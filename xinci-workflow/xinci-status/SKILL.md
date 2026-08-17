@@ -9,21 +9,21 @@ description: 新词工作流状态看板,只读汇报候选账本的全局事实
 
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/生命周期契约.md(状态词汇与时间字段约定)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(状态词汇与时间字段约定)
 
 ## 工作流
 
 1. 运行状态脚本:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/report_status.py
+python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/report_status.py
 ```
 
 2. 如实转述输出:各状态候选数;每个候选的年龄、距上次复查天数、expiry 余量;"expiry 已过且非终态"清单。
 3. 可补充运行账本完整性检查(用户要求或输出异常时):
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/validate_ledger.py
+python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/validate_ledger.py
 ```
 
 ## 硬规则

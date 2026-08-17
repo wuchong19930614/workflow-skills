@@ -9,10 +9,10 @@ description: 对形成确认(formation_confirmed)的新词候选做深度认定:
 
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/闸门契约.md(G6/G7/G8 定义;KD/KGR 统一立场)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/评分契约.md(六维权重、红队扣分、80 分线)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/数据采集指南.md(确认期审计的数据纪律)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/生命周期契约.md(转移证据要求)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/闸门契约.md(G6/G7/G8 定义;KD/KGR 统一立场)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/评分契约.md(六维权重、红队扣分、80 分线)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/数据采集指南.md(确认期审计的数据纪律)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(转移证据要求)
 
 ## 工作流
 
@@ -26,7 +26,7 @@ description: 对形成确认(formation_confirmed)的新词候选做深度认定:
 8. **用户确认后**执行:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar.py transition \
+python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to qualified --by xinci-qualify --score <N> \
   --gates G6=pass,G7=pass,G8=pass --evidence "证据/<slug>/<日期>-qualify.json"
 ```

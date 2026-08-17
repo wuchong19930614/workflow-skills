@@ -11,9 +11,9 @@ description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看
 
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/生命周期契约.md(转移证据要求;时间字段只记录不调度)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/闸门契约.md(G0–G5;形成期允许的 Semrush 探针边界)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/数据采集指南.md(真浏览器原则;探针纪律)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(转移证据要求;时间字段只记录不调度)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/闸门契约.md(G0–G5;形成期允许的 Semrush 探针边界)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/数据采集指南.md(真浏览器原则;探针纪律)
 
 ## 工作流
 
@@ -27,7 +27,7 @@ description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看
 6. **写观察文件并登记复查:**
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar.py checked \
+python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py checked \
   --slug <slug> --evidence "证据/<slug>/<日期>-track.json"
 ```
 
@@ -36,7 +36,7 @@ python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar
    - 提议续期或字段修订(expiry 延后、aliases/失效条件追加),用户确认后:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar.py amend \
+python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py amend \
   --slug <slug> --by xinci-track --reason "<用户确认的续期/修订理由>" \
   [--expiry YYYY-MM-DD] [--add-alias <胜出的叫法>] [--add-invalidation "<新失效条件>"]
 ```

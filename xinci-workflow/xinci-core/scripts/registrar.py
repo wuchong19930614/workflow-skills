@@ -14,7 +14,8 @@ from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[2] / "数据" / "新词工作流"
+# 数据区在仓库根(代码与数据分离):xinci-workflow/xinci-core/scripts/ 向上三级
+DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[3] / "数据" / "新词工作流"
 
 STATES = {
     "captured", "screened", "tracking", "formation_confirmed", "qualified",

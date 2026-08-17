@@ -9,10 +9,10 @@ description: 扫描发现新兴/全新的英文 Google 搜索词候选:真浏览
 
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/闸门契约.md(G0–G5 定义;G0 最先,G5 先于 G2 执行)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/陷阱类别.md(已知陷阱,命中直接验 G3)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/数据采集指南.md(真浏览器原则与来源表)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/生命周期契约.md(注册与转移的证据要求)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/闸门契约.md(G0–G5 定义;G0 最先,G5 先于 G2 执行)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/陷阱类别.md(已知陷阱,命中直接验 G3)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/数据采集指南.md(真浏览器原则与来源表)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(注册与转移的证据要求)
 
 ## 工作流
 
@@ -27,7 +27,7 @@ description: 扫描发现新兴/全新的英文 Google 搜索词候选:真浏览
 7. **写观察文件并注册。** 每个候选一份 `证据/<slug>/<日期>-scan.json`(要点式,schema 见 数据结构/observation.schema.json),然后:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar.py register \
+python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py register \
   --slug <slug> --term "<精确措辞>" --source-url <URL> --source-note "<现场摘要>" \
   --task "<搜索者要完成的任务>" --evidence "证据/<slug>/<日期>-scan.json"
 ```

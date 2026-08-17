@@ -14,8 +14,8 @@ description: 对已认定(qualified)的新词候选出建站 go/no-go 决策:页
 
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/闸门契约.md(G8 页面地图标准)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/闸门契约.md(G8 页面地图标准)
 
 ## 完整模式工作流
 
@@ -27,7 +27,7 @@ description: 对已认定(qualified)的新词候选出建站 go/no-go 决策:页
 6. **写决策书两份**(见下"双格式约定"),**提议决策**,用户确认后:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar.py transition \
+python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to build_ready --by xinci-decide \
   --decision-ref "决策书/<slug>.md" --play single_domain
 ```
