@@ -1,0 +1,23 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci 决策结构化摘要",
+  "description": "决策书正文在 决策书/<slug>.md(唯一事实来源)与同名 .html(人读视图);本 schema 只描述账本可引用的结构化摘要。仅 go 决策产出决策书。",
+  "type": "object",
+  "required": ["slug", "decision", "play", "files"],
+  "properties": {
+    "slug": { "type": "string", "description": "所属候选" },
+    "decision": { "type": "string", "enum": ["build_ready", "pilot_ready", "fast_grab_ready"], "description": "go 决策类型" },
+    "play": { "type": "string", "enum": ["fast_grab", "single_domain", "cluster_expansion"], "description": "打法" },
+    "expiry": { "type": ["string", "null"], "description": "快道必填:窗口失效日 YYYY-MM-DD" },
+    "score": { "type": ["integer", "null"], "description": "完整决策携带认定得分;快道与 pilot 不得声称全站分数" },
+    "files": {
+      "type": "object",
+      "required": ["md", "html"],
+      "properties": {
+        "md": { "type": "string", "description": "给落地网站内容的 AI 读,唯一事实来源" },
+        "html": { "type": "string", "description": "给人读的渲染视图,与 md 同批产出、同批更新" }
+      }
+    }
+  },
+  "additionalProperties": false
+}

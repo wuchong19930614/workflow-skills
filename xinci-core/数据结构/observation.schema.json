@@ -1,0 +1,25 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci 观察记录(证据文件)",
+  "description": "只描述看到了什么,不携带任何读起来像裁决的字段。写要点,不写转录(数据极简原则)。文件名约定:证据/<slug>/<YYYY-MM-DD>-<阶段>.json,阶段 ∈ scan/track/qualify/decide。",
+  "type": "object",
+  "required": ["slug", "observed_at", "stage", "points"],
+  "properties": {
+    "slug": { "type": "string", "description": "所属候选" },
+    "observed_at": { "type": "string", "description": "观察时间 ISO 8601" },
+    "stage": { "type": "string", "enum": ["scan", "track", "qualify", "decide"], "description": "产生本观察的阶段" },
+    "source_urls": { "type": "array", "items": { "type": "string" }, "description": "本次实际打开过的页面;未打开的不得列入" },
+    "points": {
+      "type": "array",
+      "items": { "type": "string" },
+      "minItems": 1,
+      "description": "要点式观察,每条一句话(如:SERP 首屏无原生组件;第 2 页出现完整题库竞品)"
+    },
+    "gates": {
+      "type": "object",
+      "additionalProperties": { "type": "string" },
+      "description": "本次涉及的闸门结论(G1–G8 → pass/veto),仅列实际检查过的"
+    }
+  },
+  "additionalProperties": false
+}
