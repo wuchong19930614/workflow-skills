@@ -26,7 +26,7 @@ def mk_decision(root: Path, slug: str, with_html: bool = True) -> str:
     return f"决策书/{slug}.md"
 
 
-GATES_15 = {"G1": "pass", "G2": "pass", "G3": "pass", "G4": "pass", "G5": "pass"}
+GATES_15 = {"G0": "pass", "G1": "pass", "G2": "pass", "G3": "pass", "G4": "pass", "G5": "pass"}
 GATES_678 = {"G6": "pass", "G7": "pass", "G8": "pass"}
 
 

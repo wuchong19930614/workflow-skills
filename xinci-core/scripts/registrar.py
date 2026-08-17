@@ -35,7 +35,7 @@ LEGAL = {
     ("built", "tracking"),  # 升级通路,仅用户发起
 }
 
-SCREEN_GATES = ("G1", "G2", "G3", "G4", "G5")
+SCREEN_GATES = ("G0", "G1", "G2", "G3", "G4", "G5")
 QUALIFY_GATES = ("G6", "G7", "G8")
 WINDOWS = {"days", "weeks", "months"}
 BUILD_PLAYS = {"single_domain", "cluster_expansion"}

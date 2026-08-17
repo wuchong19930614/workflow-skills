@@ -12,7 +12,7 @@ description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看
 ## 行动前必读
 
 - /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/生命周期契约.md(转移证据要求;时间字段只记录不调度)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/闸门契约.md(G1–G5;形成期允许的 Semrush 探针边界)
+- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/闸门契约.md(G0–G5;形成期允许的 Semrush 探针边界)
 - /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/数据采集指南.md(真浏览器原则;探针纪律)
 
 ## 工作流
@@ -34,7 +34,7 @@ python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar
 7. **向用户提交提议清单**,每候选一条,三种出口:
    - 继续追踪(观察已更新,无需转移);
    - 提议 `formation_confirmed`(要求:累计 ≥2 次 -track 观察、命名定型、≥1 项形成信号、本次 G1=pass);
-   - 提议 `expired`(expiry 已过/失效条件命中)或 `rejected`(G1 翻转、竞品占位)。
+   - 提议 `expired`(expiry 已过/失效条件命中)或 `rejected`(G0 或 G1 翻转、竞品占位)。
 8. **用户确认后**才执行对应 transition;写运行清单 `运行/<日期>-xinci-track.json`。
 
 ## 硬规则
