@@ -41,4 +41,4 @@ python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar
 - veto 被推翻的候选回到普通评分,不豁免任何数值闸门。
 - 79 分不算过;为凑候选降门槛是禁止的。分数差多少如实写进缺口。
 - 每一次计费查询必须能改变决策;为流程而查是禁止的。
-- 提议与执行分离:转移经用户确认后才调 registrar。
+- 提议与执行分离:转移经用户确认后才调 registrar。例外:xinci-run 连续运行模式下,启动命令即标准授权,无需逐条确认。

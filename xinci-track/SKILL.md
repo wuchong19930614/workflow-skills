@@ -40,7 +40,7 @@ python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar
 ## 硬规则
 
 - 每次复查必重跑 G1,不许沿用上次结论。
-- 提议与执行分离:本 skill 永不直接改状态,一切转移经用户确认。
+- 提议与执行分离:本 skill 永不直接改状态,一切转移经用户确认。例外:xinci-run 连续运行模式下,启动命令即标准授权,无需逐条确认。
 - expiry 已过的候选必须给出明确提议(expired,或说明为何值得用户续期并给新 expiry),不许沉默跳过;续期必须由用户确认并附理由。
 - 不自我调度:不设 next_check、不承诺"下次几天后查"、不催促用户。
 - Semrush 探针仅限形成期、仅限能改变决策的查询;查了改变不了提议的,不查。

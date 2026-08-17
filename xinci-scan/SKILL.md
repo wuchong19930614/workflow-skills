@@ -43,6 +43,6 @@ python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar
 - 窗口期禁用 KD、KGR、CPC、Google Trends;Semrush 查无是这条赛道的定义属性,不作为否决理由。
 - 每个进入 tracking 的候选必须带 expiry(附推理)和至少一条失效条件。
 - 区分"发布"与"一时热闹":只产生一周好奇、没有重复任务的东西,直说不值得,不进清单。
-- 提议与执行分离:转移一律经用户确认后才调 registrar。
+- 提议与执行分离:转移一律经用户确认后才调 registrar。例外:xinci-run 连续运行模式下,启动命令即标准授权,无需逐条确认。
 - 本 skill 不注册域名、不花钱、不发布任何内容。
 - 扫描产出为零时如实说零;禁止凑数,禁止 maybe 清单。

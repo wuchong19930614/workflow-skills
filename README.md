@@ -6,6 +6,7 @@
 
 | 单元 | 职责 |
 | --- | --- |
+| [xinci-run](xinci-run/SKILL.md) | 连续运行驱动器:启动后循环推进,直到任一 go 决策或 Semrush 额度实际耗尽 |
 | [xinci-status](xinci-status/SKILL.md) | 状态看板:只读汇报账本事实 |
 | [xinci-scan](xinci-scan/SKILL.md) | 扫描发现:真浏览器捕获候选,当场 G1–G5 初筛 |
 | [xinci-track](xinci-track/SKILL.md) | 追踪复查:用户指定候选,重跑 G1,提议转移 |
@@ -20,7 +21,7 @@
 skill 通过 symlink 同时接入 Codex CLI 与 Claude Code,两环境读同一份正本:
 
 ```bash
-for s in xinci-status xinci-scan xinci-track xinci-qualify xinci-decide; do
+for s in xinci-run xinci-status xinci-scan xinci-track xinci-qualify xinci-decide; do
   ln -s "/Users/vito.wu/IdeaProjects/workflow-skills/$s" ~/.codex/skills/$s
   ln -s "/Users/vito.wu/IdeaProjects/workflow-skills/$s" ~/.claude/skills/$s
 done
