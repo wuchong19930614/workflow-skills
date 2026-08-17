@@ -36,16 +36,17 @@
     "superseded_by": { "type": ["string", "null"], "description": "被取代时指向新候选 slug" },
     "history": {
       "type": "array",
-      "description": "状态转移史,registrar 追加,不可改写",
+      "description": "状态转移与字段修订史,registrar 追加,不可改写",
       "items": {
         "type": "object",
         "required": ["at", "to", "by"],
         "properties": {
           "at": { "type": "string", "description": "转移时间 ISO 8601" },
           "from": { "type": ["string", "null"], "description": "原状态,注册时为 null" },
-          "to": { "type": "string", "description": "新状态" },
+          "to": { "type": "string", "description": "新状态;amend 条目 from==to" },
           "by": { "type": "string", "description": "执行的 skill 名" },
-          "reason": { "type": "string", "description": "拒绝/过期/搁置等的决定性理由" }
+          "reason": { "type": "string", "description": "拒绝/过期/搁置/修订等的决定性理由" },
+          "amend": { "type": "array", "items": { "type": "string" }, "description": "amend 条目专用:本次修订的字段名(expiry/aliases/invalidation)" }
         }
       }
     }

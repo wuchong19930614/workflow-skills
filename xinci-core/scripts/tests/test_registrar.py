@@ -10,11 +10,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import registrar as R
 
 
-def mk_evidence(root: Path, slug: str, name: str) -> str:
-    d = root / "证据" / slug
+def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
+    """写一份满足观察 schema 最小要求的证据文件;stage 由文件名后缀推导。"""
+    d = root / "证据" / cand_slug
     d.mkdir(parents=True, exist_ok=True)
-    (d / name).write_text("{}", encoding="utf-8")
-    return f"证据/{slug}/{name}"
+    stage = Path(name).stem.rsplit("-", 1)[-1]
+    obs = {
+        "slug": cand_slug,
+        "observed_at": "2026-08-17T00:00:00+00:00",
+        "stage": stage,
+        "points": ["测试观察要点"],
+    }
+    obs.update(overrides)
+    (d / name).write_text(json.dumps(obs, ensure_ascii=False), encoding="utf-8")
+    return f"证据/{cand_slug}/{name}"
 
 
 def mk_decision(root: Path, slug: str, with_html: bool = True) -> str:
@@ -26,7 +35,7 @@ def mk_decision(root: Path, slug: str, with_html: bool = True) -> str:
     return f"决策书/{slug}.md"
 
 
-GATES_15 = {"G0": "pass", "G1": "pass", "G2": "pass", "G3": "pass", "G4": "pass", "G5": "pass"}
+GATES_SCREEN = {"G0": "pass", "G1": "pass", "G2": "pass", "G3": "pass", "G4": "pass", "G5": "pass"}
 GATES_678 = {"G6": "pass", "G7": "pass", "G8": "pass"}
 
 
@@ -46,10 +55,10 @@ class RegistrarTest(unittest.TestCase):
                    task="complete demo task", evidence=[ev])
         return slug
 
-    def to_screened(self, slug):
+    def to_screened(self, slug, window="weeks"):
         ev = mk_evidence(self.root, slug, "2026-08-17b-scan.json")
         R.transition(self.root, slug, to="screened", by="xinci-scan",
-                     gates=dict(GATES_15), window_estimate="weeks", evidence=[ev])
+                     gates=dict(GATES_SCREEN), window_estimate=window, evidence=[ev])
 
     def to_tracking(self, slug):
         ev = mk_evidence(self.root, slug, "2026-08-17c-scan.json")
@@ -94,9 +103,9 @@ class RegistrarTest(unittest.TestCase):
             R.transition(self.root, slug, to="build_ready", by="xinci-decide",
                          decision_ref=f"决策书/{slug}.md", play="single_domain")
 
-    def test_screened_requires_all_five_gates(self):
+    def test_screened_requires_all_six_gates(self):
         slug = self.register()
-        gates = dict(GATES_15)
+        gates = dict(GATES_SCREEN)
         del gates["G5"]
         ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
         with self.assertRaises(R.RegistrarError):
@@ -172,10 +181,19 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaises(R.RegistrarError):
             R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
                          decision_ref=ref, expiry="2026-08-25", play="fast_grab")
-        self.to_screened(slug)
+        self.to_screened(slug, window="days")
         R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
                      decision_ref=ref, expiry="2026-08-25", play="fast_grab")
         self.assertEqual(self.load(slug)["state"], "fast_grab_ready")
+
+    def test_fast_grab_requires_days_window(self):
+        # 快道只收 window_estimate=days 的 screened 候选(xinci-decide 硬规则,registrar 强制)
+        slug = self.register()
+        self.to_screened(slug, window="weeks")
+        ref = mk_decision(self.root, slug)
+        with self.assertRaises(R.RegistrarError):
+            R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
+                         decision_ref=ref, expiry="2026-08-25", play="fast_grab")
 
     def test_terminal_states_have_no_exit(self):
         slug = self.register()
@@ -196,6 +214,26 @@ class RegistrarTest(unittest.TestCase):
         rec = self.load(slug)
         self.assertEqual(rec["state"], "superseded")
         self.assertEqual(rec["superseded_by"], other)
+
+    def test_superseded_allowed_from_decision_finals(self):
+        # 生命周期契约:disqualified / no_site 是决策终局,除 superseded 外无出边——即 superseded 必须可达
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        R.transition(self.root, slug, to="disqualified", by="xinci-qualify",
+                     reason="竞争维度差 12 分")
+        other = "better-wording"
+        ev = mk_evidence(self.root, other, "2026-08-17-scan.json")
+        R.register(self.root, slug=other, term="better wording", source_url="https://e.com",
+                   task="same task", evidence=[ev])
+        R.transition(self.root, slug, to="superseded", by="xinci-scan", superseded_by=other)
+        self.assertEqual(self.load(slug)["state"], "superseded")
+        # 其余终态(rejected 等)仍无出边
+        other2 = self.register("plain-rejected")
+        R.transition(self.root, other2, to="rejected", by="xinci-scan", reason="G1 否决")
+        with self.assertRaises(R.RegistrarError):
+            R.transition(self.root, other2, to="superseded", by="xinci-scan", superseded_by=other)
 
     def test_checked_updates_last_checked_at_without_state_change(self):
         slug = self.register()
@@ -218,6 +256,88 @@ class RegistrarTest(unittest.TestCase):
         for h in rec["history"]:
             self.assertIn("at", h)
             self.assertIn("by", h)
+
+    # ---- amend:观察性字段修订(续期/别名/失效条件) ----
+
+    def test_amend_updates_expiry_with_reason(self):
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        R.amend(self.root, slug, by="xinci-track", expiry="2026-10-31",
+                reason="形成信号仍在增长,用户确认续期")
+        rec = self.load(slug)
+        self.assertEqual(rec["expiry"], "2026-10-31")
+        self.assertEqual(rec["state"], "tracking")
+        last = rec["history"][-1]
+        self.assertEqual(last["from"], "tracking")
+        self.assertEqual(last["to"], "tracking")
+        self.assertIn("expiry", last["amend"])
+
+    def test_amend_appends_aliases_and_invalidation(self):
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        R.amend(self.root, slug, by="xinci-track", add_aliases=["community-nickname"],
+                add_invalidation=["竞品完整题库上线"], reason="复查观察到命名分裂与新竞品信号")
+        rec = self.load(slug)
+        self.assertIn("community-nickname", rec["aliases"])
+        self.assertIn("竞品完整题库上线", rec["invalidation"])
+
+    def test_amend_requires_reason_and_fields(self):
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        with self.assertRaises(R.RegistrarError):
+            R.amend(self.root, slug, by="xinci-track", expiry="2026-10-31", reason="")
+        with self.assertRaises(R.RegistrarError):
+            R.amend(self.root, slug, by="xinci-track", reason="没有任何字段可改")
+
+    def test_amend_rejects_terminal_states(self):
+        slug = self.register()
+        R.transition(self.root, slug, to="rejected", by="xinci-scan", reason="G1 否决")
+        with self.assertRaises(R.RegistrarError):
+            R.amend(self.root, slug, by="xinci-track", expiry="2026-10-31", reason="不该成功")
+
+    # ---- 证据内容校验 ----
+
+    def test_evidence_content_validated(self):
+        slug = "content-check"
+        d = self.root / "证据" / slug
+        d.mkdir(parents=True)
+        # 空对象:缺必填字段
+        (d / "2026-08-17-scan.json").write_text("{}", encoding="utf-8")
+        with self.assertRaises(R.RegistrarError):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[f"证据/{slug}/2026-08-17-scan.json"])
+        # slug 与候选不一致
+        bad = mk_evidence(self.root, slug, "2026-08-18-scan.json", slug="someone-else")
+        with self.assertRaises(R.RegistrarError):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[bad])
+        # stage 与文件名不一致
+        bad2 = mk_evidence(self.root, slug, "2026-08-19-scan.json", stage="track")
+        with self.assertRaises(R.RegistrarError):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[bad2])
+        # points 为空
+        bad3 = mk_evidence(self.root, slug, "2026-08-20-scan.json", points=[])
+        with self.assertRaises(R.RegistrarError):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[bad3])
+        # 合法观察通过
+        ok = mk_evidence(self.root, slug, "2026-08-21-scan.json")
+        R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                   task="t", evidence=[ok])
+        self.assertEqual(self.load(slug)["state"], "captured")
+
+    def test_evidence_path_escape_rejected(self):
+        slug = "path-check"
+        outside = self.root.parent / "outside.json"
+        outside.write_text("{}", encoding="utf-8")
+        for bad in [str(outside), f"证据/{slug}/../../outside.json"]:
+            with self.assertRaises(R.RegistrarError):
+                R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                           task="t", evidence=[bad])
 
 
 if __name__ == "__main__":

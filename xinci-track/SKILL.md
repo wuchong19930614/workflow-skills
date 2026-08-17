@@ -31,17 +31,25 @@ python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar
   --slug <slug> --evidence "证据/<slug>/<日期>-track.json"
 ```
 
-7. **向用户提交提议清单**,每候选一条,三种出口:
+7. **向用户提交提议清单**,每候选一条,四种出口:
    - 继续追踪(观察已更新,无需转移);
+   - 提议续期或字段修订(expiry 延后、aliases/失效条件追加),用户确认后:
+
+```bash
+python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/scripts/registrar.py amend \
+  --slug <slug> --by xinci-track --reason "<用户确认的续期/修订理由>" \
+  [--expiry YYYY-MM-DD] [--add-alias <胜出的叫法>] [--add-invalidation "<新失效条件>"]
+```
+
    - 提议 `formation_confirmed`(要求:累计 ≥2 次 -track 观察、命名定型、≥1 项形成信号、本次 G1=pass);
    - 提议 `expired`(expiry 已过/失效条件命中)或 `rejected`(G0 或 G1 翻转、竞品占位)。
-8. **用户确认后**才执行对应 transition;写运行清单 `运行/<日期>-xinci-track.json`。
+8. **用户确认后**才执行对应 transition;写运行清单 `运行/<日期>-xinci-track.json`(同日再次运行加 HHMM 后缀)。
 
 ## 硬规则
 
 - 每次复查必重跑 G1,不许沿用上次结论。
 - 提议与执行分离:本 skill 永不直接改状态,一切转移经用户确认。例外:xinci-run 连续运行模式下,启动命令即标准授权,无需逐条确认。
-- expiry 已过的候选必须给出明确提议(expired,或说明为何值得用户续期并给新 expiry),不许沉默跳过;续期必须由用户确认并附理由。
+- expiry 已过的候选必须给出明确提议(expired,或说明为何值得用户续期并给新 expiry),不许沉默跳过;续期必须由用户确认并附理由,经 registrar amend 执行——手工编辑账本是禁止的。
 - 不自我调度:不设 next_check、不承诺"下次几天后查"、不催促用户。
 - Semrush 探针仅限形成期、仅限能改变决策的查询;查了改变不了提议的,不查。
 - 观察写要点不写转录;未打开的页面不得列入 source_urls。

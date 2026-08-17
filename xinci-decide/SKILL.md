@@ -16,7 +16,6 @@ description: 对已认定(qualified)的新词候选出建站 go/no-go 决策:页
 
 - /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
 - /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/闸门契约.md(G8 页面地图标准)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-core/数据结构/decision.schema.json(结构化摘要字段)
 
 ## 完整模式工作流
 

@@ -5,10 +5,12 @@
 账本:数据/新词工作流/账本/候选账本.json,本脚本独占写入,原子替换。
 """
 import argparse
+import fcntl
 import json
 import os
 import sys
 import tempfile
+from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -21,6 +23,9 @@ STATES = {
 }
 # 设计终态词汇为前五个;disqualified/no_site 是决策终局,除 superseded 外无出边,并入终态集
 TERMINAL = {"rejected", "expired", "superseded", "withdrawn", "built", "disqualified", "no_site"}
+# 决策终局的唯一出边:被更好措辞的候选取代
+SUPERSEDABLE_FINAL = {"disqualified", "no_site"}
+OBS_STAGES = {"scan", "track", "qualify", "decide"}
 
 LEGAL = {
     ("captured", "screened"), ("captured", "rejected"),
@@ -70,16 +75,57 @@ def _save(data_root: Path, ledger: dict) -> None:
     os.replace(tmp, p)
 
 
+@contextmanager
+def _locked(data_root: Path):
+    """账本互斥锁:load-modify-save 全程持有,防止并发会话(如 xinci-run 与手动操作)丢更新。"""
+    lock_path = _ledger_path(data_root).parent
+    lock_path.mkdir(parents=True, exist_ok=True)
+    with open(lock_path / ".lock", "w") as f:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(f, fcntl.LOCK_UN)
+
+
 def _require(cond: bool, msg: str) -> None:
     if not cond:
         raise RegistrarError(msg)
 
 
-def _check_evidence(data_root: Path, refs) -> list:
+def _check_evidence(data_root: Path, refs, slug=None) -> list:
     refs = list(refs or [])
     for r in refs:
-        _require((Path(data_root) / r).is_file(), f"证据文件不存在: {r}")
+        rel = Path(r)
+        _require(not rel.is_absolute() and ".." not in rel.parts,
+                 f"证据路径必须是数据区内的相对路径(禁绝对路径与 ..): {r}")
+        f = Path(data_root) / r
+        _require(f.is_file(), f"证据文件不存在: {r}")
+        if rel.parts and rel.parts[0] == "证据" and rel.suffix == ".json":
+            _require(slug is None or (len(rel.parts) >= 3 and rel.parts[1] == slug),
+                     f"证据文件必须位于 证据/{slug}/ 目录下: {r}")
+            _check_observation(f, r, slug)
     return refs
+
+
+def _check_observation(path: Path, ref: str, slug) -> None:
+    """观察文件最小内容校验(与 数据结构/observation.schema.json 对齐):
+    只查决策会用到的齐备性,不做全量 schema 校验(数据极简)。"""
+    try:
+        obs = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, UnicodeDecodeError):
+        raise RegistrarError(f"观察文件不是合法 JSON: {ref}")
+    _require(isinstance(obs, dict), f"观察文件必须是 JSON 对象: {ref}")
+    for k in ("slug", "observed_at", "stage", "points"):
+        _require(bool(obs.get(k)), f"观察文件缺必填字段 {k}: {ref}")
+    _require(slug is None or obs["slug"] == slug,
+             f"观察文件 slug={obs['slug']!r} 与候选 {slug!r} 不一致: {ref}")
+    _require(obs["stage"] in OBS_STAGES, f"观察文件 stage 必须属于 {sorted(OBS_STAGES)}: {ref}")
+    _require(Path(ref).stem.endswith(f"-{obs['stage']}"),
+             f"观察文件 stage={obs['stage']!r} 与文件名不一致(约定 <日期>-<阶段>.json): {ref}")
+    pts = obs["points"]
+    _require(isinstance(pts, list) and len(pts) >= 1 and all(isinstance(x, str) and x for x in pts),
+             f"观察文件 points 必须是非空字符串数组: {ref}")
 
 
 def _check_date(value: str, field: str) -> str:
@@ -109,9 +155,16 @@ def register(data_root, slug, term, source_url, task, evidence,
              source_note="", aliases=None, by="xinci-scan"):
     data_root = Path(data_root)
     _require(bool(slug and term and source_url and task), "slug/term/source_url/task 均不可为空")
+    with _locked(data_root):
+        return _register_locked(data_root, slug, term, source_url, task, evidence,
+                                source_note, aliases, by)
+
+
+def _register_locked(data_root, slug, term, source_url, task, evidence,
+                     source_note, aliases, by):
     ledger = _load(data_root)
     _require(slug not in ledger["candidates"], f"候选已存在: {slug}")
-    refs = _check_evidence(data_root, evidence)
+    refs = _check_evidence(data_root, evidence, slug=slug)
     _require(len(refs) >= 1, "注册候选要求至少 1 个证据文件")
     now = _now()
     ledger["candidates"][slug] = {
@@ -143,24 +196,35 @@ def transition(data_root, slug, to, by, gates=None, window_estimate=None, expiry
                invalidation=None, score=None, decision_ref=None, play=None,
                reason=None, evidence=None, superseded_by=None):
     data_root = Path(data_root)
+    with _locked(data_root):
+        return _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
+                                  invalidation, score, decision_ref, play,
+                                  reason, evidence, superseded_by)
+
+
+def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
+                       invalidation, score, decision_ref, play,
+                       reason, evidence, superseded_by):
     ledger = _load(data_root)
     _require(slug in ledger["candidates"], f"候选不存在: {slug}")
     rec = ledger["candidates"][slug]
     frm = rec["state"]
     _require(to in STATES, f"未知状态: {to}")
 
-    if to in {"withdrawn", "superseded"}:
+    if to == "withdrawn":
         _require(frm not in TERMINAL, f"终态候选不可再转移: {frm}")
-        if to == "withdrawn":
-            _require(bool(reason), "withdrawn 要求 reason")
-        else:
-            _require(bool(superseded_by) and superseded_by != slug
-                     and superseded_by in ledger["candidates"],
-                     f"superseded 要求 superseded_by 指向账本中已存在的其他候选: {superseded_by!r}")
+        _require(bool(reason), "withdrawn 要求 reason")
+    elif to == "superseded":
+        # 决策终局(disqualified/no_site)的唯一出边即 superseded;其余终态无出边
+        _require(frm not in TERMINAL or frm in SUPERSEDABLE_FINAL,
+                 f"终态候选不可再转移: {frm}")
+        _require(bool(superseded_by) and superseded_by != slug
+                 and superseded_by in ledger["candidates"],
+                 f"superseded 要求 superseded_by 指向账本中已存在的其他候选: {superseded_by!r}")
     else:
         _require((frm, to) in LEGAL, f"非法转移: {frm} -> {to}")
 
-    refs = _check_evidence(data_root, evidence)
+    refs = _check_evidence(data_root, evidence, slug=slug)
     merged_refs = rec["evidence_refs"] + [r for r in refs if r not in rec["evidence_refs"]]
 
     if to == "screened":
@@ -178,12 +242,14 @@ def transition(data_root, slug, to, by, gates=None, window_estimate=None, expiry
             _require(bool(invalidation), "screened→tracking 要求至少 1 条失效条件")
             _require(len(refs) >= 1, "screened→tracking 要求本次至少 1 个证据")
     elif to == "fast_grab_ready":
+        _require(rec.get("window_estimate") == "days",
+                 f"快道只收 window_estimate=days 的 screened 候选,当前 {rec.get('window_estimate')!r}")
         _check_decision_files(data_root, decision_ref)
         _check_date(expiry, "expiry")
         _require(play in (None, "fast_grab"), "快道 play 只能是 fast_grab")
         play = "fast_grab"
     elif to == "formation_confirmed":
-        track_obs = [r for r in merged_refs if "-track" in Path(r).name]
+        track_obs = [r for r in merged_refs if Path(r).stem.endswith("-track")]
         _require(len(track_obs) >= 2,
                  f"tracking→formation_confirmed 要求 ≥2 个追踪期观察(-track 证据),当前 {len(track_obs)}")
         _check_gates(gates, ("G1",), "tracking→formation_confirmed")
@@ -230,16 +296,48 @@ def transition(data_root, slug, to, by, gates=None, window_estimate=None, expiry
 def checked(data_root, slug, evidence, by="xinci-track"):
     """复查登记:更新 last_checked_at、追加证据,不改状态。"""
     data_root = Path(data_root)
-    ledger = _load(data_root)
-    _require(slug in ledger["candidates"], f"候选不存在: {slug}")
-    rec = ledger["candidates"][slug]
-    _require(rec["state"] not in TERMINAL, f"终态候选无需复查: {rec['state']}")
-    refs = _check_evidence(data_root, evidence)
-    _require(len(refs) >= 1, "checked 要求至少 1 个证据文件")
-    rec["evidence_refs"] += [r for r in refs if r not in rec["evidence_refs"]]
-    rec["last_checked_at"] = _now()
-    _save(data_root, ledger)
-    return rec
+    with _locked(data_root):
+        ledger = _load(data_root)
+        _require(slug in ledger["candidates"], f"候选不存在: {slug}")
+        rec = ledger["candidates"][slug]
+        _require(rec["state"] not in TERMINAL, f"终态候选无需复查: {rec['state']}")
+        refs = _check_evidence(data_root, evidence, slug=slug)
+        _require(len(refs) >= 1, "checked 要求至少 1 个证据文件")
+        rec["evidence_refs"] += [r for r in refs if r not in rec["evidence_refs"]]
+        rec["last_checked_at"] = _now()
+        _save(data_root, ledger)
+        return rec
+
+
+def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invalidation=None):
+    """观察性字段修订(不改状态):续期 expiry、追加 aliases/invalidation。
+    经用户确认后调用;reason 必填并写入 history,保证账本自解释。"""
+    data_root = Path(data_root)
+    _require(bool(reason), "amend 要求 reason(如:用户确认续期的理由)")
+    add_aliases = list(add_aliases or [])
+    add_invalidation = list(add_invalidation or [])
+    _require(bool(expiry) or add_aliases or add_invalidation,
+             "amend 要求至少提供一个可改字段:expiry / add_aliases / add_invalidation")
+    with _locked(data_root):
+        ledger = _load(data_root)
+        _require(slug in ledger["candidates"], f"候选不存在: {slug}")
+        rec = ledger["candidates"][slug]
+        _require(rec["state"] not in TERMINAL, f"终态候选不可修订: {rec['state']}")
+        amended = []
+        if expiry:
+            _check_date(expiry, "expiry")
+            rec["expiry"] = expiry
+            amended.append("expiry")
+        if add_aliases:
+            rec["aliases"] = list(dict.fromkeys(rec["aliases"] + add_aliases))
+            amended.append("aliases")
+        if add_invalidation:
+            rec["invalidation"] = list(dict.fromkeys(rec["invalidation"] + add_invalidation))
+            amended.append("invalidation")
+        rec["history"].append({"at": _now(), "from": rec["state"], "to": rec["state"],
+                               "by": by, "reason": reason, "amend": amended})
+        _save(data_root, ledger)
+        return rec
 
 
 def _parse_gates(text):
@@ -287,6 +385,14 @@ def main(argv=None):
     p.add_argument("--evidence", action="append", required=True)
     p.add_argument("--by", default="xinci-track")
 
+    p = sub.add_parser("amend", help="观察性字段修订(不改状态):续期 expiry、追加 aliases/invalidation")
+    p.add_argument("--slug", required=True)
+    p.add_argument("--by", required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--expiry")
+    p.add_argument("--add-alias", action="append", default=[])
+    p.add_argument("--add-invalidation", default="", help="分号分隔")
+
     a = ap.parse_args(argv)
     try:
         if a.cmd == "register":
@@ -300,6 +406,10 @@ def main(argv=None):
                              invalidation=[x for x in a.invalidation.split(";") if x] or None,
                              score=a.score, decision_ref=a.decision_ref, play=a.play,
                              reason=a.reason, evidence=a.evidence, superseded_by=a.superseded_by)
+        elif a.cmd == "amend":
+            rec = amend(a.data_root, a.slug, by=a.by, reason=a.reason, expiry=a.expiry,
+                        add_aliases=a.add_alias,
+                        add_invalidation=[x for x in a.add_invalidation.split(";") if x])
         else:
             rec = checked(a.data_root, a.slug, a.evidence, by=a.by)
     except RegistrarError as e:

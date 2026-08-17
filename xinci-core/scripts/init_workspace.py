@@ -23,6 +23,15 @@ def init_workspace(data_root) -> list:
             json.dumps({"schema_version": 1, "candidates": {}}, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8")
         created.append(str(ledger))
+    index = data_root / "淘汰方向.md"
+    if not index.is_file():
+        index.write_text(
+            "# 淘汰方向索引\n\n"
+            "追加式清单:未注册即弃的候选方向,扫描与连续运行开局据此去重。\n"
+            "每条一行:`- <YYYY-MM-DD> <词/方向> — <一句话:哪道门、为何>`。\n"
+            "(走到 G1 及之后才被否决的候选在账本留痕,不入此表。)\n",
+            encoding="utf-8")
+        created.append(str(index))
     return created
 
 

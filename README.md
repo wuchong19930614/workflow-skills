@@ -6,7 +6,7 @@
 
 | 单元 | 职责 |
 | --- | --- |
-| [xinci-run](xinci-run/SKILL.md) | 连续运行驱动器:启动后循环推进,直到任一 go 决策或 Semrush 额度实际耗尽 |
+| [xinci-run](xinci-run/SKILL.md) | 连续运行驱动器:启动后循环推进,直到任一 go 决策或 Semrush 额度实际耗尽。启动暗号 `xinci_run`,消息中出现即一体启动整个工作流 |
 | [xinci-status](xinci-status/SKILL.md) | 状态看板:只读汇报账本事实 |
 | [xinci-scan](xinci-scan/SKILL.md) | 扫描发现:真浏览器捕获候选,当场 G1–G5 初筛 |
 | [xinci-track](xinci-track/SKILL.md) | 追踪复查:用户指定候选,重跑 G1,提议转移 |
@@ -14,7 +14,7 @@
 | [xinci-decide](xinci-decide/SKILL.md) | 建站决策:页面地图 + 收入模型 + md/html 双格式决策书 |
 | [xinci-core](xinci-core/) | 共享核心:契约、闸门、schema、registrar 脚本(判断标准唯一来源) |
 
-设计文档:[设计/新词工作流skill设计-2026-08-17.md](设计/新词工作流skill设计-2026-08-17.md)。数据区:`数据/新词工作流/`(账本 / 证据 / 决策书 / 运行)。
+设计文档:[设计/新词工作流skill设计-2026-08-17.md](设计/新词工作流skill设计-2026-08-17.md)。数据区:`数据/新词工作流/`(账本 / 证据 / 决策书 / 运行 / 淘汰方向索引)。
 
 ## 双环境接入(symlink,不入库)
 
