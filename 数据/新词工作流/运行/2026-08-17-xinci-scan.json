@@ -1,0 +1,22 @@
+{
+  "date": "2026-08-17",
+  "skill": "xinci-scan",
+  "started_at": "2026-08-17T08:36:31Z",
+  "sources_opened": [
+    "https://news.ycombinator.com",
+    "https://producthunt.com",
+    "https://news.ycombinator.com/item?id=49320611",
+    "https://news.ycombinator.com/item?id=49324087"
+  ],
+  "sources_blocked": ["https://reddit.com/r/all/rising(浏览器策略拦截,本次未检查)"],
+  "candidates_registered": 0,
+  "metered_calls": 0,
+  "notes": [
+    "Qwen 3.8 27B(HN #1, 419分):命中陷阱类别一(新发布 AI 模型),即陷阱清单记录的原案,弃",
+    "Product Hunt 当日 14 个发布全部为纯品牌名(陷阱类别二),零任务零候选",
+    "ai credit resale / token relay market(HN 277分,深读):措辞真实在形成,但买卖两侧任务均建立在违反 ToS 与欺诈供血之上(盗刷 key/卡、薅试用、MITM 倒卖数据),无合法自助变现,G6 弃",
+    "claude watermark(HN 217分,深读):三个衍生任务全不成立——检测需厂商密钥(第三方页面无法完成任务)、去水印属规避工具(不做)、informational 查询将被官方与大媒体占据,弃",
+    "cloudflare injects analytics(Tell HN 479分):一次性配置修复任务,官方答案在途,耐久以周计,G7 弃",
+    "AGI-64 / Vocal Slice / MathCode / nurb / OpenTrade 等:纯品牌名或 $1k/月上限不合理,弃"
+  ]
+}
