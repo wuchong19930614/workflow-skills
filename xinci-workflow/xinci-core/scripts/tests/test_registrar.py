@@ -3,6 +3,7 @@ import json
 import sys
 import tempfile
 import unittest
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -11,13 +12,18 @@ import registrar as R
 
 
 def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
-    """写一份满足观察 schema 最小要求的证据文件;stage 由文件名后缀推导。"""
+    """写一份满足观察 schema 最小要求的证据文件;stage 由文件名后缀推导,
+    observed_at 由文件名日期前缀推导(推导不出时用固定值)。"""
     d = root / "证据" / cand_slug
     d.mkdir(parents=True, exist_ok=True)
     stage = Path(name).stem.rsplit("-", 1)[-1]
+    try:
+        observed_at = f"{date.fromisoformat(name[:10]).isoformat()}T00:00:00+00:00"
+    except ValueError:
+        observed_at = "2026-08-17T00:00:00+00:00"
     obs = {
         "slug": cand_slug,
-        "observed_at": "2026-08-17T00:00:00+00:00",
+        "observed_at": observed_at,
         "stage": stage,
         "points": ["测试观察要点"],
     }
@@ -135,6 +141,27 @@ class RegistrarTest(unittest.TestCase):
             R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
                          gates={"G1": "pass"}, evidence=[ev])
 
+    def test_formation_needs_seven_day_track_span(self):
+        # 形成期以周计:同一天凑出的两个 -track 观察不得进 formation_confirmed
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+        same_day = mk_evidence(self.root, slug, "2026-08-20b-track.json")
+        with self.assertRaisesRegex(R.RegistrarError, "跨度"):
+            R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
+                         gates={"G1": "pass"}, evidence=[same_day])
+        # 六天也不够
+        six_days = mk_evidence(self.root, slug, "2026-08-26-track.json")
+        with self.assertRaisesRegex(R.RegistrarError, "跨度"):
+            R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
+                         gates={"G1": "pass"}, evidence=[six_days])
+        # 满 7 天通过
+        ok = mk_evidence(self.root, slug, "2026-08-27-track.json")
+        R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
+                     gates={"G1": "pass"}, evidence=[ok])
+        self.assertEqual(self.load(slug)["state"], "formation_confirmed")
+
     def test_qualified_requires_score_80(self):
         slug = self.register()
         self.to_screened(slug)
@@ -235,6 +262,44 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaises(R.RegistrarError):
             R.transition(self.root, other2, to="superseded", by="xinci-scan", superseded_by=other)
 
+    def test_built_to_tracking_upgrade_path(self):
+        # 快道 built 的词被证明耐久后,用户可发起转回 tracking 走完整认定
+        slug = self.register()
+        self.to_screened(slug, window="days")
+        ref = mk_decision(self.root, slug)
+        R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
+                     decision_ref=ref, expiry="2026-08-25", play="fast_grab")
+        R.transition(self.root, slug, to="built", by="xinci-decide", reason="用户已建站")
+        with self.assertRaises(R.RegistrarError):  # 缺 reason
+            R.transition(self.root, slug, to="tracking", by="xinci-track", expiry="2026-12-31")
+        with self.assertRaises(R.RegistrarError):  # 缺 expiry
+            R.transition(self.root, slug, to="tracking", by="xinci-track", reason="词耐久,升级完整认定")
+        R.transition(self.root, slug, to="tracking", by="xinci-track",
+                     reason="词耐久,升级完整认定", expiry="2026-12-31")
+        self.assertEqual(self.load(slug)["state"], "tracking")
+
+    def test_hold_to_disqualified(self):
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        self.to_qualified(slug)
+        R.transition(self.root, slug, to="hold", by="xinci-decide", reason="窗口判断存疑,搁置重审")
+        with self.assertRaises(R.RegistrarError):  # 缺 reason
+            R.transition(self.root, slug, to="disqualified", by="xinci-qualify")
+        R.transition(self.root, slug, to="disqualified", by="xinci-qualify",
+                     reason="重审后耐久性缺口:官方答案已上线")
+        self.assertEqual(self.load(slug)["state"], "disqualified")
+
+    def test_checked_allowed_on_any_nonterminal_state(self):
+        # 设计意图锁定:checked 是"登记新观察",适用于任何非终态(如 qualified 等待决策期间);终态拒绝
+        slug = self.register()
+        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-19-track.json")])
+        self.assertEqual(self.load(slug)["state"], "captured")
+        R.transition(self.root, slug, to="rejected", by="xinci-scan", reason="G1 否决")
+        with self.assertRaises(R.RegistrarError):
+            R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+
     def test_checked_updates_last_checked_at_without_state_change(self):
         slug = self.register()
         self.to_screened(slug)
@@ -245,6 +310,28 @@ class RegistrarTest(unittest.TestCase):
         self.assertEqual(after["state"], "tracking")
         self.assertGreaterEqual(after["last_checked_at"], before["last_checked_at"])
         self.assertIn(f"证据/{slug}/2026-08-20-track.json", after["evidence_refs"])
+
+    def test_history_records_param_snapshots(self):
+        # gates/score 等顶层字段会被后续转移覆盖,history 必须留有当次快照
+        slug = self.register()
+        self.to_screened(slug)
+        rec = self.load(slug)
+        self.assertEqual(rec["history"][-1]["gates"], GATES_SCREEN)
+        self.assertEqual(rec["history"][-1]["window_estimate"], "weeks")
+        self.to_tracking(slug)
+        rec = self.load(slug)
+        self.assertEqual(rec["history"][-1]["expiry"], "2026-09-30")
+        self.assertEqual(rec["history"][-1]["invalidation"], ["官方工具上线"])
+        self.to_formation(slug)
+        self.to_qualified(slug)
+        rec = self.load(slug)
+        self.assertEqual(rec["history"][-1]["score"], 80)
+        self.assertEqual(rec["history"][-1]["gates"], GATES_678)
+        R.amend(self.root, slug, by="xinci-track", expiry="2026-12-31",
+                add_aliases=["nickname"], reason="用户确认续期")
+        last = self.load(slug)["history"][-1]
+        self.assertEqual(last["expiry"], "2026-12-31")
+        self.assertEqual(last["add_aliases"], ["nickname"])
 
     def test_history_append_only(self):
         slug = self.register()
@@ -324,8 +411,24 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaises(R.RegistrarError):
             R.register(self.root, slug=slug, term="t", source_url="https://e.com",
                        task="t", evidence=[bad3])
-        # 合法观察通过
-        ok = mk_evidence(self.root, slug, "2026-08-21-scan.json")
+        # schema 外字段(与 observation.schema.json 的 additionalProperties:false 对齐)
+        bad4 = mk_evidence(self.root, slug, "2026-08-22-scan.json", verdict="looks good")
+        with self.assertRaisesRegex(R.RegistrarError, "schema 外字段"):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[bad4])
+        # observed_at 不是 ISO 8601
+        bad5 = mk_evidence(self.root, slug, "2026-08-23-scan.json", observed_at="昨天")
+        with self.assertRaisesRegex(R.RegistrarError, "ISO 8601"):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[bad5])
+        # source_urls 类型错误
+        bad6 = mk_evidence(self.root, slug, "2026-08-24-scan.json", source_urls="https://e.com")
+        with self.assertRaisesRegex(R.RegistrarError, "source_urls"):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[bad6])
+        # 合法观察(含可选字段)通过
+        ok = mk_evidence(self.root, slug, "2026-08-21-scan.json",
+                         source_urls=["https://e.com/thread"], gates={"G1": "pass"})
         R.register(self.root, slug=slug, term="t", source_url="https://e.com",
                    task="t", evidence=[ok])
         self.assertEqual(self.load(slug)["state"], "captured")

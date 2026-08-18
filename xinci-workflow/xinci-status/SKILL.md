@@ -7,7 +7,7 @@ description: 新词工作流状态看板,只读汇报候选账本的全局事实
 
 只读汇报,零判断,零写入。这套工作流由用户人工驱动:本 skill 只陈述账本事实,不推荐动作、不安排日程、不执行任何状态转移。
 
-> **路径约定**:本文相对路径均以**仓库根**为基准。本文件正本位于 `仓库根/xinci-workflow/xinci-status/SKILL.md`,经 symlink 加载时先解析正本真实位置(如 `readlink`),再向上两级即仓库根。bash 命令在仓库根执行,或先将路径展开为绝对路径。
+> **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-status/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
 
 ## 行动前必读
 

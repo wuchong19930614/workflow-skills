@@ -7,7 +7,7 @@ description: 对形成确认(formation_confirmed)的新词候选做深度认定:
 
 回答一个问题:这个机会是真的吗?输入必须是 `formation_confirmed` 状态的候选(registrar 强制,其他状态拒收)。认定说"机会为真",不说"该建站"——后者是 xinci-decide 的事。
 
-> **路径约定**:本文相对路径均以**仓库根**为基准。本文件正本位于 `仓库根/xinci-workflow/xinci-qualify/SKILL.md`,经 symlink 加载时先解析正本真实位置(如 `readlink`),再向上两级即仓库根。bash 命令在仓库根执行,或先将路径展开为绝对路径。
+> **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-qualify/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
 
 ## 行动前必读
 
@@ -19,7 +19,7 @@ description: 对形成确认(formation_confirmed)的新词候选做深度认定:
 ## 工作流
 
 1. **核对输入。** 候选状态必须是 formation_confirmed;通读其全部历史观察,先掌握已知,再花新的注意力。
-2. **G6 商业闭环。** 付费者是谁、任务是否被迫或重复、自助变现路径、$200/月上限的合理性——四件缺一即 veto。
+2. **G6 商业闭环。** 付费者是谁、任务是否被迫或重复、自助变现路径、保守假设下稳定收入 ≥$200/月 的可达性——四件缺一即 veto。
 3. **G7 耐久性。** 版本更替风险、官方答案风险、好奇 vs 重复任务,逐一排查并记录判断依据。
 4. **G8 簇广度。** 枚举意图簇:≥3 个任务型查询 × ≥2 个独立 family 才够全站;合并表述性变体,不许同义改写凑数。
 5. **完整竞争审计。** 真浏览器读核心任务查询的完整 top-10(到第二页或质量断层),每个结果按"做什么"分类;**实测至少一个竞品的 footprint**(authority、流量、词量、增速)——存在不等于占据。
@@ -33,7 +33,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --gates G6=pass,G7=pass,G8=pass --evidence "证据/<slug>/<日期>-qualify.json"
 ```
 
-写运行清单 `运行/<日期>-xinci-qualify.json`(含计费调用数)。
+写运行清单 `运行/<日期>-xinci-qualify.json`(含计费调用数)。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
 
 ## 硬规则
 

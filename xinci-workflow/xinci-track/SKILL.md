@@ -9,7 +9,7 @@ description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看
 
 复查哪些候选、何时复查,由用户决定;本 skill 被调用才动,不设节奏、不催促。
 
-> **路径约定**:本文相对路径均以**仓库根**为基准。本文件正本位于 `仓库根/xinci-workflow/xinci-track/SKILL.md`,经 symlink 加载时先解析正本真实位置(如 `readlink`),再向上两级即仓库根。bash 命令在仓库根执行,或先将路径展开为绝对路径。
+> **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-track/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
 
 ## 行动前必读
 
@@ -43,9 +43,9 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
   [--expiry YYYY-MM-DD] [--add-alias <胜出的叫法>] [--add-invalidation "<新失效条件>"]
 ```
 
-   - 提议 `formation_confirmed`(要求:累计 ≥2 次 -track 观察、命名定型、≥1 项形成信号、本次 G1=pass);
+   - 提议 `formation_confirmed`(要求:累计 ≥2 次 -track 观察且最早与最新相隔 ≥7 天、命名定型、≥1 项形成信号、本次 G1=pass);
    - 提议 `expired`(expiry 已过/失效条件命中)或 `rejected`(G0 或 G1 翻转、竞品占位)。
-8. **用户确认后**才执行对应 transition;写运行清单 `运行/<日期>-xinci-track.json`(同日再次运行加 HHMM 后缀)。
+8. **用户确认后**才执行对应 transition;写运行清单 `运行/<日期>-xinci-track.json`(同日再次运行加 HHMM 后缀)。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
 
 ## 硬规则
 

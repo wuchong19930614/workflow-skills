@@ -36,7 +36,7 @@
     "superseded_by": { "type": ["string", "null"], "description": "被取代时指向新候选 slug" },
     "history": {
       "type": "array",
-      "description": "状态转移与字段修订史,registrar 追加,不可改写",
+      "description": "状态转移与字段修订史,registrar 追加,不可改写;每条附当次提交的参数快照(顶层 gates/score 等字段会被后续转移覆盖,翻转史只在这里)",
       "items": {
         "type": "object",
         "required": ["at", "to", "by"],
@@ -46,7 +46,17 @@
           "to": { "type": "string", "description": "新状态;amend 条目 from==to" },
           "by": { "type": "string", "description": "执行的 skill 名" },
           "reason": { "type": "string", "description": "拒绝/过期/搁置/修订等的决定性理由" },
-          "amend": { "type": "array", "items": { "type": "string" }, "description": "amend 条目专用:本次修订的字段名(expiry/aliases/invalidation)" }
+          "amend": { "type": "array", "items": { "type": "string" }, "description": "amend 条目专用:本次修订的字段名(expiry/aliases/invalidation)" },
+          "gates": { "type": "object", "additionalProperties": { "type": "string" }, "description": "快照:本次转移提交的闸门结论" },
+          "window_estimate": { "type": "string", "description": "快照:本次提交的窗口评估" },
+          "expiry": { "type": "string", "description": "快照:本次提交/修订的失效日" },
+          "invalidation": { "type": "array", "items": { "type": "string" }, "description": "快照:本次提交的失效条件" },
+          "score": { "type": "integer", "description": "快照:本次提交的认定分数" },
+          "play": { "type": "string", "description": "快照:本次提交的打法" },
+          "decision_ref": { "type": "string", "description": "快照:本次提交的决策书路径" },
+          "superseded_by": { "type": "string", "description": "快照:本次提交的取代者 slug" },
+          "add_aliases": { "type": "array", "items": { "type": "string" }, "description": "快照:amend 追加的别名" },
+          "add_invalidation": { "type": "array", "items": { "type": "string" }, "description": "快照:amend 追加的失效条件" }
         }
       }
     }

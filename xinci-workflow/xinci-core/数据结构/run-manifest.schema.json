@@ -1,0 +1,36 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci 运行清单",
+  "description": "每次运行一个小 JSON,不写过程日志(数据极简原则)。文件名约定:运行/<YYYY-MM-DD>-<skill>.json,同日再次启动加 HHMM 后缀。xinci-run 连续运行只写一份,轮次在 rounds 里追加。",
+  "type": "object",
+  "required": ["date", "skill"],
+  "properties": {
+    "date": { "type": "string", "description": "运行日期 YYYY-MM-DD" },
+    "skill": {
+      "type": "string",
+      "enum": ["xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run"],
+      "description": "产生本清单的 skill"
+    },
+    "sources_opened": { "type": "array", "items": { "type": "string" }, "description": "本次实际打开过的来源 URL;未打开的不得列入" },
+    "candidates_touched": { "type": "array", "items": { "type": "string" }, "description": "本次触及的候选 slug" },
+    "billable_calls": { "type": "integer", "description": "计费查询次数(Semrush 等);扫描阶段应为 0" },
+    "notes": { "type": "array", "items": { "type": "string" }, "description": "值得留档的事实要点:screen_unsatisfiable 假设、额度耗尽提示要点、blocker 记录等" },
+    "rounds": {
+      "type": "array",
+      "description": "xinci-run 专用:每轮追加一条,顶层字段作全局汇总",
+      "items": {
+        "type": "object",
+        "required": ["round"],
+        "properties": {
+          "round": { "type": "integer", "description": "轮次序号,从 1 起" },
+          "sources_opened": { "type": "array", "items": { "type": "string" }, "description": "本轮打开的来源 URL" },
+          "candidates_touched": { "type": "array", "items": { "type": "string" }, "description": "本轮触及的候选 slug" },
+          "billable_calls": { "type": "integer", "description": "本轮计费查询次数" },
+          "notes": { "type": "array", "items": { "type": "string" }, "description": "本轮事实要点" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

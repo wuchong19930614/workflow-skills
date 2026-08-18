@@ -95,6 +95,45 @@ class ValidateLedgerTest(unittest.TestCase):
         self.assertTrue(any("play" in e for e in errs))
         self.assertTrue(any("score" in e for e in errs))
 
+    def test_detects_fast_grab_window_not_days(self):
+        slug = self.build_chain(until="fast_grab_ready", window="days")
+        self.corrupt(slug, window_estimate="weeks")
+        self.assertTrue(any("window_estimate=days" in e for e in self.errors()))
+
+    def test_detects_screen_gate_veto(self):
+        slug = self.build_chain(until="screened")
+        ledger_gates = dict(GATES_SCREEN)
+        ledger_gates["G3"] = "veto"
+        self.corrupt(slug, gates=ledger_gates)
+        self.assertTrue(any("G0–G5 全 pass" in e and "G3" in e for e in self.errors()))
+
+    def test_detects_qualify_gate_missing(self):
+        slug = self.build_chain(until="qualified")
+        gates = {**GATES_SCREEN, "G6": "pass", "G8": "pass"}  # 缺 G7
+        self.corrupt(slug, gates=gates)
+        self.assertTrue(any("G6–G8 全 pass" in e and "G7" in e for e in self.errors()))
+
+    def test_detects_missing_track_observations(self):
+        slug = self.build_chain(until="formation_confirmed")
+        p = self.root / "账本" / "候选账本.json"
+        ledger = json.loads(p.read_text(encoding="utf-8"))
+        rec = ledger["candidates"][slug]
+        rec["evidence_refs"] = [r for r in rec["evidence_refs"] if not r.endswith("-track.json")]
+        p.write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.assertTrue(any("≥2 个 -track 观察" in e for e in self.errors()))
+
+    def test_detects_track_span_too_short(self):
+        slug = self.build_chain(until="formation_confirmed")
+        # 把 -track 观察替换为同一天的两份:跨度 0 天,应报错
+        p = self.root / "账本" / "候选账本.json"
+        ledger = json.loads(p.read_text(encoding="utf-8"))
+        rec = ledger["candidates"][slug]
+        rec["evidence_refs"] = [r for r in rec["evidence_refs"] if not r.endswith("-track.json")]
+        rec["evidence_refs"] += [mk_evidence(self.root, slug, "2026-09-03-track.json"),
+                                 mk_evidence(self.root, slug, "2026-09-03b-track.json")]
+        p.write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding="utf-8")
+        self.assertTrue(any("跨度" in e for e in self.errors()))
+
     def test_detects_low_score_on_qualified(self):
         slug = self.build_chain(until="qualified")
         self.corrupt(slug, score=79)

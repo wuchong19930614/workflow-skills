@@ -5,7 +5,6 @@
 账本:数据/新词工作流/账本/候选账本.json,本脚本独占写入,原子替换。
 """
 import argparse
-import fcntl
 import json
 import os
 import sys
@@ -13,6 +12,25 @@ import tempfile
 from contextlib import contextmanager
 from datetime import date, datetime, timezone
 from pathlib import Path
+
+# 文件锁跨平台:POSIX 用 fcntl.flock,Windows(如 Codex 多环境)降级 msvcrt.locking
+try:
+    import fcntl
+
+    def _flock(f):
+        fcntl.flock(f, fcntl.LOCK_EX)
+
+    def _funlock(f):
+        fcntl.flock(f, fcntl.LOCK_UN)
+except ImportError:  # Windows
+    import msvcrt
+
+    def _flock(f):
+        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
+
+    def _funlock(f):
+        f.seek(0)
+        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
 
 # 数据区在仓库根(代码与数据分离):xinci-workflow/xinci-core/scripts/ 向上三级
 DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[3] / "数据" / "新词工作流"
@@ -45,6 +63,8 @@ SCREEN_GATES = ("G0", "G1", "G2", "G3", "G4", "G5")
 QUALIFY_GATES = ("G6", "G7", "G8")
 WINDOWS = {"days", "weeks", "months"}
 BUILD_PLAYS = {"single_domain", "cluster_expansion"}
+# 形成期以周计(生命周期契约):-track 观察最早与最新须相隔 ≥7 天,单次连续运行凑不出形成确认
+MIN_TRACK_SPAN_DAYS = 7
 
 
 class RegistrarError(Exception):
@@ -82,11 +102,11 @@ def _locked(data_root: Path):
     lock_path = _ledger_path(data_root).parent
     lock_path.mkdir(parents=True, exist_ok=True)
     with open(lock_path / ".lock", "w") as f:
-        fcntl.flock(f, fcntl.LOCK_EX)
+        _flock(f)
         try:
             yield
         finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+            _funlock(f)
 
 
 def _require(cond: bool, msg: str) -> None:
@@ -109,9 +129,12 @@ def _check_evidence(data_root: Path, refs, slug=None) -> list:
     return refs
 
 
+OBS_FIELDS = {"slug", "observed_at", "stage", "source_urls", "points", "gates"}
+
+
 def _check_observation(path: Path, ref: str, slug) -> None:
-    """观察文件最小内容校验(与 数据结构/observation.schema.json 对齐):
-    只查决策会用到的齐备性,不做全量 schema 校验(数据极简)。"""
+    """观察文件内容校验,与 数据结构/observation.schema.json 全量对齐
+    (含 additionalProperties: false——多余字段多半是仪式性填充,数据极简原则拒收)。"""
     try:
         obs = json.loads(path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, UnicodeDecodeError):
@@ -119,14 +142,36 @@ def _check_observation(path: Path, ref: str, slug) -> None:
     _require(isinstance(obs, dict), f"观察文件必须是 JSON 对象: {ref}")
     for k in ("slug", "observed_at", "stage", "points"):
         _require(bool(obs.get(k)), f"观察文件缺必填字段 {k}: {ref}")
+    unknown = sorted(set(obs) - OBS_FIELDS)
+    _require(not unknown, f"观察文件含 schema 外字段 {unknown}(数据极简,勿加仪式性字段): {ref}")
     _require(slug is None or obs["slug"] == slug,
              f"观察文件 slug={obs['slug']!r} 与候选 {slug!r} 不一致: {ref}")
+    try:
+        datetime.fromisoformat(obs["observed_at"])
+    except (TypeError, ValueError):
+        raise RegistrarError(f"观察文件 observed_at 必须是 ISO 8601 时间: {ref}")
     _require(obs["stage"] in OBS_STAGES, f"观察文件 stage 必须属于 {sorted(OBS_STAGES)}: {ref}")
     _require(Path(ref).stem.endswith(f"-{obs['stage']}"),
              f"观察文件 stage={obs['stage']!r} 与文件名不一致(约定 <日期>-<阶段>.json): {ref}")
     pts = obs["points"]
     _require(isinstance(pts, list) and len(pts) >= 1 and all(isinstance(x, str) and x for x in pts),
              f"观察文件 points 必须是非空字符串数组: {ref}")
+    urls = obs.get("source_urls", [])
+    _require(isinstance(urls, list) and all(isinstance(u, str) and u for u in urls),
+             f"观察文件 source_urls 必须是字符串数组: {ref}")
+    gates = obs.get("gates", {})
+    _require(isinstance(gates, dict) and all(isinstance(v, str) for v in gates.values()),
+             f"观察文件 gates 必须是 闸门→字符串结论 的对象: {ref}")
+
+
+def _obs_time(data_root: Path, ref: str) -> datetime:
+    """读观察文件的 observed_at,统一为 aware datetime(naive 视为 UTC)。"""
+    obs = json.loads((Path(data_root) / ref).read_text(encoding="utf-8"))
+    try:
+        dt = datetime.fromisoformat(obs["observed_at"])
+    except (KeyError, TypeError, ValueError):
+        raise RegistrarError(f"观察文件 observed_at 不可解析为 ISO 8601: {ref}")
+    return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
 def _check_date(value: str, field: str) -> str:
@@ -253,6 +298,11 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         track_obs = [r for r in merged_refs if Path(r).stem.endswith("-track")]
         _require(len(track_obs) >= 2,
                  f"tracking→formation_confirmed 要求 ≥2 个追踪期观察(-track 证据),当前 {len(track_obs)}")
+        times = [_obs_time(data_root, r) for r in track_obs]
+        span = (max(times) - min(times)).days
+        _require(span >= MIN_TRACK_SPAN_DAYS,
+                 f"tracking→formation_confirmed 要求 -track 观察时间跨度 ≥{MIN_TRACK_SPAN_DAYS} 天"
+                 f"(形成期以周计,单次运行无法压缩),当前 {span} 天")
         _check_gates(gates, ("G1",), "tracking→formation_confirmed")
         _require(len(refs) >= 1, "tracking→formation_confirmed 要求本次至少 1 个证据")
     elif to == "expired":
@@ -288,7 +338,16 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         rec["play"] = play
     if superseded_by:
         rec["superseded_by"] = superseded_by
-    rec["history"].append({"at": now, "from": frm, "to": to, "by": by, **({"reason": reason} if reason else {})})
+    # history 条目附本次提交的参数快照:gates/score 等字段会被后续转移覆盖,
+    # 没有快照就无法回答"当时的闸门结论是什么"(如 G1 pass→veto 的翻转史)。
+    entry = {"at": now, "from": frm, "to": to, "by": by}
+    for key, value in (("reason", reason), ("gates", gates), ("window_estimate", window_estimate),
+                       ("expiry", expiry), ("invalidation", invalidation), ("score", score),
+                       ("play", play), ("decision_ref", decision_ref),
+                       ("superseded_by", superseded_by)):
+        if value not in (None, {}, [], ""):
+            entry[key] = value
+    rec["history"].append(entry)
     rec["state"] = to
     _save(data_root, ledger)
     return rec
@@ -325,18 +384,22 @@ def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invali
         rec = ledger["candidates"][slug]
         _require(rec["state"] not in TERMINAL, f"终态候选不可修订: {rec['state']}")
         amended = []
+        entry = {"at": _now(), "from": rec["state"], "to": rec["state"], "by": by, "reason": reason}
         if expiry:
             _check_date(expiry, "expiry")
             rec["expiry"] = expiry
             amended.append("expiry")
+            entry["expiry"] = expiry
         if add_aliases:
             rec["aliases"] = list(dict.fromkeys(rec["aliases"] + add_aliases))
             amended.append("aliases")
+            entry["add_aliases"] = add_aliases
         if add_invalidation:
             rec["invalidation"] = list(dict.fromkeys(rec["invalidation"] + add_invalidation))
             amended.append("invalidation")
-        rec["history"].append({"at": _now(), "from": rec["state"], "to": rec["state"],
-                               "by": by, "reason": reason, "amend": amended})
+            entry["add_invalidation"] = add_invalidation
+        entry["amend"] = amended
+        rec["history"].append(entry)
         _save(data_root, ledger)
         return rec
 

@@ -10,7 +10,9 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
 - evidence_refs 均为数据区内相对路径且存在于磁盘;
 - expiry 若存在则可解析为日期;
 - 状态不变式:screened 必有 window_estimate;tracking 必有 expiry;
-  fast_grab_ready 必有 expiry、play=fast_grab、score 为 null(快道不得声称全站分数);
+  fast_grab_ready 必有 expiry、window_estimate=days、play=fast_grab、score 为 null(快道不得声称全站分数);
+  过 screened 的非终态必有 G0–G5 全 pass;qualified 及其后继(build_ready/pilot_ready/hold)必有 G6–G8 全 pass;
+  formation_confirmed 及其后继必有 ≥2 个 -track 观察且跨度 ≥7 天;
   qualified/build_ready/pilot_ready 必有整数 score ≥80;
   build_ready/pilot_ready 的 play ∈ {single_domain, cluster_expansion};
 - go 决策态(build_ready/pilot_ready/fast_grab_ready)必须有 decision_ref,且 md+html 双文件存在;
@@ -23,11 +25,20 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from registrar import STATES, DEFAULT_DATA_ROOT, WINDOWS, BUILD_PLAYS
+from registrar import (STATES, DEFAULT_DATA_ROOT, WINDOWS, BUILD_PLAYS,
+                       SCREEN_GATES, QUALIFY_GATES, MIN_TRACK_SPAN_DAYS,
+                       RegistrarError, _obs_time)
 
 GO_STATES = {"build_ready", "pilot_ready", "fast_grab_ready"}
 NO_GO_STATES = {"hold", "no_site"}
 SCORED_STATES = {"qualified", "build_ready", "pilot_ready"}
+# 过了 screened 的非终态:G0–G5 应全 pass(复查翻转即原子转出,不存在带 veto 的中间态)
+SCREEN_PASSED_STATES = {"screened", "tracking", "formation_confirmed", "qualified",
+                        "build_ready", "pilot_ready", "fast_grab_ready", "hold"}
+# 过了认定的状态:G6–G8 应全 pass
+QUALIFY_PASSED_STATES = {"qualified", "build_ready", "pilot_ready", "hold"}
+# 过了形成确认的状态:≥2 个 -track 观察且跨度达标
+FORMED_STATES = {"formation_confirmed", "qualified", "build_ready", "pilot_ready", "hold"}
 
 
 def validate(data_root):
@@ -82,10 +93,36 @@ def validate(data_root):
         if state == "fast_grab_ready":
             if not expiry:
                 errors.append(f"{where} fast_grab_ready 必有 expiry")
+            if rec.get("window_estimate") != "days":
+                errors.append(f"{where} fast_grab_ready 必有 window_estimate=days,"
+                              f"当前 {rec.get('window_estimate')!r}")
             if rec.get("play") != "fast_grab":
                 errors.append(f"{where} fast_grab_ready 的 play 必须是 fast_grab,当前 {rec.get('play')!r}")
             if rec.get("score") is not None:
                 errors.append(f"{where} 快道不得声称全站分数,score 应为 null,当前 {rec.get('score')!r}")
+        gates = rec.get("gates", {})
+        if state in SCREEN_PASSED_STATES:
+            bad = [g for g in SCREEN_GATES if gates.get(g) != "pass"]
+            if bad:
+                errors.append(f"{where} {state} 要求 G0–G5 全 pass,未满足: {bad}")
+        if state in QUALIFY_PASSED_STATES:
+            bad = [g for g in QUALIFY_GATES if gates.get(g) != "pass"]
+            if bad:
+                errors.append(f"{where} {state} 要求 G6–G8 全 pass,未满足: {bad}")
+        if state in FORMED_STATES:
+            track_refs = [r for r in rec.get("evidence_refs", [])
+                          if Path(r).stem.endswith("-track") and (data_root / r).is_file()]
+            if len(track_refs) < 2:
+                errors.append(f"{where} {state} 要求 ≥2 个 -track 观察,当前 {len(track_refs)}")
+            else:
+                try:
+                    times = [_obs_time(data_root, r) for r in track_refs]
+                    span = (max(times) - min(times)).days
+                    if span < MIN_TRACK_SPAN_DAYS:
+                        errors.append(f"{where} {state} 要求 -track 观察跨度 ≥{MIN_TRACK_SPAN_DAYS} 天,"
+                                      f"当前 {span} 天")
+                except RegistrarError as e:
+                    errors.append(f"{where} {e}")
         if state in SCORED_STATES:
             score = rec.get("score")
             if not (isinstance(score, int) and score >= 80):
