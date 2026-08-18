@@ -7,23 +7,25 @@ description: 新词工作流状态看板,只读汇报候选账本的全局事实
 
 只读汇报,零判断,零写入。这套工作流由用户人工驱动:本 skill 只陈述账本事实,不推荐动作、不安排日程、不执行任何状态转移。
 
+> **路径约定**:本文相对路径均以**仓库根**为基准。本文件正本位于 `仓库根/xinci-workflow/xinci-status/SKILL.md`,经 symlink 加载时先解析正本真实位置(如 `readlink`),再向上两级即仓库根。bash 命令在仓库根执行,或先将路径展开为绝对路径。
+
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(状态词汇与时间字段约定)
+- xinci-workflow/xinci-core/生命周期契约.md(状态词汇与时间字段约定)
 
 ## 工作流
 
 1. 运行状态脚本:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/report_status.py
+python3 xinci-workflow/xinci-core/scripts/report_status.py
 ```
 
 2. 如实转述输出:各状态候选数;每个候选的年龄、距上次复查天数、expiry 余量;"expiry 已过且非终态"清单。
 3. 可补充运行账本完整性检查(用户要求或输出异常时):
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/validate_ledger.py
+python3 xinci-workflow/xinci-core/scripts/validate_ledger.py
 ```
 
 ## 硬规则

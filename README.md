@@ -18,16 +18,16 @@
 
 ## 双环境接入(symlink,不入库)
 
-skill 通过 symlink 同时接入 Codex CLI 与 Claude Code,两环境读同一份正本:
+skill 通过 symlink 同时接入 Codex CLI 与 Claude Code,两环境读同一份正本。仓库可放在任意位置——**在仓库根执行**:
 
 ```bash
 for s in xinci-run xinci-status xinci-scan xinci-track xinci-qualify xinci-decide; do
-  ln -s "/Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/$s" ~/.codex/skills/$s
-  ln -s "/Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/$s" ~/.claude/skills/$s
+  ln -sfn "$(pwd)/xinci-workflow/$s" ~/.codex/skills/$s
+  ln -sfn "$(pwd)/xinci-workflow/$s" ~/.claude/skills/$s
 done
 ```
 
-xinci-core 不是 skill,由各 SKILL.md 以绝对路径引用,无需 symlink。
+xinci-core 不是 skill,无需 symlink;各 SKILL.md 以仓库根相对路径引用它(路径约定见各 SKILL.md 开头)。
 
 ## 测试
 

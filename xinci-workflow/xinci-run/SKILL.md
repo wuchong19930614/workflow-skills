@@ -13,21 +13,23 @@ description: 新词工作流的一体入口与连续运行驱动器:调用本 sk
 
 启动即标准授权:本次运行内所有 registrar 转移无需逐条确认,循环推进,直至命中终止契约。本 skill 只做编排;判断标准全部来自各阶段流程文件与 xinci-core 契约,**不因连续模式软化任何闸门或分数线**。
 
+> **路径约定**:本文相对路径均以**仓库根**为基准。本文件正本位于 `仓库根/xinci-workflow/xinci-run/SKILL.md`,经 symlink 加载时先解析正本真实位置(如 `readlink`),再向上两级即仓库根。bash 命令在仓库根执行,或先将路径展开为绝对路径。
+
 ## 行动前必读(开局一次)
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(连续运行模式节:终止契约、标准授权、禁止的停止理由)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/闸门契约.md
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/陷阱类别.md
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/数据采集指南.md
+- xinci-workflow/xinci-core/生命周期契约.md(连续运行模式节:终止契约、标准授权、禁止的停止理由)
+- xinci-workflow/xinci-core/闸门契约.md
+- xinci-workflow/xinci-core/陷阱类别.md
+- xinci-workflow/xinci-core/数据采集指南.md
 
 ## 阶段流程文件(首次进入对应步骤时读,执行以其为准)
 
 本 skill 不复制各阶段的判断步骤;进入运行循环的某一步之前,先读该步的 SKILL.md,按它执行(其中"提议-确认"规则被本模式的标准授权豁免,其余原样适用):
 
-- 扫描:/Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-scan/SKILL.md
-- 复查:/Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-track/SKILL.md
-- 认定:/Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-qualify/SKILL.md
-- 决策:/Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-decide/SKILL.md
+- 扫描:xinci-workflow/xinci-scan/SKILL.md
+- 复查:xinci-workflow/xinci-track/SKILL.md
+- 认定:xinci-workflow/xinci-qualify/SKILL.md
+- 决策:xinci-workflow/xinci-decide/SKILL.md
 
 (状态汇报不需要读 xinci-status/SKILL.md,开局直接跑 report_status 脚本即可。)
 

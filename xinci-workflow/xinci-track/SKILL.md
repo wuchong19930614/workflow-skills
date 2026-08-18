@@ -9,11 +9,13 @@ description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看
 
 复查哪些候选、何时复查,由用户决定;本 skill 被调用才动,不设节奏、不催促。
 
+> **路径约定**:本文相对路径均以**仓库根**为基准。本文件正本位于 `仓库根/xinci-workflow/xinci-track/SKILL.md`,经 symlink 加载时先解析正本真实位置(如 `readlink`),再向上两级即仓库根。bash 命令在仓库根执行,或先将路径展开为绝对路径。
+
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(转移证据要求;时间字段只记录不调度)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/闸门契约.md(G0–G5;形成期允许的 Semrush 探针边界)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/数据采集指南.md(真浏览器原则;探针纪律)
+- xinci-workflow/xinci-core/生命周期契约.md(转移证据要求;时间字段只记录不调度)
+- xinci-workflow/xinci-core/闸门契约.md(G0–G5;形成期允许的 Semrush 探针边界)
+- xinci-workflow/xinci-core/数据采集指南.md(真浏览器原则;探针纪律)
 
 ## 工作流
 
@@ -27,7 +29,7 @@ description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看
 6. **写观察文件并登记复查:**
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py checked \
+python3 xinci-workflow/xinci-core/scripts/registrar.py checked \
   --slug <slug> --evidence "证据/<slug>/<日期>-track.json"
 ```
 
@@ -36,7 +38,7 @@ python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/sc
    - 提议续期或字段修订(expiry 延后、aliases/失效条件追加),用户确认后:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py amend \
+python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
   --slug <slug> --by xinci-track --reason "<用户确认的续期/修订理由>" \
   [--expiry YYYY-MM-DD] [--add-alias <胜出的叫法>] [--add-invalidation "<新失效条件>"]
 ```

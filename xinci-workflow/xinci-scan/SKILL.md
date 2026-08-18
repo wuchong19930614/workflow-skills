@@ -7,12 +7,14 @@ description: 扫描发现新兴/全新的英文 Google 搜索词候选:真浏览
 
 捕获太新以致没有数据的搜索词,当场初筛,注册进账本。速度是这条赛道的全部意义:晚三天发现的候选通常已经没价值。空扫描是合法产出——如实报告远好于凑数。
 
+> **路径约定**:本文相对路径均以**仓库根**为基准。本文件正本位于 `仓库根/xinci-workflow/xinci-scan/SKILL.md`,经 symlink 加载时先解析正本真实位置(如 `readlink`),再向上两级即仓库根。bash 命令在仓库根执行,或先将路径展开为绝对路径。
+
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/闸门契约.md(G0–G5 定义;G0 最先,G5 先于 G2 执行)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/陷阱类别.md(已知陷阱,命中直接验 G3)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/数据采集指南.md(真浏览器原则与来源表)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(注册与转移的证据要求)
+- xinci-workflow/xinci-core/闸门契约.md(G0–G5 定义;G0 最先,G5 先于 G2 执行)
+- xinci-workflow/xinci-core/陷阱类别.md(已知陷阱,命中直接验 G3)
+- xinci-workflow/xinci-core/数据采集指南.md(真浏览器原则与来源表)
+- xinci-workflow/xinci-core/生命周期契约.md(注册与转移的证据要求)
 
 ## 工作流
 
@@ -27,7 +29,7 @@ description: 扫描发现新兴/全新的英文 Google 搜索词候选:真浏览
 7. **写观察文件并注册。** 每个候选一份 `证据/<slug>/<日期>-scan.json`(要点式,schema 见 数据结构/observation.schema.json),然后:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py register \
+python3 xinci-workflow/xinci-core/scripts/registrar.py register \
   --slug <slug> --term "<精确措辞>" --source-url <URL> --source-note "<现场摘要>" \
   --task "<搜索者要完成的任务>" --evidence "证据/<slug>/<日期>-scan.json"
 ```

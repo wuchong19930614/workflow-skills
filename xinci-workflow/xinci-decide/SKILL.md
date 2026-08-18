@@ -12,22 +12,24 @@ description: 对已认定(qualified)的新词候选出建站 go/no-go 决策:页
 
 决策书交付即停:注册域名、建站、发布,全部是用户的人工动作。
 
+> **路径约定**:本文相对路径均以**仓库根**为基准。本文件正本位于 `仓库根/xinci-workflow/xinci-decide/SKILL.md`,经 symlink 加载时先解析正本真实位置(如 `readlink`),再向上两级即仓库根。bash 命令在仓库根执行,或先将路径展开为绝对路径。
+
 ## 行动前必读
 
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
-- /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/闸门契约.md(G8 页面地图标准)
+- xinci-workflow/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
+- xinci-workflow/xinci-core/闸门契约.md(G8 页面地图标准)
 
 ## 完整模式工作流
 
 1. **核对输入**:状态 qualified;通读认定观察,不重做已做过的审计,只补缺口。
 2. **页面地图**:≥12 个任务互异页面 × ≥3 个簇 + ≥1 个自助产品资产;合并表述性变体。不足 → pilot(5–8 页有界实验)或 no_site。
-3. **收入三情景**:downside / base / upside;base ≥$1,000/月、无主动销售、保守假设逐条标注来源、所需流量不超 owned-intent 估计。
+3. **收入三情景**:downside / base / upside;base ≥$200/月、无主动销售、保守假设逐条标注来源、所需流量不超 owned-intent 估计。
 4. **风险清单**:技术可行性、合规、免费与付费替代、维护负担、数据/API 成本。
 5. **红队复核**:换立场反驳整个决策一轮,成立的反驳如实写入。
 6. **写决策书两份**(见下"双格式约定"),**提议决策**,用户确认后:
 
 ```bash
-python3 /Users/vito.wu/IdeaProjects/workflow-skills/xinci-workflow/xinci-core/scripts/registrar.py transition \
+python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to build_ready --by xinci-decide \
   --decision-ref "决策书/<slug>.md" --play single_domain
 ```
