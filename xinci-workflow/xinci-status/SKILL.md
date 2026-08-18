@@ -22,7 +22,7 @@ python3 xinci-workflow/xinci-core/scripts/report_status.py
 ```
 
 2. 如实转述输出:各状态候选数;每个候选的年龄、距上次复查天数、expiry 余量;"expiry 已过且非终态"清单。
-3. 可补充运行账本完整性检查(用户要求或输出异常时):
+3. 可补充账本与运行清单完整性检查(用户要求或输出异常时):
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/validate_ledger.py

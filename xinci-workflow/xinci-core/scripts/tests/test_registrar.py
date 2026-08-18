@@ -311,6 +311,109 @@ class RegistrarTest(unittest.TestCase):
         self.assertGreaterEqual(after["last_checked_at"], before["last_checked_at"])
         self.assertIn(f"证据/{slug}/2026-08-20-track.json", after["evidence_refs"])
 
+    # ---- G3 快道豁免(veto_window_bet):闸门契约 G3「唯一的降级出口」 ----
+
+    def to_screened_window_bet(self, slug, window="days", by="xinci-scan", reason="默认豁免依据"):
+        """G3 判定为临时空位(免费实现只因对象太新还没被收录)的降级路径。"""
+        gates = dict(GATES_SCREEN, G3=R.G3_WINDOW_BET)
+        R.transition(self.root, slug, to="screened", by=by, gates=gates,
+                     window_estimate=window, reason=reason,
+                     evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json")])
+
+    def test_window_bet_enters_screened(self):
+        slug = self.register()
+        self.to_screened_window_bet(slug, reason="数到 8 个免费计算器,均因模型太新未收录")
+        rec = self.load(slug)
+        self.assertEqual(rec["state"], "screened")
+        self.assertEqual(rec["gates"]["G3"], R.G3_WINDOW_BET)
+        # 豁免依据必须留在 history 里可审计
+        self.assertIn("未收录", rec["history"][-1]["reason"])
+
+    def test_window_bet_can_take_fast_lane(self):
+        slug = self.register()
+        self.to_screened_window_bet(slug, reason="临时空位")
+        R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
+                     decision_ref=mk_decision(self.root, slug), expiry="2026-08-31")
+        self.assertEqual(self.load(slug)["state"], "fast_grab_ready")
+
+    def test_window_bet_requires_days_window(self):
+        # 临时空位寿命以天计;窗口以周/月计说明判断自相矛盾
+        slug = self.register()
+        with self.assertRaises(R.RegistrarError):
+            self.to_screened_window_bet(slug, window="weeks", reason="理由")
+
+    def test_window_bet_requires_reason(self):
+        slug = self.register()
+        with self.assertRaises(R.RegistrarError):
+            self.to_screened_window_bet(slug, reason=None)
+
+    def test_window_bet_forbidden_in_continuous_mode(self):
+        # 软化闸门的决定不在连续运行的标准授权内(闸门契约 G3)
+        slug = self.register()
+        with self.assertRaises(R.RegistrarError):
+            self.to_screened_window_bet(slug, by="xinci-run", reason="理由")
+
+    def test_window_bet_cannot_enter_tracking(self):
+        # 放它进追踪等于让它绕过 G3 一路走到全站
+        slug = self.register()
+        self.to_screened_window_bet(slug, reason="临时空位")
+        with self.assertRaises(R.RegistrarError):
+            self.to_tracking(slug)
+
+    def test_plain_g3_veto_cannot_enter_screened(self):
+        # 三分里只有 pass 与 veto_window_bet 放行;真否决仍然出局
+        slug = self.register()
+        with self.assertRaises(R.RegistrarError):
+            R.transition(self.root, slug, to="screened", by="xinci-scan",
+                         gates=dict(GATES_SCREEN, G3="veto"), window_estimate="days",
+                         reason="理由",
+                         evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json")])
+
+    def test_window_bet_upgrade_requires_real_g3_pass(self):
+        # built→tracking 升级通路:豁免只在快道这一次有效
+        slug = self.register()
+        self.to_screened_window_bet(slug, reason="临时空位")
+        R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
+                     decision_ref=mk_decision(self.root, slug), expiry="2026-08-31")
+        R.transition(self.root, slug, to="built", by="user")
+        with self.assertRaises(R.RegistrarError):
+            R.transition(self.root, slug, to="tracking", by="user",
+                         reason="词看起来耐久", expiry="2026-10-31")
+        # 重跑 G3 并取得真 pass 后放行
+        R.transition(self.root, slug, to="tracking", by="user", gates={"G3": "pass"},
+                     reason="重跑 G3:通用工具始终未收录,空位判定为持久", expiry="2026-10-31")
+        rec = self.load(slug)
+        self.assertEqual(rec["state"], "tracking")
+        self.assertEqual(rec["gates"]["G3"], "pass")
+
+    def test_checked_records_history_entry_with_by(self):
+        # by 是连续运行的授权印记(by=xinci-run 即"标准授权、未经逐条确认");
+        # 不写 history 则复查的执行者与次数都无从追溯,只能靠证据文件名反推
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        depth = len(self.load(slug)["history"])
+        ref = mk_evidence(self.root, slug, "2026-08-20-track.json")
+        R.checked(self.root, slug, evidence=[ref], by="xinci-run")
+        hist = self.load(slug)["history"]
+        self.assertEqual(len(hist), depth + 1)
+        entry = hist[-1]
+        self.assertEqual(entry["by"], "xinci-run")
+        self.assertEqual(entry["checked"], [ref])
+        # from==to,history 链保持连续(与 amend 同构)
+        self.assertEqual(entry["from"], "tracking")
+        self.assertEqual(entry["to"], "tracking")
+
+    def test_checked_history_keeps_ledger_valid(self):
+        # checked 条目不得破坏 validate_ledger 的链连续性与末项一致性
+        import validate_ledger as V
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+        errors, _ = V.validate(self.root)
+        self.assertEqual(errors, [])
+
     def test_history_records_param_snapshots(self):
         # gates/score 等顶层字段会被后续转移覆盖,history 必须留有当次快照
         slug = self.register()

@@ -8,9 +8,11 @@
     "https://news.ycombinator.com/item?id=49320611",
     "https://news.ycombinator.com/item?id=49324087"
   ],
-  "sources_blocked": ["https://reddit.com/r/all/rising(浏览器策略拦截,本次未检查)"],
-  "candidates_registered": 0,
-  "metered_calls": 0,
+  "sources_blocked": [
+    "https://reddit.com/r/all/rising(浏览器策略拦截,本次未检查)"
+  ],
+  "candidates_touched": [],
+  "billable_calls": 0,
   "notes": [
     "Qwen 3.8 27B(HN #1, 419分):命中陷阱类别一(新发布 AI 模型),即陷阱清单记录的原案,弃",
     "Product Hunt 当日 14 个发布全部为纯品牌名(陷阱类别二),零任务零候选",

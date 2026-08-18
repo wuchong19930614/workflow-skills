@@ -60,6 +60,10 @@ LEGAL = {
 }
 
 SCREEN_GATES = ("G0", "G1", "G2", "G3", "G4", "G5")
+# G3 三分(闸门契约 G3):pass=位置没被占;veto=被占满,出局;
+# veto_window_bet=任务被做完但那些实现只因太新还没被收录,位置仅空几天——
+# 只准走快道,禁止进 tracking(否则绕过 G3 走到全站),且不在连续运行的标准授权内。
+G3_WINDOW_BET = "veto_window_bet"
 QUALIFY_GATES = ("G6", "G7", "G8")
 WINDOWS = {"days", "weeks", "months"}
 BUILD_PLAYS = {"single_domain", "cluster_expansion"}
@@ -274,16 +278,39 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
     merged_refs = rec["evidence_refs"] + [r for r in refs if r not in rec["evidence_refs"]]
 
     if to == "screened":
-        _check_gates(gates, SCREEN_GATES, "captured→screened")
+        submitted = gates or {}
+        _check_gates(submitted, [g for g in SCREEN_GATES if g != "G3"], "captured→screened")
+        g3 = submitted.get("G3")
+        _require(g3 in ("pass", G3_WINDOW_BET),
+                 f"captured→screened 要求 G3=pass 或 {G3_WINDOW_BET}(临时空位降级出口),当前 {g3!r}")
         _require(window_estimate in WINDOWS, f"window_estimate 必须属于 {sorted(WINDOWS)}")
         _require(len(refs) >= 1, "captured→screened 要求本次至少 1 个证据")
+        if g3 == G3_WINDOW_BET:
+            _require(window_estimate == "days",
+                     f"G3={G3_WINDOW_BET} 只适用于窗口以天计的候选(临时空位寿命以天计),"
+                     f"当前 window_estimate={window_estimate!r}")
+            _require(bool(reason),
+                     f"G3={G3_WINDOW_BET} 要求 reason(豁免依据:数到哪些免费实现、"
+                     "为何判定它们只是还没被收录)")
+            _require(by != "xinci-run",
+                     f"G3={G3_WINDOW_BET} 是软化闸门的决定,不在连续运行的标准授权内"
+                     "(标准授权明确:闸门原样适用,不因连续模式软化);须由用户在单步模式下确认")
     elif to == "rejected":
         _require(bool(reason), "rejected 要求 reason(失败闸门 + 现场证据要点)")
     elif to == "tracking":
         if frm == "built":  # 升级通路
             _require(bool(reason), "built→tracking 要求 reason(升级理由)")
             _check_date(expiry, "expiry")
+            # 快道豁免不可继承:想走全站必须重跑 G3 拿真 pass
+            if rec["gates"].get("G3") == G3_WINDOW_BET:
+                _require((gates or {}).get("G3") == "pass",
+                         f"该候选 G3={G3_WINDOW_BET}(快道豁免);built→tracking 升级要求"
+                         "本次重跑 G3 并取得 pass,豁免只在快道这一次有效")
         else:
+            _require(rec["gates"].get("G3") != G3_WINDOW_BET,
+                     f"G3={G3_WINDOW_BET} 的候选只能走快道(→fast_grab_ready)或 rejected;"
+                     "不得进入 tracking——G3 的否决理由不会随时间变好(通用工具正在收录),"
+                     "放它进追踪等于让它绕过 G3 走到全站")
             _check_date(expiry, "expiry")
             _require(bool(invalidation), "screened→tracking 要求至少 1 条失效条件")
             _require(len(refs) >= 1, "screened→tracking 要求本次至少 1 个证据")
@@ -354,8 +381,13 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
 
 
 def checked(data_root, slug, evidence, by="xinci-track"):
-    """复查登记:更新 last_checked_at、追加证据,不改状态。"""
+    """复查登记:更新 last_checked_at、追加证据,不改状态。
+
+    追加一条 from==to 的 history 条目(与 amend 同构),记录谁在何时复查、登记了哪份观察:
+    连续运行模式下 by=xinci-run 是"标准授权、未经逐条确认"的印记,不写 history 就丢了,
+    复查次数也只能靠 evidence_refs 文件名反推。"""
     data_root = Path(data_root)
+    _require(bool(by), "checked 要求 by(执行的 skill 名)")
     with _locked(data_root):
         ledger = _load(data_root)
         _require(slug in ledger["candidates"], f"候选不存在: {slug}")
@@ -364,7 +396,10 @@ def checked(data_root, slug, evidence, by="xinci-track"):
         refs = _check_evidence(data_root, evidence, slug=slug)
         _require(len(refs) >= 1, "checked 要求至少 1 个证据文件")
         rec["evidence_refs"] += [r for r in refs if r not in rec["evidence_refs"]]
-        rec["last_checked_at"] = _now()
+        now = _now()
+        rec["last_checked_at"] = now
+        rec["history"].append({"at": now, "from": rec["state"], "to": rec["state"],
+                               "by": by, "checked": refs})
         _save(data_root, ledger)
         return rec
 

@@ -35,3 +35,5 @@ xinci-core 不是 skill,无需 symlink;各 SKILL.md 以仓库根相对路径引�
 python3 -m unittest discover xinci-workflow/xinci-core/scripts/tests
 python3 xinci-workflow/xinci-core/scripts/validate_ledger.py
 ```
+
+`validate_ledger.py` 同时校验账本不变式(捕获绕过 registrar 的手工编辑)与运行清单格式(清单全靠手写,字段漂移只能靠它发现);有错即非零退出。

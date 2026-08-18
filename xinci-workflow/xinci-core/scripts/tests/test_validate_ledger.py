@@ -158,5 +158,136 @@ class ValidateLedgerTest(unittest.TestCase):
         self.assertTrue(any("相对路径" in e for e in self.errors()))
 
 
+    # ---- G3 快道豁免(veto_window_bet)的封锁 ----
+
+    def build_window_bet(self, slug="bet-term", until="screened"):
+        ev = mk_evidence(self.root, slug, "2026-08-17-scan.json")
+        R.register(self.root, slug=slug, term="bet term", source_url="https://e.com",
+                   task="t", evidence=[ev])
+        R.transition(self.root, slug, to="screened", by="xinci-scan",
+                     gates=dict(GATES_SCREEN, G3=R.G3_WINDOW_BET), window_estimate="days",
+                     reason="临时空位:数到的免费实现均因对象太新未被收录",
+                     evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json")])
+        if until == "screened":
+            return slug
+        R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
+                     decision_ref=mk_decision(self.root, slug), expiry="2026-08-31")
+        if until == "fast_grab_ready":
+            return slug
+        R.transition(self.root, slug, to="built", by="user")
+        return slug
+
+    def test_window_bet_on_allowed_states_is_valid(self):
+        self.build_window_bet(until="fast_grab_ready")
+        self.assertEqual(self.errors(), [])
+
+    def test_window_bet_at_built_is_valid(self):
+        self.build_window_bet(until="built")
+        self.assertEqual(self.errors(), [])
+
+    def test_window_bet_smuggled_into_tracking_is_caught(self):
+        # 手工把豁免候选改成 tracking = 绕过 G3 走向全站
+        slug = self.build_window_bet()
+        self.corrupt(slug, state="tracking", expiry="2026-09-30")
+        self.assertTrue(any("绕过了 G3" in e for e in self.errors()), self.errors())
+
+    def test_window_bet_must_stay_days(self):
+        slug = self.build_window_bet()
+        self.corrupt(slug, window_estimate="weeks")
+        self.assertTrue(any("要求 window_estimate=days" in e for e in self.errors()), self.errors())
+
+    def test_plain_g3_veto_at_screened_is_caught(self):
+        # 真否决被手工塞进 screened:三分里只有 pass / veto_window_bet 放行
+        slug = self.build_window_bet()
+        self.corrupt(slug, gates=dict(GATES_SCREEN, G3="veto"))
+        self.assertTrue(any("未满足: ['G3']" in e for e in self.errors()), self.errors())
+
+class ValidateRunsTest(unittest.TestCase):
+    """运行清单校验:清单不经 registrar 写入,格式漂移只能靠本校验捕获。"""
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.root = Path(self._tmp.name)
+        (self.root / "运行").mkdir(parents=True)
+
+    def tearDown(self):
+        self._tmp.cleanup()
+
+    def mk_run(self, name="2026-08-17-xinci-scan.json", **fields):
+        body = {"date": "2026-08-17", "skill": "xinci-scan"}
+        body.update(fields)
+        (self.root / "运行" / name).write_text(
+            json.dumps(body, ensure_ascii=False), encoding="utf-8")
+        return body
+
+    def assertErrorMatching(self, needle):
+        errors = V.validate_runs(self.root)
+        self.assertTrue(any(needle in e for e in errors),
+                        f"未捕获 {needle!r},实际: {errors}")
+
+    def test_minimal_and_full_manifests_pass(self):
+        self.mk_run(started_at="2026-08-17T08:36:31Z",
+                    sources_opened=["https://news.ycombinator.com"],
+                    sources_blocked=["https://reddit.com/r/all/rising(策略拦截)"],
+                    candidates_touched=[], billable_calls=0, notes=["零候选"])
+        self.mk_run("2026-08-18-0930-xinci-run.json", date="2026-08-18", skill="xinci-run",
+                    billable_calls=2,
+                    rounds=[{"round": 1, "sources_opened": ["https://producthunt.com"],
+                             "candidates_touched": ["demo-term"], "billable_calls": 2}])
+        self.assertEqual(V.validate_runs(self.root), [])
+
+    def test_real_world_drift_is_caught(self):
+        # 首份真实清单的实际漂移:metered_calls / candidates_registered 都在 schema 外
+        self.mk_run(metered_calls=0, candidates_registered=0)
+        self.assertErrorMatching("schema 外字段")
+
+    def test_missing_required_fields(self):
+        (self.root / "运行" / "2026-08-17-xinci-scan.json").write_text(
+            json.dumps({"date": "2026-08-17"}, ensure_ascii=False), encoding="utf-8")
+        self.assertErrorMatching("缺必填字段 skill")
+
+    def test_unknown_skill_rejected(self):
+        self.mk_run("2026-08-17-xinci-bogus.json", skill="xinci-bogus")
+        self.assertErrorMatching("skill 必须属于")
+
+    def test_date_must_match_filename(self):
+        self.mk_run(date="2026-08-20")
+        self.assertErrorMatching("与文件名日期")
+
+    def test_skill_must_match_filename(self):
+        self.mk_run("2026-08-17-xinci-track.json", skill="xinci-scan")
+        self.assertErrorMatching("与文件名")
+
+    def test_filename_convention(self):
+        self.mk_run("scan-notes.json")
+        self.assertErrorMatching("文件名不合约定")
+
+    def test_rounds_only_for_run(self):
+        self.mk_run(rounds=[{"round": 1}])
+        self.assertErrorMatching("rounds 是 xinci-run 专用字段")
+
+    def test_round_entry_structure(self):
+        self.mk_run("2026-08-17-xinci-run.json", skill="xinci-run",
+                    rounds=[{"sources_opened": ["https://e.com"], "notes_extra": 1}])
+        errors = V.validate_runs(self.root)
+        self.assertTrue(any("缺必填字段 round" in e for e in errors), errors)
+        self.assertTrue(any("schema 外字段" in e for e in errors), errors)
+
+    def test_type_checks(self):
+        self.mk_run(billable_calls="零", sources_opened="https://e.com")
+        errors = V.validate_runs(self.root)
+        self.assertTrue(any("billable_calls 必须是整数" in e for e in errors), errors)
+        self.assertTrue(any("sources_opened 必须是非空字符串数组" in e for e in errors), errors)
+
+    def test_malformed_json(self):
+        (self.root / "运行" / "2026-08-17-xinci-scan.json").write_text("{坏", encoding="utf-8")
+        self.assertErrorMatching("不是合法 JSON")
+
+    def test_missing_run_dir_is_not_an_error(self):
+        empty = Path(self._tmp.name) / "空数据区"
+        empty.mkdir()
+        self.assertEqual(V.validate_runs(empty), [])
+
+
 if __name__ == "__main__":
     unittest.main()
