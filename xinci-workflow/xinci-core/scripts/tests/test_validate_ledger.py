@@ -226,8 +226,7 @@ class ValidateRunsTest(unittest.TestCase):
                         f"未捕获 {needle!r},实际: {errors}")
 
     def test_minimal_and_full_manifests_pass(self):
-        self.mk_run(started_at="2026-08-17T08:36:31Z",
-                    sources_opened=["https://news.ycombinator.com"],
+        self.mk_run(sources_opened=["https://news.ycombinator.com"],
                     sources_blocked=["https://reddit.com/r/all/rising(策略拦截)"],
                     candidates_touched=[], billable_calls=0, notes=["零候选"])
         self.mk_run("2026-08-18-0930-xinci-run.json", date="2026-08-18", skill="xinci-run",

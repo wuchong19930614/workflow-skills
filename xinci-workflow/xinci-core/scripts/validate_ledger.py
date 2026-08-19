@@ -28,7 +28,7 @@ import argparse
 import json
 import re
 import sys
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 
 from registrar import (STATES, DEFAULT_DATA_ROOT, WINDOWS, BUILD_PLAYS,
@@ -37,7 +37,7 @@ from registrar import (STATES, DEFAULT_DATA_ROOT, WINDOWS, BUILD_PLAYS,
 
 # 运行清单字段白名单:与 数据结构/run-manifest.schema.json 的 properties 逐字对齐
 # (schema 声明 additionalProperties: false,越界字段一律拒收)
-RUN_FIELDS = {"date", "skill", "started_at", "sources_opened", "sources_blocked",
+RUN_FIELDS = {"date", "skill", "sources_opened", "sources_blocked",
               "candidates_touched", "billable_calls", "notes", "rounds", "funnel"}
 RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
                     "billable_calls", "notes", "funnel"}
@@ -278,13 +278,6 @@ def validate_runs(data_root):
             errors.append(f"{where} skill 必须属于 {sorted(RUN_SKILLS)},当前 {skill!r}")
         elif skill and name and skill != name.group(3):
             errors.append(f"{where} skill={skill!r} 与文件名 {name.group(3)!r} 不一致")
-
-        started = obj.get("started_at")
-        if started is not None:
-            try:
-                datetime.fromisoformat(str(started).replace("Z", "+00:00"))
-            except ValueError:
-                errors.append(f"{where} started_at 必须是 ISO 8601 时间: {started!r}")
 
         for k in RUN_STR_ARRAYS:
             _check_str_array(obj, k, where, errors)

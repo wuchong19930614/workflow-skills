@@ -11,7 +11,6 @@
       "enum": ["xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run"],
       "description": "产生本清单的 skill"
     },
-    "started_at": { "type": "string", "description": "启动时刻 ISO 8601;同日多次运行靠文件名 HHMM 区分,本字段记录精确事实" },
     "sources_opened": { "type": "array", "items": { "type": "string" }, "description": "本次实际打开过的来源 URL;未打开的不得列入" },
     "sources_blocked": { "type": "array", "items": { "type": "string" }, "description": "尝试打开但被拦截的来源(浏览器策略/登录墙/CAPTCHA),附拦截现象;记录事实以便换源与复盘覆盖面" },
     "candidates_touched": { "type": "array", "items": { "type": "string" }, "description": "本次触及的候选 slug" },
