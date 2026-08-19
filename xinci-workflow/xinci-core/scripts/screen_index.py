@@ -97,9 +97,9 @@ def load(data_root) -> list:
 def _ledger_entries(data_root) -> list:
     """账本里的候选也是"见过"的:已注册的方向不该被重复评估。
 
-    走到 G1 及之后才被否决的候选按留痕分界注册进账本、不入本索引,
-    因此只查索引的去重会漏掉它们(实测:ppwr empty space ratio 在账本 rejected,
-    只查索引会报"新")。
+    走完 G2/G3 深审后被否决的候选按留痕分界注册进账本再转 rejected、不入本索引
+    (G1 否决相反,只入索引),因此只查索引的去重会漏掉它们
+    (实测:ppwr empty space ratio 深审死在 G3、在账本 rejected,只查索引会报"新")。
     """
     path = Path(data_root) / "账本" / "候选账本.json"
     if not path.is_file():

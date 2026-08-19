@@ -13,6 +13,8 @@ description: 对形成确认(formation_confirmed)的新词候选做深度认定,
 - **hold 重审**:决策阶段搁置的 `hold` 候选,由用户送回重新核对认定结论。它已经带着 G6–G8 全 pass 与分数,**不会也不能回到 formation_confirmed**(状态机没有这条边);本 skill 对它的唯一出口是 `hold → disqualified`——补审推翻了某道认定门。若重审结论是"认定仍然成立",不做转移,把候选交回 xinci-decide 重出决策。
 
 > **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-qualify/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
+>
+> **`--by` 约定**:下面的 registrar 命令模板写的是**单步形态**(`--by xinci-qualify`)。**在 xinci-run 连续运行下(含被它派出的子代理)一律改成 `--by xinci-run` 再执行,照抄模板是错的**。取值规则见生命周期契约「registrar 用法」的 `--by` 取值节。
 
 ## 行动前必读
 

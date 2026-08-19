@@ -13,11 +13,15 @@ description: 对已认定(qualified)或搁置待议(hold)的新词候选出建�
 决策书交付即停:注册域名、建站、发布,全部是用户的人工动作。
 
 > **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-decide/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
+>
+> **`--by` 约定**:下面的 registrar 命令模板写的是**单步形态**(`--by xinci-decide`)。**在 xinci-run 连续运行下(含被它派出的子代理)一律改成 `--by xinci-run` 再执行,照抄模板是错的**。取值规则见生命周期契约「registrar 用法」的 `--by` 取值节。
 
 ## 行动前必读
 
 - xinci-workflow/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
-- xinci-workflow/xinci-core/闸门契约.md(G8 页面地图标准)
+- xinci-workflow/xinci-core/闸门契约.md(G8 页面地图标准;快道要引用的 G3 三分与 `veto_window_bet` 出口限制)
+- xinci-workflow/xinci-core/评分契约.md(收入可行性的 $200/月 基准线;"pilot 与快道不得声称全站分数"的出处)
+- xinci-workflow/xinci-core/数据采集指南.md(补缺口审计时的真浏览器原则与 Semrush decision-changing 纪律)
 
 ## 完整模式工作流
 

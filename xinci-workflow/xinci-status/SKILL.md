@@ -35,5 +35,5 @@ python3 xinci-workflow/xinci-core/scripts/validate_ledger.py
 - 零写入。本 skill 不调用 registrar,不修改任何文件。
 - 账本是唯一事实来源;不从证据文件反推状态,不脑补账本没有的信息。
 - 只陈述事实("candidate-x 距上次复查 12 天,expiry 还剩 5 天"),不加"建议尽快复查"之类的驱动性措辞。在本 skill 的语境里,复查与否、何时复查始终是用户的决定。
-- expiry 已过的候选照实列出,等用户处置;不代替用户提议 expired。提议归各阶段 skill:`tracking` 候选归 xinci-track 复查后提议,排队中的 `captured` 候选归 xinci-scan 开局接队时提议(连续模式下归 xinci-run 运行循环步骤 1)。
+- expiry 已过的候选照实列出,等用户处置;不代替用户提议 expired。处置归各阶段 skill:单步模式下由它们提议、用户确认——`tracking` 候选归 xinci-track 复查后提议,排队中的 `captured` 候选归 xinci-scan 开局接队时提议;连续运行模式下归 xinci-run 运行循环步骤 1,那里是**标准授权直接转**,没有提议环节。无论哪种,都不是本 skill 的事。
 - 汇报以用户能一遍看懂为准:先总数,后明细,异常置底单列。
