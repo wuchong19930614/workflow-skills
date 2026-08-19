@@ -16,6 +16,19 @@
     "sources_blocked": { "type": "array", "items": { "type": "string" }, "description": "尝试打开但被拦截的来源(浏览器策略/登录墙/CAPTCHA),附拦截现象;记录事实以便换源与复盘覆盖面" },
     "candidates_touched": { "type": "array", "items": { "type": "string" }, "description": "本次触及的候选 slug" },
     "billable_calls": { "type": "integer", "description": "计费查询次数(Semrush 等);扫描阶段应为 0" },
+    "funnel": {
+      "type": "object",
+      "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。",
+      "required": ["extracted", "rejected_zero_cost", "rejected_g1", "deep_audited", "queued"],
+      "properties": {
+        "extracted": { "type": "integer", "description": "第 1 层广度提取的方向总数(目标一轮 15–30)" },
+        "rejected_zero_cost": { "type": "integer", "description": "第 2 层 G0/G4/G5/无任务 秒弃,已进淘汰方向索引" },
+        "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已注册进账本并转 rejected" },
+        "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5)" },
+        "queued": { "type": "integer", "description": "过 G1 但超出深审配额,注册为 captured 待下轮消化" }
+      },
+      "additionalProperties": false
+    },
     "notes": { "type": "array", "items": { "type": "string" }, "description": "值得留档的事实要点:screen_unsatisfiable 假设、额度耗尽提示要点、blocker 记录等" },
     "rounds": {
       "type": "array",
@@ -29,6 +42,19 @@
           "sources_blocked": { "type": "array", "items": { "type": "string" }, "description": "本轮被拦截的来源" },
           "candidates_touched": { "type": "array", "items": { "type": "string" }, "description": "本轮触及的候选 slug" },
           "billable_calls": { "type": "integer", "description": "本轮计费查询次数" },
+        "funnel": {
+          "type": "object",
+          "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。",
+          "required": ["extracted", "rejected_zero_cost", "rejected_g1", "deep_audited", "queued"],
+          "properties": {
+            "extracted": { "type": "integer", "description": "第 1 层广度提取的方向总数(目标一轮 15–30)" },
+            "rejected_zero_cost": { "type": "integer", "description": "第 2 层 G0/G4/G5/无任务 秒弃,已进淘汰方向索引" },
+            "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已注册进账本并转 rejected" },
+            "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5)" },
+            "queued": { "type": "integer", "description": "过 G1 但超出深审配额,注册为 captured 待下轮消化" }
+          },
+          "additionalProperties": false
+        },
           "notes": { "type": "array", "items": { "type": "string" }, "description": "本轮事实要点" }
         },
         "additionalProperties": false

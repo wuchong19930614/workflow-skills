@@ -311,6 +311,41 @@ class RegistrarTest(unittest.TestCase):
         self.assertGreaterEqual(after["last_checked_at"], before["last_checked_at"])
         self.assertIn(f"证据/{slug}/2026-08-20-track.json", after["evidence_refs"])
 
+    def test_register_carries_gates_for_queued_candidate(self):
+        # 扫描漏斗第 4 层:过了 G1 但超出深审配额的候选注册成 captured 排队,
+        # 带上已得闸门结论,下轮开局直接进深审,不必重跑
+        slug = "queued-term"
+        ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
+        gates = {"G0": "pass", "G4": "pass", "G5": "pass", "G1": "pass"}
+        R.register(self.root, slug=slug, term="queued term", source_url="https://e.com",
+                   task="t", evidence=[ev], gates=gates)
+        rec = self.load(slug)
+        self.assertEqual(rec["state"], "captured")
+        self.assertEqual(rec["gates"], gates)
+        # 快照进 history,便于回答"注册时已过哪些门"
+        self.assertEqual(rec["history"][0]["gates"], gates)
+
+    def test_register_without_gates_stays_empty(self):
+        slug = self.register()
+        self.assertEqual(self.load(slug)["gates"], {})
+        self.assertNotIn("gates", self.load(slug)["history"][0])
+
+    def test_queued_candidate_can_finish_screening_next_round(self):
+        # 排队候选下轮补完 G2/G3 后正常进 screened
+        slug = "queued-term"
+        ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
+        R.register(self.root, slug=slug, term="queued term", source_url="https://e.com",
+                   task="t", evidence=[ev],
+                   gates={"G0": "pass", "G4": "pass", "G5": "pass", "G1": "pass"})
+        R.transition(self.root, slug, to="screened", by="xinci-scan",
+                     gates={"G2": "pass", "G3": "pass"}, window_estimate="weeks",
+                     evidence=[mk_evidence(self.root, slug, "2026-08-19-scan.json")])
+        rec = self.load(slug)
+        self.assertEqual(rec["state"], "screened")
+        # G0/G4/G5/G1 来自注册,G2/G3 来自本次转移,合并后 G0–G5 齐全
+        self.assertEqual({g: rec["gates"][g] for g in R.SCREEN_GATES},
+                         {g: "pass" for g in R.SCREEN_GATES})
+
     # ---- G3 快道豁免(veto_window_bet):闸门契约 G3「唯一的降级出口」 ----
 
     def to_screened_window_bet(self, slug, window="days", by="xinci-scan", reason="默认豁免依据"):

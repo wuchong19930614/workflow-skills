@@ -1,0 +1,28 @@
+{
+  "slug": "ppwr-empty-space-ratio",
+  "observed_at": "2026-08-18T00:00:00Z",
+  "stage": "scan",
+  "source_urls": [
+    "https://environment.ec.europa.eu/topics/waste-and-recycling/packaging-waste_en",
+    "https://www.google.com/search?q=ppwr+empty+space+ratio&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=ppwr+empty+space+ratio&gl=us&hl=en&pws=0&start=10"
+  ],
+  "points": [
+    "变化面事实(官方页面直读):PPWR(EU 2025/40)2025-02-11 生效,2026-08-12 起普遍适用,即本次扫描的 6 天前;委员会 2026-08 新发布 FAQ",
+    "付费者与任务:向欧盟市场投放包装的经营者(制造/进口/电商/物流)须按 Article 24 计算空隙率,被迫且按 SKU/箱型重复",
+    "G1:美区/桌面/未登录,首屏无 AI Overview、无原生计算器组件、无完成任务的 featured snippet,pass",
+    "G2:两页 20 个结果,顾问公司与厂商内页为主,无维基/大媒体霸榜,结构本身 pass",
+    "G3 否决且饱和:已存在至少三个 PPWR 专用站——ppwrcopilot.com(带 Void Space Ratio 计算器与指南)、ppwrconnect.com、gramta.com 的 PPWR Regulation Guides 专栏,另有 hspackfactory 资源中心(3 天前更新)",
+    "另有成规模的合规内容机器覆盖同一任务:osapiens、ecosistant(6 天前更新)、Clarity Environmental、Packsize、corplex、Carriyo、TraceX、Measurlabs、FDF、Berlin Packaging、Ranpak、MBA Green",
+    "这些实现有持续可见度:2024-2025 年的页面至今稳定排在两页内,非未收录的临时空位",
+    "SERP 上生效日与阈值口径互相矛盾(40% vs 50%、2026 vs 2028 vs 2030),存在混乱缺口,但位置已被专用站与厂商内容占满,内容质量抢不回位置"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "slug": "app-store-creative-assets",
+  "observed_at": "2026-08-18T00:00:00Z",
+  "stage": "scan",
+  "source_urls": [
+    "https://developer.apple.com/news/",
+    "https://www.google.com/search?q=%22app+store+creative+assets%22&gl=us&hl=en&pws=0"
+  ],
+  "points": [
+    "变化面事实:Apple Developer News 2026-08-05 宣布 App Store 新创意素材(产品页头图、搜索结果、In-App Events 等位置),秋季上线,WWDC26 announced",
+    "付费者与任务:app 营销方/ASO 团队需按新规格与规则准备素材,按 app、按投放位、按季节重复",
+    "G1:美区/桌面/未登录,首屏无 AI Overview、无原生组件、无完成任务的 featured snippet,pass",
+    "G2:首页结构薄——Moburst 服务页、PPC Land(2026-08-06)、X 帖、LinkedIn 帖、44Degrees 博客、ScreenshotWhale、Facebook 帖、Appvertiser AI、Reddit r/macapps(5 年前,证明该措辞本身并不新)。社交贴能排上首页,说明尚无权威内容",
+    "G3 否决的决定性事实:Apple 自己已于 2026-08-05 发布 App Store asset best practices,并附 Figma/Photoshop/Pixelmator 设计模板——官方答案完整且免费,任务当场做完",
+    "G3 第二个免费实现:ASO World 的 Apple App Store Creative Assets 2026 指南、44Degrees 的 WWDC26 新素材类型说明、Moburst 服务页,均已被收录并可见",
+    "这些不是未收录的临时空位:它们已在 SERP 上,只是内容薄;位置由官方页与 ASO 厂商持有",
+    "G7 附带风险:该任务的耐久版本属于 ASO 工具厂商(素材由工具生成),第三方信息站无可守位置"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

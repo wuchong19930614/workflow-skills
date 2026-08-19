@@ -46,11 +46,12 @@ description: 新词工作流的一体入口与连续运行驱动器:调用本 sk
 
 ## 运行循环
 
-0. **开局**:运行 report_status 读账本;读淘汰方向索引(`数据/新词工作流/淘汰方向.md`),载入已淘汰方向(去重,不重复评估)。
+0. **开局**:运行 report_status 读账本;读陷阱类别。**去重用 `screen_index.py check` 批量查(同时覆盖淘汰索引与账本),不要把索引读进上下文**——它按每天两三百条增长。
 1. **推进存量(优先;离 go 决策最近的先做)**:
    - qualified 候选 → 按 xinci-decide 完整模式出决策(流程文件见上表;可能直接命中终止 A,且主要整理既有证据,成本最低);
    - formation_confirmed 候选 → 按 xinci-qualify 流程认定(G6–G8 + 竞争审计 + 评分);
-   - tracking 候选 → 按 xinci-track 流程复查(重跑 G1,看形成信号);达标即转 formation_confirmed,expiry 过/失效条件命中即转 expired,G0/G1 翻转即转 rejected。**单次运行内每个 tracking 候选至多复查一次**——SERP 在几小时内不会变,重复复查是空烧;形成以真实天数计,registrar 的 7 天跨度闸也不接受当日凑数。
+   - tracking 候选 → 按 xinci-track 流程复查(重跑 G1,看形成信号);达标即转 formation_confirmed,expiry 过/失效条件命中即转 expired,G0/G1 翻转即转 rejected。**单次运行内每个 tracking 候选至多复查一次**——SERP 在几小时内不会变,重复复查是空烧;形成以真实天数计,registrar 的 7 天跨度闸也不接受当日凑数;
+   - **captured 候选(上轮扫描超配额排队的)→ 补跑 G2/G3 深审**(它们已过 G0/G4/G5/G1,gates 里有记录,不必重跑)。这是上轮欠的债,**必须在本轮扫描产生新债之前还**;深审配额(每轮 ≤5)由它们优先占用,占满则本轮扫描只做前三层,过 G1 的全部排队。
 2. **扫描新候选**:按 xinci-scan 流程(零成本批 G0→G4→G5 最先,G1 永不跳过;秒弃留痕进淘汰方向索引)。每轮轮换来源与角度:信号面(HN、Product Hunt、即刻、应用商店、厂商博客……)与变化面(有日期的法规/平台/技术/成本变化)交替;被拦截的来源如实记录并换源。
 3. **分流**:screened 且窗口天级 → 立即走 xinci-decide 快道模式;窗口周/月级 → 转 tracking 入库,继续循环。
 4. **每轮收尾**:把本轮内容追加进本次运行的清单(来源、候选、计费调用数);拒绝原因收敛时写 screen_unsatisfiable 假设报告——**然后继续运行**。

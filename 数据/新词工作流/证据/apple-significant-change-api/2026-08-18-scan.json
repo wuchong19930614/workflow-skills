@@ -1,0 +1,27 @@
+{
+  "slug": "apple-significant-change-api",
+  "observed_at": "2026-08-18T00:00:00Z",
+  "stage": "scan",
+  "source_urls": [
+    "https://developer.apple.com/news/",
+    "https://www.google.com/search?q=%22significant+change+api%22&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=%22significant+change+api%22&gl=us&hl=en&pws=0&start=10"
+  ],
+  "points": [
+    "变化面来源:Apple Developer News 2026-06-03 Texas SB 2420 条目,开发者被强制实现 Significant Change API(PermissionKit)+ Declared Age Range API,2026-06-04 生效",
+    "Apple 明确把判断权推给开发者:it's the developer's responsibility to determine when there's a significant change——这是官方留下的判断缺口",
+    "G1:美区/桌面/未登录搜精确词,首屏无 AI Overview、无 featured snippet 完成任务、无原生组件,pass",
+    "G2:完整读两页共 20 个结果。首页 Apple 官方新闻页×2、MacRumors、9to5Mac、Frankfurt Kurnit 律所、Medium 个人、dev.to、Biometric Update、daily.dev;第二页 Gummicube、eCorpIT 小站、LinkedIn、ASO World、AppleInsider、blakecrosley.com 个人站、TechCrunch、k-ID、Apple /kids、Help Net Security。小站与内页占相当比例,无维基/大媒体霸榜,pass",
+    "G3:任务(理解并实现该 API、判断什么算 significant change)已被多个免费结果做完且持续可见——Apple 官方 /kids 与文档、blakecrosley.com 的 Consent Lifecycle 实现走查、eCorpIT 的 2026-09 社交媒体申报+API 落地、dev.to 的两个月合规清单、k-ID/Gummicube/ASO World 的厂商指南",
+    "这些实现不是新到未被收录:Nov 2025 的文章至今仍稳定排在两页内,属持续可见度,非临时空位",
+    "词龄事实:该措辞首见于 2025-11-04 Apple 公告与同日媒体报道,至今约 9.5 个月,内容场已成形"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

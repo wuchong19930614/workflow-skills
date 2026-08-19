@@ -283,6 +283,46 @@ class ValidateRunsTest(unittest.TestCase):
         (self.root / "运行" / "2026-08-17-xinci-scan.json").write_text("{坏", encoding="utf-8")
         self.assertErrorMatching("不是合法 JSON")
 
+    # ---- 扫描漏斗自洽性:留痕纪律的可校验形式 ----
+
+    FUNNEL_OK = {"extracted": 22, "rejected_zero_cost": 14, "rejected_g1": 4,
+                 "deep_audited": 3, "queued": 1}
+
+    def test_balanced_funnel_passes(self):
+        self.mk_run(funnel=dict(self.FUNNEL_OK))
+        self.assertEqual(V.validate_runs(self.root), [])
+
+    def test_silently_dropped_directions_are_caught(self):
+        # 2026-08-18 的真实缺陷:提取 5+ 条只有 1 条走到 G1,其余无声丢弃
+        self.mk_run(funnel={"extracted": 5, "rejected_zero_cost": 0, "rejected_g1": 0,
+                            "deep_audited": 1, "queued": 0})
+        self.assertErrorMatching("不许无声丢弃")
+
+    def test_funnel_missing_field(self):
+        f = dict(self.FUNNEL_OK); f.pop("queued")
+        self.mk_run(funnel=f)
+        self.assertErrorMatching("funnel 缺字段")
+
+    def test_funnel_rejects_unknown_field(self):
+        self.mk_run(funnel=dict(self.FUNNEL_OK, maybe_list=3))
+        self.assertErrorMatching("funnel 含 schema 外字段")
+
+    def test_funnel_rejects_negative_and_nonint(self):
+        self.mk_run(funnel=dict(self.FUNNEL_OK, queued=-1))
+        self.assertErrorMatching("非负整数")
+
+    def test_funnel_checked_inside_rounds(self):
+        self.mk_run("2026-08-17-xinci-run.json", skill="xinci-run",
+                    rounds=[{"round": 1, "funnel": {"extracted": 9, "rejected_zero_cost": 2,
+                                                    "rejected_g1": 1, "deep_audited": 1,
+                                                    "queued": 0}}])
+        self.assertErrorMatching("rounds[0] funnel 去向加总")
+
+    def test_funnel_optional(self):
+        # 非扫描类清单(如纯复查轮)不带 funnel 是合法的
+        self.mk_run()
+        self.assertEqual(V.validate_runs(self.root), [])
+
     def test_missing_run_dir_is_not_an_error(self):
         empty = Path(self._tmp.name) / "空数据区"
         empty.mkdir()

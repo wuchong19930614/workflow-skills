@@ -1,4 +1,170 @@
 {
   "schema_version": 1,
-  "candidates": {}
+  "candidates": {
+    "apple-significant-change-api": {
+      "slug": "apple-significant-change-api",
+      "term": "significant change api",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-18T09:36:34+00:00",
+      "last_checked_at": "2026-08-18T09:36:34+00:00",
+      "expiry": null,
+      "source": {
+        "url": "https://developer.apple.com/news/",
+        "note": "Apple Developer News 2026-06-03:Texas SB 2420 生效,开发者须实现 Significant Change API(PermissionKit)与 Declared Age Range API"
+      },
+      "task": "iOS 开发者判断什么算 significant change 并实现该 API 以取得家长同意",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/apple-significant-change-api/2026-08-18-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "history": [
+        {
+          "at": "2026-08-18T09:36:34+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-scan"
+        },
+        {
+          "at": "2026-08-18T09:36:39+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "reason": "G3 否决:任务已被 ≥2 个免费结果做完且持续可见(Apple 官方 /kids+文档、blakecrosley.com 实现走查、eCorpIT、dev.to 合规清单、k-ID/Gummicube 厂商指南);2025-11 的文章至今仍稳定排两页内,不是未收录的临时空位",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "ppwr-empty-space-ratio": {
+      "slug": "ppwr-empty-space-ratio",
+      "term": "ppwr empty space ratio",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-18T09:38:52+00:00",
+      "last_checked_at": "2026-08-18T09:38:52+00:00",
+      "expiry": null,
+      "source": {
+        "url": "https://environment.ec.europa.eu/topics/waste-and-recycling/packaging-waste_en",
+        "note": "欧委会官方页面:PPWR(EU 2025/40)自 2026-08-12 起普遍适用,Article 24 规定分组/运输/电商包装空隙率上限"
+      },
+      "task": "向欧盟市场投放包装的经营者计算并证明自己的箱型空隙率合规",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/ppwr-empty-space-ratio/2026-08-18-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "history": [
+        {
+          "at": "2026-08-18T09:38:52+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-scan"
+        },
+        {
+          "at": "2026-08-18T09:38:52+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "reason": "G3 否决:任务已被远超 2 个免费结果做完且持续可见——ppwrcopilot.com(含计算器)、ppwrconnect.com、gramta.com 三个 PPWR 专用站,外加 osapiens/ecosistant/Clarity/Packsize/corplex/TraceX 等合规厂商内容;2024-2025 年页面至今稳定排两页内,非临时空位",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "app-store-creative-assets": {
+      "slug": "app-store-creative-assets",
+      "term": "app store creative assets",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-18T09:43:30+00:00",
+      "last_checked_at": "2026-08-18T09:43:30+00:00",
+      "expiry": null,
+      "source": {
+        "url": "https://developer.apple.com/news/",
+        "note": "Apple Developer News 2026-08-05:新创意素材秋季上线,同日发布 asset best practices 与设计模板"
+      },
+      "task": "app 营销方按新规格与内容规则准备 App Store 创意素材",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/app-store-creative-assets/2026-08-18-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "history": [
+        {
+          "at": "2026-08-18T09:43:30+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-scan"
+        },
+        {
+          "at": "2026-08-18T09:43:30+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "reason": "G3 否决:Apple 官方 2026-08-05 的 asset best practices + Figma/PS/Pixelmator 模板已把任务免费做完,ASO World/44Degrees/Moburst 等厂商内容已被收录可见;非未收录的临时空位。附 G7 风险:耐久版本归 ASO 工具厂商",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    }
+  }
 }

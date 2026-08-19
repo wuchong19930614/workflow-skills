@@ -202,16 +202,20 @@ def _check_decision_files(data_root: Path, decision_ref: str) -> str:
 
 
 def register(data_root, slug, term, source_url, task, evidence,
-             source_note="", aliases=None, by="xinci-scan"):
+             source_note="", aliases=None, by="xinci-scan", gates=None):
+    """注册新候选(→captured)。
+
+    gates 可选:扫描漏斗中"过了 G1 但超出本轮深审配额"的候选注册成 captured 排队时,
+    带上已得的闸门结论,下轮开局直接进深审,不必重跑已过的门(xinci-scan 第 4 层)。"""
     data_root = Path(data_root)
     _require(bool(slug and term and source_url and task), "slug/term/source_url/task 均不可为空")
     with _locked(data_root):
         return _register_locked(data_root, slug, term, source_url, task, evidence,
-                                source_note, aliases, by)
+                                source_note, aliases, by, gates)
 
 
 def _register_locked(data_root, slug, term, source_url, task, evidence,
-                     source_note, aliases, by):
+                     source_note, aliases, by, gates=None):
     ledger = _load(data_root)
     _require(slug not in ledger["candidates"], f"候选已存在: {slug}")
     refs = _check_evidence(data_root, evidence, slug=slug)
@@ -230,13 +234,14 @@ def _register_locked(data_root, slug, term, source_url, task, evidence,
         "task": task,
         "window_estimate": None,
         "play": None,
-        "gates": {},
+        "gates": dict(gates or {}),
         "score": None,
         "invalidation": [],
         "evidence_refs": refs,
         "decision_ref": None,
         "superseded_by": None,
-        "history": [{"at": now, "from": None, "to": "captured", "by": by}],
+        "history": [dict({"at": now, "from": None, "to": "captured", "by": by},
+                         **({"gates": dict(gates)} if gates else {}))],
     }
     _save(data_root, ledger)
     return ledger["candidates"][slug]
@@ -278,9 +283,13 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
     merged_refs = rec["evidence_refs"] + [r for r in refs if r not in rec["evidence_refs"]]
 
     if to == "screened":
-        submitted = gates or {}
-        _check_gates(submitted, [g for g in SCREEN_GATES if g != "G3"], "captured→screened")
-        g3 = submitted.get("G3")
+        # 闸门结论是候选的累积属性:排队的 captured 候选注册时已带 G0/G4/G5/G1,
+        # 下轮只补交 G2/G3 即可(xinci-scan 第 4 层的排队机制),故按合并结果校验。
+        # 注:formation_confirmed 的 G1 与 qualified 的 G6–G8 仍只看本次提交——
+        # 前者契约要求"本次重跑 G1",后者是认定阶段一次性做完的。
+        merged_gates = dict(rec["gates"], **(gates or {}))
+        _check_gates(merged_gates, [g for g in SCREEN_GATES if g != "G3"], "captured→screened")
+        g3 = merged_gates.get("G3")
         _require(g3 in ("pass", G3_WINDOW_BET),
                  f"captured→screened 要求 G3=pass 或 {G3_WINDOW_BET}(临时空位降级出口),当前 {g3!r}")
         _require(window_estimate in WINDOWS, f"window_estimate 必须属于 {sorted(WINDOWS)}")
@@ -463,6 +472,8 @@ def main(argv=None):
     p.add_argument("--aliases", default="", help="逗号分隔")
     p.add_argument("--evidence", action="append", required=True)
     p.add_argument("--by", default="xinci-scan")
+    p.add_argument("--gates", default="", help="已得的闸门结论,如 G0=pass,G4=pass,G5=pass,G1=pass"
+                                              "(超配额排队的 captured 候选用)")
 
     p = sub.add_parser("transition", help="状态转移")
     p.add_argument("--slug", required=True)
@@ -497,7 +508,8 @@ def main(argv=None):
         if a.cmd == "register":
             rec = register(a.data_root, a.slug, a.term, a.source_url, a.task, a.evidence,
                            source_note=a.source_note,
-                           aliases=[x for x in a.aliases.split(",") if x], by=a.by)
+                           aliases=[x for x in a.aliases.split(",") if x], by=a.by,
+                           gates=_parse_gates(a.gates))
         elif a.cmd == "transition":
             rec = transition(a.data_root, a.slug, a.to, a.by,
                              gates=_parse_gates(a.gates), window_estimate=a.window_estimate,

@@ -1,0 +1,8 @@
+{"date": "2026-08-17", "term": "Qwen 3.8 27B(vram/quantization 等衍生任务)", "gate": "G5", "reason": "陷阱类别一(新发布 AI 模型),即陷阱清单记录的原案"}
+{"date": "2026-08-17", "term": "Product Hunt 当日 14 个发布", "gate": "G5", "reason": "陷阱类别二(纯品牌名,前置筛除),零任务零候选"}
+{"date": "2026-08-17", "term": "ai credit resale / token relay market", "gate": "G0", "reason": "买卖两侧任务均建立在违反 ToS 与欺诈供血之上,无合法自助变现"}
+{"date": "2026-08-17", "term": "claude watermark(检测/去除/科普)", "gate": "G0", "reason": "检测需厂商密钥、去水印属规避工具、informational 将被官方与大媒体占据"}
+{"date": "2026-08-17", "term": "cloudflare injects analytics", "gate": "G7", "reason": "一次性配置修复任务,官方答案在途,耐久以周计"}
+{"date": "2026-08-17", "term": "AGI-64 / Vocal Slice / MathCode / nurb / OpenTrade", "gate": "G5", "reason": "纯品牌名(陷阱类别二)或 G6 $1k/月上限不合理"}
+{"date": "2026-08-18", "term": "UPI MDR / india upi merchant fee", "gate": "G7", "reason": "费率与适用范围尚未决定,今日不存在被迫的重复任务;MDR 本身是旧词"}
+{"date": "2026-08-18", "term": "[已归并] 有日期的合规/平台变化 + 付费者明确", "gate": "G5", "reason": "→ 陷阱类别三(厂商已占位的 B2B 强制任务);三例实证见账本 apple-significant-change-api / ppwr-empty-space-ratio / app-store-creative-assets"}

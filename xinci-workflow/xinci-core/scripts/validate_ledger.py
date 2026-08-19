@@ -21,7 +21,8 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
 - 证据/ 下无账本外孤儿目录(警告)。
 
 运行清单检查项(对齐 数据结构/run-manifest.schema.json,见 validate_runs):
-文件名约定、必填 date/skill、字段白名单、类型、文件名与内容一致性、rounds 结构。
+文件名约定、必填 date/skill、字段白名单、类型、文件名与内容一致性、rounds 结构,
+以及扫描漏斗自洽性(funnel 四个去向加总 == extracted,即每个被提取的方向都有归宿)。
 """
 import argparse
 import json
@@ -37,9 +38,12 @@ from registrar import (STATES, DEFAULT_DATA_ROOT, WINDOWS, BUILD_PLAYS,
 # 运行清单字段白名单:与 数据结构/run-manifest.schema.json 的 properties 逐字对齐
 # (schema 声明 additionalProperties: false,越界字段一律拒收)
 RUN_FIELDS = {"date", "skill", "started_at", "sources_opened", "sources_blocked",
-              "candidates_touched", "billable_calls", "notes", "rounds"}
+              "candidates_touched", "billable_calls", "notes", "rounds", "funnel"}
 RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
-                    "billable_calls", "notes"}
+                    "billable_calls", "notes", "funnel"}
+# 扫描漏斗(xinci-scan 四层):四个去向必须加总等于 extracted——每个被提取的方向都要有归宿
+FUNNEL_SINKS = ("rejected_zero_cost", "rejected_g1", "deep_audited", "queued")
+FUNNEL_FIELDS = ("extracted",) + FUNNEL_SINKS
 RUN_SKILLS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run"}
 RUN_STR_ARRAYS = ("sources_opened", "sources_blocked", "candidates_touched", "notes")
 RUN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})(?:-(\d{4}))?-(xinci-[a-z]+)")
@@ -195,6 +199,36 @@ def _check_int(obj, key, where, errors):
     errors.append(f"{where} {key} 必须是整数,当前 {v!r}")
 
 
+def _check_funnel(obj, where, errors):
+    """漏斗自洽性:extracted == 四个去向之和。
+
+    这条等式是"留痕纪律"的可校验形式:2026-08-18 首次 xinci-run 从 Apple Dev News
+    提取了 5 条以上变更却只有 1 条走到 G1,其余既未注册也未进淘汰索引——无声丢弃使
+    下轮重复评估。有了等式,漏掉的归宿会当场报错。"""
+    f = obj.get("funnel")
+    if f is None:
+        return
+    if not isinstance(f, dict):
+        errors.append(f"{where} funnel 必须是对象,当前 {type(f).__name__}")
+        return
+    unknown = sorted(set(f) - set(FUNNEL_FIELDS))
+    if unknown:
+        errors.append(f"{where} funnel 含 schema 外字段 {unknown}")
+    missing = [k for k in FUNNEL_FIELDS if k not in f]
+    if missing:
+        errors.append(f"{where} funnel 缺字段 {missing}")
+        return
+    bad = [k for k in FUNNEL_FIELDS
+           if not isinstance(f[k], int) or isinstance(f[k], bool) or f[k] < 0]
+    if bad:
+        errors.append(f"{where} funnel 各项必须是非负整数,不合格: {bad}")
+        return
+    total = sum(f[k] for k in FUNNEL_SINKS)
+    if total != f["extracted"]:
+        errors.append(f"{where} funnel 去向加总 {total} ≠ extracted {f['extracted']}"
+                      f"(每个被提取的方向都要有归宿:秒弃/G1否决/深审/排队,不许无声丢弃)")
+
+
 def validate_runs(data_root):
     """运行清单校验(对齐 数据结构/run-manifest.schema.json)。
 
@@ -255,6 +289,7 @@ def validate_runs(data_root):
         for k in RUN_STR_ARRAYS:
             _check_str_array(obj, k, where, errors)
         _check_int(obj, "billable_calls", where, errors)
+        _check_funnel(obj, where, errors)
 
         rounds = obj.get("rounds")
         if rounds is None:
@@ -278,6 +313,7 @@ def validate_runs(data_root):
             for k in RUN_STR_ARRAYS:
                 _check_str_array(rnd, k, rw, errors)
             _check_int(rnd, "billable_calls", rw, errors)
+            _check_funnel(rnd, rw, errors)
     return errors
 
 

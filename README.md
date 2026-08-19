@@ -12,9 +12,9 @@
 | [xinci-track](xinci-workflow/xinci-track/SKILL.md) | 追踪复查:用户指定候选,重跑 G1,提议转移 |
 | [xinci-qualify](xinci-workflow/xinci-qualify/SKILL.md) | 深度认定:G6–G8 + 竞争审计 + 100 分制(80 分线) |
 | [xinci-decide](xinci-workflow/xinci-decide/SKILL.md) | 建站决策:页面地图 + 收入模型 + md/html 双格式决策书 |
-| [xinci-core](xinci-workflow/xinci-core/) | 共享核心:契约、闸门、schema、registrar 脚本(判断标准唯一来源) |
+| [xinci-core](xinci-workflow/xinci-core/) | 共享核心:契约、闸门、schema、registrar / screen_index 等脚本(判断标准唯一来源) |
 
-设计文档:[设计/新词工作流skill设计-2026-08-17.md](设计/新词工作流skill设计-2026-08-17.md)。数据区:`数据/新词工作流/`(账本 / 证据 / 决策书 / 运行 / 淘汰方向索引)。
+设计文档:[设计/新词工作流skill设计-2026-08-17.md](设计/新词工作流skill设计-2026-08-17.md)。数据区:`数据/新词工作流/`(账本 / 证据 / 决策书 / 运行 / 淘汰方向索引 `淘汰方向.jsonl`,后者由 `screen_index.py` 读写,勿手工编辑)。
 
 ## 双环境接入(symlink,不入库)
 
