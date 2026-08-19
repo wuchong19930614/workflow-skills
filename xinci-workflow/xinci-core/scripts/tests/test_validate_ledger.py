@@ -355,7 +355,7 @@ class ValidateRunsTest(unittest.TestCase):
     def test_carryover_audited_accepted_and_excluded_from_sum(self):
         """还债深审记 carryover_audited:不属于本轮 extracted,不参与加总等式。
 
-        只还债不扫新的轮次四项全 0,没有这个字段那一轮看起来像什么都没干。
+        只还债不扫新的轮次五项全 0,没有这个字段那一轮看起来像什么都没干。
         """
         self.mk_run(funnel=dict(self.FUNNEL_OK, carryover_audited=5))
         self.assertEqual(V.validate_runs(self.root), [])
@@ -403,7 +403,7 @@ class ValidateRunsTest(unittest.TestCase):
         self.assertErrorMatching("rounds[0] 必须带 funnel")
 
     def test_non_scanning_round_writes_zeros(self):
-        # 只推进存量、没有扫描的轮次:四项全 0,等式 0==0 成立,也留下了"本轮没扫"的事实
+        # 只推进存量、没有扫描的轮次:extracted 与四个去向五项全 0,等式 0==0 成立,也留下了"本轮没扫"的事实
         zeros = {"extracted": 0, "rejected_zero_cost": 0, "rejected_g1": 0,
                  "deep_audited": 0, "queued": 0}
         self.mk_run("2026-08-20-xinci-run.json", date="2026-08-20", skill="xinci-run",

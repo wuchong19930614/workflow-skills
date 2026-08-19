@@ -27,7 +27,7 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
 以及扫描漏斗自洽性(funnel 四个去向加总 == extracted,即每个被提取的方向都有归宿;
 extracted 记去重后进入筛选的方向数,消化存量 captured 的深审记可选的 carryover_audited)。
 funnel 的**存在性**按日期阈值强制:FUNNEL_REQUIRED_FROM 起的 xinci-scan 清单必须带顶层
-funnel,xinci-run 清单的每一轮必须带 rounds[].funnel(该轮没扫描就写四项全 0)。阈值之前
+funnel,xinci-run 清单的每一轮必须带 rounds[].funnel(该轮没扫描就把 extracted 与四个去向五项全写 0)。阈值之前
 的历史清单豁免——那时规则还没立,回填只能编造数字。
 """
 import argparse
@@ -54,7 +54,7 @@ FUNNEL_SINKS = ("rejected_zero_cost", "rejected_g1", "deep_audited", "queued")
 FUNNEL_FIELDS = ("extracted",) + FUNNEL_SINKS
 # 可选、不参与等式:本轮消化**存量 captured**(上轮排队的债)所做的深审数。
 # 它不属于本轮 extracted,计入任一去向都会破坏等式;但它是全流程最贵的动作,
-# 只还债不扫新的轮次 funnel 四项全 0,没有这个字段就看不出那一轮花了什么。
+# 只还债不扫新的轮次 funnel 五项(extracted 与四个去向)全 0,没有这个字段就看不出那一轮花了什么。
 FUNNEL_CARRYOVER = "carryover_audited"
 FUNNEL_ALL_FIELDS = FUNNEL_FIELDS + (FUNNEL_CARRYOVER,)
 # funnel 存在性从这一天起强制。此前的清单豁免:规则是 2026-08-19 立的,
@@ -344,7 +344,8 @@ def validate_runs(data_root):
             _check_funnel(rnd, rw, errors)
             if enforce_funnel and rnd.get("funnel") is None:
                 errors.append(f"{rw} 必须带 funnel"
-                              f"(自 {FUNNEL_REQUIRED_FROM} 起强制;本轮没扫描就写四项全 0)")
+                              f"(自 {FUNNEL_REQUIRED_FROM} 起强制;"
+                              "本轮没扫描就把 extracted 与四个去向五项全写 0)")
     return errors
 
 

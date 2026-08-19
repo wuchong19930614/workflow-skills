@@ -18,7 +18,7 @@
     "gates": {
       "type": "object",
       "additionalProperties": { "type": "string" },
-      "description": "本次涉及的闸门结论(G0–G8 → pass/veto),仅列实际检查过的"
+      "description": "本次涉及的闸门结论(G0–G8 → pass/veto;G3 另有第三种结论 veto_window_bet,见闸门契约 G3),仅列实际检查过的"
     }
   },
   "additionalProperties": false

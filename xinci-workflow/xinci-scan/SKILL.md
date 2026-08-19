@@ -23,7 +23,7 @@ description: 扫描发现新兴/全新的英文 Google 搜索词候选:真浏览
 
 ### 第 0 层:开局去重与接队
 
-读陷阱类别(已归并的模式由 G5 直接筛掉),然后**用脚本批量去重,不要把索引读进上下文**——它按每天两三百条增长:
+读陷阱类别(已归并的模式由 G5 按其处置档处理:「直接筛除型」零成本弃、「验证型」跑 G3 验证),然后**用脚本批量去重,不要把索引读进上下文**——它按每天两三百条增长:
 
 ```bash
 printf '%s\n' "方向1" "方向2" ... | python3 xinci-workflow/xinci-core/scripts/screen_index.py check
@@ -35,11 +35,13 @@ printf '%s\n' "方向1" "方向2" ... | python3 xinci-workflow/xinci-core/script
 
 **接队:账本里的 `captured` 候选是上轮排队的,本轮优先消化它们**——读它们的 `gates`:**缺哪门补哪门**(缺 G1 的先回第 3 层补 G1,补过了才进第 4 层;gates 齐到 G1 的直接进第 4 层)。排队候选的 expiry 已过的,提议 `captured→expired`,不再花深审配额。
 
-> **连续运行模式下,接队不在这里做**:xinci-run 的运行循环步骤 1 已经统一处理了存量 captured(它要跨阶段排序"离 go 决策最近的先做"),本 skill 被派来执行的是「扫描新候选」这一步,直接从第 1 层开始。两处都做会重复深审、双花配额。单步调用 xinci-scan 时仍按上一段执行。
+> **连续运行模式下,接队不在这里做**:xinci-run 的运行循环步骤 1 已经统一处理了存量 captured(它要跨阶段排序"离 go 决策最近的先做"),本 skill 被派来执行的是「扫描新候选」这一步,直接从第 1 层开始。两处都做会重复深审、双花配额。**跳过的只是接队,本层的去重 check 照做**——提取完本轮方向后仍要 `screen_index.py check`,否则 `extracted` 记的就不是去重后的数。单步调用 xinci-scan 时仍按上一段执行。
 
-### 第 1 层:广度提取(便宜,目标一轮 200–300 个方向)
+### 第 1 层:广度提取(便宜,常态目标一轮 200–300 个方向)
 
 选来源真浏览器打开(来源表见数据采集指南;轮换选源,覆盖优先)。也可走变化面:从有日期的法规/平台/技术/成本变化推导受影响付费者的被迫任务。
+
+**200–300 是常态目标,不是固定值**:连续运行模式下按 `captured` 积压量下调(存量 11–20 → 100–150,>20 → 50–80),软闸表见 xinci-run 运行循环步骤 1;单步调用按常态目标。下调时本层之后的各层预期比例不变(第 2 层砍 85%、第 3 层再砍一半),只是绝对数同比缩小。
 
 **把一个源里所有有任务嫌疑的方向都提出来,不要只挑最显眼的那个。** 一个 release notes 页面通常含多条独立变更,一份法规公告通常牵出多个任务——逐条列,不合并、不省略。每条此刻只需两样东西:
 
@@ -124,11 +126,22 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
 估计窗口以天/周/月计(可发现性、多少人能做同样的页面、官方答案多久出现),写明推理。
 每个候选一份观察文件 `证据/<slug>/<日期>-scan.json`(要点式,schema 见 数据结构/observation.schema.json),然后 register(命令同上,深审已完成的可一并带 G2/G3 结论)。
 
-**提议下一步,由用户确认后执行转移:**
+**第一步一律是出闸 `captured → screened`,这一步不能跳。** register 出来的候选状态是 `captured`,而 `tracking` 与快道**都只从 `screened` 出发**(registrar 的合法边是 captured→screened→tracking / →fast_grab_ready,直接 `--to tracking` 会被判"非法转移")。窗口评估(`window_estimate`)与 G0–G5 全 pass 的校验也都落在这一步:
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
+  --slug <slug> --to screened --by xinci-scan \
+  --gates G2=pass,G3=pass --window-estimate <days|weeks|months> \
+  --evidence "证据/<slug>/<日期>-scan.json"
+```
+
+排队候选注册时已带 G0/G4/G5/G1,本次只补 G2/G3——registrar 按**合并结果**校验 G0–G5 全 pass。`G3=veto_window_bet` 的候选出闸时额外要求 `--window-estimate days` + `--reason`(豁免依据),且 `--by` 不能是 xinci-run。
+
+**出闸后提议下一步,由用户确认后执行转移:**
 
 - G0–G5 全过、窗口以周/月计 → 提议 `screened → tracking`(带 expiry 与失效条件);
-- G0–G5 全过、窗口以天计 → 提议走快道(转给 xinci-decide 快速模式);
-- G3 判定为**临时空位**(`veto_window_bet`)、窗口以天计 → 提议带豁免走快道,转移必须附 reason(数到的免费实现清单 + 为何判定它们只是还没被收录),观察文件记明该判断。该候选此后只能 fast_grab_ready 或 rejected,不得进 tracking。
+- G0–G5 全过、窗口以天计 → 提议走快道(转给 xinci-decide 快速模式,它核对的输入正是 `screened` + `window_estimate=days`);
+- G3 判定为**临时空位**(`veto_window_bet`)、窗口以天计 → 出闸时就带上豁免依据(`--reason`:数到的免费实现清单 + 为何判定它们只是还没被收录),观察文件记明该判断,然后提议走快道。该候选此后只能 fast_grab_ready 或 rejected,不得进 tracking。
   **此路径在连续运行模式下不可用**(registrar 拒收 `by=xinci-run`):此时候选**留在 `captured`**,带 gates 与 expiry 挂着等用户单步确认,清单 notes 记一句待确认——这是它的合法挂起位,不是失败,不许转 rejected;
 - 任一闸门否决 → 提议 `rejected`(带失败闸门与现场证据要点)。
 
@@ -138,12 +151,12 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
 
 ```json
 "funnel": {
-  "extracted": 240,           // 第 1 层提取、经第 0 层去重后进入筛选的方向数(提取目标 200–300)
+  "extracted": 240,           // 第 1 层提取、经第 0 层去重后进入筛选的方向数(常态目标 200–300;连续模式积压时按软闸下调)
   "rejected_zero_cost": 204,  // 第 2 层筛除(含验证型类别 G3 判 veto;已进淘汰索引;预期约 85%)
   "rejected_g1": 18,          // 第 3 层 G1 否决(已进淘汰索引;预期约剩余的一半)
   "deep_audited": 5,          // 第 4 层实际深审(配额 ≤5)
   "queued": 13,               // 本轮没走完的存活方向(超深审配额 + 超 G1 上限未搜),注册为 captured 待下轮
-  "carryover_audited": 0      // 可选,不参与加总:本轮消化存量 captured 所做的深审数(独立配额 ≤5)
+  "carryover_audited": 0      // 可选,不参与加总:本轮消化存量 captured 所做的深审数(独立配额:默认 ≤5,captured 存量 >20 时 ≤10,表见 xinci-run 步骤 1)
 }
 ```
 
@@ -152,7 +165,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
 两条**不参与等式**的口径,写错了等式会算不平:
 
 - 第 0 层**去重命中**的方向不计入 `extracted`(它们上一次已有归宿);
-- 消化**存量 captured** 的深审记 `carryover_audited`,不记 `deep_audited`——它不属于本轮 `extracted`。只还债不扫新的轮次四项全 0,靠这个字段留下那一轮的真实成本。
+- 消化**存量 captured** 的深审记 `carryover_audited`,不记 `deep_audited`——它不属于本轮 `extracted`。只还债不扫新的轮次 `extracted` 与四个去向五项全 0,靠这个字段留下那一轮的真实成本。
 
 同日再次运行时文件名追加启动时刻(`<日期>-<HHMM>-xinci-scan.json`),不覆盖已有清单。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
 
@@ -170,4 +183,4 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
 - **每个被提取的方向必须有归宿**:秒弃(进淘汰索引)、G1 否决(进淘汰索引)、深审(注册)、或排队(注册为 captured——含超深审配额的和超 G1 上限没搜的)——四选一,**不许无声丢弃**。运行清单的 `funnel` 四项去向加总须等于 `extracted`,由 `validate_ledger.py` 强制;去重命中的方向不计入 `extracted`,消化存量的深审记 `carryover_audited`,两者都不参与等式。
 - **深审配额每轮 ≤5 个**:G2/G3 是全流程最贵的动作,超配额的候选注册成 `captured` 排队,下轮开局优先消化,不得因为"这轮做不完"而丢掉。连续运行模式下**新扫描深审与还债深审配额彼此独立**——本层的 ≤5 只管新扫描的,还债另有自己的配额(积压严重时会临时提高,表见 xinci-run 运行循环步骤 1),还债不吃掉本轮扫描的深审名额。
 - **排队位的两条纪律**:①注册排队候选必须带 `expiry`(registrar 强制),否则窗口过了没有出口、方向无声腐烂;②`gates` 只写真的跑过的门——没搜 G1 就不许写 G1=pass,下轮补上再进深审。**排队会积压**(每轮进 10–20、出 ≤5),所以连续运行模式对积压设了软闸——不是停扫,而是按积压量压低本轮提取目标,见 xinci-run 运行循环步骤 1。
-- 秒弃的方向与 **G1 否决**都必须留痕进淘汰方向索引(批量追加,不逐条写),防止后续扫描重复评估;账本只收还有下一步的候选——深审存活的、排队的。同一结构性模式在索引中第三次出现时,按陷阱类别.md 的追加规则归并成正式类别(索引补一行 `[已归并]` 指针),此后同模式由 G5 直接筛掉,索引不逐条膨胀。
+- 秒弃的方向与 **G1 否决**都必须留痕进淘汰方向索引(批量追加,不逐条写),防止后续扫描重复评估;账本只收还有下一步的候选——深审存活的、排队的。同一结构性模式在索引中第三次出现时,按陷阱类别.md 的追加规则归并成正式类别(索引补一行归并记录:**term 写模式名本身**、gate 记 G5、reason 以 `[已归并]` 开头指向类别号——term 写成某个具体方向会被 append 的去重静默跳过;写法见生命周期契约「归并纪律」),此后同模式由 G5 **按该类别的处置档**处理——「直接筛除型」零成本弃、「验证型」仍跑 G3 验证;**留痕不变**,秒弃照常追加一行索引(gate 记 G5),否则下轮 check 认不出它。索引不会因此膨胀:`append` 按归一化 term 跳重复,每行始终是一个独立方向。
