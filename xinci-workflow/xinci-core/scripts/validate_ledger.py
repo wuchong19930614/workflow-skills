@@ -10,6 +10,7 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
 - evidence_refs 均为数据区内相对路径且存在于磁盘;
 - expiry 若存在则可解析为日期;
 - 状态不变式:screened 必有 window_estimate;tracking 必有 expiry;
+  captured 若带闸门结论(排队位)必有 expiry(否则窗口过了无处可去、无声腐烂);
   fast_grab_ready 必有 expiry、window_estimate=days、play=fast_grab、score 为 null(快道不得声称全站分数);
   过 screened 的非终态必有 G0–G5 全 pass(G3 可为 veto_window_bet 快道豁免);
   带 G3=veto_window_bet 的候选只能停在 screened/fast_grab_ready 或终态,且 window_estimate=days;qualified 及其后继(build_ready/pilot_ready/hold)必有 G6–G8 全 pass;
@@ -23,6 +24,9 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
 运行清单检查项(对齐 数据结构/run-manifest.schema.json,见 validate_runs):
 文件名约定、必填 date/skill、字段白名单、类型、文件名与内容一致性、rounds 结构,
 以及扫描漏斗自洽性(funnel 四个去向加总 == extracted,即每个被提取的方向都有归宿)。
+funnel 的**存在性**按日期阈值强制:FUNNEL_REQUIRED_FROM 起的 xinci-scan 清单必须带顶层
+funnel,xinci-run 清单的每一轮必须带 rounds[].funnel(该轮没扫描就写四项全 0)。阈值之前
+的历史清单豁免——那时规则还没立,回填只能编造数字。
 """
 import argparse
 import json
@@ -44,6 +48,10 @@ RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_to
 # 扫描漏斗(xinci-scan 四层):四个去向必须加总等于 extracted——每个被提取的方向都要有归宿
 FUNNEL_SINKS = ("rejected_zero_cost", "rejected_g1", "deep_audited", "queued")
 FUNNEL_FIELDS = ("extracted",) + FUNNEL_SINKS
+# funnel 存在性从这一天起强制。此前的清单豁免:规则是 2026-08-19 立的,
+# 而首份 xinci-run 清单正是"提取了 5 条以上、只有 1 条有归宿"的案例——真实数字已不可考,
+# 回填等于编造。历史保持原样,新清单一律带 funnel。
+FUNNEL_REQUIRED_FROM = "2026-08-19"
 RUN_SKILLS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run"}
 RUN_STR_ARRAYS = ("sources_opened", "sources_blocked", "candidates_touched", "notes")
 RUN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})(?:-(\d{4}))?-(xinci-[a-z]+)")
@@ -111,6 +119,9 @@ def validate(data_root):
                           f"当前 {rec.get('window_estimate')!r}")
         if state == "tracking" and not expiry:
             errors.append(f"{where} tracking 必有 expiry")
+        if state == "captured" and rec.get("gates") and not expiry:
+            errors.append(f"{where} captured 带闸门结论(排队位)必有 expiry:"
+                          "排队位每轮进多出少,没有 expiry 就没有过期出口,方向会无声腐烂")
         if state == "fast_grab_ready":
             if not expiry:
                 errors.append(f"{where} fast_grab_ready 必有 expiry")
@@ -284,6 +295,11 @@ def validate_runs(data_root):
         _check_int(obj, "billable_calls", where, errors)
         _check_funnel(obj, where, errors)
 
+        enforce_funnel = bool(run_date) and run_date >= FUNNEL_REQUIRED_FROM
+        if enforce_funnel and skill == "xinci-scan" and obj.get("funnel") is None:
+            errors.append(f"{where} xinci-scan 清单必须带 funnel"
+                          f"(自 {FUNNEL_REQUIRED_FROM} 起强制:每个被提取的方向都要有归宿)")
+
         rounds = obj.get("rounds")
         if rounds is None:
             continue
@@ -307,6 +323,9 @@ def validate_runs(data_root):
                 _check_str_array(rnd, k, rw, errors)
             _check_int(rnd, "billable_calls", rw, errors)
             _check_funnel(rnd, rw, errors)
+            if enforce_funnel and rnd.get("funnel") is None:
+                errors.append(f"{rw} 必须带 funnel"
+                              f"(自 {FUNNEL_REQUIRED_FROM} 起强制;本轮没扫描就写四项全 0)")
     return errors
 
 

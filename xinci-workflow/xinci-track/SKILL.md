@@ -53,5 +53,5 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
 - 提议与执行分离:本 skill 永不直接改状态,一切转移经用户确认。例外:xinci-run 连续运行模式下,启动命令即标准授权,无需逐条确认。
 - expiry 已过的候选必须给出明确提议(expired,或说明为何值得用户续期并给新 expiry),不许沉默跳过;续期必须由用户确认并附理由,经 registrar amend 执行——手工编辑账本是禁止的。
 - 不自我调度:不设 next_check、不承诺"下次几天后查"、不催促用户。
-- Semrush 探针仅限形成期、仅限能改变决策的查询;查了改变不了提议的,不查。
+- Semrush 探针仅限形成期(即 `tracking` 状态本身,按状态判不按年龄)、仅限能改变决策的查询;查了改变不了提议的,不查。
 - 观察写要点不写转录;未打开的页面不得列入 source_urls。

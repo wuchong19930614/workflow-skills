@@ -87,6 +87,17 @@ class ValidateLedgerTest(unittest.TestCase):
         self.corrupt(slug, expiry=None)
         self.assertTrue(any("expiry" in e for e in self.errors()))
 
+    def test_queued_captured_without_expiry_is_caught(self):
+        # 手工编辑抹掉排队位的 expiry(registrar 会拦,校验是第二道防线)
+        slug = self.build_chain(until="captured")
+        self.corrupt(slug, gates={"G0": "pass", "G1": "pass"}, expiry=None)
+        self.assertTrue(any("captured 带闸门结论" in e for e in self.errors()), self.errors())
+
+    def test_captured_without_gates_needs_no_expiry(self):
+        # 未排队的普通 captured(注册后当轮就要出结论)不要求 expiry
+        self.build_chain(until="captured")
+        self.assertEqual(self.errors(), [])
+
     def test_detects_fast_grab_invariants(self):
         slug = self.build_chain(until="fast_grab_ready", window="days")
         self.corrupt(slug, expiry=None, play="single_domain", score=90)
@@ -318,8 +329,38 @@ class ValidateRunsTest(unittest.TestCase):
         self.assertErrorMatching("rounds[0] funnel 去向加总")
 
     def test_funnel_optional(self):
-        # 非扫描类清单(如纯复查轮)不带 funnel 是合法的
+        # 阈值之前的历史清单豁免:规则立起来之前的清单不带 funnel 是合法的
         self.mk_run()
+        self.assertEqual(V.validate_runs(self.root), [])
+
+    # ---- funnel 存在性:自 FUNNEL_REQUIRED_FROM 起强制,历史豁免 ----
+
+    def test_scan_manifest_requires_funnel_from_threshold(self):
+        self.mk_run("2026-08-20-xinci-scan.json", date="2026-08-20")
+        self.assertErrorMatching("必须带 funnel")
+
+    def test_scan_manifest_with_funnel_passes(self):
+        self.mk_run("2026-08-20-xinci-scan.json", date="2026-08-20",
+                    funnel=dict(self.FUNNEL_OK))
+        self.assertEqual(V.validate_runs(self.root), [])
+
+    def test_legacy_manifest_exempt(self):
+        # 阈值之前的清单不追认:那时规则还没立,回填只能编造数字
+        self.mk_run("2026-08-18-xinci-run.json", date="2026-08-18", skill="xinci-run",
+                    rounds=[{"round": 1}])
+        self.assertEqual(V.validate_runs(self.root), [])
+
+    def test_run_rounds_require_funnel_from_threshold(self):
+        self.mk_run("2026-08-20-xinci-run.json", date="2026-08-20", skill="xinci-run",
+                    rounds=[{"round": 1}])
+        self.assertErrorMatching("rounds[0] 必须带 funnel")
+
+    def test_non_scanning_round_writes_zeros(self):
+        # 只推进存量、没有扫描的轮次:四项全 0,等式 0==0 成立,也留下了"本轮没扫"的事实
+        zeros = {"extracted": 0, "rejected_zero_cost": 0, "rejected_g1": 0,
+                 "deep_audited": 0, "queued": 0}
+        self.mk_run("2026-08-20-xinci-run.json", date="2026-08-20", skill="xinci-run",
+                    rounds=[{"round": 1, "funnel": zeros}])
         self.assertEqual(V.validate_runs(self.root), [])
 
     def test_missing_run_dir_is_not_an_error(self):

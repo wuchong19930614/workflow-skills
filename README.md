@@ -6,9 +6,9 @@
 
 | 单元 | 职责 |
 | --- | --- |
-| [xinci-run](xinci-workflow/xinci-run/SKILL.md) | 连续运行驱动器:启动后循环推进,直到任一 go 决策或 Semrush 额度实际耗尽。启动暗号 `xinci_run`,消息中出现即一体启动整个工作流 |
+| [xinci-run](xinci-workflow/xinci-run/SKILL.md) | 连续运行驱动器:启动后循环推进,直到任一 go 决策、Semrush 额度实际耗尽,或预算用完(默认 `max_rounds=6`)。启动暗号 `xinci_run`,消息中出现即一体启动整个工作流 |
 | [xinci-status](xinci-workflow/xinci-status/SKILL.md) | 状态看板:只读汇报账本事实 |
-| [xinci-scan](xinci-workflow/xinci-scan/SKILL.md) | 扫描发现:真浏览器捕获候选,当场 G1–G5 初筛 |
+| [xinci-scan](xinci-workflow/xinci-scan/SKILL.md) | 扫描发现:真浏览器捕获候选,当场 G0–G5 初筛 |
 | [xinci-track](xinci-workflow/xinci-track/SKILL.md) | 追踪复查:用户指定候选,重跑 G1,提议转移 |
 | [xinci-qualify](xinci-workflow/xinci-qualify/SKILL.md) | 深度认定:G6–G8 + 竞争审计 + 100 分制(80 分线) |
 | [xinci-decide](xinci-workflow/xinci-decide/SKILL.md) | 建站决策:页面地图 + 收入模型 + md/html 双格式决策书 |

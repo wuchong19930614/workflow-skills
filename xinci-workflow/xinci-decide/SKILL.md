@@ -21,7 +21,7 @@ description: 对已认定(qualified)的新词候选出建站 go/no-go 决策:页
 
 ## 完整模式工作流
 
-1. **核对输入**:状态 qualified;通读认定观察,不重做已做过的审计,只补缺口。
+1. **核对输入**:状态 qualified;通读认定观察,不重做已做过的审计,只补缺口。若为补缺口做了新审计,把新观察落一份 `证据/<slug>/<日期>-decide.json` 并随转移提交;没有新观察就不写——决策阶段的产出是决策书,`-decide` 观察是可选的(数据极简)。
 2. **页面地图**:≥12 个任务互异页面 × ≥3 个簇 + ≥1 个自助产品资产;合并表述性变体。不足 → pilot(5–8 页有界实验)或 no_site。
 3. **收入三情景**:downside / base / upside;base ≥$200/月、无主动销售、保守假设逐条标注来源、所需流量不超 owned-intent 估计。
 4. **风险清单**:技术可行性、合规、免费与付费替代、维护负担、数据/API 成本。
@@ -41,6 +41,7 @@ no-go(hold / no_site)只带 reason,不出决策书、不带 decision-ref。
 1. **核对输入**:状态 screened 且 window_estimate=days。
 2. **轻量决策书**,必含:词与任务;G0–G5 证据;窗口估计与 expiry(附推理);**若 G3=`veto_window_bet`:G3 豁免声明**——数到的免费实现清单、为何判定它们只是还没被收录,以及明码标价一句"本次只赌收录时差,通用工具收录后位置即失";**跳过的闸门清单及"为何此刻无法执行"**(G6–G8 所需证据对天级新词客观不存在);48 小时发布计划(最小页面集);投入上限声明(损失封顶:一个域名 + 若干页面工时);风险确认(这是窗口赌注,不是被验证的生意);失效信号;升级通路说明(词若耐久,built 后可转回 tracking 走完整认定)。
 3. 用户确认风险后:`--to fast_grab_ready --play fast_grab --expiry <日期> --decision-ref "决策书/<slug>.md"`。
+4. **快道的 no-go**:读完证据判定这个赌注不值(收录时差太短、任务其实一次性、投入上限也兜不住),提议 `rejected`(reason 写清不成立的那条判据)或由用户 `withdrawn`。**快道不产出 hold / no_site**——那两个是完整模式的结论,快道候选还没做过 G6–G8,没有资格被"搁置待议"。快道 no-go 同样不出决策书。
 
 ## 双格式约定(md 给 AI,html 给人)
 
@@ -60,5 +61,6 @@ python3 xinci-workflow/xinci-core/scripts/build_decision_html.py "数据/新词�
 - pilot 与快道决策不得声称全站分数。
 - no-go 不出决策书,只在账本记决定性理由(数据极简原则)。
 - 快道只收 window_estimate=days 的 screened 候选;别的候选想快,答案是不行。
+- 快道的两个出口是 fast_grab_ready(go)与 rejected/withdrawn(no-go);hold 与 no_site 只属于完整模式。
 - 提议与执行分离:转移经用户确认后才调 registrar;快道额外要求用户对"跳过闸门清单"逐条确认。例外:xinci-run 连续运行模式下,启动命令即标准授权,转移无需逐条确认;快道决策即运行的终止点,用户通过阅读交付的决策书完成风险确认,建站与否仍是用户的决定。
 - 写运行清单 `运行/<日期>-xinci-decide.json`。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。

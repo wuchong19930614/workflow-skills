@@ -312,18 +312,69 @@ class RegistrarTest(unittest.TestCase):
         self.assertIn(f"证据/{slug}/2026-08-20-track.json", after["evidence_refs"])
 
     def test_register_carries_gates_for_queued_candidate(self):
-        # 扫描漏斗第 4 层:过了 G1 但超出深审配额的候选注册成 captured 排队,
-        # 带上已得闸门结论,下轮开局直接进深审,不必重跑
+        # 扫描漏斗第 3/4 层:本轮没走完深审的存活候选注册成 captured 排队,
+        # 带上已得闸门结论,下轮按 gates 补跑缺的门再进深审
         slug = "queued-term"
         ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
         gates = {"G0": "pass", "G4": "pass", "G5": "pass", "G1": "pass"}
         R.register(self.root, slug=slug, term="queued term", source_url="https://e.com",
-                   task="t", evidence=[ev], gates=gates)
+                   task="t", evidence=[ev], gates=gates, expiry="2026-08-25")
         rec = self.load(slug)
         self.assertEqual(rec["state"], "captured")
         self.assertEqual(rec["gates"], gates)
-        # 快照进 history,便于回答"注册时已过哪些门"
+        self.assertEqual(rec["expiry"], "2026-08-25")
+        # 快照进 history,便于回答"注册时已过哪些门、当时给的排队 expiry 是哪天"
         self.assertEqual(rec["history"][0]["gates"], gates)
+        self.assertEqual(rec["history"][0]["expiry"], "2026-08-25")
+
+    def test_queued_register_requires_expiry(self):
+        # 排队位每轮进多出少;没有 expiry 就没有过期出口,方向会在队列里无声腐烂
+        slug = "queued-no-expiry"
+        ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
+        with self.assertRaises(R.RegistrarError):
+            R.register(self.root, slug=slug, term="q", source_url="https://e.com",
+                       task="t", evidence=[ev],
+                       gates={"G0": "pass", "G4": "pass", "G5": "pass", "G1": "pass"})
+
+    def test_register_rejects_bad_expiry(self):
+        slug = "queued-bad-expiry"
+        ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
+        with self.assertRaises(R.RegistrarError):
+            R.register(self.root, slug=slug, term="q", source_url="https://e.com",
+                       task="t", evidence=[ev], expiry="2026/08/25")
+
+    def test_queued_candidate_can_expire(self):
+        # captured→expired:排队窗口过了要有干净出口,不必硬塞成 rejected(它没有失败的闸门)
+        slug = "queued-term"
+        ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
+        R.register(self.root, slug=slug, term="queued term", source_url="https://e.com",
+                   task="t", evidence=[ev], expiry="2026-08-25",
+                   gates={"G0": "pass", "G4": "pass", "G5": "pass", "G1": "pass"})
+        R.transition(self.root, slug, to="expired", by="xinci-scan",
+                     reason="排队 expiry 已过,经用户确认不再深审")
+        self.assertEqual(self.load(slug)["state"], "expired")
+
+    def test_expired_requires_reason(self):
+        slug = "queued-term"
+        ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
+        R.register(self.root, slug=slug, term="q", source_url="https://e.com",
+                   task="t", evidence=[ev], expiry="2026-08-25",
+                   gates={"G1": "pass"})
+        with self.assertRaises(R.RegistrarError):
+            R.transition(self.root, slug, to="expired", by="xinci-scan")
+
+    def test_queued_without_g1_cannot_reach_screened(self):
+        # 决策 2:超 G1 配额未搜的方向也排队,但 gates 不含 G1;
+        # registrar 是最后一道防线——缺 G1 的排队候选不许进 screened
+        slug = "unsearched-term"
+        ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
+        R.register(self.root, slug=slug, term="unsearched term", source_url="https://e.com",
+                   task="t", evidence=[ev], expiry="2026-08-25",
+                   gates={"G0": "pass", "G4": "pass", "G5": "pass"})
+        with self.assertRaises(R.RegistrarError):
+            R.transition(self.root, slug, to="screened", by="xinci-scan",
+                         gates={"G2": "pass", "G3": "pass"}, window_estimate="weeks",
+                         evidence=[mk_evidence(self.root, slug, "2026-08-19-scan.json")])
 
     def test_register_without_gates_stays_empty(self):
         slug = self.register()
@@ -335,7 +386,7 @@ class RegistrarTest(unittest.TestCase):
         slug = "queued-term"
         ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")
         R.register(self.root, slug=slug, term="queued term", source_url="https://e.com",
-                   task="t", evidence=[ev],
+                   task="t", evidence=[ev], expiry="2026-08-25",
                    gates={"G0": "pass", "G4": "pass", "G5": "pass", "G1": "pass"})
         R.transition(self.root, slug, to="screened", by="xinci-scan",
                      gates={"G2": "pass", "G3": "pass"}, window_estimate="weeks",

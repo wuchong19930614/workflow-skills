@@ -17,14 +17,14 @@
     "billable_calls": { "type": "integer", "description": "计费查询次数(Semrush 等);扫描阶段应为 0" },
     "funnel": {
       "type": "object",
-      "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。",
+      "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。自 2026-08-19 起 funnel 本身也强制存在:xinci-scan 清单必须带顶层 funnel,xinci-run 清单每一轮必须带 rounds[].funnel(该轮没扫描就四项全 0);阈值之前的历史清单豁免。",
       "required": ["extracted", "rejected_zero_cost", "rejected_g1", "deep_audited", "queued"],
       "properties": {
-        "extracted": { "type": "integer", "description": "第 1 层广度提取的方向总数(目标一轮 15–30)" },
-        "rejected_zero_cost": { "type": "integer", "description": "第 2 层 G0/G4/G5/无任务 秒弃,已进淘汰方向索引" },
+        "extracted": { "type": "integer", "description": "第 1 层广度提取的方向总数(目标一轮 200–300)" },
+        "rejected_zero_cost": { "type": "integer", "description": "第 2 层筛除:G0/G4/G5/G6-G7 预筛/无任务 秒弃,以及陷阱型的 G3 验证失败;均已进淘汰方向索引" },
         "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已注册进账本并转 rejected" },
         "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5)" },
-        "queued": { "type": "integer", "description": "过 G1 但超出深审配额,注册为 captured 待下轮消化" }
+        "queued": { "type": "integer", "description": "本轮没走完的存活方向(超深审配额的,以及超 G1 上限本轮没搜的),注册为 captured 待下轮消化" }
       },
       "additionalProperties": false
     },
@@ -43,14 +43,14 @@
           "billable_calls": { "type": "integer", "description": "本轮计费查询次数" },
         "funnel": {
           "type": "object",
-          "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。",
+          "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。自 2026-08-19 起 funnel 本身也强制存在:xinci-scan 清单必须带顶层 funnel,xinci-run 清单每一轮必须带 rounds[].funnel(该轮没扫描就四项全 0);阈值之前的历史清单豁免。",
           "required": ["extracted", "rejected_zero_cost", "rejected_g1", "deep_audited", "queued"],
           "properties": {
-            "extracted": { "type": "integer", "description": "第 1 层广度提取的方向总数(目标一轮 15–30)" },
-            "rejected_zero_cost": { "type": "integer", "description": "第 2 层 G0/G4/G5/无任务 秒弃,已进淘汰方向索引" },
+            "extracted": { "type": "integer", "description": "第 1 层广度提取的方向总数(目标一轮 200–300)" },
+            "rejected_zero_cost": { "type": "integer", "description": "第 2 层筛除:G0/G4/G5/G6-G7 预筛/无任务 秒弃,以及陷阱型的 G3 验证失败;均已进淘汰方向索引" },
             "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已注册进账本并转 rejected" },
             "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5)" },
-            "queued": { "type": "integer", "description": "过 G1 但超出深审配额,注册为 captured 待下轮消化" }
+            "queued": { "type": "integer", "description": "本轮没走完的存活方向(超深审配额的,以及超 G1 上限本轮没搜的),注册为 captured 待下轮消化" }
           },
           "additionalProperties": false
         },
