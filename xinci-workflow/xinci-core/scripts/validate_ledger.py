@@ -13,7 +13,8 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
   captured 若带闸门结论(排队位)必有 expiry(否则窗口过了无处可去、无声腐烂);
   fast_grab_ready 必有 expiry、window_estimate=days、play=fast_grab、score 为 null(快道不得声称全站分数);
   过 screened 的非终态必有 G0–G5 全 pass(G3 可为 veto_window_bet 快道豁免);
-  带 G3=veto_window_bet 的候选只能停在 screened/fast_grab_ready 或终态,且 window_estimate=days;qualified 及其后继(build_ready/pilot_ready/hold)必有 G6–G8 全 pass;
+  带 G3=veto_window_bet 的候选只能停在 captured(挂起待确认)/screened/fast_grab_ready 或终态,
+  且在 screened/fast_grab_ready 上 window_estimate=days;qualified 及其后继(build_ready/pilot_ready/hold)必有 G6–G8 全 pass;
   formation_confirmed 及其后继必有 ≥2 个 -track 观察且跨度 ≥7 天;
   qualified/build_ready/pilot_ready 必有整数 score ≥80;
   build_ready/pilot_ready 的 play ∈ {single_domain, cluster_expansion};
@@ -23,7 +24,8 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
 
 运行清单检查项(对齐 数据结构/run-manifest.schema.json,见 validate_runs):
 文件名约定、必填 date/skill、字段白名单、类型、文件名与内容一致性、rounds 结构,
-以及扫描漏斗自洽性(funnel 四个去向加总 == extracted,即每个被提取的方向都有归宿)。
+以及扫描漏斗自洽性(funnel 四个去向加总 == extracted,即每个被提取的方向都有归宿;
+extracted 记去重后进入筛选的方向数,消化存量 captured 的深审记可选的 carryover_audited)。
 funnel 的**存在性**按日期阈值强制:FUNNEL_REQUIRED_FROM 起的 xinci-scan 清单必须带顶层
 funnel,xinci-run 清单的每一轮必须带 rounds[].funnel(该轮没扫描就写四项全 0)。阈值之前
 的历史清单豁免——那时规则还没立,回填只能编造数字。
@@ -45,9 +47,16 @@ RUN_FIELDS = {"date", "skill", "sources_opened", "sources_blocked",
               "candidates_touched", "billable_calls", "notes", "rounds", "funnel"}
 RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
                     "billable_calls", "notes", "funnel"}
-# 扫描漏斗(xinci-scan 四层):四个去向必须加总等于 extracted——每个被提取的方向都要有归宿
+# 扫描漏斗(xinci-scan 四层):四个去向必须加总等于 extracted——每个被提取的方向都要有归宿。
+# extracted 记的是**去重后**进入第 2 层筛选的方向数:第 0 层 screen_index check 命中的方向
+# 已经在索引/账本里有归宿(上一次的记录),再计一次等于要求它二次归宿,等式必然算不平。
 FUNNEL_SINKS = ("rejected_zero_cost", "rejected_g1", "deep_audited", "queued")
 FUNNEL_FIELDS = ("extracted",) + FUNNEL_SINKS
+# 可选、不参与等式:本轮消化**存量 captured**(上轮排队的债)所做的深审数。
+# 它不属于本轮 extracted,计入任一去向都会破坏等式;但它是全流程最贵的动作,
+# 只还债不扫新的轮次 funnel 四项全 0,没有这个字段就看不出那一轮花了什么。
+FUNNEL_CARRYOVER = "carryover_audited"
+FUNNEL_ALL_FIELDS = FUNNEL_FIELDS + (FUNNEL_CARRYOVER,)
 # funnel 存在性从这一天起强制。此前的清单豁免:规则是 2026-08-19 立的,
 # 而首份 xinci-run 清单正是"提取了 5 条以上、只有 1 条有归宿"的案例——真实数字已不可考,
 # 回填等于编造。历史保持原样,新清单一律带 funnel。
@@ -66,8 +75,14 @@ SCREEN_PASSED_STATES = {"screened", "tracking", "formation_confirmed", "qualifie
 QUALIFY_PASSED_STATES = {"qualified", "build_ready", "pilot_ready", "hold"}
 # 过了形成确认的状态:≥2 个 -track 观察且跨度达标
 FORMED_STATES = {"formation_confirmed", "qualified", "build_ready", "pilot_ready", "hold"}
-# G3 快道豁免(veto_window_bet)的候选只准停在这些状态:等决策的 screened、快道决策态,或已终结
-WINDOW_BET_STATES = {"screened", "fast_grab_ready"} | TERMINAL
+# G3 快道豁免(veto_window_bet)的候选只准停在这些状态:
+#   captured        —— 深审已出结论、但转移尚未被确认的挂起位(连续运行模式必经此处:
+#                      registrar 拒收 by=xinci-run 的该出口,候选只能挂着等用户单步确认);
+#   screened        —— 已确认豁免、等决策;
+#   fast_grab_ready —— 快道决策态;
+#   终态            —— 已终结。
+# 禁止的是 tracking 及其后继:那等于让豁免候选绕过 G3 走到全站。
+WINDOW_BET_STATES = {"captured", "screened", "fast_grab_ready"} | TERMINAL
 
 
 def validate(data_root):
@@ -144,8 +159,9 @@ def validate(data_root):
         if g3 == G3_WINDOW_BET:
             # 豁免只通向快道:出现在 tracking 及其后继意味着绕过了 G3
             if state not in WINDOW_BET_STATES:
-                errors.append(f"{where} G3={G3_WINDOW_BET} 的候选只能是 screened/fast_grab_ready "
-                              f"或终态,当前 {state}——进入该状态意味着绕过了 G3")
+                errors.append(f"{where} G3={G3_WINDOW_BET} 的候选只能是 captured(挂起待确认)/"
+                              f"screened/fast_grab_ready 或终态,当前 {state}"
+                              "——进入该状态意味着绕过了 G3")
             if state in {"screened", "fast_grab_ready"} and rec.get("window_estimate") != "days":
                 errors.append(f"{where} G3={G3_WINDOW_BET} 要求 window_estimate=days,"
                               f"当前 {rec.get('window_estimate')!r}")
@@ -215,22 +231,25 @@ def _check_funnel(obj, where, errors):
 
     这条等式是"留痕纪律"的可校验形式:2026-08-18 首次 xinci-run 从 Apple Dev News
     提取了 5 条以上变更却只有 1 条走到 G1,其余既未注册也未进淘汰索引——无声丢弃使
-    下轮重复评估。有了等式,漏掉的归宿会当场报错。"""
+    下轮重复评估。有了等式,漏掉的归宿会当场报错。
+
+    两条不参与等式的口径(否则必然算不平):去重命中的方向不计入 extracted;
+    消化存量 captured 的深审记 carryover_audited,不记 deep_audited。"""
     f = obj.get("funnel")
     if f is None:
         return
     if not isinstance(f, dict):
         errors.append(f"{where} funnel 必须是对象,当前 {type(f).__name__}")
         return
-    unknown = sorted(set(f) - set(FUNNEL_FIELDS))
+    unknown = sorted(set(f) - set(FUNNEL_ALL_FIELDS))
     if unknown:
         errors.append(f"{where} funnel 含 schema 外字段 {unknown}")
     missing = [k for k in FUNNEL_FIELDS if k not in f]
     if missing:
         errors.append(f"{where} funnel 缺字段 {missing}")
         return
-    bad = [k for k in FUNNEL_FIELDS
-           if not isinstance(f[k], int) or isinstance(f[k], bool) or f[k] < 0]
+    bad = [k for k in FUNNEL_ALL_FIELDS if k in f
+           and (not isinstance(f[k], int) or isinstance(f[k], bool) or f[k] < 0)]
     if bad:
         errors.append(f"{where} funnel 各项必须是非负整数,不合格: {bad}")
         return

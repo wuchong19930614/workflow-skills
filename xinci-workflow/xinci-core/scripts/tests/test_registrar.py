@@ -189,6 +189,23 @@ class RegistrarTest(unittest.TestCase):
                      decision_ref=ref, play="single_domain")
         self.assertEqual(self.load(slug)["state"], "build_ready")
 
+    def test_decision_ref_must_stay_inside_data_root(self):
+        """决策书路径与证据路径同规:数据区内的相对路径,禁绝对路径与 ..。
+
+        decision_ref 此前只校验存在性,`../` 或绝对路径能让账本指向数据区之外的文件。
+        """
+        slug = self.register()
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        self.to_qualified(slug)
+        mk_decision(self.root, slug)
+        for bad in (f"../决策书/{slug}.md", str(self.root / "决策书" / f"{slug}.md")):
+            with self.assertRaises(R.RegistrarError):
+                R.transition(self.root, slug, to="build_ready", by="xinci-decide",
+                             decision_ref=bad, play="single_domain")
+        self.assertEqual(self.load(slug)["state"], "qualified")
+
     def test_no_site_forbids_decision_ref(self):
         slug = self.register()
         self.to_screened(slug)

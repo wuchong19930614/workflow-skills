@@ -28,7 +28,7 @@
     "task": { "type": "string", "description": "搜索者想完成的具体任务" },
     "window_estimate": { "type": ["string", "null"], "enum": ["days", "weeks", "months", null], "description": "窗口评估,推理写在证据里" },
     "play": { "type": ["string", "null"], "enum": ["fast_grab", "single_domain", "cluster_expansion", null], "description": "决策时写入" },
-    "gates": { "type": "object", "additionalProperties": { "type": "string" }, "description": "各闸门最近结论(G0–G8 → pass/veto);完整证据在 evidence_refs" },
+    "gates": { "type": "object", "additionalProperties": { "type": "string" }, "description": "各闸门最近结论(G0–G8 → pass/veto,G3 另有第三种结论 veto_window_bet);完整证据在 evidence_refs" },
     "score": { "type": ["integer", "null"], "description": "认定阶段 100 分制得分,未认定为 null" },
     "invalidation": { "type": "array", "items": { "type": "string" }, "description": "失效条件清单,命中即提议放弃" },
     "evidence_refs": { "type": "array", "items": { "type": "string" }, "description": "观察文件路径,相对 数据/新词工作流/" },

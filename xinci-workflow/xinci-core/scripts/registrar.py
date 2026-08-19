@@ -63,6 +63,8 @@ SCREEN_GATES = ("G0", "G1", "G2", "G3", "G4", "G5")
 # G3 三分(闸门契约 G3):pass=位置没被占;veto=被占满,出局;
 # veto_window_bet=任务被做完但那些实现只因太新还没被收录,位置仅空几天——
 # 只准走快道,禁止进 tracking(否则绕过 G3 走到全站),且不在连续运行的标准授权内。
+# 被本出口拒收后(by=xinci-run),候选带着该结论挂在 captured 等用户单步确认:
+# captured 是合法的挂起位,不要把它硬塞进 rejected——它没有失败的闸门。
 G3_WINDOW_BET = "veto_window_bet"
 QUALIFY_GATES = ("G6", "G7", "G8")
 WINDOWS = {"days", "weeks", "months"}
@@ -194,6 +196,9 @@ def _check_gates(gates: dict, names, context: str) -> None:
 
 def _check_decision_files(data_root: Path, decision_ref: str) -> str:
     _require(bool(decision_ref), "该转移要求 decision_ref(决策书 md 路径)")
+    rel = Path(decision_ref)
+    _require(not rel.is_absolute() and ".." not in rel.parts,
+             f"决策书路径必须是数据区内的相对路径(禁绝对路径与 ..): {decision_ref}")
     md = Path(data_root) / decision_ref
     _require(md.is_file() and md.suffix == ".md", f"决策书 md 不存在: {decision_ref}")
     html = md.with_suffix(".html")

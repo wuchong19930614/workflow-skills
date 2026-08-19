@@ -213,6 +213,30 @@ class ValidateLedgerTest(unittest.TestCase):
         self.corrupt(slug, gates=dict(GATES_SCREEN, G3="veto"))
         self.assertTrue(any("未满足: ['G3']" in e for e in self.errors()), self.errors())
 
+    def hang_window_bet_at_captured(self, slug="hang-bet"):
+        """深审判出豁免、但转移尚未被确认的候选:带 gates 与 expiry 挂在 captured。"""
+        ev = mk_evidence(self.root, slug, "2026-08-19-scan.json")
+        R.register(self.root, slug=slug, term="hang bet", source_url="https://e.com",
+                   task="t", evidence=[ev],
+                   gates=dict(GATES_SCREEN, G3=R.G3_WINDOW_BET), expiry="2026-08-25")
+        return slug
+
+    def test_window_bet_may_hang_at_captured(self):
+        """captured 是豁免候选的合法挂起位。
+
+        连续运行下 registrar 拒收 by=xinci-run 的 screened 转移(闸门契约 G3),候选只能带着
+        veto_window_bet 停在 captured 等用户单步确认。若校验不认这个状态,每跑一次连续运行
+        账本就永久报错,而候选既不能推进(被拒)也不该 rejected(它没有失败的闸门)。
+        """
+        self.hang_window_bet_at_captured()
+        self.assertEqual(self.errors(), [])
+
+    def test_window_bet_at_captured_still_needs_expiry(self):
+        # 挂起位仍是排队位:没有 expiry 就没有过期出口,方向会无声腐烂
+        slug = self.hang_window_bet_at_captured()
+        self.corrupt(slug, expiry=None)
+        self.assertTrue(any("必有 expiry" in e for e in self.errors()), self.errors())
+
 class ValidateRunsTest(unittest.TestCase):
     """运行清单校验:清单不经 registrar 写入,格式漂移只能靠本校验捕获。"""
 
@@ -327,6 +351,29 @@ class ValidateRunsTest(unittest.TestCase):
                                                     "rejected_g1": 1, "deep_audited": 1,
                                                     "queued": 0}}])
         self.assertErrorMatching("rounds[0] funnel 去向加总")
+
+    def test_carryover_audited_accepted_and_excluded_from_sum(self):
+        """还债深审记 carryover_audited:不属于本轮 extracted,不参与加总等式。
+
+        只还债不扫新的轮次四项全 0,没有这个字段那一轮看起来像什么都没干。
+        """
+        self.mk_run(funnel=dict(self.FUNNEL_OK, carryover_audited=5))
+        self.assertEqual(V.validate_runs(self.root), [])
+
+    def test_carryover_audited_on_zero_scan_round(self):
+        self.mk_run("2026-08-19-xinci-run.json", skill="xinci-run", date="2026-08-19",
+                    rounds=[{"round": 1, "funnel": {"extracted": 0, "rejected_zero_cost": 0,
+                                                    "rejected_g1": 0, "deep_audited": 0,
+                                                    "queued": 0, "carryover_audited": 4}}])
+        self.assertEqual(V.validate_runs(self.root), [])
+
+    def test_carryover_audited_type_checked(self):
+        self.mk_run(funnel=dict(self.FUNNEL_OK, carryover_audited=-1))
+        self.assertErrorMatching("必须是非负整数")
+
+    def test_carryover_audited_is_optional(self):
+        self.mk_run(funnel=dict(self.FUNNEL_OK))
+        self.assertEqual(V.validate_runs(self.root), [])
 
     def test_funnel_optional(self):
         # 阈值之前的历史清单豁免:规则立起来之前的清单不带 funnel 是合法的

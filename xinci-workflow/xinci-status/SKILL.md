@@ -5,7 +5,9 @@ description: 新词工作流状态看板,只读汇报候选账本的全局事实
 
 # xinci-status 状态看板
 
-只读汇报,零判断,零写入。这套工作流由用户人工驱动:本 skill 只陈述账本事实,不推荐动作、不安排日程、不执行任何状态转移。
+只读汇报,零判断,零写入。本 skill 只陈述账本事实,不推荐动作、不安排日程、不执行任何状态转移。
+
+默认模式下工作流由用户人工驱动(提议-确认);用户显式启动 xinci-run 时它进入连续运行,但那是 xinci-run 的授权范围,与本 skill 无关——**无论哪种模式,本 skill 都只汇报**。
 
 > **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-status/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
 
@@ -32,6 +34,6 @@ python3 xinci-workflow/xinci-core/scripts/validate_ledger.py
 
 - 零写入。本 skill 不调用 registrar,不修改任何文件。
 - 账本是唯一事实来源;不从证据文件反推状态,不脑补账本没有的信息。
-- 只陈述事实("candidate-x 距上次复查 12 天,expiry 还剩 5 天"),不加"建议尽快复查"之类的驱动性措辞。复查与否、何时复查,是用户的决定。
-- expiry 已过的候选照实列出,等用户处置;不代替用户提议 expired,那是 xinci-track 复查后的职责。
+- 只陈述事实("candidate-x 距上次复查 12 天,expiry 还剩 5 天"),不加"建议尽快复查"之类的驱动性措辞。在本 skill 的语境里,复查与否、何时复查始终是用户的决定。
+- expiry 已过的候选照实列出,等用户处置;不代替用户提议 expired。提议归各阶段 skill:`tracking` 候选归 xinci-track 复查后提议,排队中的 `captured` 候选归 xinci-scan 开局接队时提议(连续模式下归 xinci-run 运行循环步骤 1)。
 - 汇报以用户能一遍看懂为准:先总数,后明细,异常置底单列。
