@@ -1,6 +1,6 @@
 ---
 name: xinci-track
-description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看 SERP 变化、命名定型与需求形成信号,向用户提议继续追踪/形成确认/过期。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 由用户指定查什么、何时查;本 skill 不自我调度。
+description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看 SERP 变化、命名定型与需求形成信号,向用户提议继续追踪/续期修订/形成确认/过期/否决。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 由用户指定查什么、何时查;本 skill 不自我调度。
 ---
 
 # xinci-track 追踪复查

@@ -22,8 +22,8 @@
       "properties": {
         "extracted": { "type": "integer", "description": "第 1 层广度提取、经第 0 层去重后进入第 2 层筛选的方向数(常态提取目标一轮 200–300;连续运行模式下按 captured 积压量下调至 100–150 或 50–80,软闸表见 xinci-run 运行循环步骤 1);去重命中的方向不计入" },
         "rejected_zero_cost": { "type": "integer", "description": "第 2 层筛除:G0/G4/G5/G6-G7 预筛/无任务 秒弃,以及陷阱型的 G3 验证失败;均已进淘汰方向索引" },
-        "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已批量追加进淘汰方向索引(gate=G1,reason 带首屏证据要点)" },
-        "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5)" },
+        "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已批量追加进淘汰方向索引(gate=G1,reason 带首屏证据要点)。只统计索引这一侧:已注册进账本的候选补跑 G1 被否时走账本的 captured→rejected,不记本格——funnel 归格按这个方向属于本轮还是存量定,本轮的记 deep_audited、上轮存量的记 carryover_audited" },
+        "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5);含本轮第 2 层陷阱验证存活、注册后补跑 G1/G2 的那一类——它做过 G3 深审、留痕在账本,与深审判否的候选同构,不记 rejected_g1。上轮存量 captured 的深审不记本格,记 carryover_audited" },
         "queued": { "type": "integer", "description": "本轮没走完的存活方向(超深审配额的,以及超 G1 上限本轮没搜的),注册为 captured 待下轮消化" },
         "carryover_audited": { "type": "integer", "description": "可选,不参与加总等式:本轮消化存量 captured(上轮排队的债)所做的深审数,配额与新扫描深审各自独立:默认 ≤5,captured 存量 >20 时 ≤10(积压软闸表见 xinci-run 运行循环步骤 1)。只还债不扫新的轮次五项全 0,靠本字段留下那一轮的真实成本" }
       },
@@ -49,8 +49,8 @@
           "properties": {
             "extracted": { "type": "integer", "description": "第 1 层广度提取、经第 0 层去重后进入第 2 层筛选的方向数(常态提取目标一轮 200–300;连续运行模式下按 captured 积压量下调至 100–150 或 50–80,软闸表见 xinci-run 运行循环步骤 1);去重命中的方向不计入" },
             "rejected_zero_cost": { "type": "integer", "description": "第 2 层筛除:G0/G4/G5/G6-G7 预筛/无任务 秒弃,以及陷阱型的 G3 验证失败;均已进淘汰方向索引" },
-            "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已批量追加进淘汰方向索引(gate=G1,reason 带首屏证据要点)" },
-            "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5)" },
+            "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已批量追加进淘汰方向索引(gate=G1,reason 带首屏证据要点)。只统计索引这一侧:已注册进账本的候选补跑 G1 被否时走账本的 captured→rejected,不记本格——funnel 归格按这个方向属于本轮还是存量定,本轮的记 deep_audited、上轮存量的记 carryover_audited" },
+            "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5);含本轮第 2 层陷阱验证存活、注册后补跑 G1/G2 的那一类——它做过 G3 深审、留痕在账本,与深审判否的候选同构,不记 rejected_g1。上轮存量 captured 的深审不记本格,记 carryover_audited" },
             "queued": { "type": "integer", "description": "本轮没走完的存活方向(超深审配额的,以及超 G1 上限本轮没搜的),注册为 captured 待下轮消化" },
             "carryover_audited": { "type": "integer", "description": "可选,不参与加总等式:本轮消化存量 captured(上轮排队的债)所做的深审数,配额与新扫描深审各自独立:默认 ≤5,captured 存量 >20 时 ≤10(积压软闸表见 xinci-run 运行循环步骤 1)。只还债不扫新的轮次五项全 0,靠本字段留下那一轮的真实成本" }
           },

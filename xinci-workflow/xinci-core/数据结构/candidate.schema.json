@@ -16,7 +16,7 @@
     "lane": { "type": "string", "const": "new", "description": "本套固定为 new;为未来成熟词道预留" },
     "first_observed_at": { "type": "string", "description": "首次捕获时间,ISO 8601(事实记录)" },
     "last_checked_at": { "type": "string", "description": "最近复查时间,ISO 8601(事实记录,不用于调度)" },
-    "expiry": { "type": ["string", "null"], "description": "失效日 YYYY-MM-DD,观察者判断并附推理于证据。按状态有两义:tracking/screened 及其后继是窗口/形成失效日;排队中的 captured(带 gates)是\"这个方向大约还值得几天深审\"的排队过期出口(见 xinci-scan 第 4 层),不是最终窗口评估" },
+    "expiry": { "type": ["string", "null"], "description": "失效日 YYYY-MM-DD,观察者判断并附推理于证据。按状态有两义:tracking/screened 及其后继是窗口/形成失效日;排队中的 captured(带 gates)是\"这个方向大约还值得几天深审\"的排队过期出口(见 xinci-scan 第 4 层),不是最终窗口评估。出闸 captured→screened 时应带 --expiry 把排队期的旧值覆盖成窗口失效日,完成语义切换——漏了这一步,旧值会残留到 screened 被按窗口失效日误读" },
     "source": {
       "type": "object",
       "required": ["url"],

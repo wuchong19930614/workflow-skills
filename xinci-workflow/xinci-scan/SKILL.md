@@ -1,6 +1,6 @@
 ---
 name: xinci-scan
-description: 扫描发现新兴/全新的英文 Google 搜索词候选:真浏览器直读 Reddit/Product Hunt/Hacker News/X/应用商店等信号面,或从有日期的法规/平台/技术变化推导付费者任务,捕获即跑 G0–G5 初筛并注册进账本。当用户说扫一下今天有什么新词、发现新机会、跑一轮雷达时使用。English triggers: scan new keywords, keyword radar, discover emerging terms. 看状态用 xinci-status,复查已有候选用 xinci-track。
+description: 扫描发现新兴/全新的英文 Google 搜索词候选:真浏览器直读 Reddit/Product Hunt/Hacker News/X/应用商店等信号面,或从有日期的法规/平台/技术变化推导付费者任务,捕获即跑 G0–G5 初筛:存活的与深审判否的注册进账本,秒弃与 G1 否决留痕进淘汰方向索引。当用户说扫一下今天有什么新词、发现新机会、跑一轮雷达时使用。English triggers: scan new keywords, keyword radar, discover emerging terms. 看状态用 xinci-status,复查已有候选用 xinci-track。
 ---
 
 # xinci-scan 扫描发现
@@ -71,11 +71,13 @@ printf '%s\n' "词|G0|违反 ToS" "词|G4|需要到场" "词|G7|官方答案在�
   | python3 xinci-workflow/xinci-core/scripts/screen_index.py append --date <YYYY-MM-DD>
 ```
 
-同型的结构性模式在第 4 个字段标 `pattern`,`screen_index.py stats` 会在累计 ≥3 次时提示归并进陷阱类别。不注册进账本。**预期本层砍掉 85%**,剩 30–50 条进 G1。
+同型的结构性模式在第 4 个字段标 `pattern`,`screen_index.py stats` 会在累计 ≥3 次时提示归并进陷阱类别(**它只统计索引这一侧**;深审否决的模式在账本里、`stats` 数不到,那一侧要把模式名记进运行清单 notes,见第 4 层)。不注册进账本。**预期本层砍掉 85%**,剩 30–50 条进 G1。
 
 **本层唯一的浏览器动作是验证型类别的 G3 验证**(其余都是零成本推理)。它虽然动用了真实 SERP,判 `veto` 时留痕仍走索引一侧:该模式已是正式类别,单个方向没有独立留档价值;这一次数到的免费实现清单按陷阱类别.md 的追加规则写进该类别节里。funnel 上它计入 `rejected_zero_cost`(本层筛除),不计 `rejected_g1`。
 
-**例外:验证判出 `pass` 或 `veto_window_bet` 的方向存活**,注册进账本、回正常序列补 G1/G2,funnel 上按它最终走到哪一层记(补完 G1 被否就记 `rejected_g1`,走完深审就记 `deep_audited`,没走完就记 `queued`)——留痕分界见生命周期契约:它还有下一步,第 1 条命中。
+**例外:验证判出 `pass` 或 `veto_window_bet` 的方向存活**,按**排队位**注册进账本(`captured` + gates(含本次 G3 结论)+ expiry——它还缺 G1/G2,本轮出不了闸;见生命周期契约「留痕分界」①的 b 类),回正常序列补 G1/G2。留痕分界第 1 条命中了它:它还有下一步。
+
+funnel 按它最终走到哪一层记,但**它已经在账本里,`rejected_g1` 那一格与它无关**——那一格记的是索引一侧。三种去向:补完 G1 被否 → 走 `captured→rejected`(reason 写清首屏是什么把任务做完了,见生命周期契约 rejected 边第⑤种情形),funnel 记 `deep_audited`(它做过 G3 深审、留痕在账本,与深审判否的候选同构);走完 G2 深审 → 同样记 `deep_audited`;本轮没走完 → 记 `queued`。
 
 ### 第 3 层:G1 快筛(中等,每条约十几秒)
 
@@ -96,7 +98,7 @@ printf '%s\n' "词|G1|原生单位转换器组件直接作答" "词|G1|AI Overvi
   | python3 xinci-workflow/xinci-core/scripts/screen_index.py append --date <YYYY-MM-DD>
 ```
 
-预期本层再砍掉一半,约 18 条。**为什么不注册**:G1 是硬否决且永不复活,要留下的只是"这个方向见过、死在 G1",索引一行完整承载;逐条写观察文件 + register + transition 是每轮 36 次脚本调用、每周 100+ 条 rejected 塞满账本,写入成本会压过本轮真正值钱的 5 次深审。账本收的是「现场证据值得单独留档」的候选——还有下一步的,以及走完 G2/G3 深审的(存活与否都算,见第 4 层);G1 否决两条都不沾。完整分界见生命周期契约。
+预期本层再砍掉一半,约 18 条。**为什么不注册**:G1 是硬否决且永不复活,要留下的只是"这个方向见过、死在 G1",索引一行完整承载;逐条写观察文件 + register + transition 是每轮 36 次脚本调用、每周 100+ 条 rejected 塞满账本,写入成本会压过本轮真正值钱的 5 次深审。账本收的是「现场证据值得单独留档」的候选——还有下一步的,以及走完 G2/G3 深审的(存活与否都算,见第 4 层);G1 否决两条都不沾。**但这只管本轮首次见到、尚未注册的方向**:已在账本里的排队候选(第 2 层陷阱验证存活的、超配额排队的)补跑 G1 被否时走 `captured→rejected`,不是追加一行索引——它在账本里,索引管不着它。完整分界见生命周期契约。
 
 **本层是整个漏斗的真实瓶颈**,两条纪律:
 
@@ -130,6 +132,8 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
 
 理由见生命周期契约「留痕分界」第 2 条:深审每轮只有 ≤5 次,它数到的免费实现清单与结构阅读要点是这个方向独有的证据,索引一行的 reason 装不下;而**没有**这条账本记录,下轮 `screen_index.py check` 就认不出它(check 同时查索引与账本,深审否决的候选只在账本一侧)。唯一的例外是命中已成册陷阱类别、当场跑 G3 验证判 `veto` 的方向——那是类别级死因的复核,按第 2 层走索引。
 
+**深审判否时,若死因看起来是一个结构性模式,把模式名记进本次运行清单的 notes**:账本没有 `pattern` 字段,`screen_index.py stats` 只统计索引一侧,这类模式的计数只能靠 notes 累计。归并阈值按两侧合计判(见生命周期契约「归并纪律」)——陷阱类别三的三例正是全在账本一侧,只数索引永远数不到三。
+
 **超出配额的候选不许丢弃**:注册成 `captured`,带上已得的闸门结论**和一个 expiry**,下轮第 0 层优先消化。
 
 expiry 是排队位的过期出口:排队每轮进多出少,没有 expiry 的方向会在队列里无声腐烂,而 report_status 只按 expiry 提示到期候选。给的是"这个方向大约还值得几天深审"的判断(附推理进观察文件),不是最终窗口评估——真正的 window_estimate 在第 5 层深审后才做。registrar 强制:带 `--gates` 就必须带 `--expiry`。
@@ -154,26 +158,30 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
   --task "<搜索者要完成的任务>" --evidence "证据/<slug>/<日期>-scan.json" --by xinci-scan
 ```
 
-理由与第 4 层同一条:**`register` 带 `--gates` 就会被 registrar 强制要 `--expiry`**,而 `--expiry` 在 `captured` 上的语义是**排队过期出口**(「这个方向大约还值得几天深审」,见 candidate.schema),一个下一步就出闸的候选没有排队期可言;硬塞一个进去还会残留到 `screened`,被按「窗口失效日」重新解读。同理,`register` **没有** `--window-estimate` 参数——窗口评估也在出闸那一步写入。
+理由与第 4 层同一条:**`register` 带 `--gates` 就会被 registrar 强制要 `--expiry`**,而 `--expiry` 在 `captured` 上的语义是**排队过期出口**(「这个方向大约还值得几天深审」,见 candidate.schema),一个下一步就出闸的候选没有排队期可言。**排队候选带的那个 expiry 不是问题,前提是出闸时用 `--expiry` 覆盖它**(见下面出闸命令的注释:语义从「还值得几天深审」切换为「窗口失效日」);漏了这一步,旧值就会残留到 `screened` 被按窗口失效日误读。同理,`register` **没有** `--window-estimate` 参数——窗口评估也在出闸那一步写入。
 
 **第一步一律是出闸 `captured → screened`,这一步不能跳。** register 出来的候选状态是 `captured`,而 `tracking` 与快道**都只从 `screened` 出发**(registrar 的合法边是 captured→screened→tracking / →fast_grab_ready,直接 `--to tracking` 会被判"非法转移")。窗口评估(`window_estimate`)与 G0–G5 全 pass 的校验也都落在这一步:
 
 ```bash
 # 上轮排队的候选:注册时已带 G0/G4/G5/G1,本次只补 G2/G3
+# --expiry 在这里把排队期的旧值覆盖成真正的窗口失效日(语义切换,见下)
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to screened --by xinci-scan \
   --gates G2=pass,G3=pass --window-estimate <days|weeks|months> \
+  --expiry <YYYY-MM-DD> \
   --evidence "证据/<slug>/<日期>-scan.json"
 
 # 本轮走完全程的候选:register 没带 gates,这一步要交齐 G0–G5 六道
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to screened --by xinci-scan \
   --gates G0=pass,G4=pass,G5=pass,G1=pass,G2=pass,G3=pass \
-  --window-estimate <days|weeks|months> \
+  --window-estimate <days|weeks|months> --expiry <YYYY-MM-DD> \
   --evidence "证据/<slug>/<日期>-scan.json"
 ```
 
-registrar 按**合并结果**(账本已有 gates + 本次提交)校验 G0–G5 全 pass,所以两种写法各自交齐自己那部分即可。`G3=veto_window_bet` 的候选出闸时额外要求 `--window-estimate days` + `--reason`(豁免依据),且 `--by` 不能是 xinci-run——**这不是"把 `--by` 换个值就能过"的意思,而是这条出口在连续运行下根本不可用**:连续运行时本该写的 `--by` 就是 `xinci-run`(见上「`--by` 约定」),写别的值是伪造授权印记。此时正确的处置是把候选留在 `captured` 挂起等用户单步确认(见下面的出口清单与 xinci-run 硬规则)。
+registrar 按**合并结果**(账本已有 gates + 本次提交)校验 G0–G5 全 pass,所以两种写法各自交齐自己那部分即可。
+
+**两条命令都带 `--expiry`,写的是窗口失效日**(按 window_estimate 推出,推理进观察文件)。registrar 不强制它,但缺了它 report_status 就提示不到这个候选窗口已过,`screened → expired` 那条边等于没有触发点(那条边归 xinci-decide 提议,连续运行下归 xinci-run 步骤 1,见生命周期契约 expired 的四条来源)。对排队来的候选,这一步同时完成 expiry 的**语义切换**:从「还值得几天深审」换成「窗口失效日」。`G3=veto_window_bet` 的候选出闸时额外要求 `--window-estimate days` + `--reason`(豁免依据),且 `--by` 不能是 xinci-run——**这不是"把 `--by` 换个值就能过"的意思,而是这条出口在连续运行下根本不可用**:连续运行时本该写的 `--by` 就是 `xinci-run`(见上「`--by` 约定」),写别的值是伪造授权印记。此时正确的处置是把候选留在 `captured` 挂起等用户单步确认(见下面的出口清单与 xinci-run 硬规则)。
 
 **出闸后提议下一步,由用户确认后执行转移:**
 
@@ -219,7 +227,7 @@ registrar 按**合并结果**(账本已有 gates + 本次提交)校验 G0–G5 �
 - 本 skill 不注册域名、不花钱、不发布任何内容。
 - 扫描产出为零时如实说零;禁止凑数,禁止 maybe 清单。
 - **广度优先于深度**:一轮的价值先由"提取了多少方向"决定,再由"审得多深"决定。一个源里的多条独立变更要逐条提,不合并、不只挑最显眼的那条;提取不足目标量时**换源补足**,而不是拿现有的少数一路深挖到底。
-- **每个被提取的方向必须有归宿**:秒弃(进淘汰索引)、G1 否决(进淘汰索引)、深审(注册)、或排队(注册为 captured——含超深审配额的和超 G1 上限没搜的)——四选一,**不许无声丢弃**。运行清单的 `funnel` 四项去向加总须等于 `extracted`,由 `validate_ledger.py` 强制;去重命中的方向不计入 `extracted`,消化存量的深审记 `carryover_audited`,两者都不参与等式。
+- **每个被提取的方向必须有归宿**:秒弃(进淘汰索引)、G1 否决(进淘汰索引)、深审(注册)、或排队(注册为 captured——含超深审配额的和超 G1 上限没搜的)——四选一,**不许无声丢弃**。(已注册候选补跑 G1 被否属「深审」那一格:账本走 `captured→rejected`,不记 `rejected_g1`——后者只统计索引一侧;funnel 归格按方向属于本轮还是存量定,本轮的记 `deep_audited`、上轮存量的记 `carryover_audited`。)运行清单的 `funnel` 四项去向加总须等于 `extracted`,由 `validate_ledger.py` 强制;去重命中的方向不计入 `extracted`,消化存量的深审记 `carryover_audited`,两者都不参与等式。
 - **深审配额每轮 ≤5 个**:G2/G3 是全流程最贵的动作,超配额的候选注册成 `captured` 排队,下轮开局优先消化,不得因为"这轮做不完"而丢掉。连续运行模式下**新扫描深审与还债深审配额彼此独立**——本层的 ≤5 只管新扫描的,还债另有自己的配额(积压严重时会临时提高,表见 xinci-run 运行循环步骤 1),还债不吃掉本轮扫描的深审名额。
 - **排队位的两条纪律**:①注册排队候选必须带 `expiry`(registrar 强制),否则窗口过了没有出口、方向无声腐烂;②`gates` 只写真的跑过的门——没搜 G1 就不许写 G1=pass,下轮补上再进深审。**排队会积压**(每轮进 10–20、出 ≤5),所以连续运行模式对积压设了软闸——不是停扫,而是按积压量压低本轮提取目标,见 xinci-run 运行循环步骤 1。
-- 秒弃的方向与 **G1 否决**都必须留痕进淘汰方向索引(批量追加,不逐条写),防止后续扫描重复评估;账本收的是「现场证据值得单独留档」的候选:深审存活的、排队的,以及**深审判否的**(第 4 层 register + `→rejected`,别漏这一类)。同一结构性模式在索引中第三次出现时,按陷阱类别.md 的追加规则归并成正式类别(索引补一行归并记录:**term 写模式名本身**、gate 记 G5、reason 以 `[已归并]` 开头指向类别号——term 写成某个具体方向会被 append 的去重静默跳过;写法见生命周期契约「归并纪律」),此后同模式由 G5 **按该类别的处置档**处理——「直接筛除型」零成本弃、「验证型」仍跑 G3 验证;**留痕不变**,秒弃照常追加一行索引(gate 记 G5),否则下轮 check 认不出它。索引不会因此膨胀:`append` 按归一化 term 跳重复,每行始终是一个独立方向。
+- 秒弃的方向与 **G1 否决**都必须留痕进淘汰方向索引(批量追加,不逐条写),防止后续扫描重复评估;**这条限本轮首次见到、尚未注册的方向**——已注册的排队候选补跑 G1 被否走 `captured→rejected`,不进索引;账本收的是「现场证据值得单独留档」的候选:深审存活的、排队的,以及**深审判否的**(第 4 层 register + `→rejected`,别漏这一类)。同一结构性模式**累计第三次出现**时(索引一侧的秒弃 + 账本一侧的深审否决合并计数,后者靠运行清单 notes 累计——`stats` 只统计索引一侧),按陷阱类别.md 的追加规则归并成正式类别(索引补一行归并记录:**term 写模式名本身**、gate 记 G5、reason 以 `[已归并]` 开头指向类别号——term 写成某个具体方向会被 append 的去重静默跳过;写法见生命周期契约「归并纪律」),此后同模式由 G5 **按该类别的处置档**处理——「直接筛除型」零成本弃、「验证型」仍跑 G3 验证;**留痕不变**,秒弃照常追加一行索引(gate 记 G5),否则下轮 check 认不出它。索引不会因此膨胀:`append` 按归一化 term 跳重复,每行始终是一个独立方向。
