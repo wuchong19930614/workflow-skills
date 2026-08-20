@@ -460,7 +460,7 @@ class RegistrarTest(unittest.TestCase):
             self.to_screened_window_bet(slug, reason=None)
 
     def test_window_bet_forbidden_in_continuous_mode(self):
-        # 软化闸门的决定不在连续运行的标准授权内(闸门契约 G3)
+        # 接受额外窗口赌注风险不在连续运行的标准授权内(闸门契约 G3)
         slug = self.register()
         with self.assertRaises(R.RegistrarError):
             self.to_screened_window_bet(slug, by="xinci-run", reason="理由")

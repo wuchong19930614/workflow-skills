@@ -317,26 +317,26 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                      f"G3={G3_WINDOW_BET} 只适用于窗口以天计的候选(临时空位寿命以天计),"
                      f"当前 window_estimate={window_estimate!r}")
             _require(bool(reason),
-                     f"G3={G3_WINDOW_BET} 要求 reason(豁免依据:数到哪些免费实现、"
+                     f"G3={G3_WINDOW_BET} 要求 reason(降级依据:数到哪些免费实现、"
                      "为何判定它们只是还没被收录)")
             _require(by != "xinci-run",
-                     f"G3={G3_WINDOW_BET} 是软化闸门的决定,不在连续运行的标准授权内"
-                     "(标准授权明确:闸门原样适用,不因连续模式软化);须由用户在单步模式下确认")
+                     f"G3={G3_WINDOW_BET} 出闸意味着接受额外窗口赌注风险,"
+                     "不在连续运行的标准授权内;须由用户在单步模式下确认")
     elif to == "rejected":
         _require(bool(reason), "rejected 要求 reason(失败闸门 + 现场证据要点)")
     elif to == "tracking":
         if frm == "built":  # 升级通路
             _require(bool(reason), "built→tracking 要求 reason(升级理由)")
             _check_date(expiry, "expiry")
-            # 快道豁免不可继承:想走全站必须重跑 G3 拿真 pass
+            # 快道降级结论不可继承:想走全站必须重跑 G3 拿真 pass
             if rec["gates"].get("G3") == G3_WINDOW_BET:
                 _require((gates or {}).get("G3") == "pass",
-                         f"该候选 G3={G3_WINDOW_BET}(快道豁免);built→tracking 升级要求"
-                         "本次重跑 G3 并取得 pass,豁免只在快道这一次有效")
+                         f"该候选 G3={G3_WINDOW_BET}(快道降级结论);built→tracking 升级要求"
+                         "本次重跑 G3 并取得 pass,降级结论只在快道这一次有效")
         else:
             _require(rec["gates"].get("G3") != G3_WINDOW_BET,
                      f"G3={G3_WINDOW_BET} 的候选只能走快道(→fast_grab_ready)或 rejected;"
-                     "不得进入 tracking——G3 的否决理由不会随时间变好(通用工具正在收录),"
+                     "不得进入 tracking——临时空位风险不会随时间变好(通用工具正在收录),"
                      "放它进追踪等于让它绕过 G3 走到全站")
             _check_date(expiry, "expiry")
             _require(bool(invalidation), "screened→tracking 要求至少 1 条失效条件")

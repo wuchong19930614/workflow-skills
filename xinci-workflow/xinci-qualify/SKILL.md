@@ -1,6 +1,6 @@
 ---
 name: xinci-qualify
-description: 对形成确认(formation_confirmed)的新词候选做深度认定,也受理决策阶段搁置(hold)候选的重审:G6 商业闭环、G7 耐久性、G8 簇广度、完整竞争审计与 100 分制评分(80 分线)。当用户说认定候选 X、X 值不值得建站、给 X 打分时使用。English triggers: qualify candidate, keyword qualification, score keyword opportunity. 建站 go/no-go 决策用 xinci-decide。
+description: 对形成确认(formation_confirmed)的新词候选做深度认定,也受理决策阶段搁置(hold)候选的重审:G6 商业闭环、G7 耐久性、G8 簇广度、完整竞争审计与 100 分制评分(80 分线)。当用户说认定候选 X、判断这个机会是否真实、给 X 打分时使用。English triggers: qualify candidate, keyword qualification, score keyword opportunity. “值不值得建站”与建站 go/no-go 决策用 xinci-decide。
 ---
 
 # xinci-qualify 深度认定
