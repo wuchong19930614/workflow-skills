@@ -49,6 +49,9 @@ OBS_STAGES = {"scan", "track", "qualify", "decide"}
 LEGAL = {
     ("captured", "screened"), ("captured", "rejected"), ("captured", "expired"),
     ("screened", "rejected"), ("screened", "tracking"), ("screened", "fast_grab_ready"),
+    # screened→expired:出闸后窗口自己过期(始终没排上快道/入库)的干净出口。
+    # 与 captured→expired 同一条理由——它没有失败的闸门,不该被硬塞进 rejected。
+    ("screened", "expired"),
     ("tracking", "formation_confirmed"), ("tracking", "expired"), ("tracking", "rejected"),
     ("formation_confirmed", "qualified"), ("formation_confirmed", "disqualified"),
     ("qualified", "build_ready"), ("qualified", "pilot_ready"),

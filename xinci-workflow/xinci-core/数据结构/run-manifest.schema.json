@@ -17,7 +17,7 @@
     "billable_calls": { "type": "integer", "description": "计费查询次数(Semrush 等);扫描阶段应为 0" },
     "funnel": {
       "type": "object",
-      "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。两条不参与等式的口径:①第 0 层去重命中的方向不计入 extracted(它们上一次已有归宿,再计一次等式必然算不平);②消化存量 captured 的深审记 carryover_audited,不记 deep_audited。自 2026-08-19 起 funnel 本身也强制存在:xinci-scan 清单必须带顶层 funnel,xinci-run 清单每一轮必须带 rounds[].funnel(该轮没扫描就把 extracted 与四个去向五项全写 0——这五项都是 required,只写四个去向会被判缺 extracted;但还了债就要写 carryover_audited);阈值之前的历史清单豁免。",
+      "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。两条不参与等式的口径:①第 0 层去重命中的方向不计入 extracted(它们上一次已有归宿,再计一次等式必然算不平);②消化存量 captured 的深审记 carryover_audited,不记 deep_audited。自 2026-08-19 起 funnel 本身也强制存在:xinci-scan 清单必须带顶层 funnel,xinci-run 清单每一轮必须带 rounds[].funnel(该轮没扫描就把 extracted 与四个去向五项全写 0——这五项都是 required,只写四个去向会被判缺 extracted;还了债的轮次记得补上可选的 carryover_audited,否则看不出那一轮花了什么);阈值之前的历史清单豁免。",
       "required": ["extracted", "rejected_zero_cost", "rejected_g1", "deep_audited", "queued"],
       "properties": {
         "extracted": { "type": "integer", "description": "第 1 层广度提取、经第 0 层去重后进入第 2 层筛选的方向数(常态提取目标一轮 200–300;连续运行模式下按 captured 积压量下调至 100–150 或 50–80,软闸表见 xinci-run 运行循环步骤 1);去重命中的方向不计入" },
@@ -44,7 +44,7 @@
           "billable_calls": { "type": "integer", "description": "本轮计费查询次数" },
         "funnel": {
           "type": "object",
-          "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。两条不参与等式的口径:①第 0 层去重命中的方向不计入 extracted(它们上一次已有归宿,再计一次等式必然算不平);②消化存量 captured 的深审记 carryover_audited,不记 deep_audited。自 2026-08-19 起 funnel 本身也强制存在:xinci-scan 清单必须带顶层 funnel,xinci-run 清单每一轮必须带 rounds[].funnel(该轮没扫描就把 extracted 与四个去向五项全写 0——这五项都是 required,只写四个去向会被判缺 extracted;但还了债就要写 carryover_audited);阈值之前的历史清单豁免。",
+          "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。两条不参与等式的口径:①第 0 层去重命中的方向不计入 extracted(它们上一次已有归宿,再计一次等式必然算不平);②消化存量 captured 的深审记 carryover_audited,不记 deep_audited。自 2026-08-19 起 funnel 本身也强制存在:xinci-scan 清单必须带顶层 funnel,xinci-run 清单每一轮必须带 rounds[].funnel(该轮没扫描就把 extracted 与四个去向五项全写 0——这五项都是 required,只写四个去向会被判缺 extracted;还了债的轮次记得补上可选的 carryover_audited,否则看不出那一轮花了什么);阈值之前的历史清单豁免。",
           "required": ["extracted", "rejected_zero_cost", "rejected_g1", "deep_audited", "queued"],
           "properties": {
             "extracted": { "type": "integer", "description": "第 1 层广度提取、经第 0 层去重后进入第 2 层筛选的方向数(常态提取目标一轮 200–300;连续运行模式下按 captured 积压量下调至 100–150 或 50–80,软闸表见 xinci-run 运行循环步骤 1);去重命中的方向不计入" },

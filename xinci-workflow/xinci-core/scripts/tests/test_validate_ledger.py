@@ -98,6 +98,15 @@ class ValidateLedgerTest(unittest.TestCase):
         self.build_chain(until="captured")
         self.assertEqual(self.errors(), [])
 
+    def test_hold_keeps_its_score(self):
+        # hold 只能从 qualified 转入,分数已经产生且不被清空(生命周期契约:
+        # "hold 本身已带着 G6–G8 全 pass 与分数");手工抹掉要被校验捕获
+        slug = self.build_chain(until="qualified")
+        R.transition(self.root, slug, to="hold", by="xinci-decide", reason="页面地图存疑,搁置重审")
+        self.assertEqual(self.errors(), [])
+        self.corrupt(slug, score=None)
+        self.assertTrue(any("score" in e for e in self.errors()), self.errors())
+
     def test_detects_fast_grab_invariants(self):
         slug = self.build_chain(until="fast_grab_ready", window="days")
         self.corrupt(slug, expiry=None, play="single_domain", score=90)

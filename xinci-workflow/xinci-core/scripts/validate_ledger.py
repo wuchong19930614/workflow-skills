@@ -16,7 +16,7 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
   带 G3=veto_window_bet 的候选只能停在 captured(挂起待确认)/screened/fast_grab_ready 或终态,
   且在 screened/fast_grab_ready 上 window_estimate=days;qualified 及其后继(build_ready/pilot_ready/hold)必有 G6–G8 全 pass;
   formation_confirmed 及其后继必有 ≥2 个 -track 观察且跨度 ≥7 天;
-  qualified/build_ready/pilot_ready 必有整数 score ≥80;
+  qualified/build_ready/pilot_ready/hold 必有整数 score ≥80(hold 是认定后的搁置,分数已经产生);
   build_ready/pilot_ready 的 play ∈ {single_domain, cluster_expansion};
 - go 决策态(build_ready/pilot_ready/fast_grab_ready)必须有 decision_ref,且 md+html 双文件存在;
 - hold/no_site 不得携带 decision_ref(no-go 不出决策书);
@@ -67,7 +67,9 @@ RUN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})(?:-(\d{4}))?-(xinci-[a-z]+)")
 
 GO_STATES = {"build_ready", "pilot_ready", "fast_grab_ready"}
 NO_GO_STATES = {"hold", "no_site"}
-SCORED_STATES = {"qualified", "build_ready", "pilot_ready"}
+# 带分数的状态:认定产生分数,其后继一路带着它。hold 也在内——生命周期契约明确
+# "hold 本身已带着 G6–G8 全 pass 与分数",它只能从 qualified 转入,分数不会被清空。
+SCORED_STATES = {"qualified", "build_ready", "pilot_ready", "hold"}
 # 过了 screened 的非终态:G0–G5 应全 pass(复查翻转即原子转出,不存在带 veto 的中间态)
 SCREEN_PASSED_STATES = {"screened", "tracking", "formation_confirmed", "qualified",
                         "build_ready", "pilot_ready", "fast_grab_ready", "hold"}

@@ -19,8 +19,8 @@ description: 对已认定(qualified)或搁置待议(hold)的新词候选出建�
 ## 行动前必读
 
 - xinci-workflow/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
-- xinci-workflow/xinci-core/闸门契约.md(G8 页面地图标准;快道要引用的 G3 三分与 `veto_window_bet` 出口限制)
-- xinci-workflow/xinci-core/评分契约.md(收入可行性的 $200/月 基准线;"pilot 与快道不得声称全站分数"的出处)
+- xinci-workflow/xinci-core/闸门契约.md(G8 认定门与决策门;**pilot 由决策门触发**;快道要引用的 G3 三分与 `veto_window_bet` 出口限制)
+- xinci-workflow/xinci-core/评分契约.md(收入可行性的 $200/月 基准线;硬否决不产生分数;`veto_window_bet` 只走快道、而快道本身不评分)
 - xinci-workflow/xinci-core/数据采集指南.md(补缺口审计时的真浏览器原则与 Semrush decision-changing 纪律)
 
 ## 完整模式工作流
@@ -46,7 +46,14 @@ no-go(hold / no_site)只带 reason,不出决策书、不带 decision-ref。
 
 1. **核对输入**:状态 screened 且 window_estimate=days。
 2. **轻量决策书**,必含:词与任务;G0–G5 证据;窗口估计与 expiry(附推理);**若 G3=`veto_window_bet`:G3 豁免声明**——数到的免费实现清单、为何判定它们只是还没被收录,以及明码标价一句"本次只赌收录时差,通用工具收录后位置即失";**跳过的闸门清单及"为何此刻无法执行"**(G6–G8 所需证据对天级新词客观不存在);48 小时发布计划(最小页面集);投入上限声明(损失封顶:一个域名 + 若干页面工时);风险确认(这是窗口赌注,不是被验证的生意);失效信号;升级通路说明(词若耐久,built 后可转回 tracking 走完整认定;**若本次 G3=`veto_window_bet`,升级时必须重跑 G3 并取得真 pass**,快道豁免不可继承)。
-3. 用户确认风险后:`--to fast_grab_ready --play fast_grab --expiry <日期> --decision-ref "决策书/<slug>.md"`。
+3. 用户确认风险后:
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
+  --slug <slug> --to fast_grab_ready --by xinci-decide \
+  --play fast_grab --expiry <日期> --decision-ref "决策书/<slug>.md"
+```
+
 4. **快道的 no-go**:读完证据判定这个赌注不值(收录时差太短、任务其实一次性、投入上限也兜不住),提议 `rejected`(reason 写清不成立的那条判据)或由用户 `withdrawn`。**快道不产出 hold / no_site**——那两个是完整模式的结论,快道候选还没做过 G6–G8,没有资格被"搁置待议"。快道 no-go 同样不出决策书。
 
 ## 双格式约定(md 给 AI,html 给人)
@@ -64,7 +71,8 @@ python3 xinci-workflow/xinci-core/scripts/build_decision_html.py "数据/新词�
 ## 硬规则
 
 - 不注册域名、不花钱、不发布——决策书交付即停。
-- pilot 与快道决策不得声称全站分数。
+- **快道不评分**:它没做过 G6–G8,账本上 `score` 必须保持 null(`validate_ledger` 强制),决策书里也不许出现任何分数。
+- **pilot 有分数,但那是认定分,不是全站背书**:它从 qualified 转来,账本上照常带着 ≥80 的认定分(`validate_ledger` 同样强制)。决策书要写清楚这个分数说的是"机会为真",而它降为 pilot 恰恰是因为页面地图凑不满全站规模(闸门契约 G8 决策门)——不得拿它当"全站已验证"的依据。
 - no-go 不出决策书,只在账本记决定性理由(数据极简原则)。
 - 快道只收 window_estimate=days 的 screened 候选;别的候选想快,答案是不行。
 - 快道只有两类出口:go 是 fast_grab_ready,no-go 是 rejected(判据不成立)或 withdrawn(用户撤回);hold 与 no_site 只属于完整模式。

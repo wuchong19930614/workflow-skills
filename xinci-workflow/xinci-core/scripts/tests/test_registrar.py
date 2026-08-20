@@ -371,6 +371,15 @@ class RegistrarTest(unittest.TestCase):
                      reason="排队 expiry 已过,经用户确认不再深审")
         self.assertEqual(self.load(slug)["state"], "expired")
 
+    def test_screened_can_expire(self):
+        # screened→expired:出闸后窗口自己过期(始终没排上快道、也没入库)的干净出口。
+        # 与 captured→expired 同一条理由——它没有失败的闸门,不该被硬塞进 rejected。
+        slug = self.register()
+        self.to_screened(slug)
+        R.transition(self.root, slug, to="expired", by="xinci-scan",
+                     reason="窗口以周计但始终没推进,expiry 已过经用户确认")
+        self.assertEqual(self.load(slug)["state"], "expired")
+
     def test_expired_requires_reason(self):
         slug = "queued-term"
         ev = mk_evidence(self.root, slug, "2026-08-18-scan.json")

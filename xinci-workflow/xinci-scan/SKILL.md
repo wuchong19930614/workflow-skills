@@ -144,24 +144,42 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
 ### 第 5 层:窗口评估与注册(只对深审存活的候选)
 
 估计窗口以天/周/月计(可发现性、多少人能做同样的页面、官方答案多久出现),写明推理。
-每个候选一份观察文件 `证据/<slug>/<日期>-scan.json`(要点式,schema 见 数据结构/observation.schema.json),然后 register(命令格式同第 4 层的两个 register 块,深审已完成的把 `--gates` 一并带上 G2/G3 结论;上轮已排队注册过的候选跳过 register,直接出闸)。
+每个候选一份观察文件 `证据/<slug>/<日期>-scan.json`(要点式,schema 见 数据结构/observation.schema.json),然后 register。上轮已排队注册过的候选**跳过 register,直接出闸**。
+
+**本轮走完全程的候选,register 不带 `--gates`**(命令格式同第 4 层的第一个 register 块),闸门结论随下一步出闸的 transition 一起提交:
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/registrar.py register \
+  --slug <slug> --term "<精确措辞>" --source-url <URL> --source-note "<现场摘要>" \
+  --task "<搜索者要完成的任务>" --evidence "证据/<slug>/<日期>-scan.json" --by xinci-scan
+```
+
+理由与第 4 层同一条:**`register` 带 `--gates` 就会被 registrar 强制要 `--expiry`**,而 `--expiry` 在 `captured` 上的语义是**排队过期出口**(「这个方向大约还值得几天深审」,见 candidate.schema),一个下一步就出闸的候选没有排队期可言;硬塞一个进去还会残留到 `screened`,被按「窗口失效日」重新解读。同理,`register` **没有** `--window-estimate` 参数——窗口评估也在出闸那一步写入。
 
 **第一步一律是出闸 `captured → screened`,这一步不能跳。** register 出来的候选状态是 `captured`,而 `tracking` 与快道**都只从 `screened` 出发**(registrar 的合法边是 captured→screened→tracking / →fast_grab_ready,直接 `--to tracking` 会被判"非法转移")。窗口评估(`window_estimate`)与 G0–G5 全 pass 的校验也都落在这一步:
 
 ```bash
+# 上轮排队的候选:注册时已带 G0/G4/G5/G1,本次只补 G2/G3
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to screened --by xinci-scan \
   --gates G2=pass,G3=pass --window-estimate <days|weeks|months> \
   --evidence "证据/<slug>/<日期>-scan.json"
+
+# 本轮走完全程的候选:register 没带 gates,这一步要交齐 G0–G5 六道
+python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
+  --slug <slug> --to screened --by xinci-scan \
+  --gates G0=pass,G4=pass,G5=pass,G1=pass,G2=pass,G3=pass \
+  --window-estimate <days|weeks|months> \
+  --evidence "证据/<slug>/<日期>-scan.json"
 ```
 
-排队候选注册时已带 G0/G4/G5/G1,本次只补 G2/G3——registrar 按**合并结果**校验 G0–G5 全 pass。`G3=veto_window_bet` 的候选出闸时额外要求 `--window-estimate days` + `--reason`(豁免依据),且 `--by` 不能是 xinci-run——**这不是"把 `--by` 换个值就能过"的意思,而是这条出口在连续运行下根本不可用**:连续运行时本该写的 `--by` 就是 `xinci-run`(见上「`--by` 约定」),写别的值是伪造授权印记。此时正确的处置是把候选留在 `captured` 挂起等用户单步确认(见下面的出口清单与 xinci-run 硬规则)。
+registrar 按**合并结果**(账本已有 gates + 本次提交)校验 G0–G5 全 pass,所以两种写法各自交齐自己那部分即可。`G3=veto_window_bet` 的候选出闸时额外要求 `--window-estimate days` + `--reason`(豁免依据),且 `--by` 不能是 xinci-run——**这不是"把 `--by` 换个值就能过"的意思,而是这条出口在连续运行下根本不可用**:连续运行时本该写的 `--by` 就是 `xinci-run`(见上「`--by` 约定」),写别的值是伪造授权印记。此时正确的处置是把候选留在 `captured` 挂起等用户单步确认(见下面的出口清单与 xinci-run 硬规则)。
 
 **出闸后提议下一步,由用户确认后执行转移:**
 
 - G0–G5 全过、窗口以周/月计 → 提议 `screened → tracking`(带 expiry 与失效条件);
 - G0–G5 全过、窗口以天计 → 提议走快道(转给 xinci-decide 快速模式,它核对的输入正是 `screened` + `window_estimate=days`);
-- G3 判定为**临时空位**(`veto_window_bet`)、窗口以天计 → 出闸时就带上豁免依据(`--reason`:数到的免费实现清单 + 为何判定它们只是还没被收录),观察文件记明该判断,然后提议走快道。该候选此后的合法出口共四个:`fast_grab_ready`(快道 go)、`rejected`(快道读完证据判定这个赌注不值)、`withdrawn`(用户撤回),以及它挂在 `captured` 时排队 expiry 过了的 `expired`;**唯独不得进 tracking**(理由见闸门契约 G3「唯一的降级出口」;`validate_ledger` 的 `WINDOW_BET_STATES` 同样只放行 `captured`/`screened`/`fast_grab_ready` 与终态,出现在 tracking 及其后继一律报错)。
+- G3 判定为**临时空位**(`veto_window_bet`)、窗口以天计 → 出闸时就带上豁免依据(`--reason`:数到的免费实现清单 + 为何判定它们只是还没被收录),观察文件记明该判断,然后提议走快道。该候选此后的合法出口共四个:`fast_grab_ready`(快道 go)、`rejected`(快道读完证据判定这个赌注不值)、`withdrawn`(用户撤回),以及 expiry 过了的 `expired`(挂在 `captured` 排队过期,或已出闸到 `screened` 后窗口自己过了,两条来路都算);**唯独不得进 tracking**(理由见闸门契约 G3「唯一的降级出口」;`validate_ledger` 的 `WINDOW_BET_STATES` 同样只放行 `captured`/`screened`/`fast_grab_ready` 与终态,出现在 tracking 及其后继一律报错)。
   **此路径在连续运行模式下不可用**(registrar 拒收 `by=xinci-run`):此时候选**留在 `captured`**,带 gates 与 expiry 挂着等用户单步确认,清单 notes 记一句待确认——这是它的合法挂起位,不是失败,不许转 rejected。
 
 (**深审被否决的候选不在本清单里**:它在第 4 层就走完了 register + `→rejected`,不进第 5 层——第 5 层只处理深审存活的候选,出闸的前提是 G0–G5 全 pass。)
