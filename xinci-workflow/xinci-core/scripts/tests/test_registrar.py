@@ -594,6 +594,46 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaises(R.RegistrarError):
             R.amend(self.root, slug, by="xinci-track", reason="没有任何字段可改")
 
+    def test_amend_records_gates_on_captured(self):
+        """captured 上补记闸门结论:排队位/挂起位在账本上唯一的 gates 写入口。
+
+        上轮已注册的排队候选本轮才跑出结论(典型是还债深审判出 G3=veto_window_bet):
+        captured→captured 不是转移,transition 写不了它,不补记就等于账本上看不见这个挂起。
+        """
+        slug = "queued-term"
+        ev = mk_evidence(self.root, slug, "2026-08-17-scan.json")
+        R.register(self.root, slug=slug, term="queued term", source_url="https://e.com",
+                   task="t", evidence=[ev],
+                   gates={"G0": "pass", "G4": "pass", "G5": "pass", "G1": "pass"},
+                   expiry="2026-08-25")
+        R.amend(self.root, slug, by="xinci-run", gates={"G3": R.G3_WINDOW_BET},
+                reason="还债深审:数到 4 个免费实现,收录时差实测 4 天")
+        rec = self.load(slug)
+        self.assertEqual(rec["gates"]["G3"], R.G3_WINDOW_BET)
+        self.assertEqual(rec["gates"]["G1"], "pass")   # 已有结论不被覆盖
+        self.assertEqual(rec["state"], "captured")
+        last = rec["history"][-1]
+        self.assertIn("gates", last["amend"])
+        self.assertEqual(last["gates"], {"G3": R.G3_WINDOW_BET})
+
+    def test_amend_gates_only_on_captured(self):
+        """出闸之后的 gates 只能由 transition 校验着写,amend 不给它们留后门。"""
+        slug = self.register()
+        self.to_screened(slug)
+        with self.assertRaises(R.RegistrarError):
+            R.amend(self.root, slug, by="xinci-scan", gates={"G3": R.G3_WINDOW_BET},
+                    reason="想绕过 transition 的校验")
+
+    def test_amend_gates_requires_expiry(self):
+        """captured 带闸门结论即排队位:没有过期出口的方向会在队列里无声腐烂。"""
+        slug = self.register()   # 不带 gates 注册,因此也没有 expiry
+        with self.assertRaises(R.RegistrarError):
+            R.amend(self.root, slug, by="xinci-scan", gates={"G1": "pass"},
+                    reason="缺 expiry,应被拒")
+        R.amend(self.root, slug, by="xinci-scan", gates={"G1": "pass"},
+                expiry="2026-08-25", reason="同批给出排队位 expiry")
+        self.assertEqual(self.load(slug)["gates"]["G1"], "pass")
+
     def test_amend_rejects_terminal_states(self):
         slug = self.register()
         R.transition(self.root, slug, to="rejected", by="xinci-scan", reason="G1 否决")

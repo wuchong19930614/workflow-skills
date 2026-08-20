@@ -431,15 +431,23 @@ def checked(data_root, slug, evidence, by="xinci-track"):
         return rec
 
 
-def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invalidation=None):
-    """观察性字段修订(不改状态):续期 expiry、追加 aliases/invalidation。
-    经用户确认后调用;reason 必填并写入 history,保证账本自解释。"""
+def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invalidation=None,
+          gates=None):
+    """观察性字段修订(不改状态):续期 expiry、追加 aliases/invalidation、
+    给 captured 候选补记闸门结论。
+    经用户确认后调用;reason 必填并写入 history,保证账本自解释。
+
+    gates 只对 `captured` 开放:排队位/挂起位的闸门结论是逐轮累积的,而 captured→captured
+    不是转移、transition 写不了它——上轮已注册的排队候选本轮才跑出的结论(典型是还债深审
+    判出 G3=veto_window_bet)只能从这里进账本,否则结论只剩在观察文件里,账本上看不见这个
+    挂起。出闸之后的 gates 一律由 transition 校验着写,本口径不给它们留后门;而 captured
+    上的补记绕不过任何校验——出闸(captured→screened)与 rejected 都会重新按合并结果验。"""
     data_root = Path(data_root)
     _require(bool(reason), "amend 要求 reason(如:用户确认续期的理由)")
     add_aliases = list(add_aliases or [])
     add_invalidation = list(add_invalidation or [])
-    _require(bool(expiry) or add_aliases or add_invalidation,
-             "amend 要求至少提供一个可改字段:expiry / add_aliases / add_invalidation")
+    _require(bool(expiry) or add_aliases or add_invalidation or gates,
+             "amend 要求至少提供一个可改字段:expiry / add_aliases / add_invalidation / gates")
     with _locked(data_root):
         ledger = _load(data_root)
         _require(slug in ledger["candidates"], f"候选不存在: {slug}")
@@ -460,6 +468,17 @@ def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invali
             rec["invalidation"] = list(dict.fromkeys(rec["invalidation"] + add_invalidation))
             amended.append("invalidation")
             entry["add_invalidation"] = add_invalidation
+        if gates:
+            _require(rec["state"] == "captured",
+                     "amend --gates 只用于 captured 候选(排队位/挂起位)补记闸门结论:"
+                     "出闸之后的 gates 由 transition 校验着写,不得从这里绕过;"
+                     f"当前状态 {rec['state']}")
+            _require(bool(rec.get("expiry")),
+                     "captured 带闸门结论即排队位,补记 gates 后必须有 expiry"
+                     "(本次给 --expiry,或候选已有):没有过期出口的方向会在队列里无声腐烂")
+            rec["gates"].update(gates)
+            amended.append("gates")
+            entry["gates"] = gates
         entry["amend"] = amended
         rec["history"].append(entry)
         _save(data_root, ledger)
@@ -514,13 +533,17 @@ def main(argv=None):
     p.add_argument("--evidence", action="append", required=True)
     p.add_argument("--by", default="xinci-track")
 
-    p = sub.add_parser("amend", help="观察性字段修订(不改状态):续期 expiry、追加 aliases/invalidation")
+    p = sub.add_parser("amend", help="观察性字段修订(不改状态):续期 expiry、"
+                                     "追加 aliases/invalidation、captured 补记闸门结论")
     p.add_argument("--slug", required=True)
     p.add_argument("--by", required=True)
     p.add_argument("--reason", required=True)
     p.add_argument("--expiry")
     p.add_argument("--add-alias", action="append", default=[])
     p.add_argument("--add-invalidation", default="", help="分号分隔")
+    p.add_argument("--gates", default="", help="仅 captured 候选:补记本轮跑出的闸门结论,"
+                                              "如 G3=veto_window_bet(captured→captured 不是转移,"
+                                              "排队位的 gates 只能从这里写)")
 
     a = ap.parse_args(argv)
     try:
@@ -539,7 +562,8 @@ def main(argv=None):
         elif a.cmd == "amend":
             rec = amend(a.data_root, a.slug, by=a.by, reason=a.reason, expiry=a.expiry,
                         add_aliases=a.add_alias,
-                        add_invalidation=[x for x in a.add_invalidation.split(";") if x])
+                        add_invalidation=[x for x in a.add_invalidation.split(";") if x],
+                        gates=_parse_gates(a.gates))
         else:
             rec = checked(a.data_root, a.slug, a.evidence, by=a.by)
     except RegistrarError as e:

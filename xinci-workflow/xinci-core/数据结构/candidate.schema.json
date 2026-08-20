@@ -46,7 +46,7 @@
           "to": { "type": "string", "description": "新状态;amend/checked 条目 from==to" },
           "by": { "type": "string", "description": "执行的 skill 名" },
           "reason": { "type": "string", "description": "拒绝/过期/搁置/修订等的决定性理由" },
-          "amend": { "type": "array", "items": { "type": "string" }, "description": "amend 条目专用:本次修订的字段名(expiry/aliases/invalidation)" },
+          "amend": { "type": "array", "items": { "type": "string" }, "description": "amend 条目专用:本次修订的字段名(expiry/aliases/invalidation/gates;gates 仅 captured 可补记)" },
           "checked": { "type": "array", "items": { "type": "string" }, "description": "checked 条目专用:本次复查登记的观察文件路径" },
           "gates": { "type": "object", "additionalProperties": { "type": "string" }, "description": "快照:本次转移提交的闸门结论" },
           "window_estimate": { "type": "string", "description": "快照:本次提交的窗口评估" },
