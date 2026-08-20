@@ -32,38 +32,20 @@ funnel,xinci-run 清单的每一轮必须带 rounds[].funnel(该轮没扫描就�
 """
 import argparse
 import json
-import re
 import sys
 from datetime import date
 from pathlib import Path
 
 from registrar import (STATES, DEFAULT_DATA_ROOT, WINDOWS, BUILD_PLAYS,
                        SCREEN_GATES, QUALIFY_GATES, MIN_TRACK_SPAN_DAYS,
-                       G3_WINDOW_BET, TERMINAL, RegistrarError, _obs_time)
-
-# 运行清单字段白名单:与 数据结构/run-manifest.schema.json 的 properties 逐字对齐
-# (schema 声明 additionalProperties: false,越界字段一律拒收)
-RUN_FIELDS = {"date", "skill", "sources_opened", "sources_blocked",
-              "candidates_touched", "billable_calls", "notes", "rounds", "funnel"}
-RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
-                    "billable_calls", "notes", "funnel"}
-# 扫描漏斗(xinci-scan 四层):四个去向必须加总等于 extracted——每个被提取的方向都要有归宿。
-# extracted 记的是**去重后**进入第 2 层筛选的方向数:第 0 层 screen_index check 命中的方向
-# 已经在索引/账本里有归宿(上一次的记录),再计一次等于要求它二次归宿,等式必然算不平。
-FUNNEL_SINKS = ("rejected_zero_cost", "rejected_g1", "deep_audited", "queued")
-FUNNEL_FIELDS = ("extracted",) + FUNNEL_SINKS
-# 可选、不参与等式:本轮消化**存量 captured**(上轮排队的债)所做的深审数。
-# 它不属于本轮 extracted,计入任一去向都会破坏等式;但它是全流程最贵的动作,
-# 只还债不扫新的轮次 funnel 五项(extracted 与四个去向)全 0,没有这个字段就看不出那一轮花了什么。
-FUNNEL_CARRYOVER = "carryover_audited"
-FUNNEL_ALL_FIELDS = FUNNEL_FIELDS + (FUNNEL_CARRYOVER,)
-# funnel 存在性从这一天起强制。此前的清单豁免:规则是 2026-08-19 立的,
-# 而首份 xinci-run 清单正是"提取了 5 条以上、只有 1 条有归宿"的案例——真实数字已不可考,
-# 回填等于编造。历史保持原样,新清单一律带 funnel。
-FUNNEL_REQUIRED_FROM = "2026-08-19"
-RUN_SKILLS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run"}
-RUN_STR_ARRAYS = ("sources_opened", "sources_blocked", "candidates_touched", "notes")
-RUN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})(?:-(\d{4}))?-(xinci-[a-z]+)")
+                       G3_WINDOW_BET, TERMINAL, RegistrarError, _obs_time,
+                       SLUG_RE, VALID_ACTORS, _check_decision_files,
+                       _check_gate_payload, _check_gate_evidence)
+from run_state import RunStateError, load_session
+from run_manifest import validate_runs
+from transaction_journal import TransactionError, list_pending
+from dedup_decisions import DedupDecisionError, load as load_dedup_decisions
+from term_normalize import match_kind
 
 GO_STATES = {"build_ready", "pilot_ready", "fast_grab_ready"}
 NO_GO_STATES = {"hold", "no_site"}
@@ -101,6 +83,8 @@ def validate(data_root):
     candidates = ledger.get("candidates", {})
     for slug, rec in candidates.items():
         where = f"[{slug}]"
+        if not SLUG_RE.fullmatch(slug) or rec.get("slug") != slug:
+            errors.append(f"{where} slug 必须是 kebab-case 且记录内 slug 与账本键一致")
         state = rec.get("state")
         if state not in STATES:
             errors.append(f"{where} 未知状态: {state!r}")
@@ -117,6 +101,32 @@ def validate(data_root):
                 if i > 0 and h.get("from") != hist[i - 1].get("to"):
                     errors.append(f"{where} history[{i}] 断链: from={h.get('from')!r} "
                                   f"≠ 前项 to={hist[i - 1].get('to')!r}")
+                if h.get("by") not in VALID_ACTORS:
+                    errors.append(f"{where} history[{i}] by 非法: {h.get('by')!r}")
+                if h.get("by") == "xinci-run":
+                    run_id = h.get("run_id")
+                    round_number = h.get("round")
+                    if not run_id:
+                        # 兼容运行会话机制建立前的真实历史，不把旧记录伪造为新会话。
+                        if (h.get("at") or "")[:10] >= "2026-08-20":
+                            errors.append(f"{where} history[{i}] by=xinci-run 缺 run_id")
+                    else:
+                        try:
+                            session = load_session(data_root, run_id)
+                        except RunStateError as e:
+                            errors.append(f"{where} history[{i}] run_id 无效: {e}")
+                        else:
+                            if ((h.get("at") or "")[:10] >= "2026-08-20"
+                                    and (not isinstance(round_number, int)
+                                         or isinstance(round_number, bool)
+                                         or not 1 <= round_number <= session["max_rounds"])):
+                                errors.append(f"{where} history[{i}] by=xinci-run 缺合法 round")
+                if h.get("gates") and (h.get("at") or "")[:10] >= "2026-08-20":
+                    try:
+                        _check_gate_evidence(data_root, h.get("evidence"), h["gates"],
+                                             f"{where} history[{i}]")
+                    except RegistrarError as e:
+                        errors.append(str(e))
         for r in rec.get("evidence_refs", []):
             rel = Path(r)
             if rel.is_absolute() or ".." in rel.parts:
@@ -134,6 +144,8 @@ def validate(data_root):
         if state == "screened" and rec.get("window_estimate") not in WINDOWS:
             errors.append(f"{where} screened 必有 window_estimate ∈ {sorted(WINDOWS)},"
                           f"当前 {rec.get('window_estimate')!r}")
+        if state == "screened" and not expiry:
+            errors.append(f"{where} screened 必有 expiry(窗口失效日)")
         if state == "tracking" and not expiry:
             errors.append(f"{where} tracking 必有 expiry")
         if state == "captured" and rec.get("gates") and not expiry:
@@ -150,6 +162,10 @@ def validate(data_root):
             if rec.get("score") is not None:
                 errors.append(f"{where} 快道不得声称全站分数,score 应为 null,当前 {rec.get('score')!r}")
         gates = rec.get("gates", {})
+        try:
+            _check_gate_payload(gates)
+        except RegistrarError as e:
+            errors.append(f"{where} {e}")
         g3 = gates.get("G3")
         if state in SCREEN_PASSED_STATES:
             bad = [g for g in SCREEN_GATES if g != "G3" and gates.get(g) != "pass"]
@@ -202,8 +218,44 @@ def validate(data_root):
                     errors.append(f"{where} 决策书 md 缺失: {ref}")
                 if not md.with_suffix(".html").is_file():
                     errors.append(f"{where} 决策书 html 缺失(双格式要求): {md.with_suffix('.html').name}")
+                if md.is_file() and md.with_suffix(".html").is_file():
+                    try:
+                        _check_decision_files(data_root, ref)
+                    except RegistrarError as e:
+                        errors.append(f"{where} 决策书校验失败: {e}")
         if state in NO_GO_STATES and ref:
             errors.append(f"{where} no-go 结论不应携带 decision_ref: {ref}")
+
+    try:
+        pending = list_pending(data_root)
+        if pending:
+            errors.append(f"存在未恢复跨文件事务: {[x.get('tx_id') for x in pending]};"
+                          "执行 run_controller.py recover")
+    except TransactionError as e:
+        errors.append(str(e))
+    try:
+        decisions = load_dedup_decisions(data_root)
+        seen_decision_ids = set()
+        for i, row in enumerate(decisions, 1):
+            required = ("decision_id", "reason", "decided_at", "actor", "term_task",
+                        "matched_task", "term_evidence_urls", "matched_evidence_urls")
+            missing = [k for k in required if not row.get(k)]
+            if missing:
+                errors.append(f"去重裁决[{i}] 缺字段 {missing}")
+            if match_kind(row.get("term", ""), row.get("matched", "")) != "probable":
+                errors.append(f"去重裁决[{i}] 两个措辞当前不是疑似重复关系")
+            if row.get("decision_id") in seen_decision_ids:
+                errors.append(f"去重裁决[{i}] decision_id 重复")
+            if row.get("supersedes") and row["supersedes"] not in seen_decision_ids:
+                errors.append(f"去重裁决[{i}] supersedes 未指向更早的裁决")
+            seen_decision_ids.add(row.get("decision_id"))
+            if row.get("actor") == "xinci-run":
+                try:
+                    load_session(data_root, row.get("run_id"))
+                except RunControllerError as e:
+                    errors.append(f"去重裁决[{i}] run_id 无效: {e}")
+    except DedupDecisionError as e:
+        errors.append(str(e))
 
     evidence_dir = data_root / "证据"
     if evidence_dir.is_dir():
@@ -211,144 +263,6 @@ def validate(data_root):
             if d.is_dir() and d.name not in candidates:
                 warnings.append(f"孤儿证据目录(账本无此候选): 证据/{d.name}")
     return errors, warnings
-
-
-def _check_str_array(obj, key, where, errors):
-    v = obj.get(key)
-    if v is None:
-        return
-    if not (isinstance(v, list) and all(isinstance(x, str) and x for x in v)):
-        errors.append(f"{where} {key} 必须是非空字符串数组,当前 {v!r}")
-
-
-def _check_int(obj, key, where, errors):
-    v = obj.get(key)
-    if v is None or (isinstance(v, int) and not isinstance(v, bool)):
-        return
-    errors.append(f"{where} {key} 必须是整数,当前 {v!r}")
-
-
-def _check_funnel(obj, where, errors):
-    """漏斗自洽性:extracted == 四个去向之和。
-
-    这条等式是"留痕纪律"的可校验形式:2026-08-18 首次 xinci-run 从 Apple Dev News
-    提取了 5 条以上变更却只有 1 条走到 G1,其余既未注册也未进淘汰索引——无声丢弃使
-    下轮重复评估。有了等式,漏掉的归宿会当场报错。
-
-    两条不参与等式的口径(否则必然算不平):去重命中的方向不计入 extracted;
-    消化存量 captured 的深审记 carryover_audited,不记 deep_audited。"""
-    f = obj.get("funnel")
-    if f is None:
-        return
-    if not isinstance(f, dict):
-        errors.append(f"{where} funnel 必须是对象,当前 {type(f).__name__}")
-        return
-    unknown = sorted(set(f) - set(FUNNEL_ALL_FIELDS))
-    if unknown:
-        errors.append(f"{where} funnel 含 schema 外字段 {unknown}")
-    missing = [k for k in FUNNEL_FIELDS if k not in f]
-    if missing:
-        errors.append(f"{where} funnel 缺字段 {missing}")
-        return
-    bad = [k for k in FUNNEL_ALL_FIELDS if k in f
-           and (not isinstance(f[k], int) or isinstance(f[k], bool) or f[k] < 0)]
-    if bad:
-        errors.append(f"{where} funnel 各项必须是非负整数,不合格: {bad}")
-        return
-    total = sum(f[k] for k in FUNNEL_SINKS)
-    if total != f["extracted"]:
-        errors.append(f"{where} funnel 去向加总 {total} ≠ extracted {f['extracted']}"
-                      f"(每个被提取的方向都要有归宿:秒弃/G1否决/深审/排队,不许无声丢弃)")
-
-
-def validate_runs(data_root):
-    """运行清单校验(对齐 数据结构/run-manifest.schema.json)。
-
-    运行清单不经 registrar 写入,全靠各 skill 手写,格式漂移无人察觉:首份真实清单
-    (2026-08-17-xinci-scan)即用了 metered_calls / candidates_registered 等 schema 外
-    字段,直到本校验加上才被发现。因此按 schema 全量校验,并额外查文件名与内容一致性。
-    """
-    data_root = Path(data_root)
-    errors = []
-    run_dir = data_root / "运行"
-    if not run_dir.is_dir():
-        return errors
-
-    for path in sorted(run_dir.glob("*.json")):
-        where = f"[运行/{path.name}]"
-        name = RUN_NAME_RE.fullmatch(path.stem)
-        if not name:
-            errors.append(f"{where} 文件名不合约定 <YYYY-MM-DD>[-HHMM]-<skill>.json")
-        try:
-            obj = json.loads(path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, UnicodeDecodeError) as e:
-            errors.append(f"{where} 不是合法 JSON: {e}")
-            continue
-        if not isinstance(obj, dict):
-            errors.append(f"{where} 必须是 JSON 对象")
-            continue
-
-        unknown = sorted(set(obj) - RUN_FIELDS)
-        if unknown:
-            errors.append(f"{where} 含 schema 外字段 {unknown}(数据极简,勿加仪式性字段)")
-        for k in ("date", "skill"):
-            if not obj.get(k):
-                errors.append(f"{where} 缺必填字段 {k}")
-
-        run_date = obj.get("date")
-        if run_date:
-            try:
-                date.fromisoformat(run_date)
-            except (TypeError, ValueError):
-                errors.append(f"{where} date 不可解析: {run_date!r}")
-            else:
-                if name and run_date != name.group(1):
-                    errors.append(f"{where} date={run_date} 与文件名日期 {name.group(1)} 不一致")
-
-        skill = obj.get("skill")
-        if skill and skill not in RUN_SKILLS:
-            errors.append(f"{where} skill 必须属于 {sorted(RUN_SKILLS)},当前 {skill!r}")
-        elif skill and name and skill != name.group(3):
-            errors.append(f"{where} skill={skill!r} 与文件名 {name.group(3)!r} 不一致")
-
-        for k in RUN_STR_ARRAYS:
-            _check_str_array(obj, k, where, errors)
-        _check_int(obj, "billable_calls", where, errors)
-        _check_funnel(obj, where, errors)
-
-        enforce_funnel = bool(run_date) and run_date >= FUNNEL_REQUIRED_FROM
-        if enforce_funnel and skill == "xinci-scan" and obj.get("funnel") is None:
-            errors.append(f"{where} xinci-scan 清单必须带 funnel"
-                          f"(自 {FUNNEL_REQUIRED_FROM} 起强制:每个被提取的方向都要有归宿)")
-
-        rounds = obj.get("rounds")
-        if rounds is None:
-            continue
-        if skill != "xinci-run":
-            errors.append(f"{where} rounds 是 xinci-run 专用字段,当前 skill={skill!r}")
-        if not isinstance(rounds, list):
-            errors.append(f"{where} rounds 必须是数组,当前 {type(rounds).__name__}")
-            continue
-        for i, rnd in enumerate(rounds):
-            rw = f"{where} rounds[{i}]"
-            if not isinstance(rnd, dict):
-                errors.append(f"{rw} 必须是对象")
-                continue
-            unknown = sorted(set(rnd) - RUN_ROUND_FIELDS)
-            if unknown:
-                errors.append(f"{rw} 含 schema 外字段 {unknown}")
-            num = rnd.get("round")
-            if not isinstance(num, int) or isinstance(num, bool):
-                errors.append(f"{rw} 缺必填字段 round(整数),当前 {num!r}")
-            for k in RUN_STR_ARRAYS:
-                _check_str_array(rnd, k, rw, errors)
-            _check_int(rnd, "billable_calls", rw, errors)
-            _check_funnel(rnd, rw, errors)
-            if enforce_funnel and rnd.get("funnel") is None:
-                errors.append(f"{rw} 必须带 funnel"
-                              f"(自 {FUNNEL_REQUIRED_FROM} 起强制;"
-                              "本轮没扫描就把 extracted 与四个去向五项全写 0)")
-    return errors
 
 
 def main(argv=None):

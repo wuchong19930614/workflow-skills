@@ -26,12 +26,14 @@ def build_report(data_root):
     ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
     today = date.today()
 
-    counts, rows, overdue = {}, [], []
+    counts, rows, overdue, recheck_due = {}, [], [], []
     for slug, rec in sorted(ledger.get("candidates", {}).items()):
         state = rec["state"]
         counts[state] = counts.get(state, 0) + 1
         expiry = rec.get("expiry")
         expiry_days = (date.fromisoformat(expiry) - today).days if expiry else None
+        recheck_after = rec.get("recheck_after")
+        recheck_days = (date.fromisoformat(recheck_after) - today).days if recheck_after else None
         row = {
             "slug": slug,
             "term": rec["term"],
@@ -40,11 +42,16 @@ def build_report(data_root):
             "days_since_checked": _days_since(rec["last_checked_at"]),
             "expiry": expiry,
             "expiry_days_left": expiry_days,
+            "recheck_after": recheck_after,
+            "recheck_days_left": recheck_days,
         }
         rows.append(row)
         if expiry_days is not None and expiry_days < 0 and state not in TERMINAL:
             overdue.append(slug)
-    return {"counts": counts, "candidates": rows, "expired_unhandled": overdue}
+        if recheck_days is not None and recheck_days <= 0 and state == "rejected":
+            recheck_due.append(slug)
+    return {"counts": counts, "candidates": rows, "expired_unhandled": overdue,
+            "recheck_due": recheck_due}
 
 
 def render_text(report) -> str:
@@ -63,6 +70,11 @@ def render_text(report) -> str:
         lines.append("")
         lines.append("== expiry 已过且非终态(待用户决定) ==")
         for slug in report["expired_unhandled"]:
+            lines.append(f"- {slug}")
+    if report["recheck_due"]:
+        lines.append("")
+        lines.append("== 可逆 SERP 型否决已到复核日 ==")
+        for slug in report["recheck_due"]:
             lines.append(f"- {slug}")
     return "\n".join(lines)
 

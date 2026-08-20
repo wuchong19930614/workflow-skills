@@ -1,6 +1,6 @@
 ---
 name: xinci-qualify
-description: 对形成确认(formation_confirmed)的新词候选做深度认定,也受理决策阶段搁置(hold)候选的重审:G6 商业闭环、G7 耐久性、G8 簇广度、完整竞争审计与 100 分制评分(80 分线)。当用户说认定候选 X、判断这个机会是否真实、给 X 打分时使用。English triggers: qualify candidate, keyword qualification, score keyword opportunity. “值不值得建站”与建站 go/no-go 决策用 xinci-decide。
+description: '对形成确认(formation_confirmed)的新词候选做深度认定,也受理决策阶段搁置(hold)候选的重审:G6 商业闭环、G7 耐久性、G8 簇广度、完整竞争审计与 100 分制评分(80 分线)。当用户说认定候选 X、判断这个机会是否真实、给 X 打分时使用。English triggers: qualify candidate, keyword qualification, score keyword opportunity. “值不值得建站”与建站 go/no-go 决策用 xinci-decide。'
 ---
 
 # xinci-qualify 深度认定
@@ -31,7 +31,7 @@ description: 对形成确认(formation_confirmed)的新词候选做深度认定,
 4. **G8 簇广度(硬门)。** 枚举意图簇:≥3 个任务型查询 × ≥2 个独立 family;合并表述性变体,不许同义改写凑数。达不到即 disqualified——pilot 由决策阶段的页面地图线触发,不是 G8 的降级出口。
 5. **完整竞争审计。** 真浏览器读核心任务查询的完整 top-10(到第二页或质量断层),每个结果按"做什么"分类;对判定"把任务做完了"的结果再判持续可见度(结构上进不来 SERP 的实现不计入否决,见闸门契约 G3 三分);**实测至少一个竞品的 footprint**(authority、流量、词量、增速)——存在不等于占据。
 6. **评分。** 按评分契约六维打分,做红队反驳并扣分。硬否决之后不产生最终分数。
-7. **写观察文件**(`证据/<slug>/<日期>-qualify.json`:逐维得分、红队记录、竞争分类清单、footprint 实测),**向用户提议** qualified(附分数)或 disqualified(附决定性缺口:哪一项、差多少)。
+7. **写观察文件**(`证据/<slug>/<日期>-qualify.json`:逐维得分、红队记录、竞争分类清单、footprint 实测),qualified 观察必须在 `gates` 明确写 G6/G7/G8 的 pass,并把支撑来源列入非空 `source_urls`;registrar 会把 transition 的三门结论与这份观察逐门核对。然后**向用户提议** qualified(附分数)或 disqualified(附决定性缺口:哪一项、差多少)。
 8. **用户确认后**执行:
 
 ```bash

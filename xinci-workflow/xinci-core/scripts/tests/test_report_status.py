@@ -25,11 +25,16 @@ class ReportStatusTest(unittest.TestCase):
         R.register(self.root, slug=slug, term=slug, source_url="https://e.com",
                    task="t", evidence=[ev])
         if state == "rejected":
-            R.transition(self.root, slug, to="rejected", by="xinci-scan", reason="G1 否决")
+            R.transition(self.root, slug, to="rejected", by="xinci-scan",
+                         gates={"G1": "veto"}, reason="G1 否决",
+                         evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json",
+                                               gates={"G1": "veto"})])
         elif state == "tracking":
             R.transition(self.root, slug, to="screened", by="xinci-scan",
                          gates=dict(GATES_SCREEN), window_estimate="weeks",
-                         evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json")])
+                         expiry=expiry,
+                         evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json",
+                                               gates=dict(GATES_SCREEN))])
             R.transition(self.root, slug, to="tracking", by="xinci-scan",
                          expiry=expiry, invalidation=["官方工具上线"],
                          evidence=[mk_evidence(self.root, slug, "2026-08-17c-scan.json")])

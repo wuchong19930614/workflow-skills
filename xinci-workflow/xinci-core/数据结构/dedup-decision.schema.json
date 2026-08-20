@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci 疑似重复裁决(JSONL 单行)",
+  "type": "object",
+  "required": ["decision_id", "term", "matched", "decision", "reason", "actor", "term_task", "matched_task", "term_evidence_urls", "matched_evidence_urls", "decided_at"],
+  "properties": {
+    "decision_id": { "type": "string", "pattern": "^dd-[a-f0-9]{16}$" },
+    "term": { "type": "string", "minLength": 1 },
+    "matched": { "type": "string", "minLength": 1 },
+    "decision": { "type": "string", "enum": ["same", "distinct"] },
+    "reason": { "type": "string", "minLength": 1 },
+    "actor": { "type": "string", "enum": ["xinci-scan", "xinci-run", "user"] },
+    "run_id": { "type": "string" },
+    "term_task": { "type": "string", "minLength": 1 },
+    "matched_task": { "type": "string", "minLength": 1 },
+    "term_evidence_urls": { "type": "array", "minItems": 1, "items": { "type": "string", "format": "uri" } },
+    "matched_evidence_urls": { "type": "array", "minItems": 1, "items": { "type": "string", "format": "uri" } },
+    "supersedes": { "type": "string", "pattern": "^dd-[a-f0-9]{16}$" },
+    "decided_at": { "type": "string" }
+  },
+  "additionalProperties": false
+}

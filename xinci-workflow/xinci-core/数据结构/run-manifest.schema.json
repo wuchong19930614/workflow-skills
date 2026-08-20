@@ -1,11 +1,12 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "xinci 运行清单",
-  "description": "每次运行一个小 JSON,不写过程日志(数据极简原则)。文件名约定:运行/<YYYY-MM-DD>-<skill>.json,同日再次启动加 HHMM 后缀。xinci-run 连续运行只写一份,轮次在 rounds 里追加。",
+  "description": "每次运行一个小 JSON,不写过程日志(数据极简原则)。单步文件名:运行/<YYYY-MM-DD>[-HHMM]-<skill>.json；xinci-run 自动文件名:<YYYY-MM-DD>-<HHMMSS>-<run-token>-xinci-run.json。连续运行由 run_controller record-round 原子维护一份清单,轮次只追加不覆盖。",
   "type": "object",
   "required": ["date", "skill"],
   "properties": {
     "date": { "type": "string", "description": "运行日期 YYYY-MM-DD" },
+    "run_id": { "type": "string", "description": "xinci-run 清单关联的可恢复运行会话 ID" },
     "skill": {
       "type": "string",
       "enum": ["xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run"],

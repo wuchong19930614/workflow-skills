@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import registrar as R
 import validate_ledger as V
+import run_controller as RC
 from test_registrar import mk_evidence, mk_decision, GATES_SCREEN, GATES_678
 
 
@@ -24,13 +25,15 @@ class ValidateLedgerTest(unittest.TestCase):
 
     def build_chain(self, slug="demo-term", until="tracking", window="weeks"):
         ev = mk_evidence(self.root, slug, "2026-08-17-scan.json")
-        R.register(self.root, slug=slug, term="demo term", source_url="https://e.com",
+        R.register(self.root, slug=slug, term=slug.replace("-", " "), source_url="https://e.com",
                    task="t", evidence=[ev])
         if until == "captured":
             return slug
         R.transition(self.root, slug, to="screened", by="xinci-scan",
                      gates=dict(GATES_SCREEN), window_estimate=window,
-                     evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json")])
+                     expiry="2026-10-01",
+                     evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json",
+                                           gates=dict(GATES_SCREEN))])
         if until == "screened":
             return slug
         if until == "fast_grab_ready":
@@ -47,12 +50,14 @@ class ValidateLedgerTest(unittest.TestCase):
         R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-27-track.json")])
         R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
                      gates={"G1": "pass"},
-                     evidence=[mk_evidence(self.root, slug, "2026-09-03-track.json")])
+                     evidence=[mk_evidence(self.root, slug, "2026-09-03-track.json",
+                                           gates={"G1": "pass"})])
         if until == "formation_confirmed":
             return slug
         R.transition(self.root, slug, to="qualified", by="xinci-qualify", score=85,
                      gates=dict(GATES_678),
-                     evidence=[mk_evidence(self.root, slug, "2026-09-10-qualify.json")])
+                     evidence=[mk_evidence(self.root, slug, "2026-09-10-qualify.json",
+                                           gates=dict(GATES_678))])
         if until == "qualified":
             return slug
         ref = mk_decision(self.root, slug)
@@ -186,8 +191,10 @@ class ValidateLedgerTest(unittest.TestCase):
                    task="t", evidence=[ev])
         R.transition(self.root, slug, to="screened", by="xinci-scan",
                      gates=dict(GATES_SCREEN, G3=R.G3_WINDOW_BET), window_estimate="days",
+                     expiry="2026-08-31",
                      reason="临时空位:数到的免费实现均因对象太新未被收录",
-                     evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json")])
+                     evidence=[mk_evidence(self.root, slug, "2026-08-17b-scan.json",
+                                           gates=dict(GATES_SCREEN, G3=R.G3_WINDOW_BET))])
         if until == "screened":
             return slug
         R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
@@ -224,10 +231,11 @@ class ValidateLedgerTest(unittest.TestCase):
 
     def hang_window_bet_at_captured(self, slug="hang-bet"):
         """深审判出豁免、但转移尚未被确认的候选:带 gates 与 expiry 挂在 captured。"""
-        ev = mk_evidence(self.root, slug, "2026-08-19-scan.json")
+        gates = dict(GATES_SCREEN, G3=R.G3_WINDOW_BET)
+        ev = mk_evidence(self.root, slug, "2026-08-19-scan.json", gates=gates)
         R.register(self.root, slug=slug, term="hang bet", source_url="https://e.com",
                    task="t", evidence=[ev],
-                   gates=dict(GATES_SCREEN, G3=R.G3_WINDOW_BET), expiry="2026-08-25")
+                   gates=gates, expiry="2026-08-25")
         return slug
 
     def test_window_bet_may_hang_at_captured(self):
@@ -423,6 +431,37 @@ class ValidateRunsTest(unittest.TestCase):
         empty = Path(self._tmp.name) / "空数据区"
         empty.mkdir()
         self.assertEqual(V.validate_runs(empty), [])
+
+    def test_completed_session_requires_manifest(self):
+        run = RC.start(self.root)
+        # 受控 writer 会为零轮次运行自动创建空 manifest，不再要求调用者手写。
+        RC.finish(self.root, run["run_id"], "cancelled", "测试取消")
+        self.assertEqual(V.validate_runs(self.root), [])
+
+    def test_run_manifest_round_numbers_are_sequential(self):
+        self.mk_run("2026-08-18-xinci-run.json", date="2026-08-18", skill="xinci-run",
+                    rounds=[{"round": 99}])
+        self.assertErrorMatching("从 1 开始连续")
+
+    def test_duplicate_manifests_for_one_run_are_rejected(self):
+        run = RC.start(self.root)
+        common = {"date": "2026-08-20", "skill": "xinci-run",
+                  "run_id": run["run_id"], "rounds": []}
+        for name in ("2026-08-20-xinci-run.json", "2026-08-20-1200-xinci-run.json"):
+            (self.root / "运行" / name).write_text(
+                json.dumps(common, ensure_ascii=False), encoding="utf-8")
+        self.assertErrorMatching("必须恰好对应一份")
+
+    def test_manifest_must_list_candidates_written_by_run(self):
+        run = RC.start(self.root)
+        ledger_dir = self.root / "账本"
+        ledger_dir.mkdir(parents=True)
+        (ledger_dir / "候选账本.json").write_text(json.dumps({
+            "candidates": {"demo": {"history": [{"run_id": run["run_id"]}]}}
+        }), encoding="utf-8")
+        self.mk_run("2026-08-20-xinci-run.json", date="2026-08-20", skill="xinci-run",
+                    run_id=run["run_id"], rounds=[])
+        self.assertErrorMatching("candidates_touched 漏记")
 
 
 if __name__ == "__main__":

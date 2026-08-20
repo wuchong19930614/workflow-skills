@@ -7,7 +7,7 @@ from pathlib import Path
 
 # 数据区在仓库根(代码与数据分离):xinci-workflow/xinci-core/scripts/ 向上三级
 DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[3] / "数据" / "新词工作流"
-SUBDIRS = ("账本", "证据", "决策书", "运行")
+SUBDIRS = ("账本", "证据", "决策书", "运行", "运行状态", "运行状态/事务")
 
 
 def init_workspace(data_root) -> list:
@@ -28,6 +28,10 @@ def init_workspace(data_root) -> list:
     if not index.is_file():
         index.write_text("", encoding="utf-8")
         created.append(str(index))
+    decisions = data_root / "去重裁决.jsonl"
+    if not decisions.is_file():
+        decisions.write_text("", encoding="utf-8")
+        created.append(str(decisions))
     return created
 
 

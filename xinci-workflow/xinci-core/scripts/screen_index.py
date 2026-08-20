@@ -13,66 +13,22 @@
 命令:
   check   从 stdin 逐行读待查方向,报告哪些见过(附原因)、哪些是新的
   append  从 stdin 逐行读 JSON 或 "词|门|理由[|模式]",批量追加
+  resolve 登记疑似重复的 same/distinct 裁决，后续 check 与 registrar 共用
   stats   总量、按闸门分布、达到归并阈值(≥3 次)的模式
 """
 import argparse
 import json
-import re
 import sys
 from pathlib import Path
 
 from registrar import DEFAULT_DATA_ROOT, _flock, _funlock
+from dedup_decisions import DedupDecisionError, find as find_decision, resolve as resolve_decision
+from term_normalize import match_kind, normalize, similar
 
 INDEX_NAME = "淘汰方向.jsonl"
 MERGE_THRESHOLD = 3  # 同一结构性模式出现 3 次即应归并进陷阱类别(陷阱类别.md 追加规则)
-_PUNCT = re.compile(r"[(){}\[\]（）【】,，.。:：;；/／\\\-—–_'\"“”‘’!！?？]+")
-
-
 def _index_path(data_root) -> Path:
     return Path(data_root) / INDEX_NAME
-
-
-def normalize(term: str) -> str:
-    """归一化:小写、去标点、压空白。措辞微差不应被当成新方向重复评估。"""
-    return re.sub(r"\s+", " ", _PUNCT.sub(" ", (term or "").lower())).strip()
-
-
-def _informative(tokens) -> bool:
-    """交集里至少要有一个有信息量的词,否则 "3"/"8"/"api" 这类会把一切都匹上。"""
-    return any(len(x) >= 3 and not x.isdigit() for x in tokens)
-
-
-# 词集合重叠阈值。取值受两个真实约束夹逼:
-#   保留 "qwen 3.8 27b vram requirements" 与 "Qwen 3.8 27B(vram/quantization…)" 的 5/6≈0.83;
-#   排除只差一个词的相邻方向(如 "…number 0" 与 "…number 1" 的 3/4=0.75)。
-# 偏保守是有意的:漏判只是重复评估一轮,误判会把一个真机会永久筛掉。
-OVERLAP_THRESHOLD = 0.8
-
-
-def similar(a: str, b: str) -> bool:
-    """三种命中方式任一满足即算见过:
-
-    1. 归一化后完全相等;
-    2. 一方包含另一方(被包含者 ≥4 字符)——中文方向无空格分词,靠这条;
-    3. 词集合重叠 ≥OVERLAP_THRESHOLD 且交集含信息量词——英文多词关键词靠这条。
-
-    第 3 条要求两边都 ≥2 个词:单词方向做重叠匹配必然得 1.0,
-    会让 "api" 命中一切含 api 的方向。单词只认前两条。
-    """
-    na, nb = normalize(a), normalize(b)
-    if not na or not nb:
-        return False
-    if na == nb:
-        return True
-    if (len(na) >= 4 and na in nb) or (len(nb) >= 4 and nb in na):
-        return True
-    sa, sb = set(na.split()), set(nb.split())
-    if min(len(sa), len(sb)) < 2:
-        return False
-    inter = sa & sb
-    if not inter or not _informative(inter):
-        return False
-    return len(inter) / min(len(sa), len(sb)) >= OVERLAP_THRESHOLD
 
 
 def load(data_root) -> list:
@@ -114,57 +70,83 @@ def _ledger_entries(data_root) -> list:
         for name in names:
             out.append({"term": name, "gate": "账本",
                         "reason": f"已注册候选 {slug},当前状态 {rec.get('state')}",
-                        "date": (rec.get("first_observed_at") or "")[:10]})
+                        "date": (rec.get("first_observed_at") or "")[:10],
+                        "task": rec.get("task", "")})
     return out
 
 
 def check(data_root, terms) -> dict:
-    """返回 {"seen": [{term, matched, gate, reason, date}], "fresh": [term]}。
+    """返回 exact seen、需要快审的 probable review，以及 fresh。
 
     同时查淘汰索引与账本——开局去重一条命令覆盖两处,不必把任何一方读进上下文。
     """
     known = load(data_root) + _ledger_entries(data_root)
-    seen, fresh = [], []
+    seen, review, fresh = [], [], []
     for term in terms:
         if not normalize(term):
             continue
-        hit = next((rec for rec in known if similar(term, rec["term"])), None)
+        hit = next((rec for rec in known if match_kind(term, rec["term"]) == "exact"), None)
+        probable = None
+        same = None
+        if not hit:
+            for rec in known:
+                if match_kind(term, rec["term"]) != "probable":
+                    continue
+                decision = find_decision(data_root, term, rec["term"])
+                if decision and decision["decision"] == "distinct":
+                    continue
+                if decision and decision["decision"] == "same":
+                    same = rec
+                    break
+                probable = rec
+                break
+        row = lambda rec: {"term": term, "matched": rec["term"], "gate": rec.get("gate", ""),
+                           "reason": rec.get("reason", ""), "date": rec.get("date", ""),
+                           "matched_task": rec.get("task", ""),
+                           "source_urls": rec.get("source_urls", [])}
         if hit:
-            seen.append({"term": term, "matched": hit["term"], "gate": hit.get("gate", ""),
-                         "reason": hit.get("reason", ""), "date": hit.get("date", "")})
+            seen.append(row(hit))
+        elif same:
+            seen.append(row(same))
+        elif probable:
+            review.append(row(probable))
         else:
             fresh.append(term)
-    return {"seen": seen, "fresh": fresh}
+    return {"seen": seen, "review": review, "fresh": fresh}
 
 
 def append(data_root, records) -> int:
-    """批量追加。同一批内与已有索引内的重复条目都会被跳过(按归一化 term)。"""
+    """批量追加。只自动跳过归一化完全相等项；相似长尾不得被永久误杀。"""
     data_root = Path(data_root)
     data_root.mkdir(parents=True, exist_ok=True)
     p = _index_path(data_root)
-    existing = [r["term"] for r in load(data_root)]
-    lines, added = [], 0
-    for rec in records:
-        term = (rec.get("term") or "").strip()
-        if not term:
-            continue
-        if any(similar(term, e) for e in existing):
-            continue
-        existing.append(term)
-        row = {"date": rec.get("date", ""), "term": term,
-               "gate": rec.get("gate", ""), "reason": rec.get("reason", "")}
-        if rec.get("pattern"):
-            row["pattern"] = rec["pattern"]
-        lines.append(json.dumps(row, ensure_ascii=False))
-        added += 1
-    if not lines:
-        return 0
-    with open(p, "a", encoding="utf-8") as f:
-        _flock(f)
+    lock_path = data_root / f".{INDEX_NAME}.lock"
+    with open(lock_path, "w") as lock:
+        _flock(lock)
         try:
-            f.write("\n".join(lines) + "\n")
+            existing = [normalize(r["term"]) for r in load(data_root)]
+            lines, added = [], 0
+            for rec in records:
+                term = (rec.get("term") or "").strip()
+                norm = normalize(term)
+                if not norm or norm in existing:
+                    continue
+                existing.append(norm)
+                row = {"date": rec.get("date", ""), "term": term,
+                       "gate": rec.get("gate", ""), "reason": rec.get("reason", "")}
+                if rec.get("pattern"):
+                    row["pattern"] = rec["pattern"]
+                if rec.get("task"):
+                    row["task"] = rec["task"]
+                if rec.get("source_urls"):
+                    row["source_urls"] = rec["source_urls"]
+                lines.append(json.dumps(row, ensure_ascii=False))
+                added += 1
+            if lines:
+                with open(p, "a", encoding="utf-8") as f:
+                    f.write("\n".join(lines) + "\n")
         finally:
-            _funlock(f)
+            _funlock(lock)
     return added
 
 
@@ -207,6 +189,19 @@ def main(argv=None):
     p.add_argument("--date", default="", help="统一日期 YYYY-MM-DD(行内未给时使用)")
 
     sub.add_parser("stats", help="总量、闸门分布、达到归并阈值的模式")
+    p = sub.add_parser("resolve", help="登记疑似重复裁决")
+    p.add_argument("--term", required=True)
+    p.add_argument("--matched", required=True)
+    p.add_argument("--decision", choices=["same", "distinct"], required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--term-task", required=True)
+    p.add_argument("--matched-task", help="索引旧条目缺 task 时必须人工重建并填写")
+    p.add_argument("--term-evidence-url", action="append", required=True)
+    p.add_argument("--matched-evidence-url", action="append",
+                   help="历史条目的独立来源;未给时可使用索引记录自身 source_urls")
+    p.add_argument("--by", choices=["xinci-scan", "xinci-run", "user"], default="user")
+    p.add_argument("--run-id")
+    p.add_argument("--supersedes", help="修订错误裁决时指向当前 decision_id")
 
     a = ap.parse_args(argv)
 
@@ -216,9 +211,11 @@ def main(argv=None):
         if a.json:
             print(json.dumps(r, ensure_ascii=False, indent=2))
         else:
-            print(f"待查 {len(terms)} 条:见过 {len(r['seen'])},新 {len(r['fresh'])}")
+            print(f"待查 {len(terms)} 条:精确见过 {len(r['seen'])},疑似重复待快审 {len(r['review'])},新 {len(r['fresh'])}")
             for s in r["seen"]:
                 print(f"  [见过] {s['term']} ← {s['date']} {s['matched']} ({s['gate']}: {s['reason']})")
+            for s in r["review"]:
+                print(f"  [疑似重复·须快审] {s['term']} ≈ {s['date']} {s['matched']} ({s['gate']}: {s['reason']})")
             for t in r["fresh"]:
                 print(f"  [新] {t}")
         return 0
@@ -236,6 +233,33 @@ def main(argv=None):
                 recs.append(rec)
         n = append(a.data_root, recs)
         print(f"追加 {n} 条(输入 {len(recs)} 条,重复已跳过)")
+        return 0
+
+    if a.cmd == "resolve":
+        known = load(a.data_root) + _ledger_entries(a.data_root)
+        target = next((r for r in known if normalize(r["term"]) == normalize(a.matched)), None)
+        if not target:
+            print("裁决拒绝:matched 必须精确指向当前索引或账本条目", file=sys.stderr)
+            return 2
+        if match_kind(a.term, target["term"]) != "probable":
+            print("裁决拒绝:这两个措辞当前不是疑似重复关系", file=sys.stderr)
+            return 2
+        try:
+            matched_task = a.matched_task or target.get("task")
+            if not matched_task:
+                print("裁决拒绝:历史 matched 条目缺 concrete task;"
+                      "先重建证据并传 --matched-task", file=sys.stderr)
+                return 2
+            row = resolve_decision(
+                a.data_root, a.term, target["term"], a.decision, a.reason,
+                actor=a.by, term_task=a.term_task, matched_task=matched_task,
+                term_evidence_urls=a.term_evidence_url,
+                matched_evidence_urls=a.matched_evidence_url or target.get("source_urls"),
+                run_id=a.run_id, supersedes=a.supersedes)
+        except DedupDecisionError as e:
+            print(f"裁决拒绝:{e}", file=sys.stderr)
+            return 2
+        print(json.dumps(row, ensure_ascii=False))
         return 0
 
     s = stats(a.data_root)

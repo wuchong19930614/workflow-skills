@@ -5,6 +5,7 @@ md 是唯一事实来源(生命周期契约);html 永不手写、永不手改—
 只覆盖决策书实际用到的 Markdown 子集:标题、列表、表格、引用、代码块、粗斜体、行内代码、链接、分隔线。
 """
 import argparse
+import hashlib
 import html as html_mod
 import re
 import sys
@@ -131,18 +132,26 @@ def md_to_html_body(md: str) -> str:
     return "\n".join(blocks)
 
 
-def build(md_path: Path) -> Path:
-    md = md_path.read_text(encoding="utf-8")
+def render(md_path: Path) -> str:
+    raw = md_path.read_bytes()
+    md = raw.decode("utf-8")
+    source_sha256 = hashlib.sha256(raw).hexdigest()
     m = re.search(r"^#\s+(.+)$", md, re.MULTILINE)
     title = html_mod.escape(m.group(1).strip()) if m else md_path.stem
     doc = (
         "<!doctype html>\n<html lang=\"zh\">\n<head>\n<meta charset=\"utf-8\">\n"
         "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
+        f"<meta name=\"xinci-source-sha256\" content=\"{source_sha256}\">\n"
         f"<title>{title}</title>\n<style>{STYLE}</style>\n</head>\n<body>\n"
         f"{md_to_html_body(md)}\n"
         f"<footer>本页由 build_decision_html.py 生成自 {html_mod.escape(md_path.name)}(md 是唯一事实来源);"
         "勿手改本文件,改 md 后重新生成。</footer>\n</body>\n</html>\n"
     )
+    return doc
+
+
+def build(md_path: Path) -> Path:
+    doc = render(md_path)
     out = md_path.with_suffix(".html")
     out.write_text(doc, encoding="utf-8")
     return out

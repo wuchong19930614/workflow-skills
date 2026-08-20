@@ -1,0 +1,78 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci-run 可恢复运行会话",
+  "type": "object",
+  "required": ["schema_version", "run_id", "mode", "status", "started_at", "updated_at", "max_rounds", "max_hours", "rounds_completed", "current_round", "confirmations", "finish_reason"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "run_id": { "type": "string", "pattern": "^run-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$" },
+    "mode": { "type": "string", "const": "continuous" },
+    "status": { "type": "string", "enum": ["active", "go", "quota_exhausted", "budget_reached", "resource_exhausted", "blocked", "cancelled"] },
+    "started_at": { "type": "string" },
+    "updated_at": { "type": "string" },
+    "finished_at": { "type": "string" },
+    "max_rounds": { "type": "integer", "minimum": 1 },
+    "max_hours": { "type": ["number", "null"], "exclusiveMinimum": 0 },
+    "rounds_completed": { "type": "integer", "minimum": 0 },
+    "current_round": { "type": ["integer", "null"], "minimum": 1 },
+    "confirmations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["risk", "confirmed_at", "consumed_at", "voided_at", "history"],
+        "properties": {
+          "risk": { "type": "string", "const": "window_bet" },
+          "confirmed_at": { "type": "string" },
+          "consumed_at": { "type": ["string", "null"] },
+          "voided_at": { "type": ["string", "null"] },
+          "history": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "risk": { "type": "string" },
+                "confirmed_at": { "type": ["string", "null"] },
+                "consumed_at": { "type": ["string", "null"] },
+                "voided_at": { "type": ["string", "null"] }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "finish_reason": { "type": ["string", "null"] },
+    "go_candidates": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "active" } } },
+      "then": {
+        "properties": {
+          "finished_at": false,
+          "finish_reason": { "type": "null" },
+          "go_candidates": false
+        }
+      },
+      "else": {
+        "required": ["finished_at"],
+        "properties": {
+          "current_round": { "type": "null" },
+          "finish_reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "status": { "const": "go" } } },
+      "then": { "required": ["go_candidates"] },
+      "else": { "properties": { "go_candidates": false } }
+    }
+  ]
+}

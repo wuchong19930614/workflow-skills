@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci 跨文件事务日志",
+  "type": "object",
+  "required": ["schema_version", "tx_id", "kind", "status", "run_id", "slug", "prepared_at", "committed_at", "candidate_before_sha256", "candidate_after_sha256", "candidate_after"],
+  "properties": {
+    "schema_version": { "type": "integer", "const": 2 },
+    "tx_id": { "type": "string", "pattern": "^tx-run-.+$" },
+    "kind": { "type": "string", "const": "window_bet_transition" },
+    "status": { "type": "string", "enum": ["prepared", "committed", "reconciled"] },
+    "run_id": { "type": "string", "pattern": "^run-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$" },
+    "slug": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$" },
+    "prepared_at": { "type": "string" },
+    "committed_at": { "type": ["string", "null"] },
+    "candidate_before_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "candidate_after_sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "candidate_after": { "type": "object" },
+    "reconciliation": {
+      "type": "object",
+      "required": ["decision", "reason", "actor", "confirmation_ref", "at"],
+      "properties": {
+        "decision": { "type": "string", "enum": ["keep_current", "apply_after"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "actor": { "type": "string", "enum": ["user", "xinci-run"] },
+        "confirmation_ref": { "type": "string", "minLength": 1 },
+        "at": { "type": "string" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}

@@ -16,7 +16,7 @@
     "lane": { "type": "string", "const": "new", "description": "本套固定为 new;为未来成熟词道预留" },
     "first_observed_at": { "type": "string", "description": "首次捕获时间,ISO 8601(事实记录)" },
     "last_checked_at": { "type": "string", "description": "最近复查时间,ISO 8601(事实记录,不用于调度)" },
-    "expiry": { "type": ["string", "null"], "description": "失效日 YYYY-MM-DD,观察者判断并附推理于证据。按状态有两义:tracking/screened 及其后继是窗口/形成失效日;排队中的 captured(带 gates)是\"这个方向大约还值得几天深审\"的排队过期出口(见 xinci-scan 第 4 层),不是最终窗口评估。出闸 captured→screened 时应带 --expiry 把排队期的旧值覆盖成窗口失效日,完成语义切换——漏了这一步,旧值会残留到 screened 被按窗口失效日误读" },
+    "expiry": { "type": ["string", "null"], "description": "失效日 YYYY-MM-DD。captured 排队位表示还值得几天深审;screened 及后继表示窗口/形成失效日。captured→screened 时 registrar 强制用 --expiry 完成语义切换" },
     "source": {
       "type": "object",
       "required": ["url"],
@@ -34,6 +34,7 @@
     "evidence_refs": { "type": "array", "items": { "type": "string" }, "description": "观察文件路径,相对 数据/新词工作流/" },
     "decision_ref": { "type": ["string", "null"], "description": "决策书 md 路径;仅 go 决策携带" },
     "superseded_by": { "type": ["string", "null"], "description": "被取代时指向新候选 slug" },
+    "recheck_after": { "type": ["string", "null"], "description": "仅 G1/G2/G3 可逆 SERP 型否决的复核日期;不自动重开" },
     "history": {
       "type": "array",
       "description": "状态转移、复查登记与字段修订史,registrar 追加,不可改写;每条附当次提交的参数快照(顶层 gates/score 等字段会被后续转移覆盖,翻转史只在这里)",
@@ -45,6 +46,8 @@
           "from": { "type": ["string", "null"], "description": "原状态,注册时为 null" },
           "to": { "type": "string", "description": "新状态;amend/checked 条目 from==to" },
           "by": { "type": "string", "description": "执行的 skill 名" },
+          "run_id": { "type": "string", "description": "连续运行写入时必填的可恢复运行会话 ID" },
+          "round": { "type": "integer", "minimum": 1, "description": "连续运行写入时必填的活动轮号,供 manifest 自动归集候选" },
           "reason": { "type": "string", "description": "拒绝/过期/搁置/修订等的决定性理由" },
           "amend": { "type": "array", "items": { "type": "string" }, "description": "amend 条目专用:本次修订的字段名(expiry/aliases/invalidation/gates;gates 仅 captured 可补记)" },
           "checked": { "type": "array", "items": { "type": "string" }, "description": "checked 条目专用:本次复查登记的观察文件路径" },
@@ -56,6 +59,8 @@
           "play": { "type": "string", "description": "快照:本次提交的打法" },
           "decision_ref": { "type": "string", "description": "快照:本次提交的决策书路径" },
           "superseded_by": { "type": "string", "description": "快照:本次提交的取代者 slug" },
+          "reopened": { "type": "boolean", "description": "本条是否为基于新证据的受控重开" },
+          "evidence": { "type": "array", "items": { "type": "string" }, "description": "本次注册、转移、补记或重开直接使用的观察文件；用于把 gates 快照绑定到具体证据" },
           "add_aliases": { "type": "array", "items": { "type": "string" }, "description": "快照:amend 追加的别名" },
           "add_invalidation": { "type": "array", "items": { "type": "string" }, "description": "快照:amend 追加的失效条件" }
         }

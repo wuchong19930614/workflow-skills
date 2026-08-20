@@ -1,6 +1,6 @@
 ---
 name: xinci-track
-description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看 SERP 变化、命名定型与需求形成信号,向用户提议继续追踪/续期修订/形成确认/过期/否决。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 由用户指定查什么、何时查;本 skill 不自我调度。
+description: '复查新词工作流中处于追踪状态的候选:重跑 G1、看 SERP 变化、命名定型与需求形成信号,向用户提议继续追踪/续期修订/形成确认/过期/否决。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 由用户指定查什么、何时查;本 skill 不自我调度。'
 ---
 
 # xinci-track 追踪复查
@@ -29,7 +29,7 @@ description: 复查新词工作流中处于追踪状态的候选:重跑 G1、看
 3. **看命名定型。** 回访来源社区:叫法统一了还是分裂了?aliases 有没有胜出者?
 4. **看需求形成信号。** 自动补全出现?首批 Semrush 行出现?讨论持续增长?(形成期允许轻量 Semrush 探针,仅限能改变决策的查询。)
 5. **对照 expiry 与失效条件。** 失效条件命中或 expiry 已过 → 如实报告。
-6. **写观察文件并登记复查:**
+6. **写观察文件并登记复查:** observation 的 `gates` 只列本次实际重跑的门(至少写本次 G1 结论),`source_urls` 列实际打开的页面。仅登记复查而不转移时用 checked;随后若 transition 提交 gates,复用这份观察作为 `--evidence`,registrar 会逐门核对。
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py checked \

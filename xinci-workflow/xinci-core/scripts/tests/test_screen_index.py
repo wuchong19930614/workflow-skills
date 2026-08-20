@@ -8,6 +8,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import screen_index as S
+import dedup_decisions as DD
 
 
 class SimilarTest(unittest.TestCase):
@@ -43,6 +44,9 @@ class SimilarTest(unittest.TestCase):
         self.assertFalse(S.similar("distinct direction number one",
                                    "distinct direction number seven"))
 
+    def test_programming_language_symbols_are_meaningful(self):
+        self.assertFalse(S.similar("C++ migration tool", "C# migration tool"))
+
     def test_empty_is_never_similar(self):
         self.assertFalse(S.similar("", "anything"))
         self.assertFalse(S.similar("anything", "   "))
@@ -77,7 +81,95 @@ class ScreenIndexTest(unittest.TestCase):
                          "gate": "G5", "reason": "陷阱类别一"})
         r = S.check(self.root, ["qwen 3.8 27b vram requirements"])
         self.assertEqual(r["fresh"], [])
-        self.assertEqual(r["seen"][0]["gate"], "G5")
+        self.assertEqual(r["seen"], [])
+        self.assertEqual(r["review"][0]["gate"], "G5")
+
+    def test_probable_resolution_closes_review_loop(self):
+        known = "Qwen 3.8 27B vram quantization"
+        term = "qwen 3.8 27b vram requirements"
+        self.seed_index({"date": "2026-08-17", "term": known, "gate": "G5", "reason": "x"})
+        self.assertEqual(len(S.check(self.root, [term])["review"]), 1)
+        DD.resolve(self.root, term, known, "distinct", "任务一个算显存,一个列硬件要求",
+                   actor="user", term_task="列硬件要求", matched_task="计算量化显存",
+                   term_evidence_urls=["https://e.com/requirements"],
+                   matched_evidence_urls=["https://e.com/quantization"])
+        self.assertEqual(S.check(self.root, [term])["fresh"], [term])
+
+    def test_same_resolution_turns_probable_into_seen(self):
+        known = "Qwen 3.8 27B vram quantization"
+        term = "qwen 3.8 27b vram requirements"
+        self.seed_index({"date": "2026-08-17", "term": known, "gate": "G5", "reason": "x"})
+        DD.resolve(self.root, term, known, "same", "同一任务", actor="user",
+                   term_task="估算显存", matched_task="估算显存",
+                   term_evidence_urls=["https://e.com/requirements"],
+                   matched_evidence_urls=["https://e.com/quantization"])
+        result = S.check(self.root, [term])
+        self.assertEqual(len(result["seen"]), 1)
+        self.assertEqual(result["review"], [])
+
+    def test_wrong_dedup_ruling_has_append_only_revision(self):
+        known = "Qwen 3.8 27B vram quantization"
+        term = "qwen 3.8 27b vram requirements"
+        first = DD.resolve(self.root, term, known, "same", "初判同一任务", actor="user",
+                           term_task="估算显存", matched_task="估算显存",
+                           term_evidence_urls=["https://e.com/new"],
+                           matched_evidence_urls=["https://e.com/old"])
+        with self.assertRaises(DD.DedupDecisionError):
+            DD.resolve(self.root, term, known, "distinct", "发现任务不同", actor="user",
+                       term_task="列硬件要求", matched_task="生成量化文件",
+                       term_evidence_urls=["https://e.com/new"],
+                       matched_evidence_urls=["https://e.com/old"])
+        revised = DD.resolve(self.root, term, known, "distinct", "复核后发现任务不同",
+                             actor="user", term_task="列硬件要求", matched_task="生成量化文件",
+                             term_evidence_urls=["https://e.com/new"],
+                             matched_evidence_urls=["https://e.com/old"],
+                             supersedes=first["decision_id"])
+        self.assertEqual(revised["supersedes"], first["decision_id"])
+        self.assertEqual(DD.find(self.root, term, known)["decision"], "distinct")
+
+    def test_forged_run_actor_requires_real_session(self):
+        path = self.root / DD.FILE_NAME
+        path.write_text(json.dumps({
+            "decision_id": "dd-0123456789abcdef",
+            "term": "qwen 3.8 27b vram requirements",
+            "matched": "Qwen 3.8 27B vram quantization",
+            "decision": "distinct", "reason": "伪造", "actor": "xinci-run",
+            "run_id": "run-20260820T000000Z-deadbeef",
+            "term_task": "列硬件要求", "matched_task": "计算量化显存",
+            "term_evidence_urls": ["https://e.com/new"],
+            "matched_evidence_urls": ["https://e.com/old"],
+            "decided_at": "2026-08-20T00:00:00+00:00",
+        }, ensure_ascii=False) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(DD.DedupDecisionError, "run_id 无效"):
+            DD.find(self.root, "qwen 3.8 27b vram requirements",
+                    "Qwen 3.8 27B vram quantization")
+
+    def test_forged_duplicate_decision_id_fails_on_load(self):
+        base = {
+            "decision_id": "dd-0123456789abcdef", "decision": "distinct",
+            "reason": "伪造", "actor": "user", "term_task": "任务 A",
+            "matched_task": "任务 B", "term_evidence_urls": ["https://e.com/a"],
+            "matched_evidence_urls": ["https://e.com/b"],
+            "decided_at": "2026-08-20T00:00:00+00:00",
+        }
+        rows = [dict(base, term="alpha tool setup", matched="alpha setup tool"),
+                dict(base, term="beta tool setup", matched="beta setup tool")]
+        (self.root / DD.FILE_NAME).write_text(
+            "\n".join(json.dumps(x) for x in rows) + "\n", encoding="utf-8")
+        with self.assertRaisesRegex(DD.DedupDecisionError, "全局重复"):
+            DD.load(self.root)
+
+    def test_dedup_requires_independent_urls_and_distinct_tasks(self):
+        with self.assertRaisesRegex(DD.DedupDecisionError, "不可复用"):
+            DD.resolve(self.root, "alpha tool setup", "alpha setup tool", "distinct", "不同",
+                       actor="user", term_task="任务 A", matched_task="任务 B",
+                       term_evidence_urls=["https://e.com/shared"],
+                       matched_evidence_urls=["https://e.com/shared"])
+        with self.assertRaisesRegex(DD.DedupDecisionError, "两个不同"):
+            DD.resolve(self.root, "alpha tool setup", "alpha setup tool", "distinct", "不同",
+                       actor="user", term_task="同一任务", matched_task="同一任务",
+                       term_evidence_urls=["https://e.com/a"],
+                       matched_evidence_urls=["https://e.com/b"])
 
     def test_check_hits_ledger(self):
         # 走到 G1 之后被否决的候选只在账本、不在索引,只查索引会漏判
@@ -97,6 +189,7 @@ class ScreenIndexTest(unittest.TestCase):
         r = S.check(self.root, ["某个全新方向", "another fresh direction here"])
         self.assertEqual(len(r["fresh"]), 2)
         self.assertEqual(r["seen"], [])
+        self.assertEqual(r["review"], [])
 
     def test_check_on_empty_workspace(self):
         r = S.check(self.root, ["anything at all"])
@@ -104,13 +197,20 @@ class ScreenIndexTest(unittest.TestCase):
 
     # ---- append ----
 
-    def test_append_skips_duplicates_of_existing(self):
+    def test_append_preserves_probable_but_nonexact_direction(self):
         self.seed_index({"date": "2026-08-17", "term": "Qwen 3.8 27B(vram 等衍生任务)",
                          "gate": "G5", "reason": "陷阱类别一"})
         n = S.append(self.root, [{"date": "2026-08-18", "term": "qwen 3.8 27b vram requirements",
                                   "gate": "G5", "reason": "换个说法的同一方向"}])
+        self.assertEqual(n, 1)
+        self.assertEqual(len(S.load(self.root)), 2)
+
+    def test_append_skips_normalized_exact_duplicate(self):
+        self.seed_index({"date": "2026-08-17", "term": "PPWR Empty-Space Ratio",
+                         "gate": "G3", "reason": "x"})
+        n = S.append(self.root, [{"date": "2026-08-18", "term": "ppwr empty space ratio",
+                                  "gate": "G3", "reason": "same"}])
         self.assertEqual(n, 0)
-        self.assertEqual(len(S.load(self.root)), 1)
 
     def test_append_skips_duplicates_within_batch(self):
         # 回归:existing 由 set 改 list 后 .add() 未同步改成 .append(),

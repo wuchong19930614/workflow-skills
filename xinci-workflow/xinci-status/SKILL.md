@@ -1,6 +1,6 @@
 ---
 name: xinci-status
-description: 新词工作流状态看板,只读汇报候选账本的全局事实。当用户想看新词工作流状态、账本里有什么、各候选进展到哪、有哪些 expiry 快到期时使用。纯汇报不驱动。English triggers: xinci status, keyword workflow status, candidate ledger overview. 发现新词用 xinci-scan,复查用 xinci-track。
+description: '新词工作流状态看板,只读汇报候选账本的全局事实。当用户想看新词工作流状态、账本里有什么、各候选进展到哪、有哪些 expiry 快到期时使用。纯汇报不驱动。English triggers: xinci status, keyword workflow status, candidate ledger overview. 发现新词用 xinci-scan,复查用 xinci-track。'
 ---
 
 # xinci-status 状态看板
@@ -23,7 +23,7 @@ description: 新词工作流状态看板,只读汇报候选账本的全局事实
 python3 xinci-workflow/xinci-core/scripts/report_status.py
 ```
 
-2. 如实转述输出:各状态候选数;每个候选的年龄、距上次复查天数、expiry 余量;"expiry 已过且非终态"清单。
+2. 如实转述输出:各状态候选数;每个候选的年龄、距上次复查天数、expiry 余量;"expiry 已过且非终态"清单;以及可逆 G1/G2/G3 否决已到 `recheck_after` 的清单。到期只是事实,不会自动重开。
 3. 可补充账本与运行清单完整性检查(用户要求或输出异常时):
 
 ```bash

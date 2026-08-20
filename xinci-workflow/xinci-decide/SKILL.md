@@ -1,6 +1,6 @@
 ---
 name: xinci-decide
-description: 对已认定(qualified)或搁置待议(hold)的新词候选出建站 go/no-go 决策:页面地图、收入三情景、风险清单、红队复核;go 结论产出 md+html 双格式决策书,no-go 只在账本登记决定性理由。也可对窗口以天计的 screened 候选走快道出速建决策。当用户说给 X 出建站决策、X 能不能建站、出决策书时使用。也受理 screened / fast_grab_ready 到期候选的 expired 提议。English triggers: build decision, site go no-go, decision document. 认定评分用 xinci-qualify。
+description: '对已认定(qualified)或搁置待议(hold)的新词候选出建站 go/no-go 决策:页面地图、收入三情景、风险清单、红队复核;go 结论产出 md+html 双格式决策书,no-go 只在账本登记决定性理由。也可对窗口以天计的 screened 候选走快道出速建决策。当用户说给 X 出建站决策、X 能不能建站、出决策书时使用。也受理 screened / fast_grab_ready 到期候选的 expired 提议。English triggers: build decision, site go no-go, decision document. 认定评分用 xinci-qualify。'
 ---
 
 # xinci-decide 建站决策
@@ -83,7 +83,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
 python3 xinci-workflow/xinci-core/scripts/build_decision_html.py "数据/新词工作流/决策书/<slug>.md"
 ```
 
-- md 每次修改后重跑脚本再生成 html,禁止手改 html。registrar 在注册决策时强制校验双文件同时存在。
+- md 每次修改后重跑脚本再生成 html,禁止手改 html。生成器把 md 的 SHA-256 写入 html meta;registrar 同时校验源哈希与**完整确定性渲染结果**,旧 html、伪造 meta 或手改 html 一律拒收。
 - 每份决策书必含**失效条件**(出现什么信号即放弃)与**下一步人工动作清单**。
 
 ## 硬规则
