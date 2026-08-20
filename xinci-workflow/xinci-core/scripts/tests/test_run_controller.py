@@ -56,6 +56,33 @@ class RunControllerTest(unittest.TestCase):
         with self.assertRaises(RC.RunControllerError):
             RC.start(self.root)
 
+    def test_chinese_status_alias_and_human_rendering(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        RC.record_round(self.root, run["run_id"], funnel={
+            "extracted": 0, "rejected_zero_cost": 0, "rejected_g1": 0,
+            "deep_audited": 0, "queued": 0,
+        })
+        done = RC.finish(self.root, run["run_id"], "运行预算已用完", "一轮预算已用完")
+        self.assertEqual(done["status"], "budget_reached")
+        rendered = RC.render_human_result("show", done)
+        self.assertIn("运行状态：运行预算已用完", rendered)
+        self.assertNotIn("budget_reached", rendered)
+
+    def test_historical_reason_is_localized_without_mutation(self):
+        obj = {
+            "run_id": "run-20260820T000000Z-1234abcd",
+            "status": "budget_reached",
+            "rounds_completed": 6,
+            "max_rounds": 6,
+            "finish_reason": "max_rounds=6; 无GO; SERP unusual traffic",
+        }
+        rendered = RC.render_human_result("show", obj)
+        self.assertIn("最大轮次=6", rendered)
+        self.assertIn("无可交付", rendered)
+        self.assertIn("搜索结果页 异常流量提示", rendered)
+        self.assertNotIn("max_rounds", rendered)
+
     def test_round_budget_is_enforced(self):
         run = RC.start(self.root, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])

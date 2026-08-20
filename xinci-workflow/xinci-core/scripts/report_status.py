@@ -11,6 +11,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from registrar import TERMINAL, DEFAULT_DATA_ROOT
+from chinese_labels import candidate_state_label
 
 
 def _days_since(iso_ts: str) -> int:
@@ -59,21 +60,21 @@ def render_text(report) -> str:
     if not report["counts"]:
         lines.append("(账本为空)")
     for state, n in sorted(report["counts"].items()):
-        lines.append(f"{state}: {n}")
+        lines.append(f"{candidate_state_label(state)}：{n}")
     lines.append("")
     lines.append("== 候选明细 ==")
     for r in report["candidates"]:
-        exp = "无 expiry" if r["expiry"] is None else f"expiry {r['expiry']}(余 {r['expiry_days_left']} 天)"
-        lines.append(f"[{r['state']}] {r['slug']} — {r['term']} | 年龄 {r['age_days']} 天 | "
+        exp = "无失效日" if r["expiry"] is None else f"失效日 {r['expiry']}（余 {r['expiry_days_left']} 天）"
+        lines.append(f"【{candidate_state_label(r['state'])}】{r['slug']} — {r['term']} | 年龄 {r['age_days']} 天 | "
                      f"距上次复查 {r['days_since_checked']} 天 | {exp}")
     if report["expired_unhandled"]:
         lines.append("")
-        lines.append("== expiry 已过且非终态(待用户决定) ==")
+        lines.append("== 失效日已过且仍未终结（待用户决定） ==")
         for slug in report["expired_unhandled"]:
             lines.append(f"- {slug}")
     if report["recheck_due"]:
         lines.append("")
-        lines.append("== 可逆 SERP 型否决已到复核日 ==")
+        lines.append("== 可逆搜索结果页型否决已到复核日 ==")
         for slug in report["recheck_due"]:
             lines.append(f"- {slug}")
     return "\n".join(lines)

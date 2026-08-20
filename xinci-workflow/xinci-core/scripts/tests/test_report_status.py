@@ -70,8 +70,17 @@ class ReportStatusTest(unittest.TestCase):
         # 过期未处理:只有非终态的 overdue-one;rejected 即使无 expiry 也不该出现
         self.assertEqual(report["expired_unhandled"], ["overdue-one"])
         text = S.render_text(report)
-        self.assertIn("expiry 已过且非终态", text)
+        self.assertIn("失效日已过且仍未终结", text)
         self.assertIn("- overdue-one", text)
+
+    def test_human_output_uses_chinese_state_labels(self):
+        future = (date.today() + timedelta(days=5)).isoformat()
+        self._mk("fresh-one", state="tracking", expiry=future)
+        text = S.render_text(S.build_report(self.root))
+        self.assertIn("跟踪中：1", text)
+        self.assertIn("【跟踪中】", text)
+        self.assertIn("失效日", text)
+        self.assertNotIn("[tracking]", text)
 
     def test_terminal_overdue_not_listed(self):
         past = (date.today() - timedelta(days=2)).isoformat()

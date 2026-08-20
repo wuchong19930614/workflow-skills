@@ -22,6 +22,8 @@ from run_state import (SESSION_DIR, RUN_ID_RE, FINAL_STATUSES, RunStateError,
 from run_manifest import (RunManifestError, append_round, candidates_by_run,
                           candidates_by_round, create_run_manifest, find_run_manifest,
                           validate_runs)
+from chinese_labels import (humanize_text, normalize_session_status,
+                            session_status_label)
 
 try:
     import fcntl
@@ -149,16 +151,16 @@ def begin_round(data_root, run_id):
             raise RunControllerError(str(e))
         obj = load_session(data_root, run_id)
         if obj.get("status") != "active":
-            raise RunControllerError(f"运行会话不是 active: {obj.get('status')}")
+            raise RunControllerError(f"运行会话当前不是运行中，而是：{session_status_label(obj.get('status'))}")
         if obj.get("current_round") is not None:
             raise RunControllerError(f"第 {obj['current_round']} 轮尚未结束")
         if obj["rounds_completed"] >= obj["max_rounds"]:
-            raise RunControllerError("轮次预算已命中;请 finish --status budget_reached")
+            raise RunControllerError("轮次预算已用完；请结束会话并将状态设为“运行预算已用完”")
         if obj.get("max_hours") is not None:
             started = datetime.fromisoformat(obj["started_at"])
             elapsed_hours = (datetime.now(timezone.utc) - started).total_seconds() / 3600
             if elapsed_hours >= obj["max_hours"]:
-                raise RunControllerError("时长预算已命中;请 finish --status budget_reached")
+                raise RunControllerError("时长预算已用完；请结束会话并将状态设为“运行预算已用完”")
         obj["current_round"] = obj["rounds_completed"] + 1
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
@@ -317,10 +319,12 @@ def reconcile(data_root, tx_id, decision, reason, actor, confirmation_ref):
 
 
 def finish(data_root, run_id, status, reason):
+    status = normalize_session_status(status)
     if status not in FINAL_STATUSES:
-        raise RunControllerError(f"status 必须属于 {sorted(FINAL_STATUSES)}")
+        allowed = "、".join(session_status_label(x) for x in sorted(FINAL_STATUSES))
+        raise RunControllerError(f"结束状态必须是：{allowed}")
     if not reason:
-        raise RunControllerError("finish 要求 reason")
+        raise RunControllerError("结束会话时必须填写事实说明")
     with _locked(data_root):
         try:
             require_clean(data_root)
@@ -328,7 +332,7 @@ def finish(data_root, run_id, status, reason):
             raise RunControllerError(str(e))
         obj = load_session(data_root, run_id)
         if obj.get("status") != "active":
-            raise RunControllerError(f"运行会话已经结束: {obj.get('status')}")
+            raise RunControllerError(f"运行会话已经结束：{session_status_label(obj.get('status'))}")
         if obj.get("current_round") is not None:
             raise RunControllerError("当前轮次尚未 record-round")
         try:
@@ -398,14 +402,63 @@ def finish(data_root, run_id, status, reason):
         return obj
 
 
+def _render_session(obj):
+    lines = [
+        f"运行编号：{obj['run_id']}",
+        f"运行状态：{session_status_label(obj['status'])}",
+        f"已完成轮次：{obj.get('rounds_completed', 0)}/{obj.get('max_rounds', '未设置')}",
+    ]
+    if obj.get("current_round") is not None:
+        lines.append(f"当前轮次：第 {obj['current_round']} 轮")
+    if obj.get("finish_reason"):
+        lines.append(f"终止说明：{humanize_text(obj['finish_reason'])}")
+    if obj.get("go_candidates"):
+        lines.append("可交付候选：" + "、".join(obj["go_candidates"]))
+    return "\n".join(lines)
+
+
+def render_human_result(cmd, obj):
+    """把控制器结果渲染为中文；机器调用可显式要求 JSON。"""
+    if cmd == "list":
+        active = obj.get("active") or []
+        lines = ["活动会话：" + ("、".join(active) if active else "无")]
+        sessions = obj.get("sessions") or []
+        if sessions:
+            lines.append("会话记录：")
+            for row in sessions:
+                lines.append(
+                    f"- {row['run_id']}｜{session_status_label(row['status'])}｜"
+                    f"已完成 {row.get('rounds_completed', 0)}/{row.get('max_rounds', '未设置')} 轮"
+                )
+        return "\n".join(lines)
+    if cmd == "record-round":
+        session = obj["session"]
+        round_record = obj["round"]
+        return "\n".join([
+            f"第 {round_record['round']} 轮已记录。",
+            f"本轮触及候选：{len(round_record.get('candidates_touched') or [])} 个",
+            f"计费调用：{round_record.get('billable_calls', 0)} 次",
+            f"运行清单：{obj['manifest']}",
+            _render_session(session),
+        ])
+    if cmd == "recover":
+        return f"已恢复未完成事务：{len(obj.get('recovered') or [])} 个"
+    if cmd == "reconcile":
+        return "分歧事务已按用户确认完成处理。"
+    if isinstance(obj, dict) and "run_id" in obj and "status" in obj:
+        return _render_session(obj)
+    return "操作已完成。"
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="xinci-run 可恢复运行会话控制器")
     ap.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
+    ap.add_argument("--json", action="store_true", help="输出稳定机器格式；面向用户时不要使用")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("start")
     p.add_argument("--max-rounds", type=int, default=6)
     p.add_argument("--max-hours", type=float)
-    sub.add_parser("list", help="列出会话摘要并直接给出 active run_id")
+    sub.add_parser("list", help="列出会话摘要并直接给出活动运行编号")
     for name in ("begin-round", "show"):
         p = sub.add_parser(name)
         p.add_argument("--run-id", required=True)
@@ -421,7 +474,8 @@ def main(argv=None):
     p.add_argument("--slug", required=True)
     p = sub.add_parser("finish")
     p.add_argument("--run-id", required=True)
-    p.add_argument("--status", choices=sorted(FINAL_STATUSES), required=True)
+    p.add_argument("--status", required=True,
+                   help="结束状态；推荐使用中文，如“运行预算已用完”")
     p.add_argument("--reason", required=True)
     p = sub.add_parser("recover", help="前滚恢复未完成的跨文件事务")
     p.add_argument("--run-id")
@@ -464,7 +518,8 @@ def main(argv=None):
     except (RunControllerError, TransactionError) as e:
         print(f"run_controller 拒绝: {e}", file=sys.stderr)
         return 2
-    print(json.dumps(obj, ensure_ascii=False, indent=2))
+    print(json.dumps(obj, ensure_ascii=False, indent=2) if a.json
+          else render_human_result(a.cmd, obj))
     return 0
 
 
