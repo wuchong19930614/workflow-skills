@@ -2,13 +2,14 @@
   "schema_version": 1,
   "run_id": "run-20260820T113403Z-67553e0e",
   "mode": "continuous",
-  "status": "active",
+  "status": "budget_reached",
   "started_at": "2026-08-20T11:34:03+00:00",
-  "updated_at": "2026-08-20T13:02:58+00:00",
+  "updated_at": "2026-08-21T02:38:39+00:00",
   "max_rounds": 100,
   "max_hours": null,
-  "rounds_completed": 2,
-  "current_round": 3,
+  "rounds_completed": 3,
+  "current_round": null,
   "confirmations": {},
-  "finish_reason": null
+  "finish_reason": "定时任务本次给定 max_rounds=1,已完成第 3 轮(还债 20 次 G1 + 8 次深审、扫描 58 个新方向、归并陷阱类别四)。未产出 go 决策,Semrush 额度未动用(计费调用 0),浏览器与 Google 搜索全程正常。下次启动从账本现状继续。",
+  "finished_at": "2026-08-21T02:38:39+00:00"
 }

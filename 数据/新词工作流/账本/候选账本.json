@@ -2236,7 +2236,7 @@
       "slug": "gh-ruleset-auto-migration",
       "term": "Automatically migrate branch protection rules to repository rulesets",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T09:27:18+00:00",
       "last_checked_at": "2026-08-20T09:27:18+00:00",
@@ -2252,16 +2252,19 @@
         "G0": "pass",
         "G4": "pass",
         "G5": "pass",
-        "G1": "pass"
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/gh-ruleset-auto-migration/2026-08-20-scan.json"
+        "证据/gh-ruleset-auto-migration/2026-08-20-scan.json",
+        "证据/gh-ruleset-auto-migration/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
-      "recheck_after": null,
+      "recheck_after": "2026-09-20",
       "history": [
         {
           "at": "2026-08-20T09:27:18+00:00",
@@ -2298,6 +2301,23 @@
             "evidence",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:24:42+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/gh-ruleset-auto-migration/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:github.blog changelog 首位摘要给出 Settings→Branches→Convert to ruleset 完整路径,docs.github.com 与 daily.dev 复述;三者均永久收录、持续可见。死因为厂商 changelog 自带答案。",
+          "gates": {
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
         }
       ]
     },
@@ -2305,7 +2325,7 @@
       "slug": "gh-usage-report-per-model-tokens",
       "term": "Per-model token breakdown in the usage report",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T09:27:18+00:00",
       "last_checked_at": "2026-08-20T09:27:18+00:00",
@@ -2321,16 +2341,19 @@
         "G0": "pass",
         "G4": "pass",
         "G5": "pass",
-        "G1": "pass"
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/gh-usage-report-per-model-tokens/2026-08-20-scan.json"
+        "证据/gh-usage-report-per-model-tokens/2026-08-20-scan.json",
+        "证据/gh-usage-report-per-model-tokens/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
-      "recheck_after": null,
+      "recheck_after": "2026-09-20",
       "history": [
         {
           "at": "2026-08-20T09:27:18+00:00",
@@ -2367,6 +2390,23 @@
             "evidence",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:24:42+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/gh-usage-report-per-model-tokens/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:docs.github.com billing-reports reference 直接列出 input/output/cache_read/cache_write 字段完成任务,github.blog、daily.dev、Visual Studio Magazine 并存,均持续可见。死因为厂商 changelog+官方文档自带答案。",
+          "gates": {
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
         }
       ]
     },
@@ -2635,7 +2675,7 @@
       "slug": "gh-org-pull-request-limits",
       "term": "Set pull request limits at the organization level",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T09:27:18+00:00",
       "last_checked_at": "2026-08-20T09:27:18+00:00",
@@ -2651,16 +2691,19 @@
         "G0": "pass",
         "G4": "pass",
         "G5": "pass",
-        "G1": "pass"
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/gh-org-pull-request-limits/2026-08-20-scan.json"
+        "证据/gh-org-pull-request-limits/2026-08-20-scan.json",
+        "证据/gh-org-pull-request-limits/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
-      "recheck_after": null,
+      "recheck_after": "2026-09-20",
       "history": [
         {
           "at": "2026-08-20T09:27:18+00:00",
@@ -2697,6 +2740,23 @@
             "evidence",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:24:42+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/gh-org-pull-request-limits/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:github.blog changelog(首位)摘要即含完整操作路径 Settings→Moderation tools,daily.dev 同步问答复述;两者均为永久收录、在本查询持续可见的免费实现,≥2 条已把任务做完。死因为厂商 changelog 自带答案。",
+          "gates": {
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
         }
       ]
     },
@@ -5223,12 +5283,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-bedrock-external-web-access/2026-08-20-scan.json"
+        "证据/aws-bedrock-external-web-access/2026-08-20-scan.json",
+        "证据/aws-bedrock-external-web-access/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5250,6 +5312,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-bedrock-external-web-access/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5272,12 +5355,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-bedrock-web-search-filtering/2026-08-20-scan.json"
+        "证据/aws-bedrock-web-search-filtering/2026-08-20-scan.json",
+        "证据/aws-bedrock-web-search-filtering/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5299,6 +5384,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-bedrock-web-search-filtering/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5321,12 +5427,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-cloudwatch-log-tag-propagation/2026-08-20-scan.json"
+        "证据/aws-cloudwatch-log-tag-propagation/2026-08-20-scan.json",
+        "证据/aws-cloudwatch-log-tag-propagation/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5348,6 +5456,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-cloudwatch-log-tag-propagation/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5370,12 +5499,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-sagemaker-trusted-identity-notebooks/2026-08-20-scan.json"
+        "证据/aws-sagemaker-trusted-identity-notebooks/2026-08-20-scan.json",
+        "证据/aws-sagemaker-trusted-identity-notebooks/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5397,6 +5528,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:53+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-sagemaker-trusted-identity-notebooks/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5419,12 +5571,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-cloudwatch-geoip-rds-xml-processors/2026-08-20-scan.json"
+        "证据/aws-cloudwatch-geoip-rds-xml-processors/2026-08-20-scan.json",
+        "证据/aws-cloudwatch-geoip-rds-xml-processors/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5446,6 +5600,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-cloudwatch-geoip-rds-xml-processors/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5468,12 +5643,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-cost-anomaly-third-party-bedrock-models/2026-08-20-scan.json"
+        "证据/aws-cost-anomaly-third-party-bedrock-models/2026-08-20-scan.json",
+        "证据/aws-cost-anomaly-third-party-bedrock-models/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5495,6 +5672,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-cost-anomaly-third-party-bedrock-models/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5517,12 +5715,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-quick-deny-default-permissions/2026-08-20-scan.json"
+        "证据/aws-quick-deny-default-permissions/2026-08-20-scan.json",
+        "证据/aws-quick-deny-default-permissions/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5544,6 +5744,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:53+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-quick-deny-default-permissions/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5566,12 +5787,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-workspaces-applications-monitoring/2026-08-20-scan.json"
+        "证据/aws-workspaces-applications-monitoring/2026-08-20-scan.json",
+        "证据/aws-workspaces-applications-monitoring/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5593,6 +5816,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:53+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-workspaces-applications-monitoring/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5615,12 +5859,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-storage-gateway-fips-privatelink/2026-08-20-scan.json"
+        "证据/aws-storage-gateway-fips-privatelink/2026-08-20-scan.json",
+        "证据/aws-storage-gateway-fips-privatelink/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5642,6 +5888,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:53+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-storage-gateway-fips-privatelink/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5664,12 +5931,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-agentcore-payments/2026-08-20-scan.json"
+        "证据/aws-agentcore-payments/2026-08-20-scan.json",
+        "证据/aws-agentcore-payments/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5691,6 +5960,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:51+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-agentcore-payments/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5713,12 +6003,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-sagemaker-data-profiling/2026-08-20-scan.json"
+        "证据/aws-sagemaker-data-profiling/2026-08-20-scan.json",
+        "证据/aws-sagemaker-data-profiling/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5740,6 +6032,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:53+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-sagemaker-data-profiling/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5762,12 +6075,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-mwaa-serverless-python-bash-operators/2026-08-20-scan.json"
+        "证据/aws-mwaa-serverless-python-bash-operators/2026-08-20-scan.json",
+        "证据/aws-mwaa-serverless-python-bash-operators/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5789,6 +6104,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-mwaa-serverless-python-bash-operators/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5796,7 +6132,7 @@
       "slug": "aws-iam-policy-autopilot-terraform-plan",
       "term": "IAM Policy Autopilot Terraform plan files",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -5811,16 +6147,20 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-iam-policy-autopilot-terraform-plan/2026-08-20-scan.json"
+        "证据/aws-iam-policy-autopilot-terraform-plan/2026-08-20-scan.json",
+        "证据/aws-iam-policy-autopilot-terraform-plan/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
-      "recheck_after": null,
+      "recheck_after": "2026-09-20",
       "history": [
         {
           "at": "2026-08-20T10:33:11+00:00",
@@ -5838,6 +6178,23 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:42+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/aws-iam-policy-autopilot-terraform-plan/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:窄措辞下 aws.amazon.com what's-new + awslabs/iam-policy-autopilot 仓库 + DevelopersIO 完整走查(含 terraform show -json 步骤)三条已做完任务;宽措辞下 tinfoilcipher(2023)、mhdez.com 的 iamlive 方案与 IAM Access Analyzer 长期占位。两种措辞都不是临时空位。",
+          "gates": {
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
         }
       ]
     },
@@ -5845,7 +6202,7 @@
       "slug": "aws-workspaces-nested-virtualization",
       "term": "Amazon WorkSpaces nested virtualization",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -5860,16 +6217,20 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-workspaces-nested-virtualization/2026-08-20-scan.json"
+        "证据/aws-workspaces-nested-virtualization/2026-08-20-scan.json",
+        "证据/aws-workspaces-nested-virtualization/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
-      "recheck_after": null,
+      "recheck_after": "2026-09-20",
       "history": [
         {
           "at": "2026-08-20T10:33:11+00:00",
@@ -5887,6 +6248,23 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:42+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/aws-workspaces-nested-virtualization/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:docs.aws.amazon.com adminguide『Nested virtualization for WorkSpaces Personal』与 EC2 UserGuide 分步指引并列首页,what's-new 明写 console/API/CLI 三种启用方式;AWS 官方域持续可见。死因为厂商 release note+官方文档自带答案。",
+          "gates": {
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
         }
       ]
     },
@@ -5909,12 +6287,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-ec2-autoscaling-batch-termination/2026-08-20-scan.json"
+        "证据/aws-ec2-autoscaling-batch-termination/2026-08-20-scan.json",
+        "证据/aws-ec2-autoscaling-batch-termination/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5936,6 +6316,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-ec2-autoscaling-batch-termination/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -5958,12 +6359,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-msk-custom-domain-names/2026-08-20-scan.json"
+        "证据/aws-msk-custom-domain-names/2026-08-20-scan.json",
+        "证据/aws-msk-custom-domain-names/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5985,6 +6388,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-msk-custom-domain-names/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -6007,12 +6431,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-network-firewall-rule-hit-counts/2026-08-20-scan.json"
+        "证据/aws-network-firewall-rule-hit-counts/2026-08-20-scan.json",
+        "证据/aws-network-firewall-rule-hit-counts/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -6034,6 +6460,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-network-firewall-rule-hit-counts/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -6056,12 +6503,14 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-cloudshell-visual-file-editor/2026-08-20-scan.json"
+        "证据/aws-cloudshell-visual-file-editor/2026-08-20-scan.json",
+        "证据/aws-cloudshell-visual-file-editor/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -6083,6 +6532,27 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:52+00:00",
+          "from": "captured",
+          "to": "captured",
+          "by": "xinci-run",
+          "reason": "本轮补跑 G1(美区英文未登录、只看首屏)=pass;深审配额已用于其他 8 个候选,继续排队等下轮补 G2/G3",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "expiry": "2026-08-27",
+          "gates": {
+            "G1": "pass"
+          },
+          "evidence": [
+            "证据/aws-cloudshell-visual-file-editor/2026-08-21-scan.json"
+          ],
+          "amend": [
+            "evidence",
+            "expiry",
+            "gates"
+          ]
         }
       ]
     },
@@ -6090,7 +6560,7 @@
       "slug": "aws-quick-dlp-purview",
       "term": "Amazon Quick data loss prevention with Microsoft Purview",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:12+00:00",
       "last_checked_at": "2026-08-20T10:33:12+00:00",
@@ -6105,16 +6575,20 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-quick-dlp-purview/2026-08-20-scan.json"
+        "证据/aws-quick-dlp-purview/2026-08-20-scan.json",
+        "证据/aws-quick-dlp-purview/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
-      "recheck_after": null,
+      "recheck_after": "2026-09-20",
       "history": [
         {
           "at": "2026-08-20T10:33:12+00:00",
@@ -6132,6 +6606,23 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:42+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/aws-quick-dlp-purview/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:docs.aws.amazon.com DLP 文档首位给出完整配置向导步骤,MicrosoftPurviewProviderConfig API 参考补齐凭据与标签映射,learn.microsoft.com 完成 Purview 侧策略创建;跨厂商两侧官方文档合起来无缺口且持续可见。",
+          "gates": {
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
         }
       ]
     },
@@ -6139,7 +6630,7 @@
       "slug": "aws-s3-access-denied-policy-details",
       "term": "Amazon S3 access denied error additional policy details",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:12+00:00",
       "last_checked_at": "2026-08-20T10:33:12+00:00",
@@ -6154,16 +6645,20 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass"
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-s3-access-denied-policy-details/2026-08-20-scan.json"
+        "证据/aws-s3-access-denied-policy-details/2026-08-20-scan.json",
+        "证据/aws-s3-access-denied-policy-details/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
-      "recheck_after": null,
+      "recheck_after": "2026-09-20",
       "history": [
         {
           "at": "2026-08-20T10:33:12+00:00",
@@ -6181,6 +6676,23 @@
             "G5": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:42+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/aws-s3-access-denied-policy-details/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:docs.aws.amazon.com 403 排障文档(首位)明写错误含 policy ARN 可直接定位策略,AWS re:Post 知识库与 OneUptime 2026-02 完整指南各自独立完成同一任务,另有 AWS 官方视频;且 'S3 access denied' 是十年成熟饱和查询,新字段未开出新位置。",
+          "gates": {
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
         }
       ]
     },
@@ -6600,7 +7112,7 @@
       "slug": "aws-secrets-manager-jenkins-sonarqube",
       "term": "AWS Secrets Manager adds managed external secrets support for Jenkins and SonarQube",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T13:02:11+00:00",
       "last_checked_at": "2026-08-20T13:02:11+00:00",
@@ -6616,16 +7128,19 @@
         "G0": "pass",
         "G4": "pass",
         "G5": "pass",
-        "G1": "pass"
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
       },
       "score": null,
       "invalidation": [],
       "evidence_refs": [
-        "证据/aws-secrets-manager-jenkins-sonarqube/2026-08-20-scan.json"
+        "证据/aws-secrets-manager-jenkins-sonarqube/2026-08-20-scan.json",
+        "证据/aws-secrets-manager-jenkins-sonarqube/2026-08-21-scan.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
-      "recheck_after": null,
+      "recheck_after": "2026-09-20",
       "history": [
         {
           "at": "2026-08-20T13:02:11+00:00",
@@ -6644,6 +7159,89 @@
             "G1": "pass"
           },
           "expiry": "2026-08-27"
+        },
+        {
+          "at": "2026-08-21T02:24:42+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/aws-secrets-manager-jenkins-sonarqube/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:docs.aws.amazon.com User Guide + Managed external secrets Partners 两页把 Jenkins/SonarQube token 自动轮换配置做完,aws.amazon.com what's-new 与 aws-news.com 并存;AWS 文档域持续可见。死因为厂商 release note+官方文档自带答案。",
+          "gates": {
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "sablefish-inseason-trip-limit": {
+      "slug": "sablefish-inseason-trip-limit",
+      "term": "sablefish trip limit north of 36 N lat",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T02:37:36+00:00",
+      "last_checked_at": "2026-08-21T02:37:36+00:00",
+      "expiry": null,
+      "source": {
+        "url": "https://www.federalregister.gov/documents/search?conditions%5Bpublication_date%5D%5Bgte%5D=2026-08-01&conditions%5Btype%5D%5B%5D=RULE&order=newest",
+        "note": "Federal Register 2026-08-20 NOAA 最终规则:Pacific Coast Groundfish 2025-2026 双年管理措施 inseason 调整,提高 36°N 南北 LE 与 OA 的 sablefish trip limit"
+      },
+      "task": "持证商业渔民查当前 inseason 调整后 36°N 以北 sablefish 的 limited entry / open access trip limit",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/sablefish-inseason-trip-limit/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T02:37:36+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/sablefish-inseason-trip-limit/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3
+        },
+        {
+          "at": "2026-08-21T02:37:36+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260820T113403Z-67553e0e",
+          "round": 3,
+          "evidence": [
+            "证据/sablefish-inseason-trip-limit/2026-08-21-scan.json"
+          ],
+          "reason": "G3 否决:eCFR §660.232 的 Table 2b(实测标注 up to date as of 8/19/2026、两周内刚随本规则更新)、CA.gov 的 Table 2b PDF、CDFW 官方 Facebook 帖(直接给出 2,400 lb/周、两月 4,800 lb)三个免费实现都完成任务且都在本查询首页持续可见,不是临时空位。附带 G6 隐患:西海岸 limited-entry sablefish 持证渔民仅数百量级,保守估算够不到 $200/月。",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
         }
       ]
     }

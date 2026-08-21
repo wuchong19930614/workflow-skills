@@ -1,0 +1,15 @@
+{"slug":"sablefish-inseason-trip-limit","observed_at":"2026-08-21T11:50:00+08:00","stage":"scan",
+"source_urls":[
+"https://www.federalregister.gov/documents/search?conditions%5Bpublication_date%5D%5Bgte%5D=2026-08-01&conditions%5Btype%5D%5B%5D=RULE&order=newest",
+"https://www.google.com/search?q=sablefish+trip+limit+north+of+36+latitude+limited+entry&gl=us&hl=en&pws=0&num=20",
+"https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-E/section-660.232"],
+"points":[
+"来源:Federal Register 2026-08-20 NOAA 最终规则,对西海岸底层鱼商业渔业做 inseason 调整,提高 36°N 以北 limited entry 与 open access 的 sablefish trip limit。",
+"这是本轮唯一一个符合'付费者被迫、且尚无对应厂商行业'画像的方向:付费者是持证商业渔民(微型经营者),超限即罚款吊照,调整按季反复发生。",
+"G1(美区英文未登录、只看首屏):无 featured snippet、无原生组件、无 AI Overview 完成任务;People also ask 四条全部离题(黑鲈尺寸、渔船吨位、墨西哥水域护照);G1=pass。",
+"G2 完整首页阅读:NOAA Fisheries(.gov)两条、eCFR(.gov)、Cornell LII、CustomsMobile、CDFW Facebook 帖、Federal Register(.gov)2001 年旧文、GovInfo(.gov) PDF、CA.gov nrm.dfg.ca.gov PDF。特征是政府原始法条与 PDF 主导,没有小站、没有论坛帖、没有面向渔民的可读页面。",
+"G3 现场实测 eCFR §660.232:页面标注 'up to date as of 8/19/2026'、'There has been one change in the last two weeks to §660.232',即该免费实现是当前有效且持续更新的;条文本身不给数字,而是指向本 subpart 的 Table 2b(North)与 2b(South)。",
+"数到的免费实现(均完成任务且在本查询持续可见):①eCFR Table 2b —— 权威、当前、永久收录;②CA.gov nrm.dfg.ca.gov 的 Table 2b PDF —— 首页在列;③CDFW 官方 Facebook 帖直接给出 36°N 以北 2,400 lb/周、两月不超 4,800 lb 的具体数字。",
+"这些实现不属于'结构上进不来 SERP',也不属于'对象太新还没被收录'——它们已经在首页上,且 eCFR 两周内刚随该规则更新。因此不是临时空位,G3=veto 而非 veto_window_bet。",
+"附带的 G6 观察(扫描期不出正式结论):西海岸 limited-entry sablefish 持证渔民规模在数百量级,保守假设下够不到 $200/月 自助变现线;即便 G3 放行,认定期大概率仍会卡在这里。"],
+"gates":{"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"pass","G3":"veto"}}

@@ -763,3 +763,61 @@
 {"date": "2026-08-20", "term": "Introducing Vercel for Slack", "gate": "G5", "reason": "品牌集成发布"}
 {"date": "2026-08-20", "term": "Chat SDK adds Instagram adapter", "gate": "G7", "reason": "官方 SDK 适配器发布即答案"}
 {"date": "2026-08-20", "term": "Vercel for Platforms can now deploy from your users' GitHub repositories", "gate": "G7", "reason": "官方部署工作流能力公告"}
+{"date": "2026-08-21", "term": "厂商 release note 衍生任务", "gate": "G5", "reason": "[已归并] 见陷阱类别.md 类别四:发布方同日自带官方文档做完任务,官方域永久收录持续可见,聚合站 24h 内填满剩余位置", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "copyright ai generated content eu", "gate": "G5", "reason": "命中陷阱类别三:有日期的法律变化+付费者明确(用 AI 生成内容的公司),律所内容机器已围着这个付费者转", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "github august 17 outage postmortem", "gate": "G6", "reason": "事故复盘是新闻,没有任何人被迫重复做的任务", "pattern": "新闻非任务"}
+{"date": "2026-08-21", "term": "amazon ai training fair use", "gate": "G6", "reason": "观点讨论,无可由页面完成的任务", "pattern": "观点非任务"}
+{"date": "2026-08-21", "term": "consumer rights wiki", "gate": "G6", "reason": "已存在的资源本身,不是待完成的任务", "pattern": "资源名称"}
+{"date": "2026-08-21", "term": "thick prose writing style", "gate": "G6", "reason": "随笔观点,无任务", "pattern": "观点非任务"}
+{"date": "2026-08-21", "term": "aaron swartz scraping prosecution meta", "gate": "G6", "reason": "观点讨论,无任务", "pattern": "观点非任务"}
+{"date": "2026-08-21", "term": "small software team size", "gate": "G6", "reason": "观点随笔,无任务", "pattern": "观点非任务"}
+{"date": "2026-08-21", "term": "html can do that", "gate": "G6", "reason": "技术资源汇总页,不产生独立任务", "pattern": "资源名称"}
+{"date": "2026-08-21", "term": "i should have loved biology", "gate": "G6", "reason": "2020 年旧随笔回流,无任务", "pattern": "旧内容回流"}
+{"date": "2026-08-21", "term": "openrouter stealth model", "gate": "G5", "reason": "命中陷阱类别二:临时代号/品牌导航意图,无可搜索任务", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "malicious rust crate arrayref build-time payload", "gate": "G5", "reason": "命中陷阱类别三:供应链安全已有成规模厂商行业(Socket/Snyk/Phylum)围着同一付费者转", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "cia funding next computer", "gate": "G6", "reason": "历史新闻,无任务", "pattern": "新闻非任务"}
+{"date": "2026-08-21", "term": "huzzah ai coding", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "detecting scraper bots scroll behaviour", "gate": "G5", "reason": "命中陷阱类别三:反爬已有成规模厂商行业(Cloudflare/DataDome/PerimeterX)占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "why smart people not happier", "gate": "G6", "reason": "2022 年旧随笔回流,无任务", "pattern": "旧内容回流"}
+{"date": "2026-08-21", "term": "vomit claude token output cleaner", "gate": "G5", "reason": "命中陷阱类别二:个人项目品牌名", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "linux 7.2 release", "gate": "G5", "reason": "命中陷阱类别四:版本发布,发布方 release notes 自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "spacetimedb technical review", "gate": "G5", "reason": "命中陷阱类别二:产品名 + 第三方评测,无独立任务", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "berkeley law ai prohibition classes", "gate": "G6", "reason": "校规新闻,无跨机构可复用任务", "pattern": "新闻非任务"}
+{"date": "2026-08-21", "term": "compromise system job interview code", "gate": "G6", "reason": "付费者是求职开发者,无预算无自助变现路径", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "mojo open source", "gate": "G5", "reason": "命中陷阱类别四:厂商发布公告,官方文档同步自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "anti-ai fonts", "gate": "G6", "reason": "观点反驳文,无任务", "pattern": "观点非任务"}
+{"date": "2026-08-21", "term": "tidal cycles live coding", "gate": "G6", "reason": "十余年成熟工具,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "git at any scale", "gate": "G5", "reason": "命中陷阱类别四:厂商工程博客,自带完整答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "diffusiongemma technical report", "gate": "G6", "reason": "arXiv 论文,尚无可由页面重复完成的付费者任务", "pattern": "研究术语未成形"}
+{"date": "2026-08-21", "term": "every model cheats", "gate": "G6", "reason": "评测观点文,无任务", "pattern": "观点非任务"}
+{"date": "2026-08-21", "term": "speeding up small ruby hashes", "gate": "G6", "reason": "技术随笔,无任务", "pattern": "观点非任务"}
+{"date": "2026-08-21", "term": "sixtyfour yc hiring", "gate": "G6", "reason": "招聘帖,无任务", "pattern": "新闻非任务"}
+{"date": "2026-08-21", "term": "checksum ai testing agent", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "the new calendly", "gate": "G5", "reason": "命中陷阱类别二:成熟品牌的版本发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "prized internal tools non-engineers", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "glasp for firefox", "gate": "G5", "reason": "命中陷阱类别二:已有品牌的浏览器扩展发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "berd desktop ai agents", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "roveri riding journal iphone", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "peach co-pilot whatsapp", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "revy fashion ownership layer", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "cloudways managed ai agents", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名 + 托管服务发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "viktor ai coworker slack", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "special local regulation north east river power boat race", "gate": "G7", "reason": "一次性临时水域管制(2026-09-12 单日),无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "arts in education national program waiver extension", "gate": "G6", "reason": "拨款延期通知,受众是既有受助方,无可搜索任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval south carolina department name change", "gate": "G6", "reason": "机构改名的 SIP 更新,纯行政动作无任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "arizona hayden so2 nonattainment attainment plan", "gate": "G6", "reason": "州级 SIP 批准,付费者是州政府不是可自助变现群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "superfund national priorities list deletion 2026", "gate": "G5", "reason": "命中陷阱类别四:EPA 自有 NPL 数据库即官方答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "wisconsin 2015 ozone moderate attainment plan", "gate": "G6", "reason": "州级 SIP 批准,无微型经营者任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "wagner-peyser act employment service staffing merit staff", "gate": "G6", "reason": "受影响方是州就业服务机构,非自助变现付费者", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "atf application relief from disabilities firearms", "gate": "G5", "reason": "命中陷阱类别三:付费者明确且有预算(个人恢复持枪权),枪械律所内容机器已占满", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "sba small business size standards 338 industries 2026", "gate": "G5", "reason": "命中陷阱类别四:SBA 自己发布 size standards 查询表即官方答案,且 govcon 咨询行业已占位", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "sba revised size standards methodology white paper", "gate": "G6", "reason": "方法论白皮书,读者是政策研究者,无被迫重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "presidential disaster declaration michigan public assistance", "gate": "G7", "reason": "单次灾难声明修订,SBA 灾害贷款官方页自带答案且事件一次性", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "presidential disaster declaration wisconsin public assistance", "gate": "G7", "reason": "单次灾难声明修订,同上", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "irs target normal cost single-employer defined benefit plans", "gate": "G5", "reason": "命中陷阱类别三:付费者是 DB 计划发起人,精算咨询行业已围着转", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "irs section 250 sales dispositions intangible property", "gate": "G5", "reason": "命中陷阱类别三:付费者是跨国企业税务部,四大内容机器已占满", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "irs prwora refundable tax credits federal public benefit", "gate": "G5", "reason": "命中陷阱类别三:移民律所与报税软件内容机器已围着同一付费者转", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "fda cardiovascular renal drugs advisory committee renewal", "gate": "G6", "reason": "咨询委员会续期公告,无任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "fda endocrinologic metabolic drugs advisory committee renewal", "gate": "G6", "reason": "咨询委员会续期公告,无任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "fda potency assessment active immunotherapy draft guidance", "gate": "G5", "reason": "命中陷阱类别三:付费者是生物药企,法规咨询与 CRO 行业已占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "aliexpress webaudio fingerprinting bluetooth multipoint", "gate": "G7", "reason": "G1 已跑并 pass,但整页是同一篇博文 24 小时内的新闻扩散(HN/X/Reddit/Threads/V2EX/Lemmy 同稿);属只产生一周好奇、无被迫重复任务、无付费者的方向,本应在零成本批筛掉,G1 是多花的", "pattern": "好奇非任务"}

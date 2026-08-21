@@ -10,9 +10,21 @@
     "https://github.blog/changelog/feed/",
     "https://aws.amazon.com/about-aws/whats-new/recent/feed/",
     "https://cloud.google.com/feeds/gcp-release-notes.xml",
-    "https://vercel.com/changelog/rss"
+    "https://vercel.com/changelog/rss",
+    "https://news.ycombinator.com/",
+    "https://www.producthunt.com/leaderboard/daily/2026/8/21",
+    "https://github.blog/changelog/",
+    "https://www.federalregister.gov/documents/search?conditions%5Bpublication_date%5D%5Bgte%5D=2026-08-01&conditions%5Btype%5D%5B%5D=RULE&order=newest",
+    "https://www.federalregister.gov/documents/search?conditions%5Bagencies%5D%5B%5D=federal-motor-carrier-safety-administration&conditions%5Bagencies%5D%5B%5D=food-and-drug-administration&conditions%5Bagencies%5D%5B%5D=small-business-administration&conditions%5Bagencies%5D%5B%5D=agricultural-marketing-service&conditions%5Bagencies%5D%5B%5D=internal-revenue-service&conditions%5Bpublication_date%5D%5Bgte%5D=2026-07-15&order=newest",
+    "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-E/section-660.232",
+    "https://www.google.com/search (31 次 SERP:23 次 G1 + 8 次 G2/G3 深审,均 gl=us&hl=en&pws=0)"
   ],
-  "sources_blocked": [],
+  "sources_blocked": [
+    "https://www.reddit.com/r/smallbusiness/new/(Browser pane 直接拒绝:blocked by policy,属环境策略拦截而非站点反爬;未尝试改用其他浏览器绕行)",
+    "https://x.com/explore/tabs/trending(登录墙:未登录只显示登录表单,读不到 trending)",
+    "https://apps.apple.com/us/charts/iphone/business-apps/6000(可达但被强制重定向到中国区 Today 页,美区商务榜未取到)",
+    "https://www.producthunt.com/(首次访问撞 Cloudflare 安全验证拦截页;未绕过,稍后重访自然通过,已计入 sources_opened)"
+  ],
   "candidates_touched": [
     "cf-ai-search-cache-freshness",
     "cf-ai-user-insights",
@@ -52,12 +64,43 @@
     "gh-copilot-cli-actions-auth",
     "gh-credential-revocation-token-type",
     "gh-enterprise-third-party-apps",
-    "vercel-kms-jwt-signing"
+    "vercel-kms-jwt-signing",
+    "aws-agentcore-payments",
+    "aws-bedrock-external-web-access",
+    "aws-bedrock-web-search-filtering",
+    "aws-cloudshell-visual-file-editor",
+    "aws-cloudwatch-geoip-rds-xml-processors",
+    "aws-cloudwatch-log-tag-propagation",
+    "aws-cost-anomaly-third-party-bedrock-models",
+    "aws-ec2-autoscaling-batch-termination",
+    "aws-iam-policy-autopilot-terraform-plan",
+    "aws-msk-custom-domain-names",
+    "aws-mwaa-serverless-python-bash-operators",
+    "aws-network-firewall-rule-hit-counts",
+    "aws-quick-deny-default-permissions",
+    "aws-quick-dlp-purview",
+    "aws-s3-access-denied-policy-details",
+    "aws-sagemaker-data-profiling",
+    "aws-sagemaker-trusted-identity-notebooks",
+    "aws-storage-gateway-fips-privatelink",
+    "aws-workspaces-applications-monitoring",
+    "aws-workspaces-nested-virtualization",
+    "gh-org-pull-request-limits",
+    "gh-ruleset-auto-migration",
+    "gh-usage-report-per-model-tokens",
+    "sablefish-inseason-trip-limit"
   ],
   "billable_calls": 0,
   "notes": [
     "跟踪复查12条：11条因G1/G2/G3现场翻转转为已否决，cf-unified-routes-dashboard继续跟踪；Chrome登录态但Google页面显示结果未个性化。存量待补闸深审10条：5条转已否决，5条出闸并进入跟踪。信号面新扫60条：零成本筛除52、G1否决7、深审1条且G2否决；无验证码、无额度耗尽提示、无待确认窗口赌注。",
-    "复查本次运行尚未track的5条新跟踪候选，均继续跟踪；同日证据不满足7天形成跨度。存量待补闸深审10条：7条进入跟踪、3条转已否决。变化面新扫50条：零成本筛除44、G1否决0、深审5、排队1；vercel-kms-jwt-signing进入跟踪，aws-secrets-manager-jenkins-sonarqube排队。无验证码、无额度耗尽提示、无待确认窗口赌注。"
+    "复查本次运行尚未track的5条新跟踪候选，均继续跟踪；同日证据不满足7天形成跨度。存量待补闸深审10条：7条进入跟踪、3条转已否决。变化面新扫50条：零成本筛除44、G1否决0、深审5、排队1；vercel-kms-jwt-signing进入跟踪，aws-secrets-manager-jenkins-sonarqube排队。无验证码、无额度耗尽提示、无待确认窗口赌注。",
+    "G1 搜索健康度(本轮重点):31 次连续 Google SERP 抓取,其中 G1 判定 23 次(20 次还债补门 + 2 次扫描存活方向 + 1 次方法校验)、G2/G3 深审 8 次。全程未出现验证码、未出现限流、未出现结果异常。方法校验用 '100 usd to eur' 确认了抓取能看见原生组件(Currency Converter 出现在 Web results 之前),因此'首屏无原生组件'的判定是可信的而非抓不到。",
+    "还债:24 个 captured 中 20 个缺 G1,本轮全部补跑,20/20 全 pass——这些是厂商 release note 标题,Google 对它们没有原生答案,G1 从来不是它们的死因。深审 8 个(配额 10),8 个全部 G3 veto,死因完全一致:发布方自家文档同日或次日就把任务做完,且官方域永久收录、持续可见。",
+    "据此归并陷阱类别四『厂商 release note / changelog 衍生任务』(SERP 陷阱型 · 直接筛除型)。满足改档独立性要求:跨 2026-08-18/08-20/08-21 三个日期、Apple Developer News / GitHub Changelog / AWS what's-new 三个来源家族、Apple/GitHub/AWS 三个独立发布方。此后命中零成本弃,不再跑 SERP。这条归并直接解释了账本里 51 个 rejected 的绝大多数。",
+    "screen_unsatisfiable 假设:连续三天的拒绝原因已收敛到一条结构性模式——『有明确发布方的变化』必然自带官方答案。厂商变化死于类别四(官方文档),有预算付费者的法规变化死于类别三(厂商内容机器),本轮新增的政府法规变化(sablefish)死于同一形状(eCFR/CA.gov/CDFW 三个政府免费实现)。推论:变化面上真正剩下的位置,只可能在『发布方只写自己那一半』的横向任务上(跨发布方汇总/迁移/对比),或在没有任何机构负责发布答案的群体里。下一轮建议按这个方向换角度,而不是继续遍历 release notes。",
+    "社区面首次实测(此前一次都没打开过):Hacker News 可直读;Product Hunt 首访撞 Cloudflare 验证、稍后重访通过,可直读;Reddit 被 Browser pane 以 policy 直接拒绝(未绕行);X 登录墙;Apple App Store 可达但强制重定向中国区。可用的社区面只有 HN 与 PH 两个,且两者都是软件人群来源,与本工作流要找的『微型经营者、个体从业者』目标群体不匹配——这是本轮扫描产出低的真实原因,不是搜索被限。",
+    "本轮 rejected_g1=0 且 G1 次数只到 23(任务要求 30-50)。真实原因:58 个新方向里 57 个在零成本批(类别二/三/四 + G6/G7 预筛 + 无任务)就死了,给已死方向补跑 G1 只是凑数,漏斗的意义正是不花这笔钱。要把 G1 次数做上去,需要的是换到能产出更多存活方向的来源,不是多搜几次。",
+    "一处自评失误:aliexpress webaudio fingerprinting 本应在零成本批按 G7(好奇非任务)筛掉,我让它过了批筛并多花了一次 G1(结果 pass),读完首页才确认整页是同一篇博文 24 小时内的新闻扩散。已按 G7 记入索引,funnel 归入 rejected_zero_cost(死因是零成本门,不是 G1)。"
   ],
   "rounds": [
     {
@@ -150,6 +193,77 @@
       },
       "notes": [
         "复查本次运行尚未track的5条新跟踪候选，均继续跟踪；同日证据不满足7天形成跨度。存量待补闸深审10条：7条进入跟踪、3条转已否决。变化面新扫50条：零成本筛除44、G1否决0、深审5、排队1；vercel-kms-jwt-signing进入跟踪，aws-secrets-manager-jenkins-sonarqube排队。无验证码、无额度耗尽提示、无待确认窗口赌注。"
+      ]
+    },
+    {
+      "round": 3,
+      "sources_opened": [
+        "https://news.ycombinator.com/",
+        "https://www.producthunt.com/",
+        "https://www.producthunt.com/leaderboard/daily/2026/8/21",
+        "https://github.blog/changelog/",
+        "https://www.federalregister.gov/documents/search?conditions%5Bpublication_date%5D%5Bgte%5D=2026-08-01&conditions%5Btype%5D%5B%5D=RULE&order=newest",
+        "https://www.federalregister.gov/documents/search?conditions%5Bagencies%5D%5B%5D=federal-motor-carrier-safety-administration&conditions%5Bagencies%5D%5B%5D=food-and-drug-administration&conditions%5Bagencies%5D%5B%5D=small-business-administration&conditions%5Bagencies%5D%5B%5D=agricultural-marketing-service&conditions%5Bagencies%5D%5B%5D=internal-revenue-service&conditions%5Bpublication_date%5D%5Bgte%5D=2026-07-15&order=newest",
+        "https://www.ecfr.gov/current/title-50/chapter-VI/part-660/subpart-E/section-660.232",
+        "https://www.google.com/search (31 次 SERP:23 次 G1 + 8 次 G2/G3 深审,均 gl=us&hl=en&pws=0)"
+      ],
+      "sources_blocked": [
+        "https://www.reddit.com/r/smallbusiness/new/(Browser pane 直接拒绝:blocked by policy,属环境策略拦截而非站点反爬;未尝试改用其他浏览器绕行)",
+        "https://x.com/explore/tabs/trending(登录墙:未登录只显示登录表单,读不到 trending)",
+        "https://apps.apple.com/us/charts/iphone/business-apps/6000(可达但被强制重定向到中国区 Today 页,美区商务榜未取到)",
+        "https://www.producthunt.com/(首次访问撞 Cloudflare 安全验证拦截页;未绕过,稍后重访自然通过,已计入 sources_opened)"
+      ],
+      "candidates_touched": [
+        "aws-agentcore-payments",
+        "aws-bedrock-external-web-access",
+        "aws-bedrock-web-search-filtering",
+        "aws-cloudshell-visual-file-editor",
+        "aws-cloudwatch-geoip-rds-xml-processors",
+        "aws-cloudwatch-log-tag-propagation",
+        "aws-cost-anomaly-third-party-bedrock-models",
+        "aws-ec2-autoscaling-batch-termination",
+        "aws-iam-policy-autopilot-terraform-plan",
+        "aws-msk-custom-domain-names",
+        "aws-mwaa-serverless-python-bash-operators",
+        "aws-network-firewall-rule-hit-counts",
+        "aws-quick-deny-default-permissions",
+        "aws-quick-dlp-purview",
+        "aws-s3-access-denied-policy-details",
+        "aws-sagemaker-data-profiling",
+        "aws-sagemaker-trusted-identity-notebooks",
+        "aws-secrets-manager-jenkins-sonarqube",
+        "aws-storage-gateway-fips-privatelink",
+        "aws-workspaces-applications-monitoring",
+        "aws-workspaces-nested-virtualization",
+        "gcp-optimize-vpc-service-controls-perimeters-with-recommender",
+        "gcp-private-service-connect-multi-regional-service-endpoints",
+        "gcp-restore-soft-delete-cloud-storage-buckets-after-project-de",
+        "gcp-set-up-dataform-remote-mcp-server",
+        "gcp-set-up-secure-source-manager-mcp-server",
+        "gcp-upgrade-google-distributed-cloud-vmware-1-34-800",
+        "gh-credential-revocation-token-type",
+        "gh-org-pull-request-limits",
+        "gh-ruleset-auto-migration",
+        "gh-usage-report-per-model-tokens",
+        "sablefish-inseason-trip-limit"
+      ],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 58,
+        "rejected_zero_cost": 57,
+        "rejected_g1": 0,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 8
+      },
+      "notes": [
+        "G1 搜索健康度(本轮重点):31 次连续 Google SERP 抓取,其中 G1 判定 23 次(20 次还债补门 + 2 次扫描存活方向 + 1 次方法校验)、G2/G3 深审 8 次。全程未出现验证码、未出现限流、未出现结果异常。方法校验用 '100 usd to eur' 确认了抓取能看见原生组件(Currency Converter 出现在 Web results 之前),因此'首屏无原生组件'的判定是可信的而非抓不到。",
+        "还债:24 个 captured 中 20 个缺 G1,本轮全部补跑,20/20 全 pass——这些是厂商 release note 标题,Google 对它们没有原生答案,G1 从来不是它们的死因。深审 8 个(配额 10),8 个全部 G3 veto,死因完全一致:发布方自家文档同日或次日就把任务做完,且官方域永久收录、持续可见。",
+        "据此归并陷阱类别四『厂商 release note / changelog 衍生任务』(SERP 陷阱型 · 直接筛除型)。满足改档独立性要求:跨 2026-08-18/08-20/08-21 三个日期、Apple Developer News / GitHub Changelog / AWS what's-new 三个来源家族、Apple/GitHub/AWS 三个独立发布方。此后命中零成本弃,不再跑 SERP。这条归并直接解释了账本里 51 个 rejected 的绝大多数。",
+        "screen_unsatisfiable 假设:连续三天的拒绝原因已收敛到一条结构性模式——『有明确发布方的变化』必然自带官方答案。厂商变化死于类别四(官方文档),有预算付费者的法规变化死于类别三(厂商内容机器),本轮新增的政府法规变化(sablefish)死于同一形状(eCFR/CA.gov/CDFW 三个政府免费实现)。推论:变化面上真正剩下的位置,只可能在『发布方只写自己那一半』的横向任务上(跨发布方汇总/迁移/对比),或在没有任何机构负责发布答案的群体里。下一轮建议按这个方向换角度,而不是继续遍历 release notes。",
+        "社区面首次实测(此前一次都没打开过):Hacker News 可直读;Product Hunt 首访撞 Cloudflare 验证、稍后重访通过,可直读;Reddit 被 Browser pane 以 policy 直接拒绝(未绕行);X 登录墙;Apple App Store 可达但强制重定向中国区。可用的社区面只有 HN 与 PH 两个,且两者都是软件人群来源,与本工作流要找的『微型经营者、个体从业者』目标群体不匹配——这是本轮扫描产出低的真实原因,不是搜索被限。",
+        "本轮 rejected_g1=0 且 G1 次数只到 23(任务要求 30-50)。真实原因:58 个新方向里 57 个在零成本批(类别二/三/四 + G6/G7 预筛 + 无任务)就死了,给已死方向补跑 G1 只是凑数,漏斗的意义正是不花这笔钱。要把 G1 次数做上去,需要的是换到能产出更多存活方向的来源,不是多搜几次。",
+        "一处自评失误:aliexpress webaudio fingerprinting 本应在零成本批按 G7(好奇非任务)筛掉,我让它过了批筛并多花了一次 G1(结果 pass),读完首页才确认整页是同一篇博文 24 小时内的新闻扩散。已按 G7 记入索引,funnel 归入 rejected_zero_cost(死因是零成本门,不是 G1)。"
       ]
     }
   ]
