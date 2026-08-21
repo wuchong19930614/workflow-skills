@@ -1,0 +1,156 @@
+{
+  "date": "2026-08-20",
+  "skill": "xinci-run",
+  "run_id": "run-20260820T113403Z-67553e0e",
+  "sources_opened": [
+    "https://news.ycombinator.com/newest",
+    "https://news.ycombinator.com/newest?next=49373409&n=31",
+    "https://www.producthunt.com/",
+    "https://developers.cloudflare.com/changelog/rss/index.xml",
+    "https://github.blog/changelog/feed/",
+    "https://aws.amazon.com/about-aws/whats-new/recent/feed/",
+    "https://cloud.google.com/feeds/gcp-release-notes.xml",
+    "https://vercel.com/changelog/rss"
+  ],
+  "sources_blocked": [],
+  "candidates_touched": [
+    "cf-ai-search-cache-freshness",
+    "cf-ai-user-insights",
+    "cf-api-token-search",
+    "cf-do-eviction-test",
+    "cf-email-activity-preview",
+    "cf-email-blocked-content",
+    "cf-unified-routes-dashboard",
+    "cf-worker-integration-test-harness",
+    "gcp-app-engine-tls-1-2-migration-checklist",
+    "gcp-cloud-cdn-targeted-cdn-cache-control-header",
+    "gcp-configure-backup-and-dr-multi-party-approval-for-project-l",
+    "gcp-configure-compute-engine-vm-extension-policies",
+    "gcp-configure-exascale-storage-vault-for-exadata-vm-clusters",
+    "gcp-connectivity-tests-cloud-run-job-source-endpoint",
+    "gcp-gke-15-gb-minimum-boot-disk-size-migration",
+    "gcp-google-error-reporting-rust-std-backtrace-setup",
+    "gcp-migrate-app-engine-images-service-to-cloud-run-java",
+    "gcp-migrate-app-engine-push-queues-to-cloud-tasks-go",
+    "gcp-migrate-google-cloud-batch-debian-11-jobs-to-debian-12",
+    "gcp-migrate-looker-ci-from-legacy-spectacles-service",
+    "us-state-age-verification-compliance-checklist",
+    "vercel-compliance-documents",
+    "vercel-connect-microsoft-tokens",
+    "aws-bedrock-mantle-cost-allocation",
+    "aws-msk-zookeeper-kraft-migration",
+    "aws-secrets-manager-jenkins-sonarqube",
+    "cf-waf-authorization-leaked-credentials",
+    "gcp-gcloud-corrupted-kubeconfig",
+    "gcp-optimize-vpc-service-controls-perimeters-with-recommender",
+    "gcp-private-service-connect-multi-regional-service-endpoints",
+    "gcp-restore-soft-delete-cloud-storage-buckets-after-project-de",
+    "gcp-set-up-dataform-remote-mcp-server",
+    "gcp-set-up-secure-source-manager-mcp-server",
+    "gcp-upgrade-google-distributed-cloud-vmware-1-34-800",
+    "gh-code-quality-trends",
+    "gh-copilot-cli-actions-auth",
+    "gh-credential-revocation-token-type",
+    "gh-enterprise-third-party-apps",
+    "vercel-kms-jwt-signing"
+  ],
+  "billable_calls": 0,
+  "notes": [
+    "跟踪复查12条：11条因G1/G2/G3现场翻转转为已否决，cf-unified-routes-dashboard继续跟踪；Chrome登录态但Google页面显示结果未个性化。存量待补闸深审10条：5条转已否决，5条出闸并进入跟踪。信号面新扫60条：零成本筛除52、G1否决7、深审1条且G2否决；无验证码、无额度耗尽提示、无待确认窗口赌注。",
+    "复查本次运行尚未track的5条新跟踪候选，均继续跟踪；同日证据不满足7天形成跨度。存量待补闸深审10条：7条进入跟踪、3条转已否决。变化面新扫50条：零成本筛除44、G1否决0、深审5、排队1；vercel-kms-jwt-signing进入跟踪，aws-secrets-manager-jenkins-sonarqube排队。无验证码、无额度耗尽提示、无待确认窗口赌注。"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "sources_opened": [
+        "https://news.ycombinator.com/newest",
+        "https://news.ycombinator.com/newest?next=49373409&n=31",
+        "https://www.producthunt.com/"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [
+        "cf-ai-search-cache-freshness",
+        "cf-ai-user-insights",
+        "cf-api-token-search",
+        "cf-do-eviction-test",
+        "cf-email-activity-preview",
+        "cf-email-blocked-content",
+        "cf-unified-routes-dashboard",
+        "cf-worker-integration-test-harness",
+        "gcp-app-engine-tls-1-2-migration-checklist",
+        "gcp-cloud-cdn-targeted-cdn-cache-control-header",
+        "gcp-configure-backup-and-dr-multi-party-approval-for-project-l",
+        "gcp-configure-compute-engine-vm-extension-policies",
+        "gcp-configure-exascale-storage-vault-for-exadata-vm-clusters",
+        "gcp-connectivity-tests-cloud-run-job-source-endpoint",
+        "gcp-gke-15-gb-minimum-boot-disk-size-migration",
+        "gcp-google-error-reporting-rust-std-backtrace-setup",
+        "gcp-migrate-app-engine-images-service-to-cloud-run-java",
+        "gcp-migrate-app-engine-push-queues-to-cloud-tasks-go",
+        "gcp-migrate-google-cloud-batch-debian-11-jobs-to-debian-12",
+        "gcp-migrate-looker-ci-from-legacy-spectacles-service",
+        "us-state-age-verification-compliance-checklist",
+        "vercel-compliance-documents",
+        "vercel-connect-microsoft-tokens"
+      ],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 60,
+        "rejected_zero_cost": 52,
+        "rejected_g1": 7,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 10
+      },
+      "notes": [
+        "跟踪复查12条：11条因G1/G2/G3现场翻转转为已否决，cf-unified-routes-dashboard继续跟踪；Chrome登录态但Google页面显示结果未个性化。存量待补闸深审10条：5条转已否决，5条出闸并进入跟踪。信号面新扫60条：零成本筛除52、G1否决7、深审1条且G2否决；无验证码、无额度耗尽提示、无待确认窗口赌注。"
+      ]
+    },
+    {
+      "round": 2,
+      "sources_opened": [
+        "https://developers.cloudflare.com/changelog/rss/index.xml",
+        "https://github.blog/changelog/feed/",
+        "https://aws.amazon.com/about-aws/whats-new/recent/feed/",
+        "https://cloud.google.com/feeds/gcp-release-notes.xml",
+        "https://vercel.com/changelog/rss"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [
+        "aws-bedrock-mantle-cost-allocation",
+        "aws-msk-zookeeper-kraft-migration",
+        "aws-secrets-manager-jenkins-sonarqube",
+        "cf-waf-authorization-leaked-credentials",
+        "gcp-configure-backup-and-dr-multi-party-approval-for-project-l",
+        "gcp-gcloud-corrupted-kubeconfig",
+        "gcp-google-error-reporting-rust-std-backtrace-setup",
+        "gcp-migrate-app-engine-images-service-to-cloud-run-java",
+        "gcp-migrate-app-engine-push-queues-to-cloud-tasks-go",
+        "gcp-migrate-looker-ci-from-legacy-spectacles-service",
+        "gcp-optimize-vpc-service-controls-perimeters-with-recommender",
+        "gcp-private-service-connect-multi-regional-service-endpoints",
+        "gcp-restore-soft-delete-cloud-storage-buckets-after-project-de",
+        "gcp-set-up-dataform-remote-mcp-server",
+        "gcp-set-up-secure-source-manager-mcp-server",
+        "gcp-upgrade-google-distributed-cloud-vmware-1-34-800",
+        "gh-code-quality-trends",
+        "gh-copilot-cli-actions-auth",
+        "gh-credential-revocation-token-type",
+        "gh-enterprise-third-party-apps",
+        "vercel-kms-jwt-signing"
+      ],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 50,
+        "rejected_zero_cost": 44,
+        "rejected_g1": 0,
+        "deep_audited": 5,
+        "queued": 1,
+        "carryover_audited": 10
+      },
+      "notes": [
+        "复查本次运行尚未track的5条新跟踪候选，均继续跟踪；同日证据不满足7天形成跨度。存量待补闸深审10条：7条进入跟踪、3条转已否决。变化面新扫50条：零成本筛除44、G1否决0、深审5、排队1；vercel-kms-jwt-signing进入跟踪，aws-secrets-manager-jenkins-sonarqube排队。无验证码、无额度耗尽提示、无待确认窗口赌注。"
+      ]
+    }
+  ]
+}

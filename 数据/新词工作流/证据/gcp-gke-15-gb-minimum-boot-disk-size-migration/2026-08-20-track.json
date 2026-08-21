@@ -1,0 +1,27 @@
+{
+  "slug": "gcp-gke-15-gb-minimum-boot-disk-size-migration",
+  "observed_at": "2026-08-20T19:54:25+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=GKE%2015%20GB%20minimum%20boot%20disk%20size%20migration&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://docs.cloud.google.com/kubernetes-engine/docs/release-notes",
+    "https://stackoverflow.com/questions/65505182/reduce-boot-disk-size-of-a-gke-cluster",
+    "https://docs.portworx.com/portworx-enterprise/how-to-guides/gke-upgrade-nodes"
+  ],
+  "points": [
+    "G0 零成本重核：为本组织授权的 GKE 集群迁移节点池以满足新版最小启动盘要求，是正常的基础设施维护任务；未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 真浏览器重跑翻转：Google 首屏 AI Overview 已明确 1.36.3-gke.1480000 起最小启动盘为 15 GB，并直接给出新建节点池 --disk-size=15、cordon、drain 与删除旧节点池的完整迁移步骤，已完成精确任务，G1=veto。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active 与 ssui=on，未完全达到未登录条件。",
+    "G2 复看：自然结果以 Google Cloud GKE release notes 为唯一新阈值精确结果，随后是 2019—2024 年启动盘容量问答、通用节点池迁移与磁盘调整内容；未见视频占屏、大媒体或强品牌首页垄断，G2 保持 pass。",
+    "G3 复看：Portworx 提供一套通用的新建节点池、迁移工作负载、删除旧节点池流程；Stack Overflow 等结果只回答既有节点池磁盘不可原地变更。针对 2026 年 15 GB 新阈值仍不足两个独立稳定 exact-task 实现，G3 保持 pass。",
+    "官方叫法为 minimum supported boot disk size is 15 GB，并绑定 GKE versions 1.36.3-gke.1480000 and later；外部页面尚未形成独立稳定简称或迁移术语。",
+    "形成信号不足：精确阈值仍仅见官方 release note，其他结果是历史通用问题；Google AI Overview 的完整答案反而封闭了查询需求，触发 G1 否决。",
+    "Semrush 未调用：G1 已达到硬否决线，任何关键词行都不会改变本次 tracking→rejected 决策。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

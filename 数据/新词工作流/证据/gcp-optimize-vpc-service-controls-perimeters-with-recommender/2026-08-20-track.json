@@ -1,0 +1,23 @@
+{
+  "slug": "gcp-optimize-vpc-service-controls-perimeters-with-recommender",
+  "observed_at": "2026-08-20T22:54:00+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://docs.cloud.google.com/vpc-service-controls/docs/recommender?hl=en",
+    "https://www.google.com/search?q=Optimize%20VPC%20Service%20Controls%20perimeters%20with%20recommender&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Optimize%20VPC%20Service%20Controls%20perimeters%20with%20recommender&gl=us&hl=en&pws=0&safe=active&ssui=on&start=10"
+  ],
+  "points": [
+    "Chrome 真浏览器重跑 G0/G1：无 CAPTCHA，但首屏新增 AI Overview；展开后列出三类 recommender 风险及完整修复流程，包括加入项目、收紧 VPC accessible services、对齐 allowed/restricted lists、dry-run、宏 perimeter 与 IaC 审计，G1=veto。",
+    "G2 仍读满两页：精确 Google guide/release note 后接通用 VPC Service Controls 视频、InfoQ、OneUptime、Terraform 与网络最佳实践，第二页存在 recommender-specific 质量断层；G2=pass。",
+    "网页结果仍只有 Google 精确 guide 完成 recommender 工作流，未形成第二个独立 exact implementation；G3=pass。",
+    "形成信号是 Google 原生 AI Overview 已直接完成优化任务，而非第二个网页；G1 硬否决触发 tracking 失效。",
+    "Semrush 无法改变原生答案硬否决，billable_calls=0。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

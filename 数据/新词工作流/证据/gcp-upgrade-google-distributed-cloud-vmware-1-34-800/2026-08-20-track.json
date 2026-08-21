@@ -1,0 +1,26 @@
+{
+  "slug": "gcp-upgrade-google-distributed-cloud-vmware-1-34-800",
+  "observed_at": "2026-08-20T22:15:00+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://docs.cloud.google.com/kubernetes-engine/distributed-cloud/vmware/docs/how-to/upgrading",
+    "https://docs.cloud.google.com/kubernetes-engine/distributed-cloud/vmware/docs/downloads?hl=en",
+    "https://www.google.com/search?q=Upgrade%20Google%20Distributed%20Cloud%20VMware%201.34.800&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Upgrade%20Google%20Distributed%20Cloud%20VMware%201.34.800&gl=us&hl=en&pws=0&safe=active&ssui=on&start=10"
+  ],
+  "points": [
+    "Chrome 真浏览器重跑 G0/G1：任务仍合法且可在线完成，首屏无 CAPTCHA、AI Overview、featured snippet 或原生组件直接作答；G0/G1=pass。",
+    "G2 重新读满两页：升级、升级概览、版本、下载、release notes、漏洞修复、node pools 与 pre-upgrade tool 等 Google 官方内页持续到第二页，没有媒体/百科/首页接管；G2=pass。",
+    "1.34.800-gke.90 仍只在官方 release note 与安全补丁结果形成精确版本信号；通用升级页仍显示 Missing 1.34.800。",
+    "官方升级指南与下载/版本页仍是一套互补实现；两页没有第二个独立 1.34.800 VMware 完整升级指南，也没有版本专用 codelab；G3=pass。",
+    "支持状态、bundle/gkeadm artifact、签名和兼容性要求未见变化，原失效条件均未命中；保持 tracking。",
+    "Semrush 对当前决策无增量，billable_calls=0。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

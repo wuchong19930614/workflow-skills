@@ -1,0 +1,26 @@
+{
+  "slug": "cf-email-activity-preview",
+  "observed_at": "2026-08-20T19:46:47+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Preview%20sent%20emails%20in%20the%20Activity%20log&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://developers.cloudflare.com/changelog/post/2026-07-17-email-message-preview/",
+    "https://community.cloudflare.com/t/email-service-preview-sent-emails-in-the-activity-log/940695"
+  ],
+  "points": [
+    "G0 零成本重核：在已授权的 Email Service Activity log 中预览本组织已发邮件是正常的调试与可观测任务，未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 重跑：Google 首屏 AI Overview 已直接给出 Cloudflare 操作步骤：在发送域设置开启 Email preview，进入 Email Service Activity log，展开已发邮件并打开 Preview，可切换 HTML、纯文本、headers、attachments 和 raw source，已完成任务。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active与ssui=on，未完全达到未登录条件。",
+    "G2 复看：首页自然结果是 Cloudflare changelog/Community、ServiceNow、Ziflow、HubSpot 等不同平台的 Activity log 邮件问题，未见视频占屏、大媒体或强品牌首页垄断，G2 保持 pass。",
+    "G3 复看：Cloudflare changelog 与 Community 是同一 Email Service 平台实现及同一公告的复制；ServiceNow/HubSpot 完成的是各自平台任务，不是 Cloudflare Email Service exact task。未达两个独立免费实现，G3 保持 pass。",
+    "官方叫法保持 Preview sent emails in the Activity log、Email preview 与 message preview，功能保留期仍为约 7 天；未见新的 Cloudflare 社区别名胜出。",
+    "Cloudflare Community 仍是 system 自动复制的 1/1 changelog companion topic，仅 27 次浏览且无用户回复；未见本精确措辞的需求持续增长信号。",
+    "Semrush 未调用：G1 已经独立硬否决，任何形成期词行都不会改变本次转移。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

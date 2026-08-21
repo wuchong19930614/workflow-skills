@@ -1,0 +1,28 @@
+{
+  "slug": "cf-do-eviction-test",
+  "observed_at": "2026-08-20T19:44:50+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Test%20Durable%20Object%20eviction%20with%20new%20cloudflare%3Atest%20helpers&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://developers.cloudflare.com/changelog/post/2026-06-25-durable-object-eviction-test-helpers/",
+    "https://developers.cloudflare.com/durable-objects/examples/testing-with-durable-objects/",
+    "https://developers.cloudflare.com/workers/testing/vitest-integration/test-apis/",
+    "https://github.com/cloudflare/workers-sdk/issues/5423"
+  ],
+  "points": [
+    "G0 零成本重核：在单元测试中模拟 Durable Object eviction 是正常的软件测试任务，未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 重跑：首屏的 AI 模块长时间保持 Generating/Thinking，未形成可读取的直接答案；未见 featured snippet、原生工具或已完成任务的 AI Overview，G1 保持 pass。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active与ssui=on，未完全达到未登录条件。",
+    "G2 复看：首页前三个自然结果是 Cloudflare changelog、Testing Durable Objects 和 Durable Objects changelog，随后出现由三个长视频构成的大段 Videos 区；该任务不需要视频，已命中非视频任务视频占屏的 G2 拒绝信号。",
+    "G3 复看：Cloudflare changelog 给出 evictDurableObject/evictAllDurableObjects 示例；Testing Durable Objects 已是完整 cookbook，包含 Vitest 配置、状态恢复、WebSocket eviction 和运行测试；Test APIs 另有完整 API 参考与代码。至少两个免费 exact-task 结果稳定可见，G3=veto。",
+    "来源叫法已从发布标题的 Durable Object eviction test helpers 收敛到函数名 evictDurableObject、evictAllDurableObjects 以及文档标题 Testing eviction；未见独立的社区别名。",
+    "GitHub 原需求用 hibernateDurableObject 表达更窄的 WebSocket 休眠测试，Issue 现已 Closed；官方在 changelog 后 4 天上线完整 Testing Durable Objects 文档，这是官方答案成熟信号，不是第三方需求增长信号。",
+    "Semrush 未调用：G2/G3 已达否决线，任何形成期词行都不会改变本次转移。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G2": "veto",
+    "G3": "veto"
+  }
+}

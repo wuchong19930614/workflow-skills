@@ -1,0 +1,27 @@
+{
+  "slug": "gcp-migrate-google-cloud-batch-debian-11-jobs-to-debian-12",
+  "observed_at": "2026-08-20T19:55:54+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Migrate%20Google%20Cloud%20Batch%20Debian%2011%20jobs%20to%20Debian%2012&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://docs.cloud.google.com/batch/docs/release-notes",
+    "https://docs.cloud.google.com/release-notes",
+    "https://contabo.com/blog/kb/103000296654-how-do-i-upgrade-my-server-from-debian-11-to-debian-12/"
+  ],
+  "points": [
+    "G0 零成本重核：为本组织授权的 Google Cloud Batch 作业迁移受支持的基础镜像，是正常的云基础设施维护任务；未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 真浏览器重跑翻转：Google 首屏 AI Overview 已给出 2026-08-31 截止日期，区分默认 batch-debian 自动迁移与显式 batch-debian-11-official 必须改为 batch-debian-12-official，并要求提交测试作业验证兼容性，完整完成精确任务，G1=veto。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active 与 ssui=on，未完全达到未登录条件。",
+    "G2 复看：精确结果仅为 Google Cloud Batch release notes 与全局 release notes 的同源页面；随后是通用 Debian 11→12 主机升级、旧 Google Groups、SDK 安装和无关视频，未见首屏视频占屏、大媒体或强品牌首页垄断，G2 保持 pass。",
+    "G3 复看：只有 Google 官方 release note 完成 Batch 作业定义的精确迁移；Contabo、phoenixNAP 等只处理通用 Debian 系统升级，不涉及 Batch image family，仍不足两个独立稳定 exact-task 实现，G3 保持 pass。",
+    "官方叫法为 Batch Debian 11 operating system image family、batch-debian-11-official 与 Batch Debian 12 image；官方动作是 migrate any job that uses a Batch Debian 11 image，外部尚未形成独立简称。",
+    "形成信号不足：精确 SERP 仍是同一 Google 公告的两个入口，其他结果均为历史通用 Debian 内容；Google AI Overview 已直接封闭迁移查询需求。",
+    "Semrush 未调用：G1 已达到硬否决线，任何关键词行都不会改变本次 tracking→rejected 决策。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

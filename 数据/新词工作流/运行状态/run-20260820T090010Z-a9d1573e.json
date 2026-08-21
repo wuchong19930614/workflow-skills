@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "run_id": "run-20260820T090010Z-a9d1573e",
+  "mode": "continuous",
+  "status": "budget_reached",
+  "started_at": "2026-08-20T09:00:10+00:00",
+  "updated_at": "2026-08-20T10:35:10+00:00",
+  "max_rounds": 6,
+  "max_hours": null,
+  "rounds_completed": 6,
+  "current_round": null,
+  "confirmations": {},
+  "finish_reason": "已完成用户授权的 max_rounds=6；无GO候选，未观察到Semrush额度耗尽；第6轮Google SERP仍受unusual traffic阻断，但已完成所有可安全执行的零成本扫描与排队留痕。",
+  "finished_at": "2026-08-20T10:35:10+00:00"
+}

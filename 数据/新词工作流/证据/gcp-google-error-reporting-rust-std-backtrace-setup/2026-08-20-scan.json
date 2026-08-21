@@ -1,0 +1,34 @@
+{
+  "slug": "gcp-google-error-reporting-rust-std-backtrace-setup",
+  "observed_at": "2026-08-20T20:16:48+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Google%20Error%20Reporting%20Rust%20std%3A%3Abacktrace%20setup&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Google%20Error%20Reporting%20Rust%20std%3A%3Abacktrace%20setup&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/error-reporting/reference/rest/v1beta1/projects.events/report?hl=en",
+    "https://doc.rust-lang.org/std/backtrace/index.html",
+    "https://docs.rs/eyre/"
+  ],
+  "points": [
+    "This carryover audit supplements only G2 and G3; G0/G4/G5/G1 are inherited from the existing candidate record and were not re-adjudicated.",
+    "A real Chrome session read the complete first two US-English Google result pages. Page one mixes Rust standard-library documentation, one Google Error Reporting API reference, Stack Overflow, Rust forums, Docs.rs, Reddit, Medium, GitHub, and a generic Google Rust logging page; page two drops into generic Rust error-handling articles, forums, books, crates, video, and Hacker News.",
+    "G2=pass: the result set has a large share of inner documentation, forums, small technical sites, and generic or aged Rust material, with no video, wiki, major-media, or strong-brand-homepage takeover; page two is a clear exact-task quality cliff.",
+    "The Google Error Reporting projects.events.report reference is the only result that completes the Google-specific portion of the task. It defines the required request message, standard std::backtrace frames, RUST_BACKTRACE=1, and debug symbols for Rust ingestion.",
+    "Rust std::backtrace, eyre, Stack Overflow, Rust forum, Reddit, Medium, and GitHub results explain capture or local error handling but do not submit or configure those frames for Google Error Reporting, so they are not exact-task completions.",
+    "G3=pass: only one free exact Google Error Reporting plus Rust std::backtrace implementation is stably visible across the two pages, below the veto threshold of two.",
+    "This is not veto_window_bet because no second already-built exact implementation was found merely awaiting indexing.",
+    "Window estimate is weeks, expiring 2026-09-20. The API requirement was updated recently, while the sole exact official reference and broad generic-Rust collision make the gap narrow and time-sensitive.",
+    "Invalidation conditions: a second free end-to-end Google Error Reporting Rust backtrace guide becomes stably visible; Google publishes an official Rust SDK/sample that covers capture through report submission; the std::backtrace ingestion requirements or projects.events.report contract changes.",
+    "Semrush paid calls: 0. Carryover audited: 1.",
+    "Caveat: Chrome used a signed-in Google session with gl=us, hl=en, pws=0; the result footer reported that results were not personalized, while safe=active and ssui=on were appended by Google."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

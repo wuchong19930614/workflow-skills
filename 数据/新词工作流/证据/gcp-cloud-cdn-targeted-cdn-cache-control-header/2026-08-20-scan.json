@@ -1,0 +1,34 @@
+{
+  "slug": "gcp-cloud-cdn-targeted-cdn-cache-control-header",
+  "observed_at": "2026-08-20T20:06:15+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Cloud%20CDN%20targeted%20CDN-Cache-Control%20header&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Cloud%20CDN%20targeted%20CDN-Cache-Control%20header&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/cdn/docs/caching?hl=en",
+    "https://www.akamai.com/blog/news/targeted-cache-control",
+    "https://blog.cloudflare.com/cdn-cache-control/",
+    "https://http.dev/cdn-cache-control"
+  ],
+  "points": [
+    "Google Cloud release notes supplied this dated task direction; the existing captured record already carried G0/G4/G5/G1=pass, and this carryover debt action only adds G2/G3.",
+    "G2 read the complete first page and continued through page two. Page one contains the Google Cloud CDN caching guide, Akamai and Cloudflare targeted-cache-control articles, a general Google Cloud CDN Cache-Control article, implementation-adjacent tutorials and forum questions. Page two falls to old cacheability questions, generic header references, basic CDN videos, Cache Tags and broad setup guides, establishing a quality cliff.",
+    "G2=pass: the result mix includes inner documentation pages, technical blogs, small guides and forums. There is no video takeover, Wikipedia-level or major-media dominance, or strong-brand homepage takeover.",
+    "G3 classified by task: Google documents that an origin can use targeted CDN-Cache-Control to apply Cloud CDN-specific caching rules without changing browser caching. Akamai documents the same Targeted Cache Control standard and origin-header form; Cloudflare documents the same header semantics, directive precedence and copy-compatible Cache-Control values; HTTP.DEV supplies directive descriptions and concrete header examples.",
+    "These are more than two free task-completing results for setting a targeted CDN cache policy at the origin. The Google, Akamai and Cloudflare pages are all stably visible on page one, while HTTP.DEV remains visible at the page-one/page-two boundary, so the sustained-visibility half of G3 is also met.",
+    "G3=veto, not veto_window_bet: the non-Google implementations date back to 2021 and the independent header reference is already indexed; this is a mature interoperable header standard, not a new object waiting for generic tools to ingest it.",
+    "Other results about ordinary Cache-Control, Cloud CDN cache hits, Cache Tags or basic CDN setup were classified as adjacent and not counted as exact-task implementations.",
+    "No window estimate or tracking expiry was produced because G3 veto terminates the candidate during deep audit; the previous 2026-08-27 expiry was only its captured queue deadline and is superseded by terminal rejection.",
+    "Window-state Semrush was not called, as required. This stored-candidate deep audit counts as carryover_audited=1.",
+    "SERP condition caveat: desktop Chrome used gl=us, hl=en and pws=0 and the footer reported Results are not personalized; the Google account remained signed in and Google appended safe=active and ssui=on."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

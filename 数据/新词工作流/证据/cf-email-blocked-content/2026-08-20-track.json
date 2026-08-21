@@ -1,0 +1,29 @@
+{
+  "slug": "cf-email-blocked-content",
+  "observed_at": "2026-08-20T19:48:49+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Block%20emails%20by%20content%20with%20blocked%20content%20rules&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://developers.cloudflare.com/cloudflare-one/email-security/email-configuration/settings/blocked-content/",
+    "https://developers.cloudflare.com/cloudflare-one/email-security/settings/detection-settings/blocked-content/",
+    "https://support.mailessentials.gfi.com/article/117167-creating-advanced-content-filtering-rules",
+    "https://knowledge.workspace.google.com/admin/gmail/advanced/set-up-rules-for-advanced-email-content-filtering?hl=zh-cn"
+  ],
+  "points": [
+    "G0 零成本重核：在本组织授权的邮件安全环境中按内容规则阻断邮件是正常的安全治理任务，未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 重跑：Google 首屏 AI Overview 已直接给出 Cloudflare 操作路径 Policies & rules > Blocked content，并说明配置纯文本或正则、选择 subject/body/both 和执行 block，已完成精确任务。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active与ssui=on，未完全达到未登录条件。",
+    "G2 复看：首页包括 Cloudflare、GFI MailEssentials、Google Workspace、Microsoft 等多个平台的内容过滤内页，未见视频占屏、大媒体或强品牌首页垄断，G2 保持 pass。",
+    "G3 复看：Cloudflare 新 Blocked content 文档、GFI Advanced Content Filtering 指南和 Gmail 内容合规规则均稳定可见，均完整覆盖内容/正则匹配与拒收、删除或隔离操作；已超过两个免费 exact-task 结果，G3=veto。",
+    "Cloudflare 旧路径 /email-configuration/settings/blocked-content/ 现返回 404；导航指向的新路径 /settings/detection-settings/blocked-content/ 已是完整 cookbook，含示例、配置步骤、Java 正则 checker 和避免误报/漏报的验证提示，直接命中帐本失效条件。",
+    "叫法已分平台成熟：Cloudflare 使用 Blocked content rules，GFI 使用 Advanced Content Filtering，Google 使用 content compliance rules；精确 Cloudflare 标签并未成为跨平台统一叫法。",
+    "形成信号显示这是已成熟的跨平台任务，而不是尚待形成的 Cloudflare 新词市场；官方 cookbook 已封闭内容空缺。",
+    "Semrush 未调用：G1/G3 已独立达到否决线，任何形成期词行都不会改变本次转移。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

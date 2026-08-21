@@ -1,0 +1,27 @@
+{
+  "slug": "cf-ai-user-insights",
+  "observed_at": "2026-08-20T19:40:41+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Track%20AI%20spend%20and%20catch%20anomalous%20usage%20with%20User%20Insights&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://developers.cloudflare.com/changelog/post/2026-08-05-user-insights/",
+    "https://blog.cloudflare.com/identity-aware-ai-gateway/",
+    "https://toolspend.com/"
+  ],
+  "points": [
+    "G0 零成本重核：按用户归因 AI 支出并发现异常用量是正常的成本与安全治理任务，未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 重跑：Google 首屏 AI Overview 直接说明 User Insights 展示组织成本、请求、Token 与采用情况，并以每个用户过去 30 天的 p95 会话成本为基线标记异常会话，已完成查询任务。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active与ssui=on，未完全达到未登录条件。",
+    "G2 复看：首页广告较多，自然结果包括 Cloudflare changelog/博客、AI 成本异常检测文章、ToolSpend 工具与监控指南；未见视频占屏或大媒体/强品牌首页垄断，结构门保持 pass。",
+    "G3 复看：Cloudflare changelog 与博客是同一 User Insights 平台实现；ToolSpend 独立覆盖跨供应商成本、团队归因和异常提醒，但只提供 14 天试用且标价付费。未数到两个免费且持续可见的独立 exact-task 实现，G3 保持 pass。",
+    "官方来源继续使用 User Insights、identity-aware analytics、AI spend、anomalous usage 和 behavioral baseline；SERP 中外部页面更常用 AI cost anomaly detection、AI usage monitoring 和 track AI spend，未见官方长标题成为独立稳定叫法。",
+    "形成信号只存在于更宽的 AI 成本监控/异常检测既有词群；本精确 User Insights 措辞的首页仍主要是 Cloudflare 官方发布与转述。",
+    "Semrush 未调用：G1 已经独立硬否决，任何首批词行都无法改变本次转移。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

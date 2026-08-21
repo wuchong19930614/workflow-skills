@@ -1,0 +1,33 @@
+{
+  "slug": "gcp-configure-exascale-storage-vault-for-exadata-vm-clusters",
+  "observed_at": "2026-08-20T20:13:19+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Configure%20Exascale%20Storage%20Vault%20for%20Exadata%20VM%20Clusters&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Configure%20Exascale%20Storage%20Vault%20for%20Exadata%20VM%20Clusters&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.oracle.com/en/learn/exadb-cc-create-exascale-vm/",
+    "https://docs.cloud.google.com/oracle/database/docs/configure-exascale-storage?hl=en",
+    "https://docs.cloud.google.com/oracle/database/docs/create-exadata-storage-vaults"
+  ],
+  "points": [
+    "This carryover audit supplements only G2 and G3; G0/G4/G5/G1 are inherited from the existing candidate record and were not re-adjudicated.",
+    "A real Chrome session read the complete first two US-English Google result pages. Page one mixes official Oracle and Google Cloud inner documentation, a bounded video block, an independent technical walkthrough, and Oracle product material; page two continues with Oracle-on-AWS/GCP documentation, a Google Cloud management page, blogs, Medium, and videos.",
+    "G2=pass: despite a video block, the result set is not taken over by video, wiki, major media, or strong-brand homepages; implementation-oriented inner pages and an independent walkthrough remain prominent across both pages.",
+    "The first natural result is a complete free Oracle tutorial. Its Task 3 creates and sizes an Exascale Storage Vault, and Task 4 associates it with an Exadata VM Cluster and completes provisioning.",
+    "A separate Google Cloud implementation page fully configures the vault for an Exadata Infrastructure through gcloud or API, including permissions, infrastructure, project, region, total storage, and VM storage parameters before cluster creation.",
+    "A further Google Cloud page for creating Exadata storage vaults is also visibly indexed on page one, while page two contains management and Exascale-cluster implementation pages.",
+    "G3=veto: at least two free exact-task implementations are already stable and visible on the first page, one at the first natural position and another within the same first-page result set. The broader documentation footprint reinforces durable visibility.",
+    "This is not veto_window_bet because the completion pages are already indexed and visible; there is no temporary unindexed gap.",
+    "Semrush paid calls: 0. Carryover audited: 1.",
+    "Caveat: Chrome used a signed-in Google session with gl=us, hl=en, pws=0; the result footer reported that results were not personalized, while safe=active and ssui=on were appended by Google."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

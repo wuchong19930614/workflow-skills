@@ -1,0 +1,33 @@
+{
+  "slug": "gcp-app-engine-tls-1-2-migration-checklist",
+  "observed_at": "2026-08-20T20:03:14+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=App%20Engine%20TLS%201.2%20migration%20checklist&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=App%20Engine%20TLS%201.2%20migration%20checklist&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/appengine/docs/standard/secure-minimum-tls?hl=zh-cn",
+    "https://docs.cloud.google.com/appengine/docs/flexible/secure-minimum-tls?hl=zh-cn",
+    "https://stackoverflow.com/questions/79514719/traffic-blocked-with-app-engine-tls-1-2-opt-in",
+    "https://medium.com/@abiodun.solomon.a/how-to-upgrade-tls-version-for-cloud-run-cloud-function-and-app-engine-on-gcp-google-cloud-107ca22cb1c8"
+  ],
+  "points": [
+    "Google Cloud release notes supplied this dated task direction; the existing captured record already carried G0/G4/G5/G1=pass, and this carryover debt action only adds G2/G3.",
+    "G2 read the complete first page and continued through page two: the first two natural results are Google App Engine Standard and Flexible minimum-TLS inner guides; later page-one results fall into unrelated Dow Jones/Azure TLS migrations, incident-specific Stack Overflow answers, an older load-balancer tutorial, and forum questions. Page two begins with generic TLS 1.2→1.3 videos and non-App-Engine migration plans, establishing a clear quality cliff.",
+    "G2=pass: despite the two strong official inner pages, the SERP also contains forums, older tutorials and generic small-site material; no video takeover, Wikipedia-level or major-media dominance, or strong-brand homepage takeover is present.",
+    "G3 classified by task rather than publisher: the Standard guide fully covers updating App Engine Standard applications to TLS 1.2+ through Console or gcloud and explains rejection/handshake behavior; the Flexible guide independently completes the same migration for Flexible applications. Together they cover the candidate's two App Engine environment branches.",
+    "Both free exact-task guides are stably visible as natural positions one and two for this query and are directly indexable official documentation. Therefore the >=2 free results plus sustained visibility line is met: G3=veto, not veto_window_bet.",
+    "Other visible results do not add exact implementations: the 2025 Stack Overflow result is a rollout/traffic-blocking incident, Medium describes an older load-balancer SSL-policy route, and page-two entries are generic TLS migrations or unrelated product guidance.",
+    "No window estimate or tracking expiry was produced because G3 veto terminates the candidate during deep audit; the previous 2026-08-27 expiry was only its captured queue deadline and is superseded by terminal rejection.",
+    "Window-state Semrush was not called, as required. This stored-candidate deep audit counts as carryover_audited=1.",
+    "SERP condition caveat: desktop Chrome used gl=us, hl=en and pws=0 and the footer reported Results are not personalized; the Google account remained signed in and Google appended safe=active and ssui=on. The Google Docs pages themselves resolved to the browser's zh-cn locale."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

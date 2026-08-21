@@ -1,0 +1,6 @@
+{
+  "slug":"cf-natural-language-regex","observed_at":"2026-08-20T17:34:00+08:00","stage":"scan",
+  "source_urls":["https://developers.cloudflare.com/changelog/rss/index.xml","https://www.google.com/search?q=Cloudflare%20One%20natural%20language%20regex%20generator&gl=us&hl=en&pws=0","https://www.google.com/search?q=Cloudflare%20One%20natural%20language%20regex%20generator&gl=us&hl=en&pws=0&start=10","https://regex-generator.olafneumann.org/","https://www.autoregex.xyz/"],
+  "points":["官方 RSS 给出精确任务措辞。","G1 首屏没有 Google 原生 regex 工具直接完成 Cloudflare One 中的配置任务。","G2 读完前两页：除 Cloudflare changelog/docs 外，连续出现多个独立 regex generator。","G3 否决：Regex Generator、AutoRegex 及多家 free AI regex generator 已免费把自然语言转正则的 exact task 做完，并在 SERP 稳定可见。"],
+  "gates":{"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"pass","G3":"veto"}
+}

@@ -1,0 +1,31 @@
+{
+  "slug": "gcp-connectivity-tests-cloud-run-job-source-endpoint",
+  "observed_at": "2026-08-20T20:15:07+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Connectivity%20Tests%20Cloud%20Run%20job%20source%20endpoint&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Connectivity%20Tests%20Cloud%20Run%20job%20source%20endpoint&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/network-intelligence-center/docs/connectivity-tests/how-to/running-connectivity-tests?hl=en",
+    "https://docs.cloud.google.com/sdk/gcloud/reference/network-management/connectivity-tests/update?hl=en"
+  ],
+  "points": [
+    "This carryover audit supplements only G2 and G3; G0/G4/G5/G1 are inherited from the existing candidate record and were not re-adjudicated.",
+    "A real Chrome session read the complete first two US-English Google result pages. Page one mixes Google Cloud overview, how-to, CLI reference, blog, forum, one video, codelab, Medium, and an independent monitoring article; page two drops into generic Cloud Run FAQs, forums, networking videos, vendor integrations, and unrelated endpoint material.",
+    "G2=pass: implementation-oriented inner pages, forums, and independent articles occupy substantial space; there is no video, wiki, major-media, or strong-brand-homepage takeover, and page two establishes a clear relevance cliff.",
+    "The Google Cloud Create and run Connectivity Tests guide has an exact section for testing from a Cloud Run job to a VM instance or another supported endpoint, providing the task workflow and appearing as the second natural result.",
+    "The separately indexed gcloud connectivity-tests update reference provides a second free executable path: it documents the test identifier and the --source-cloud-run-job=SOURCE_CLOUD_RUN_JOB flag, including clearing or replacing the Cloud Run job URI source endpoint.",
+    "G3=veto: two free exact-task completion pages are already stably visible on page one—the complete how-to and the executable CLI reference. Overview, blog, forum, and general Cloud Run pages are not counted.",
+    "This is not veto_window_bet because both task-completing pages are already indexed and visible; there is no temporary unindexed gap.",
+    "Semrush paid calls: 0. Carryover audited: 1.",
+    "Caveat: Chrome used a signed-in Google session with gl=us, hl=en, pws=0; the result footer reported that results were not personalized, while safe=active and ssui=on were appended by Google."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

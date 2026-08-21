@@ -1,0 +1,25 @@
+{
+  "slug": "vercel-kms-jwt-signing",
+  "observed_at": "2026-08-20T23:03:00+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://vercel.com/changelog/sign-jwts-from-your-functions-without-managing-private-keys",
+    "https://www.google.com/search?q=Vercel%20Functions%20sign%20JWT%20without%20private%20key&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Vercel%20Functions%20sign%20JWT%20without%20private%20key&gl=us&hl=en&pws=0&safe=active&ssui=on&start=10",
+    "https://helloaihub.vercel.app/blog/jwt-authentication-rs256-public-key-caching"
+  ],
+  "points": [
+    "Chrome 真浏览器重跑 G0/G1：任务仍合法且可在线完成，首屏无 CAPTCHA、AI Overview、featured snippet 或原生组件直接作答；G0/G1=pass。",
+    "G2 重新读满两页：Vercel changelog/KMS quickstart/JWKS 文档、新闻转述、旧 Vercel JWT/OIDC 教程和通用认证内容混合，结构仍有效；G2=pass。",
+    "Vercel KMS quickstart 仍是唯一可运行 exact implementation。daily.dev、Create With、beyondthe.news 与 clipraptor 只转述发布；SSOJet、Curity 与 Clerk 属旧自管密钥或验证教程。",
+    "新出现的 helloaihub.vercel.app 结果标题与摘要仅指向通用 RS256/JWKS；Chrome 打开时报 ERR_CERT_COMMON_NAME_INVALID，无法核验且不计作完整实现。未达到两个独立可运行 Vercel KMS 教程，G3=pass。",
+    "Google 原生结果未生成签名代码，原失效条件未命中；保持 tracking。",
+    "Semrush 对当前决策无增量，billable_calls=0。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "slug": "cf-ai-search-engine-data",
+  "observed_at": "2026-08-20T17:32:56+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://developers.cloudflare.com/changelog/rss/index.xml",
+    "https://www.google.com/search?q=AI%20Search%20makes%20it%20easier%20to%20build%20a%20search%20engine%20for%20your%20data&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=AI%20Search%20makes%20it%20easier%20to%20build%20a%20search%20engine%20for%20your%20data&gl=us&hl=en&pws=0&start=10"
+  ],
+  "points": [
+    "官方 RSS 给出精确任务措辞。",
+    "首屏 AI Overview 仍在生成，未完成任务；G1=pass。",
+    "G2 真浏览器读完首页并继续到第二页：首页为 Google AI Search 概念页、Reddit/Quora 讨论与视频卡片，未对应 Cloudflare 的自有数据搜索引擎任务；第二页仍为 Algolia、Meilisearch 等通用概念页。",
+    "非视频任务的 SERP 被视频/论坛与强品牌概念页占据，到第二页仍无精确任务断层；G2=veto，未继续 G3。"
+  ],
+  "gates": {"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"veto"}
+}

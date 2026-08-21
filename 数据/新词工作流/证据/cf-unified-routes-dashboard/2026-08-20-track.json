@@ -1,0 +1,26 @@
+{
+  "slug": "cf-unified-routes-dashboard",
+  "observed_at": "2026-08-20T19:51:07+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Manage%20all%20your%20routes%20from%20one%20page%20in%20the%20dashboard&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://developers.cloudflare.com/changelog/post/2026-06-19-unified-routes-page/"
+  ],
+  "points": [
+    "G0 零成本重核：在本组织授权的网络环境中统一查看、创建、编辑、删除并测试路由，是正常的网络运维任务；未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 真浏览器重跑：Google 首屏 AI Overview 只能概述统一路由表、地图、行内编辑和筛选等能力，不能在用户已登录的 Cloudflare dashboard 中替用户完成路由管理，因此未完成精确任务，G1 保持 pass。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active 与 ssui=on，未完全达到未登录条件。",
+    "G2 复看：Cloudflare 官方 changelog 是首个精确结果，其余首屏结果大量落入配送路线、Google Maps 路线优化或泛 dashboard 导航语义；未见视频占屏、大媒体或强品牌首页垄断，G2 保持 pass。",
+    "G3 复看：精确完成 Cloudflare 路由统一管理的实现仍只有 Cloudflare 已认证 dashboard；配送路线工具不属于同一任务，未发现两个独立免费 exact-task 实现，G3 保持 pass。",
+    "官方页面确认 Routes page 可在同一表格中管理 Cloudflare Mesh、Tunnel、WAN 与 Magic Transit 路由，并支持交互地图、创建/编辑/删除、虚拟网络和路由测试；入口叫法为 Networking > Routes。",
+    "来源叫法仍由官方主导：官方使用 Routes page 与 unified Routes page；外部 SERP 的 route dashboard 主要指配送物流，没有形成 Cloudflare 网络路由任务的独立别名。",
+    "形成信号不足：精确 Cloudflare 表述仍为官方单点发布，尚无独立来源复述或采用；泛 route-management 结果的物流语义碰撞不能作为该候选需求形成证据。",
+    "Semrush 未调用：本次没有硬否决，但同日 tracking observation 无法满足至少相隔 7 天的形成确认契约；付费词行不会改变继续 tracking 的决策。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

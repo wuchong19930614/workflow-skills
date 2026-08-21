@@ -1,0 +1,28 @@
+{
+  "slug": "cf-worker-integration-test-harness",
+  "observed_at": "2026-08-20T19:54:30+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Run%20integration%20tests%20against%20your%20Worker%27s%20production%20build&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://developers.cloudflare.com/changelog/post/2026-07-21-integration-test-harness/",
+    "https://developers.cloudflare.com/workers/wrangler/api/",
+    "https://community.cloudflare.com/t/workers-run-integration-tests-against-your-workers-production-build/943336"
+  ],
+  "points": [
+    "G0 零成本重核：针对本组织授权的 Worker 构建运行集成测试，是正常的软件测试任务；未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 真浏览器重跑翻转：Google 首屏 AI Overview 已直接指定 Wrangler createTestHarness()，并给出初始化、派发请求、检查 D1/KV/R2 状态及用 MSW 模拟外部依赖的可执行代码，完整完成精确查询任务，G1=veto。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active 与 ssui=on，未完全达到未登录条件。",
+    "G2 复看：自然结果前列为 Cloudflare changelog、Cloudflare 测试文档、LinkedIn/X 转发，随后进入泛集成测试 Reddit、Stack Exchange 与视频；虽有后段视频包，但未形成首屏视频占屏、大媒体或强品牌首页垄断，G2 保持 pass。",
+    "G3 复看：Cloudflare changelog、Wrangler API 与测试指南属于同一官方实现；Community、LinkedIn 和 X 结果主要转发同一公告，泛集成测试文章不完成 Cloudflare Worker production build 任务，未达到两个独立免费 exact-task 实现，G3 保持 pass。",
+    "官方页面确认 createTestHarness() 可从任意 Node.js test runner 启动本地生产等价 Worker，支持多 Worker 路由、请求派发、存储重置、运行时日志、MSW 外部请求模拟与 Playwright；并明确替代 unstable_startWorker() 和 unstable_dev()。",
+    "来源叫法仍以官方为中心：正式名称为 createTestHarness() 与 Integration test harness；外部社交结果沿用官方标题，没有出现稳定独立别名。",
+    "形成信号仅有官方公告、Community 镜像和社交传播；X 结果显示一定互动，但没有独立教程或跨来源新叫法，不能抵消 G1 的零点击答案否决。",
+    "Semrush 未调用：G1 已达到硬否决线，任何关键词行都不会改变本次 tracking→rejected 决策。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

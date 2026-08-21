@@ -1,0 +1,6 @@
+{
+  "slug":"cf-email-blocked-content","observed_at":"2026-08-20T17:37:00+08:00","stage":"scan",
+  "source_urls":["https://developers.cloudflare.com/changelog/rss/index.xml","https://www.google.com/search?q=Cloudflare%20Email%20Security%20blocked%20content%20rules&gl=us&hl=en&pws=0","https://www.google.com/search?q=Cloudflare%20Email%20Security%20blocked%20content%20rules&gl=us&hl=en&pws=0&start=10","https://developers.cloudflare.com/cloudflare-one/email-security/email-configuration/settings/blocked-content/"],
+  "points":["官方 RSS 给出精确任务措辞。","G1 首屏未见已完成任务的 Google 原生直接答案。","G2 读完前两页：首屏以 Cloudflare 官方 blocked-content 与 email-security 内页为主，第二页快速降为泛安全规则与无关页面。","G3 放行：只数到 Cloudflare 自身规则编辑器直接完成该产品内 exact task；其余结果是解释或不相关故障，未达到两个免费 exact-task 实现。","窗口按 weeks 估计：配置示例、regex recipe 与误报排查页面仍少；官方补齐 cookbook 或多个邮件安全厂商稳定占位时失效。"],
+  "gates":{"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"pass","G3":"pass"}
+}

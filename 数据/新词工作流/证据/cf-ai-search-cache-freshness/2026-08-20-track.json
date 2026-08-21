@@ -1,0 +1,28 @@
+{
+  "slug": "cf-ai-search-cache-freshness",
+  "observed_at": "2026-08-20T19:37:42+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=%22Control+AI+Search+similarity+cache+freshness%22&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Control%20AI%20Search%20similarity%20cache%20freshness&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://developers.cloudflare.com/changelog/post/2026-06-24-ai-search-similarity-cache-controls/",
+    "https://developers.cloudflare.com/ai-search/configuration/retrieval/cache/",
+    "https://community.cloudflare.com/t/ai-search-control-ai-search-similarity-cache-freshness/935723"
+  ],
+  "points": [
+    "G0 零成本重核：该任务是 Cloudflare AI Search 实例的正常缓存配置与清理，未见违法、违反平台 ToS、欺诈供血或规避工具信号。",
+    "G1 重跑：未加引号查询首屏的 AI Overview 直接给出 cache_ttl 可设 10 分钟至 6 天、默认 48 小时，并说明可用 Dashboard 或 API purge cache，已完成任务。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Chrome 中 Google 账号仍登录，并自动加入 safe=active与ssui=on，因此未完全达到未登录条件。",
+    "G2 复看：首页除广告外，自然结果为 Cloudflare changelog、Cloudflare Community、Similarity cache 文档及通用 semantic-cache 文章；未见视频占屏或大媒体首页垄断，结构门本身仍可放行。",
+    "G3 复看：首页稳定可见的 Cloudflare changelog 与 Similarity cache 文档是两个免费结果，均提供 cache_ttl 配置和 purge_cache 操作，完整完成精确任务，已达到 G3 否决线。",
+    "来源叫法仍仅由官方的 Control AI Search similarity cache freshness 和文档中 similarity cache、cache_ttl、purge cached responses 组成；未见社区自然胜出的别名。",
+    "Cloudflare Community 页面是 system 自动复制的 changelog companion topic，仅 1/1 主帖、13 次浏览且无用户回复，未见需求持续增长或命名定型信号。",
+    "Semrush 未调用：G1 和 G3 已经独立硬否决，任何形成期词行都不会改变状态转移。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

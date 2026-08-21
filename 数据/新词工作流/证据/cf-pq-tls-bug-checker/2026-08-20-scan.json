@@ -1,0 +1,20 @@
+{
+  "slug": "cf-pq-tls-bug-checker",
+  "observed_at": "2026-08-20T17:32:00+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://developers.cloudflare.com/changelog/rss/index.xml",
+    "https://www.google.com/search?q=TLS%20bug%20detection%20Cloudflare%20Radar%20post-quantum%20checker&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=TLS%20bug%20detection%20Cloudflare%20Radar%20post-quantum%20checker&gl=us&hl=en&pws=0&start=10",
+    "https://radar.cloudflare.com/post-quantum",
+    "https://www.digicert.com/pqc-checker",
+    "https://www.wiz.io/pqc-tester"
+  ],
+  "points": [
+    "官方 RSS 给出精确任务措辞。",
+    "G1 首屏没有 Google 原生 TLS 检测工具或直接答案。",
+    "G2 读完前两页：Cloudflare 官方工具、文档与博客占据首屏，第二页仍有 Wiz、Cloudflare Research 等任务页。",
+    "G3 否决：Cloudflare Radar、DigiCert PQC checker、Wiz PQC Tester 均免费完成域名/TLS 后量子检测，且已在本查询前两页持续可见。"
+  ],
+  "gates": {"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"pass","G3":"veto"}
+}

@@ -1,0 +1,27 @@
+{
+  "slug": "gcp-private-service-connect-multi-regional-service-endpoints",
+  "observed_at": "2026-08-20T22:23:00+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://docs.cloud.google.com/vpc/docs/about-accessing-regional-google-apis-endpoints",
+    "https://docs.cloud.google.com/vpc/docs/access-regional-google-apis-endpoints?hl=en",
+    "https://www.google.com/search?q=Private%20Service%20Connect%20multi-regional%20service%20endpoints&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Private%20Service%20Connect%20multi-regional%20service%20endpoints&gl=us&hl=en&pws=0&safe=active&ssui=on&start=10",
+    "https://oneuptime.com/blog/post/2026-02-17-how-to-configure-private-service-connect-for-consuming-google-apis-without-public-internet-access-on-gcp/view"
+  ],
+  "points": [
+    "Chrome 真浏览器重跑 G0/G1：任务仍合法且可在线完成，首屏无 CAPTCHA、AI Overview、featured snippet 或原生组件直接作答；G0/G1=pass。",
+    "G2 重新读满两页：Google 新概念页、精确配置页、PSC 总览、MongoDB codelab、厂商文档、视频和通用 PSC 教程混合，第二页后半发生相邻主题质量断层；G2=pass。",
+    "OneUptime 独立教程已完整核验：它配置传统 global all-apis/vpc-sc bundle、全局 forwarding rule、DNS、Shared VPC 与监控；其 Multiple Regions 是全局端点复用，不是新 regional/multi-regional Google API service endpoints。",
+    "因此只有 Google 的精确配置页完成新任务；未出现第二个独立 exact-task 指南或第二个精确 codelab，G3=pass。",
+    "支持端点规范、Shared VPC 角色、DNS 流程与 gcloud 创建语法未见变化，原失效条件未命中；保持 tracking。",
+    "Semrush 对当前决策无增量，billable_calls=0。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

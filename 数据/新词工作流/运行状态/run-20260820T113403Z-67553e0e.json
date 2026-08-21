@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "run_id": "run-20260820T113403Z-67553e0e",
+  "mode": "continuous",
+  "status": "active",
+  "started_at": "2026-08-20T11:34:03+00:00",
+  "updated_at": "2026-08-20T13:02:58+00:00",
+  "max_rounds": 100,
+  "max_hours": null,
+  "rounds_completed": 2,
+  "current_round": 3,
+  "confirmations": {},
+  "finish_reason": null
+}

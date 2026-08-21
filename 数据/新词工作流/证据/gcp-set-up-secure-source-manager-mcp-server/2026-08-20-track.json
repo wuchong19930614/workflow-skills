@@ -1,0 +1,25 @@
+{
+  "slug": "gcp-set-up-secure-source-manager-mcp-server",
+  "observed_at": "2026-08-20T22:46:00+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://docs.cloud.google.com/secure-source-manager/docs/use-securesourcemanager-mcp?hl=en",
+    "https://www.google.com/search?q=Set%20up%20Secure%20Source%20Manager%20MCP%20server&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Set%20up%20Secure%20Source%20Manager%20MCP%20server&gl=us&hl=en&pws=0&safe=active&ssui=on&start=10",
+    "https://www.google.com/search?q=%22Secure%20Source%20Manager%22%20%22MCP%20server%22&gl=us&hl=en&pws=0&safe=active&ssui=on"
+  ],
+  "points": [
+    "Chrome 真浏览器重跑 G0/G1：任务仍合法且可在线完成，首屏无 CAPTCHA、AI Overview、featured snippet 或原生组件直接作答；G0/G1=pass。",
+    "G2 重新读满自然查询两页：secure-MCP codelab、Workspace/SecOps/database MCP、Secure Source Manager instance/overview、Cloud Run 与治理内容占据结果，产品精确度仍有明显质量断层；G2=pass。",
+    "加引号复核产品叫法后，结果仅出现 Secure Source Manager overview、release notes、Datadog 资源页与邻接 source-management 页面；官方 exact setup guide 仍未直接进入 SERP。",
+    "没有第二个独立 Secure Source Manager MCP 完整实施页，也没有专用 codelab；G3=pass。",
+    "区域端点、toolset path、OAuth scope、MCP Tool User/仓库角色和工具清单未见变化，原失效条件未命中；保持 tracking。",
+    "Semrush 对当前决策无增量，billable_calls=0。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

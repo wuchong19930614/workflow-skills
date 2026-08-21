@@ -1,0 +1,32 @@
+{
+  "slug": "gcp-configure-backup-and-dr-multi-party-approval-for-project-l",
+  "observed_at": "2026-08-20T20:09:09+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Configure%20Backup%20and%20DR%20multi-party%20approval%20for%20project%20liens&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Configure%20Backup%20and%20DR%20multi-party%20approval%20for%20project%20liens&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/backup-disaster-recovery/docs/configuration/project-liens-multi-party-approval?hl=en",
+    "https://aws.amazon.com/cn/blogs/storage/implementing-multi-party-approval-workflows-for-aws-backup-logically-air-gapped-vaults/"
+  ],
+  "points": [
+    "This carryover audit supplements only G2 and G3; G0/G4/G5/G1 are inherited from the existing candidate record and were not re-adjudicated.",
+    "A real Chrome session read the complete first two US-English Google result pages. Page one mixed one exact Google Cloud implementation with adjacent Google Cloud concept pages and AWS multi-party-approval material; page two fell into AWS, Azure, and generic backup content, establishing a quality cliff without video, wiki, major-media, or strong-brand-homepage takeover.",
+    "G2=pass: the two-page SERP is mixed inner-document and generic material rather than a durable strong-brand or media takeover.",
+    "The exact Google Cloud page is a complete tutorial for protecting Backup and DR project liens with Privileged Access Manager, including role audit, a custom lien permission, entitlement configuration, request, approval, execution, and cleanup.",
+    "G3=pass: only that Google Cloud tutorial completes the exact GCP project-lien plus PAM task. Google Cloud concept pages cross-link or summarize the mechanism, while the AWS analogue uses a different cloud resource and approval system and is not a second exact implementation.",
+    "This is not veto_window_bet: fewer than two exact implementations are visibly indexed, rather than several obvious implementations being temporarily hidden.",
+    "Window estimate is weeks, expiring 2026-09-20. The dated automatic-lien rollout creates near-term demand, but the official exact guide already ranks first and cross-cloud semantic collision limits the gap.",
+    "Invalidation conditions: two or more free and stable GCP project-lien plus PAM completion pages enter the SERP; the PAM entitlement or resourcemanager.projects.updateLiens setup path changes; the Backup and DR automatic project-lien behavior is withdrawn or rescheduled.",
+    "Semrush paid calls: 0. Carryover audited: 1.",
+    "Caveat: Chrome used a signed-in Google session with gl=us, hl=en, pws=0; the result footer reported that results were not personalized, while safe=active and ssui=on were appended by Google."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

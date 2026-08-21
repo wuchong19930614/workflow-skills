@@ -1,0 +1,28 @@
+{
+  "slug": "gh-enterprise-third-party-apps",
+  "observed_at": "2026-08-20T18:24:00+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://github.blog/changelog/2026-08-07-enterprises-can-now-install-third-party-github-apps",
+    "https://docs.github.com/enterprise-cloud@latest/apps/using-github-apps/installing-a-github-app-on-your-enterprise",
+    "https://docs.github.com/enterprise-cloud@latest/apps/using-github-apps/installing-a-github-app-from-a-third-party",
+    "https://josh-ops.com/posts/github-enterprise-apps-install-marketplace-apps/",
+    "https://www.google.com/search?q=GitHub%20Enterprise%20install%20manage%20third-party%20GitHub%20Apps&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=GitHub%20Enterprise%20install%20manage%20third-party%20GitHub%20Apps&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on"
+  ],
+  "points": [
+    "Captured 还债仅补 G2/G3；既有 G0/G4/G5/G1=pass 保留。",
+    "Chrome 真浏览器完整审阅美区英文 Google 首两页，无 CAPTCHA；结果由 GitHub Changelog、GitHub Docs、社区讨论与独立教程混合组成，没有媒体、百科或首页接管，G2=pass。",
+    "GitHub 官方文档已经覆盖企业级第三方 GitHub App 的安装前提、安装入口与安装流程。",
+    "独立 josh-ops 指南完整覆盖 Marketplace App client_id 获取、Enterprise installation API、跨组织批量安装和重复执行行为，形成可直接完成任务的第二套方案；G3=veto。",
+    "窗口期禁用 Semrush；billable_calls=0；carryover_audited=1。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

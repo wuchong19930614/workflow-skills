@@ -1,0 +1,17 @@
+{
+  "slug": "cf-ai-spend-limits",
+  "observed_at": "2026-08-20T17:32:56+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://developers.cloudflare.com/changelog/rss/index.xml",
+    "https://www.google.com/search?q=Control%20AI%20costs%20with%20spend%20limits&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=Control%20AI%20costs%20with%20spend%20limits&gl=us&hl=en&pws=0&start=10",
+    "https://modelriver.com/features/ai-spending-limits"
+  ],
+  "points": [
+    "官方 RSS 给出精确任务措辞，G1 首屏为商业产品结果，没有 Google 原生预算控制工具。",
+    "G2 读完两页：首页有 Cloudflare 官方博客/changelog、Reddit、Tetrate、ModelRiver 与 ManageEngine 等内页，第二页继续为多家预算控制产品与指南，G2=pass。",
+    "G3 实测≥2个持续可见实现：Cloudflare AI Gateway 官方首页结果提供 spend limits；ModelRiver 首页结果标明 Start free，可在 dashboard 设置 project/model 预算、按日/周/月重置并在超限前拦截请求。已达否决线，G3=veto。"
+  ],
+  "gates": {"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"pass","G3":"veto"}
+}

@@ -1,0 +1,25 @@
+{
+  "slug": "gh-credential-revocation-token-type",
+  "observed_at": "2026-08-20T22:08:00+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://github.blog/changelog/2026-08-18-credential-revocation-and-deauthorization-by-token-type",
+    "https://docs.github.com/en/enterprise-cloud@latest/rest/enterprise-admin/credential-authorizations",
+    "https://www.google.com/search?q=GitHub%20credential%20revocation%20deauthorization%20token%20type&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=GitHub%20credential%20revocation%20deauthorization%20token%20type&gl=us&hl=en&pws=0&safe=active&ssui=on&start=10",
+    "https://kimbodo.com/use-token-type-revocation-to-secure-developer-toolchains-and-ai-coding-assistants/"
+  ],
+  "points": [
+    "Chrome 真浏览器重跑 G0/G1：任务仍合法且可在线完成，首屏无 CAPTCHA、AI Overview、featured snippet 或原生组件直接作答；G0/G1=pass。",
+    "G2 重新读满两页：GitHub changelog、GitHub UI/API 文档、Kimbodo 独立指南、新闻转述与旧 token 文档混合，结构有效；G2=pass。",
+    "形成信号：Kimbodo 新独立页面已进入首页并在第二页重复出现，正文含权限控制、凭据类型清单、检测规则、分阶段 deauthorization/revocation、自动化、测试和审计的完整实施计划。",
+    "GitHub 官方 UI/API 文档与 Kimbodo 独立完整方案构成至少两个稳定可见的 exact-task completions；原失效条件命中，G3=veto。",
+    "无需 Semrush：浏览器证据已经直接改变闸门决策；billable_calls=0。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

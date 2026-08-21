@@ -1,0 +1,25 @@
+{
+  "slug": "gcp-restore-soft-delete-cloud-storage-buckets-after-project-de",
+  "observed_at": "2026-08-20T22:30:00+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://docs.cloud.google.com/storage/docs/use-soft-deleted-buckets?hl=en",
+    "https://docs.cloud.google.com/storage/docs/json_api/v1/buckets/restore",
+    "https://www.google.com/search?q=Restore%20soft-delete%20Cloud%20Storage%20buckets%20after%20project%20deletion&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Restore%20soft-delete%20Cloud%20Storage%20buckets%20after%20project%20deletion&gl=us&hl=en&pws=0&safe=active&ssui=on&start=10"
+  ],
+  "points": [
+    "Chrome 真浏览器重跑 G0/G1：任务仍合法且可在线完成，首屏无 CAPTCHA、AI Overview、featured snippet 或原生组件直接作答；G0/G1=pass。",
+    "G2 重新读满两页：bucket restore 官方指南、soft-delete 概览、项目恢复旧问答、对象恢复教程、API reference、Gist 与论坛分散出现，第二页继续为组件性内容；G2=pass。",
+    "首页旧 Stack Overflow 只说明 undelete project 后删除旧 bucket；第二页 Gist、Terra 与 JSON API 只恢复 bucket/object。它们没有串联 deleted project 恢复、soft-deleted bucket generation、IAM/name collision 与对象恢复。",
+    "Google bucket 指南仍假设项目上下文可用，没有新增 project-deletion 场景；未形成任何端到端复合指南，更未达到两个独立方案，G3=pass。",
+    "bucket retention、restore IAM、generation 处理与 project recovery 行为未见变化，失效条件未命中；保持 tracking。",
+    "Semrush 对当前决策无增量，billable_calls=0。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

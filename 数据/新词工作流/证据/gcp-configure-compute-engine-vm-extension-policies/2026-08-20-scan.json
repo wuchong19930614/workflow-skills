@@ -1,0 +1,31 @@
+{
+  "slug": "gcp-configure-compute-engine-vm-extension-policies",
+  "observed_at": "2026-08-20T20:11:37+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Configure%20Compute%20Engine%20VM%20extension%20policies&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Configure%20Compute%20Engine%20VM%20extension%20policies&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/compute/docs/vm-extensions/create-extension-policy?hl=en",
+    "https://docs.cloud.google.com/compute/docs/vm-extensions/manage-vm-extensions?hl=en"
+  ],
+  "points": [
+    "This carryover audit supplements only G2 and G3; G0/G4/G5/G1 are inherited from the existing candidate record and were not re-adjudicated.",
+    "A real Chrome session read the complete first two US-English Google result pages. Page one contains multiple Google Cloud documentation inner pages, a non-exact video block, a forum result, and other-cloud material; page two falls into forums, vendor documentation, Azure/Chrome-policy collisions, and generic GCP results, with a later zonal-policy concept page.",
+    "G2=pass: the SERP is dominated by inner documentation pages and mixed supporting results, not video takeover, wiki or major-media domination, or strong-brand homepages.",
+    "The first natural result is a complete free implementation for creating VM extension policies, covering prerequisites, permissions, policy scope and targeting, extensions, rollout settings, and console or command workflows.",
+    "The second natural result is another complete free implementation for configuring existing policies, covering view, update, extension changes, deletion, verification, and troubleshooting across console, gcloud, and REST paths.",
+    "G3=veto: at least two exact-task completion pages are already stable and highly visible as the first two natural results. The later global and zonal policy pages reinforce the official documentation footprint but are not needed to reach the veto line.",
+    "This is not veto_window_bet because both task-completing implementations are already indexed and stably visible; there is no temporary unindexed gap to confirm.",
+    "Semrush paid calls: 0. Carryover audited: 1.",
+    "Caveat: Chrome used a signed-in Google session with gl=us, hl=en, pws=0; the result footer reported that results were not personalized, while safe=active and ssui=on were appended by Google."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "veto"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "slug": "cf-api-token-search",
+  "observed_at": "2026-08-20T19:42:43+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Search%20API%20tokens%20by%20name&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://developers.cloudflare.com/changelog/post/2026-06-25-api-token-search/",
+    "https://community.cloudflare.com/t/get-accounts-id-tokens-should-accept-a-name-exact-filter-for-parity-with-s/929888"
+  ],
+  "points": [
+    "G0 零成本重核：在本账户权限内按名称查找 Cloudflare API token 是正常的凭证管理任务，未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 重跑：Google 首屏 AI Overview 直接给出 Cloudflare Dashboard 的 account/user API token 搜索方式，并给出 /user/tokens 与 /accounts/{account_id}/tokens 的 name 查询参数，已完成精确任务。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active与ssui=on，未完全达到未登录条件。",
+    "G2 复看：首页自然结果除 Cloudflare changelog 外，大量是加密 token search API、泄露密钥搜索与其他平台 token 文档，表明短词存在明显语义冲突；但未见视频占屏、大媒体或强品牌首页垄断，结构门保持 pass。",
+    "G3 复看：Cloudflare 官方页是唯一持续可见且完成按名查找 Cloudflare API token 的平台实现；Jupiter/Moralis/Bitquery 搜索的是加密资产，其他结果是文档或安全搜索，未达两个免费 exact-task 实现，G3 保持 pass。",
+    "官方叫法是 Search API tokens by name、Dashboard search 和 name query parameter；Community 用户更具体地称为 GET /accounts/{id}/tokens 的 name=<exact> filter。未见新的简短别名胜出。",
+    "Community 原请求指出批量 token 每次只能 50 条分页、CI/CD 和 fleet-management 必须客户端遍历的真实痛点；页面仅 0 票、55 次浏览与两条同作者帖子，未见广泛需求增长信号，且官方现已补齐功能。",
+    "Semrush 未调用：G1 已经独立硬否决，任何形成期词行都不会改变状态转移。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

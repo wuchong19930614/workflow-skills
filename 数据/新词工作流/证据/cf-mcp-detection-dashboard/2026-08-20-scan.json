@@ -1,0 +1,6 @@
+{
+  "slug":"cf-mcp-detection-dashboard","observed_at":"2026-08-20T17:38:00+08:00","stage":"scan",
+  "source_urls":["https://developers.cloudflare.com/changelog/rss/index.xml","https://www.google.com/search?q=Cloudflare%20MCP%20protocol%20detection%20AI%20Security%20dashboard&gl=us&hl=en&pws=0","https://www.google.com/search?q=Cloudflare%20MCP%20protocol%20detection%20AI%20Security%20dashboard&gl=us&hl=en&pws=0&start=10","https://www.google.com/search?q=free%20MCP%20traffic%20detection%20dashboard&gl=us&hl=en&pws=0","https://www.moesif.com/","https://mcp-dashboard.com/"],
+  "points":["官方 RSS 给出精确任务措辞。","G1 首屏未见 Google 原生组件或已完成 AI Overview 直接做完任务。","G2 读完前两页：Cloudflare 官方文档、厂商分析与 MCP 监控页面密集。","G3 否决：Cloudflare 自带检测面板、Moesif MCP monitoring 与 MCP Dashboard 均完成 MCP traffic/agent behavior 的检测或可视化任务，且搜索结果持续可见。"],
+  "gates":{"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"pass","G3":"veto"}
+}

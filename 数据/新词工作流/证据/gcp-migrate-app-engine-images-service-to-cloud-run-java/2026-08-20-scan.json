@@ -1,0 +1,34 @@
+{
+  "slug": "gcp-migrate-app-engine-images-service-to-cloud-run-java",
+  "observed_at": "2026-08-20T20:18:23+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Migrate%20App%20Engine%20Images%20service%20to%20Cloud%20Run%20Java&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Migrate%20App%20Engine%20Images%20service%20to%20Cloud%20Run%20Java&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/appengine/migration-center/standard/java/images-to-cloud-run?hl=en",
+    "https://codelabs.developers.google.com/cloud-gae-java-migrate-jib",
+    "https://docs.cloud.google.com/appengine/migration-center/standard/python/images-to-cloud-run"
+  ],
+  "points": [
+    "This carryover audit supplements only G2 and G3; G0/G4/G5/G1 are inherited from the existing candidate record and were not re-adjudicated.",
+    "A real Chrome session read the complete first two US-English Google result pages. Page one contains one exact Java Images-service migration guide, App Engine-to-Cloud Run forums, two general Java migration codelabs, a general migration overview, an independent article, a product homepage, and an unrelated deployment forum; page two drops into general migration forums, blogs, a Python Images-service guide, Medium, and a generic migration helper.",
+    "G2=pass: forums, codelabs, documentation inner pages, small articles, and older generic material occupy substantial space; there is no video, wiki, major-media, or strong-brand-homepage takeover, and page two establishes a quality cliff for the exact Java Images-service task.",
+    "The exact Google Cloud Java guide is a complete implementation: it covers limitations and roles, deploys the prebuilt authenticated Cloud Run image-processing service, grants IAM, updates Maven dependencies and appengine-web.xml environment flags, redeploys App Engine, and verifies both services in logs.",
+    "The two Java codelabs containerize a general App Engine application with Jib or Buildpacks but do not replace the legacy Images-service backend. The page-two Python guide solves the same service migration in a different language, while general migration articles and the helper do not cover the Images-service routing contract.",
+    "G3=pass: only one free exact Java App Engine Images-service to Cloud Run implementation is stably visible across the two pages, below the veto threshold of two.",
+    "This is not veto_window_bet because no second already-built exact Java implementation was found merely awaiting indexing.",
+    "Window estimate is weeks, expiring 2026-09-20. The exact Java guide is newly updated, while general App Engine migration content and a Python sibling already create nearby competition.",
+    "Invalidation conditions: a second free end-to-end Java Images-service migration guide becomes stably visible; Google publishes a Java codelab or sample that mirrors the exact migration; the prebuilt image-processing container, SDK version, or APPENGINE_IMAGES_SERVICE_ENDPOINT routing contract changes.",
+    "Semrush paid calls: 0. Carryover audited: 1.",
+    "Caveat: Chrome used a signed-in Google session with gl=us, hl=en, pws=0; the result footer reported that results were not personalized, while safe=active and ssui=on were appended by Google."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

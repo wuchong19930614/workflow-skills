@@ -1,0 +1,23 @@
+{
+  "slug": "gcp-set-up-dataform-remote-mcp-server",
+  "observed_at": "2026-08-20T22:38:00+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://docs.cloud.google.com/dataform/docs/use-dataform-mcp?hl=en",
+    "https://www.google.com/search?q=Set%20up%20Dataform%20remote%20MCP%20server&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Set%20up%20Dataform%20remote%20MCP%20server&gl=us&hl=en&pws=0&safe=active&ssui=on&start=10"
+  ],
+  "points": [
+    "Chrome 真浏览器重跑 G0/G1：无 CAPTCHA，但首屏新增 AI Overview；展开后直接给出 Dataform/BigQuery API、MCP Tool User/Dataform 权限、OAuth client、HTTP server 注册、ADC 登录和连接验证步骤，已完成主要设置任务，G1=veto。",
+    "G2 仍读满两页：一个 Dataform 精确官方指南后接通用 Google MCP、Cloud Run、BigQuery、其他产品 MCP 与 Dataform deployment 内容，第二页形成清晰质量断层；G2=pass。",
+    "网页结果仍只有 Google Dataform 指南完成 exact task，未出现第二个独立 Dataform remote MCP 实施页；G3=pass。",
+    "形成信号不是第二个网页，而是 Google 原生 AI Overview 已把任务主要步骤完整作答；G1 硬否决触发 tracking 失效。",
+    "Semrush 无法改变原生答案硬否决，billable_calls=0。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

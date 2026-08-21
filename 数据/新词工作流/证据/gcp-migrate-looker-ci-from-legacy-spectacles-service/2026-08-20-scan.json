@@ -1,0 +1,34 @@
+{
+  "slug": "gcp-migrate-looker-ci-from-legacy-spectacles-service",
+  "observed_at": "2026-08-20T20:22:16+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Migrate%20Looker%20CI%20from%20legacy%20Spectacles%20service&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Migrate%20Looker%20CI%20from%20legacy%20Spectacles%20service&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/looker/docs/admin-panel-platform-ci?hl=en",
+    "https://medium.com/refined-and-refactored/from-spectacles-to-looker-ci-a-seamless-transition-ahead-68216866492f",
+    "https://blog.rittmananalytics.com/google-integrates-spectacles-into-looker-for-continuous-integration-regression-testing-76e9d28df0c4"
+  ],
+  "points": [
+    "This carryover audit supplements only G2 and G3; G0/G4/G5/G1 are inherited from the existing candidate record and were not re-adjudicated.",
+    "A real Chrome session read the complete first two US-English Google result pages. Page one mixes a Medium comparison, release notes, an independent integration overview, Spectacles product and GitHub pages, Looker CI configuration docs, a forum announcement, and generic Looker migration articles; page two falls into unrelated BI migrations, old Spectacles usage, vendor pages, and general Looker CI usage.",
+    "G2=pass: inner documentation, independent blogs, product pages, forums, and generic migration content share the SERP; there is no video, wiki, major-media, or strong-brand-homepage takeover, and page two shows an exact-task quality cliff.",
+    "The Looker Admin Continuous Integration page fully configures native CI—enablement, CI users, access grants, GitHub app permissions, repository access, and pull-request triggering—but does not map or remove an existing legacy Spectacles service configuration.",
+    "The first natural Medium article explicitly states that it is not a how-to. It compares validator parity, triggers, notifications, content management, and migration risks, but directs setup to the official CI documentation. The Rittman Analytics result explains the product integration rather than executing a legacy-service migration.",
+    "G3=pass: no free result completes the end-to-end legacy Spectacles service to native Looker CI migration across the first two pages; configuration, comparison, and announcement pages are complementary but not exact-task completions.",
+    "This is not veto_window_bet because no already-built exact migration implementations were found merely awaiting indexing.",
+    "Window estimate is weeks, expiring 2026-09-20. The legacy standalone service has a dated November 30, 2026 discontinuation, while native CI configuration and comparison material are already mature enough for a migration guide to emerge quickly.",
+    "Invalidation conditions: two free end-to-end Spectacles-to-Looker-CI migration guides become stably visible; Google publishes an official migration checklist that maps suites, validators, triggers, notifications, and service teardown; the November 30, 2026 discontinuation date or Looker CI parity changes.",
+    "Semrush paid calls: 0. Carryover audited: 1.",
+    "Caveat: Chrome used a signed-in Google session with gl=us, hl=en, pws=0; the result footer reported that results were not personalized, while safe=active and ssui=on were appended by Google."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

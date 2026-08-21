@@ -1,0 +1,35 @@
+{
+  "slug": "gcp-migrate-app-engine-push-queues-to-cloud-tasks-go",
+  "observed_at": "2026-08-20T20:20:13+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://docs.cloud.google.com/release-notes?hl=en",
+    "https://www.google.com/search?q=Migrate%20App%20Engine%20push%20queues%20to%20Cloud%20Tasks%20Go&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://www.google.com/search?q=Migrate%20App%20Engine%20push%20queues%20to%20Cloud%20Tasks%20Go&gl=us&hl=en&pws=0&start=10&safe=active&ssui=on",
+    "https://docs.cloud.google.com/tasks/docs/migrating?hl=en",
+    "https://docs.cloud.google.com/tasks/docs/samples/cloud-tasks-enqueue?hl=en",
+    "https://docs.cloud.google.com/appengine/migration-center/standard/java/migrating-push-queues",
+    "https://docs.cloud.google.com/appengine/migration-center/standard/python/migrating-push-queues"
+  ],
+  "points": [
+    "This carryover audit supplements only G2 and G3; G0/G4/G5/G1 are inherited from the existing candidate record and were not re-adjudicated.",
+    "A real Chrome session read the complete first two US-English Google result pages. Page one contains Python and Java migration guides, an independent migration article, a Python codelab, a general migration overview, Stack Overflow, GitHub, and Google Groups; page two continues with samples, Medium, Facebook, Firebase, Hacker News, and unrelated or cross-language material.",
+    "G2=pass: documentation inner pages, forums, an independent small-site guide, samples, and older community material occupy substantial space; there is no video, wiki, major-media, or strong-brand-homepage takeover, and the second page is a clear Go-exactness quality cliff.",
+    "The generic Cloud Tasks migration page explains shared queues, feature differences, and migration constraints but links detailed code migration only for Python and Java. It does not provide an end-to-end Go rewrite.",
+    "The indexed Create App Engine tasks when migrating push queues sample is tied to the Java detailed guide, while the natural results' Python and Java guides and Python codelab solve different language implementations. The generic Go enqueue sample shows task creation but not a legacy App Engine push-queue migration comparison.",
+    "G3=pass: no free result completes the full App Engine push-queue to Cloud Tasks migration specifically in Go across the first two pages, so the veto threshold of two is not reached.",
+    "This is not veto_window_bet because no already-built exact Go migration implementations were found merely awaiting indexing.",
+    "Window estimate is weeks, expiring 2026-09-20. Cross-language documentation is mature and Google already has component Go samples, so an exact Go guide could close the gap quickly.",
+    "Invalidation conditions: two free end-to-end Go migration guides become stably visible; Google publishes an official Go migration guide or codelab linking legacy taskqueue code to Cloud Tasks; the Go Cloud Tasks client, queue.yaml compatibility, or legacy taskqueue behavior changes.",
+    "Semrush paid calls: 0. Carryover audited: 1.",
+    "Caveat: Chrome used a signed-in Google session with gl=us, hl=en, pws=0; the result footer reported that results were not personalized, while safe=active and ssui=on were appended by Google."
+  ],
+  "gates": {
+    "G0": "pass",
+    "G4": "pass",
+    "G5": "pass",
+    "G1": "pass",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

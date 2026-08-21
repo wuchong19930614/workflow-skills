@@ -1,0 +1,30 @@
+{
+  "slug": "vercel-connect-microsoft-tokens",
+  "observed_at": "2026-08-20T19:59:51+08:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=Vercel%20Connect%20Microsoft%20tokens&gl=us&hl=en&pws=0&safe=active&ssui=on",
+    "https://vercel.com/connect/microsoft",
+    "https://vercel.com/changelog/vercel-connect-supports-microsoft",
+    "https://vercel.com/docs/connect",
+    "https://daily.dev/posts/vercel-connect-now-supports-microsoft-5vm7n3l3z",
+    "https://vercel.com/connect/microsoft-entra"
+  ],
+  "points": [
+    "G0 零成本重核：由本组织授权的开发团队为 Vercel 应用配置 Microsoft 连接并获取短期令牌，是正常的身份与应用集成任务；未见违法、违反 ToS、欺诈供血或规避工具信号。",
+    "G1 真浏览器重跑翻转：Google 首屏 AI Overview 已直接说明托管 Entra app 与 federated OIDC，给出 vc connect create/attach、安装 @vercel/connect，以及 getToken() 的 app 与 user 令牌模式，完整回答配置与取令牌任务，G1=veto。",
+    "SERP 实际条件：桌面 Chrome，URL 带 gl=us、hl=en、pws=0，页脚显示 Results are not personalized；但 Google 账号仍登录且自动加入 safe=active 与 ssui=on，未完全达到未登录条件。",
+    "G2 复看：首屏出现 Microsoft Integration connector、Vercel changelog、Connect 文档与同源介绍，以及 daily.dev 摘要；未见视频占屏、大媒体或品牌首页单项垄断，G2 保持 pass。",
+    "G3 复看：/connect/microsoft、changelog 与 Connect 文档均属于同一 Vercel 托管 connector 实现；daily.dev 只是公告摘要，不是第二个实现，仍不足两个独立免费 exact-task 实现，G3 保持 pass。",
+    "新 canonical 页面 /connect/microsoft 已稳定可见并提供完整 quickstart：vercel connect create microsoft --name、@vercel/connect 与 getToken('microsoft/...')；先前索引的 /connect/microsoft-entra 仍为 404，但新页面已经改变 SERP 并命中官方完整占据查询的失效条件。",
+    "官方叫法为 Microsoft Integration - Vercel Connect、Microsoft connector、application tokens 与 delegated tokens；daily.dev 沿用同一官方叫法，尚无独立别名。",
+    "形成信号已有官方 connector 页面、changelog、文档和摘要传播，但主要是同源发布；Google AI Overview 与完整官方 quickstart 已封闭操作型查询。",
+    "Semrush 未调用：G1 已达到硬否决线，且官方完整 connector 页已改变 SERP，任何关键词行都不会改变本次 tracking→rejected 决策。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "veto",
+    "G2": "pass",
+    "G3": "pass"
+  }
+}

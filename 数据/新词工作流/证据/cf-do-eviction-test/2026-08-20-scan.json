@@ -1,0 +1,6 @@
+{
+  "slug":"cf-do-eviction-test","observed_at":"2026-08-20T17:36:00+08:00","stage":"scan",
+  "source_urls":["https://developers.cloudflare.com/changelog/rss/index.xml","https://www.google.com/search?q=Cloudflare%20Durable%20Object%20eviction%20test%20helper&gl=us&hl=en&pws=0","https://www.google.com/search?q=Cloudflare%20Durable%20Object%20eviction%20test%20helper&gl=us&hl=en&pws=0&start=10","https://www.google.com/search?q=force%20Durable%20Object%20eviction%20test&gl=us&hl=en&pws=0","https://developers.cloudflare.com/changelog/post/2026-06-25-durable-object-eviction-test-helpers/"],
+  "points":["官方 RSS 给出精确任务措辞。","G1 首屏无 Google 原生测试工具或完成任务的直接答案。","G2 读完前两页并用 exact-task 措辞复核：首屏混合官方 changelog/docs、GitHub issue、社区博客与论坛，第二页转入生命周期内容，存在明显质量断层。","G3 放行：只有 Cloudflare 新增的 evictDurableObject/evictAllDurableObjects helper 直接完成强制 eviction 测试；其余结果解释生命周期或故障，未数到第二个免费 exact-task 实现。","窗口按 weeks 估计：API 已发布但第三方测试配方尚未形成；官方或成熟框架补齐 cookbook 时失效。"],
+  "gates":{"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"pass","G3":"pass"}
+}

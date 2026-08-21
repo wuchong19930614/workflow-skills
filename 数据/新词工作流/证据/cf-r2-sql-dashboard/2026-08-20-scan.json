@@ -1,0 +1,17 @@
+{
+  "slug": "cf-r2-sql-dashboard",
+  "observed_at": "2026-08-20T17:32:56+08:00",
+  "stage": "scan",
+  "source_urls": [
+    "https://developers.cloudflare.com/changelog/rss/index.xml",
+    "https://www.google.com/search?q=Query%20R2%20Data%20Catalog%20tables%20with%20R2%20SQL%20from%20the%20dashboard&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=Query%20R2%20Data%20Catalog%20tables%20with%20R2%20SQL%20from%20the%20dashboard&gl=us&hl=en&pws=0&start=10",
+    "https://dbcode.io/docs/supported-databases/r2sql"
+  ],
+  "points": [
+    "官方 RSS 给出精确任务措辞，G1 首屏没有 Google 原生 SQL 工具完成查询。",
+    "G2 读完两页：官方 changelog 位居首页，同页还有 DBCode R2 SQL、Cloudflare skills、DuckDB 与教程内页；第二页延续为小站/社区/官方文档，G2=pass。",
+    "G3 实测两个持续可见完成方案：Cloudflare dashboard 自带 R2 SQL 查询；DBCode 首页第2结果可免费起步，文档明示直连 R2 SQL API、浏览 schema 并执行 SELECT。已达到≥2个实现的否决线，G3=veto。"
+  ],
+  "gates": {"G0":"pass","G4":"pass","G5":"pass","G1":"pass","G2":"pass","G3":"veto"}
+}
