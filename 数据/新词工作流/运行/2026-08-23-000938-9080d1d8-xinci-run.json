@@ -1,0 +1,259 @@
+{
+  "date": "2026-08-23",
+  "skill": "xinci-run",
+  "run_id": "run-20260823T000938Z-9080d1d8",
+  "sources_opened": [
+    "https://www.google.com/search?q=which+EU+countries+require+packaging+EPR+registration+for+my+products&gl=us&hl=en&pws=0",
+    "https://epr.eldris.ai/",
+    "https://www.google.com/search?q=EPR+registration+requirement+checker+tool+by+country+self-serve&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=calculate+embedded+emissions+for+CBAM+declaration+per+shipment+tool&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=do+I+need+an+EU+responsible+person+for+my+product+GPSR+check&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=does+my+product+fall+under+cyber+resilience+act+classification+check&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=eudr+due+diligence+statement+geolocation+per+shipment+tool&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=machinery+regulation+2027+conformity+assessment+category+check+per+machine&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=textile+digital+product+passport+data+requirements+per+sku+tool&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=new+toy+safety+regulation+digital+product+passport+per+toy+requirements&gl=us&hl=en&pws=0",
+    "https://gramta.com/",
+    "https://www.google.com/search?q=EPR+compliance+software+EU+sellers+multi-country+registration+platform&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=machinery+regulation+annex+i+classification+software+tool+notified+body+checker&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=GPSR+compliance+software+responsible+person+platform+tool+sellers&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=number+of+machinery+manufacturing+enterprises+in+the+EU+Eurostat+statistics&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=notified+body+EU+type+examination+cost+machinery+CE+marking+consultancy+price&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=machinery+regulation+annex+i+high+risk+category+conformity+assessment&gl=us&hl=en&pws=0",
+    "https://ppwrcopilot.com/",
+    "https://ppwrcopilot.com/ppwr-de-am-i-a-producer-verpackg-checker",
+    "https://gramta.com/do-i-need-epr"
+  ],
+  "sources_blocked": [],
+  "candidates_touched": [
+    "cra-product-scope-classification",
+    "eu-multistate-packaging-epr-registration",
+    "gpsr-eu-responsible-person-determination",
+    "eu-machinery-regulation-risk-category"
+  ],
+  "billable_calls": 0,
+  "notes": [
+    "本轮是 2026-08-23 闸门修订后的首次实跑,目的有二:按正向选择器选源,并记录命中率。步骤 1 无待办(captured 0;11 个旧 tracking 候选最早 2026-08-27 才满 7 天跨度)。carryover_audited=0。",
+    "选源方式已换掉:不再扫社区或厂商 changelog 找新词,而是按新增的正向选择器盯义务管道,且措辞落在派生计算上(「我这个 SKU 需要哪些注册」)而非规则本身(「PPWR 第 24 条说了什么」)——后者按陷阱类别六必死于全集镜像。",
+    "深审入口预检(本轮首次执行)全部通过:4 条义务都要求有预算的付费者逐对象重复完成。这与旧账本形成鲜明对比——旧账本 56 条 G3 否决里 42 条(75%)过不了这一问。预检本身零成本,证明它放在 G2/G3 之前是对位置的。",
+    "命中率(本轮实测):测 4 条义务,新 G3 放行 3 条、否决 1 条。放行的 eu-multistate-packaging-epr-registration、gpsr-eu-responsible-person-determination、cra-product-scope-classification 已注册并推进到 tracking(窗口以月计,持续性合规义务,非天级抢位)。否决的是 cbam。",
+    "命中率的正确读法(必须写清以免误读):3/4 是**通过 G3 的比例**,不是「找到三个能赚钱的生意」。G6 正式结论在确认期才出,而本账本从未有候选走到那一步。真正的检验是这三条到 2026-11-30 失效日前有没有走到 qualified、届时占位者变成什么样。在那之前,3/4 只说明修订后的闸门比旧闸门宽,不说明它对。",
+    "修订一(已落地):判据 6 提到零成本层。唯一被否的 cbam 正是死在判据 6——欧委会自己发了 Excel 计算工具(taxation-customs.ec.europa.eu 的 PDF 明写 This Excel file is a tool that allows operators to determine the embedded emissions),而我花了一次深审才发现。现要求零成本先问一句:发证机关自己有没有发计算工具/模板/Excel。",
+    "修订二(已落地):新增判据 8——付费广告密度是 G6 的正向旁证,不是 G3 的否决理由。gpsr 一条 SERP 顶部有四条付费广告(gdprrepresentative €290/年、Euverify、easecert、Pergamon Labs),说明付费者价值高到值得买流量;但自然位要与投广告的对手同场,这一点计入决策阶段评分,不据以否决。",
+    "修订三(已落地):判据 2 要区分「逐对象」的两种含义。epr 是逐管辖区 × 逐废弃物流反复注册与核对(天然带复购),cra 与 gpsr 更接近每个产品判定一次(判完就完,要靠产品线扩张或法规更新才有复购)。现要求写明是哪一种,它直接决定 G6 的单价与留存假设。",
+    "补上闸门契约的一个缺口:G3 第二问原先只写了纯小站(pass)与纯成规模厂商(进第三问)两种,漏了混合情形。cra 一条当场撞上——Keysight(成规模)与 cyberresilienceact.eu(单一法规专用小站)并存,无判据可依。已补:混合情形取 pass,判据是「只要其中有一个小而专的新站已经做起来,就证明这一格仍放人」。",
+    "需求真实性的一条现场旁证(非我方推断):r/Etsy 两周前的线程 64 条回答,最高票是一位英国卖家表示已彻底停止向欧盟及北爱尔兰销售,原因是搞不清 EPR 注册义务。这是任务成立且未被解决的直接证据。",
+    "G6 的一处欠账要记明:2026-08-23 修订要求写出「受约束付费者数 × 可行单价」两个数与出处。本轮只取到价格侧旁证(Eldris 按国按流年费、ppwrconnect €29/月起、gdprrepresentative €290/年),**付费者数量尚无实测来源**,三条候选的确认期都必须补这一项。",
+    "搜索健康度:Google 精确词搜索 5 次,另打开 1 个占位者站点核实其形态(eldris 是代办服务不是工具),全程未出现验证码或结果异常。Semrush 0 次。",
+    "本轮先验证了修订一(判据 6 与判据 2 提到零成本层)确实省钱:7 条义务里有 3 条在**没花任何 SERP**的情况下出局——forced labour regulation 死于判据 2(供应链层面尽职调查,同一条链上所有产品共享一次结论,不存在逐对象计算)、weee 归入已注册 EPR 候选的簇内变体避免重复评估、battery passport 补正式留痕(2026-08-22 校准轮已实测真工具 ≥4 且均成规模厂商)。剩 4 条进 G1。",
+    "本轮的主要产出不是候选,而是**推翻我自己当日上午的修订**。当日上午给 G3 第二问加的「小而专的新站 → pass」与「混合情形 → pass」,在本轮几乎放行了这个家族的一切:EUDR 真工具 ≥3(含单一用途域名 eudrvault.com)、纺织 DPP 3 个(含 dpp-tool.com)、TSR 约 4 个(含按行业分页的 eudigitalproductpassport.org)——因为这个家族里总能找到至少一个小而专的站。",
+    "TSR 一例是决定性的:Toy Safety Regulation (EU 2025/2509) 的 DPP 义务要到 2030-08-01 才适用,近四年后才产生需求,却已被约 4 个真工具占位。按当日上午的规则它会通过,而那显然不是开着的窗口。",
+    "回退的理由是证据等级不同,已写入闸门契约:「真工具 0–1 个 → pass」有实测支撑(来自 6 个翻案候选,占位者全是文章);而「小站存在 → 这一格仍放人」是**从 PPWR 单一案例推断的**——我证明的是 ppwrcopilot 成功了(市场是真的),从未证明第二、第三个进入者活得好。用一条推断放行整个家族,等于把样本量为一的猜测当定律。现行规则回退为:真工具 ≥2 个一律进第三问,不看占位者身份。",
+    "回退的代价我自己承担了:**推翻本运行第 1 轮的 cra-product-scope-classification 登记**,已由 tracking 转 rejected。它当时正是靠「混合情形 → pass」放行的;按回退后判据,Keysight 的 self-check tool 已把核心判定(产品的 CRA 分类与随之义务)工具化,加 cyberresilienceact.eu 的 Compliance Matrix,两个真工具均首页持续可见 → veto。重判未重跑 SERP,沿用第 1 轮现场读取,观察文件已写明不谎称重测。",
+    "本轮唯一存活并登记的是 eu-machinery-regulation-risk-category:真工具 **0 个**,占位者全是文章与指南(europa.eu、Nemko、Elomatic、Pilz、ies.co.uk 4 天前、TÜV SÜD 含 6.9 万播放视频、GetReady)。没有任何工具回答「我这台机器落在附件 I 哪一类、因此要不要 Notified Body」——而这一问直接决定成本与工期(现场读到评估前置期常为 4–10 个月)。零成本判据 6 已核对:欧委会只发法规与协调标准清单,不发分类工具(对照 CBAM——那里欧委会自带 Excel 计算器)。",
+    "占位者身份的一条观察值得留给后续:写机械法规指南的正是认证机构与安全自动化厂商本身(Nemko、TÜV SÜD、Pilz)。它们有动机解释规则(带来检测认证订单),但**没有动机做免费分类器**——那会减少咨询与预评估需求。这与 PPWR 同构:别人写「规则要求你算」,赢家做了那个算的东西。",
+    "累计命中率(两轮):测 11 条义务,新 G3 最终放行 3 条(epr、gpsr、machinery)、否决 8 条(cbam、cra、eudr、textile dpp、tsr、battery passport、forced labour、weee 归簇)。约 27%,而不是第 1 轮报的 75%——第 1 轮那个数是在被推翻的规则下算的,此处按回退后判据重算。",
+    "偿还上一轮记的 G6 欠账(部分):纺织 DPP 一格现场读到两个有出处的数字——Carbonfact 给出实际成本 **€1–10/SKU**,DPP-Tool 给出「一个品牌每季 500 个 SKU 需各自计算并核验」。这是本次运行第一次拿到可引用的单价与逐对象频次锚点,可用于同家族其他候选的 G6 估算;付费者数量侧仍无实测来源。",
+    "闸门契约仍未解决的一处:要把第二问重新变成放行条件,需要先补一个测量——在已被占的家族里查明第二/第三个进入者(ppwrconnect.com、gramta.com、dpp-tool.com)是否真的做起来了。有了这个证据再改,不要再从单一案例推断。已写入契约。",
+    "搜索健康度:Google 精确词搜索 4 次,累计本次运行 9 次,未出现验证码或结果异常。Semrush 0 次。",
+    "本轮按上一轮自己留下的建议执行:去补「已被占的家族里第二三个进入者是否真做起来了」这个测量,以决定 G3 第二问能否重新变成放行条件。守住校准纪律,只用公开页面证据,不动 Semrush(竞品流量实测属确认期动作,这几条候选还在追踪期)。",
+    "测量本身没做完,但撞上了一个更要紧的东西:**我第 1 轮的工具计数方法是错的**。直接访问 gramta.com 发现它就是 EPR 那个任务的完整判定工具——首屏自述「把销售与包装规格发来一次,算出哪些适用、按国准备到条款号的 EPR 报告、生成 PPWR 声明」,并设免费入口 Check if EPR or PPWR applies to you,另有具名客户见证。而我方 2026-08-18 的 ppwr 否决理由里其实点名过 gramta.com,当时误记为「PPWR 专栏」。",
+    "根因查明并已写进闸门契约 G3 第一问:**工具排名靠产品向措辞,不是用户问句**。EPR 一条用两个问句式措辞检索两次都得「真工具 0 个」;换一个产品向措辞(EPR compliance software ... platform)立刻出现 ≥6 个真工具:Lappa(自动化多国注册与量阈值追踪)、Interzero(31 国单一数字平台)、ForSURE、ecosistant(第 1 轮我误归为指南/服务)、regilient.ai、TraceX。GPSR 复现同一错误:问句式只见 1 个,产品向见到 ≥4 个,还包括 Amazon 自家的 compliance widget 与一位独立开发者做的免费 GPSR Checker。",
+    "契约已加硬要求:G3 第一问必须用两族措辞各检索一次——①用户问句式;②产品向(<义务> software / platform / tool / checker),缺一不可。同时写明反面:能同时通过两族措辞的 0 工具结论才可信。",
+    "代价:**推翻本运行第 1 轮的两条登记**,eu-multistate-packaging-epr-registration 与 gpsr-eu-responsible-person-determination 均由 tracking 转 rejected。加上第 2 轮已推翻的 cra,本运行第 1 轮登记的 3 条全部被自己否掉。",
+    "machinery 一条**在修正后的方法下反而更强了**:产品向措辞检索同样是 0 个分类工具。出现的只有官方 NANDO 公告机构名录(那是「谁能认证」的目录,不是「判你机器落在哪一类」的工具)、Intertek 与 Danish Technological Institute 在卖评估服务、TÜV SÜD 的新闻稿、Onix 的指南、以及一条与本任务无关的通用法规监控广告(Regology)。这是本次运行唯一经过两族措辞检验仍存活的候选。",
+    "累计命中率(经方法纠错后重算):测 11 条义务,最终存活 **1 条**(machinery),约 **9%**。三轮报过三个数——第 1 轮 75%、第 2 轮 27%、本轮 9%——每次下降都对应一次自己的错误被查出:第 1 轮错在从单一案例推断放行规则,本轮错在只用问句式措辞数工具。**9% 才是目前可信的数,而它仍然只是「通过 G3 的比例」,不是「能赚钱的比例」。**",
+    "第 2 轮留下的那个测量任务仍未完成:第二三个进入者(ppwrconnect、gramta、dpp-tool)是否真做起来了。本轮只查明 gramta 是完整产品且有具名客户,未取得任何一家的经营规模。G3 第二问继续保持关闭。",
+    "搜索健康度:Google 精确词搜索 3 次并直接访问 1 个占位者站点,累计本次运行 12 次查询,未出现验证码或结果异常。Semrush 0 次。",
+    "本轮把连续三轮记着欠账的那一项做掉:给唯一存活候选 eu-machinery-regulation-risk-category 找到 G6 两个数的出处。性质要说清——这是**为确认期预备数据,不是 G6 的正式结论**(正式结论要等它到 formation_confirmed)。",
+    "付费者规模侧,两个独立来源同一量级:IBISWorld 给出欧洲 Machinery & Equipment Manufacturing n.e.c.「142k businesses」(2020–2025 CAGR 1.6%);欧委会/Eurostat 的 KS-BW-09-001-10-EN PDF 给出 NACE Subsection DK 为 EU-27「174.0 thousand enterprises」的主营活动。",
+    "但这个数有重要保留,已同时写进候选观察与闸门契约:14.2 万–17.4 万是**行业规模,不是受附件 I 影响的子集**。附件 I 只列特定类别(车辆举升设备、锯床、压机等),真正面临该问的只是其中一部分,比例本次未取得,列为确认期必补的第一项。契约已加硬要求:估算付费者数时必须写出子集比例或说明未取得,不许拿行业规模充数。",
+    "赌注与价格侧:EcoComply 给出机械自我认证 €1,500–5,000+,而**需要 Notified Body 的路径 €13,000+**;mydpp.app(5 天前)给出同一量级;cemarking.net 记述实见  至 ,000 的跨度。结合第 2 轮读到的 4–10 个月评估前置期,判错类别的代价是每个产品线多付约 €8,000–11,000 并多等数月。这种五位数赌注才是付费意愿的依据——契约已加一条:G6 要写清赌注,不能只写任务存在。",
+    "可行单价的类比锚已一并写进契约 G6(均为本次运行现场读到):ppwrcopilot £49–199/月、ppwrconnect €29/月起、Fluxy.One €249、gdprrepresentative €290/年、Carbonfact €1–10/SKU。",
+    "顺带把 machinery 的首份 -track 观察做掉(此前只有 -scan),形成确认的 7 天跨度自今日起算,最早 2026-08-30 可达。观察内含 G0 零成本重核 pass、G1 重跑 pass、以及第三族措辞下的第三次工具计数——仍为 0 个分类工具(本次占位者:EU-OSHA、Intertek、Nemko Digital、LexisNexis、TÜV SÜD、Baker McKenzie、ResearchGate,全是文章与服务方解读)。",
+    "该候选现已用三族措辞检验过(问句式、产品向、法规术语式),三次均 0 个真工具。这是本次运行唯一经受住第 3 轮新增的两族措辞要求的方向。",
+    "如实标注该候选的结构性弱点:按修订后的判据 2,它属「每台/每型号判定一次」那一档,不是持续复购型——复购只来自新机型、重大改装与法规更新。含义是单价结构应偏按次评估或并入更宽的合规订阅,而不是独立月订阅。这是它相对 EPR 那类持续义务的劣势,不应在决策阶段被忽略。",
+    "Semrush 仍为 0 次:候选处于追踪期,契约只允许轻量形成信号探针,而本轮 G6 数据全部来自公开页面;竞品 footprint 实测属确认期动作,留到 formation_confirmed 之后。搜索健康度:Google 精确词搜索 3 次,累计本次运行 15 次,未出现验证码或结果异常。",
+    "本轮性质是闸门校准的第六节,不是扫描轮,funnel 五项全 0。前五轮的判据一直在数「有几个占位者」,从没测过「占位的东西好不好」——本轮亲手用 PPWR 一族的免费入口补这个。边界:只输入非个人信息,一旦要求邮箱/公司信息/注册即停;而「要不要邮箱才给答案」本身就是测量结果。",
+    "本轮出发时要回答的是第 2 轮留下的任务(第二三个进入者是否真做起来了)。答案是**证据不足,第二问维持关闭**:ppwrcopilot 明确在营(£49–199/月 + £545 人工审阅,自述 890+ 份档案、190+ 家机构);ppwrconnect 上线且有定价(€29/月起)但无任何客户量证据;gramta 架构完整、判定器可用,但主 CTA 仍是 Request early access,尚未正式开放。这只构成「还有人在尝试」,不构成「市场能容纳多个进入者」。",
+    "本轮更重要的结论是**「工具 vs 文章」这条判据本身错配**。ppwrcopilot 的 SERP 表面是文章形态(判定页、分国指南),生意是工具形态(付费档案生成器)。它的 /ppwr-de-am-i-a-producer-verpackg-checker 名为 checker 实为高质量判定页(5 情形各给结论、3 步流程、罚款上限 €200,000、Last checked 2026-03-29,并专设一节区分「法律要求 vs 行业惯例」)。按我方判据这一页会被计为文章、得出「位置空着」——而它是通往付费产品的漏斗,背后是 6 个免费单一用途工具 + 3 份分国指南 + methodology + source-status + 不设门的样本档案 PDF + 付费主产品 + £545 服务。**这一族已满足本契约 G8 决策门对全站的要求,新进者面对的是建好了的对手。**",
+    "已把替代判据写进闸门契约 G3(位置在第一问之前):数工具前先问「有没有人已经把这一格当成生意在经营」,看三个信号——内容后面有没有付费产品、有没有按国/按任务的簇、有没有 methodology/source-status/last-checked/change-log 这类维护痕迹。三者齐备即按 veto 处理,不必再数工具形态。这是 G3 在同一天里的第三次修改(数量线 → 工具计数 → 经营信号优先),记下这个次数本身有用:它说明「从一个案例反推判据」有多容易出错。",
+    "machinery 经受住了这一层,且理由更清楚:占位者 Nemko/TÜV SÜD/Intertek/Pilz/Onix/ies.co.uk 确实是经营中的生意,但卖高接触评估服务(€13,000+)、内容是孤立指南而非按附件 I 类别成簇、没有面向该判定的自助付费产品——三个信号只中一个,故仍回到工具计数,三族措辞下均为 0,pass 维持。动机结构也讲得通:公告机构靠预评估与认证收费,做免费分类器会减少自己的咨询需求;而 PPWR 一族的赢家做工具,正因为它没有服务收入要保护。",
+    "如实记两处边界:①gramta 的判定器我点击 Yes 后按钮视觉选中但问卷未推进到第 2 问,**无法区分「工具没接好」与「自动化点击未触发处理函数」,故不下「工具是坏的」这个结论**;整页无任何邮箱输入框,可以确定它不是线索表单。②本轮没有拿到任何一家的真实营收或流量——ppwrcopilot 的 890+/190+ 是自述,另两家连自述都没有。要真正回答「第二个进入者能不能活」需要营收或流量证据,公开页面拿不到,应留到候选进确认期后按契约允许的竞品 footprint 实测去取。",
+    "只测了 PPWR 一族。DPP 一族(passportcraft、dpp-tool、digiprodpass)与 CRA 一族(cyberresilienceact.eu)未做同样的经营信号核对,是下一步可做的。",
+    "预算命中:用户同意的 5 轮已用完。Semrush 全程 0 次,额度未耗尽。搜索健康度:本轮无 Google 查询,3 次站点访问正常;累计本次运行 15 次 Google 查询,全程无验证码或结果异常。"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "sources_opened": [
+        "https://www.google.com/search?q=which+EU+countries+require+packaging+EPR+registration+for+my+products&gl=us&hl=en&pws=0",
+        "https://epr.eldris.ai/",
+        "https://www.google.com/search?q=EPR+registration+requirement+checker+tool+by+country+self-serve&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=calculate+embedded+emissions+for+CBAM+declaration+per+shipment+tool&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=do+I+need+an+EU+responsible+person+for+my+product+GPSR+check&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=does+my+product+fall+under+cyber+resilience+act+classification+check&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [
+        "cra-product-scope-classification",
+        "eu-multistate-packaging-epr-registration",
+        "gpsr-eu-responsible-person-determination"
+      ],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 4,
+        "rejected_zero_cost": 0,
+        "rejected_g1": 0,
+        "deep_audited": 4,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "本轮是 2026-08-23 闸门修订后的首次实跑,目的有二:按正向选择器选源,并记录命中率。步骤 1 无待办(captured 0;11 个旧 tracking 候选最早 2026-08-27 才满 7 天跨度)。carryover_audited=0。",
+        "选源方式已换掉:不再扫社区或厂商 changelog 找新词,而是按新增的正向选择器盯义务管道,且措辞落在派生计算上(「我这个 SKU 需要哪些注册」)而非规则本身(「PPWR 第 24 条说了什么」)——后者按陷阱类别六必死于全集镜像。",
+        "深审入口预检(本轮首次执行)全部通过:4 条义务都要求有预算的付费者逐对象重复完成。这与旧账本形成鲜明对比——旧账本 56 条 G3 否决里 42 条(75%)过不了这一问。预检本身零成本,证明它放在 G2/G3 之前是对位置的。",
+        "命中率(本轮实测):测 4 条义务,新 G3 放行 3 条、否决 1 条。放行的 eu-multistate-packaging-epr-registration、gpsr-eu-responsible-person-determination、cra-product-scope-classification 已注册并推进到 tracking(窗口以月计,持续性合规义务,非天级抢位)。否决的是 cbam。",
+        "命中率的正确读法(必须写清以免误读):3/4 是**通过 G3 的比例**,不是「找到三个能赚钱的生意」。G6 正式结论在确认期才出,而本账本从未有候选走到那一步。真正的检验是这三条到 2026-11-30 失效日前有没有走到 qualified、届时占位者变成什么样。在那之前,3/4 只说明修订后的闸门比旧闸门宽,不说明它对。",
+        "修订一(已落地):判据 6 提到零成本层。唯一被否的 cbam 正是死在判据 6——欧委会自己发了 Excel 计算工具(taxation-customs.ec.europa.eu 的 PDF 明写 This Excel file is a tool that allows operators to determine the embedded emissions),而我花了一次深审才发现。现要求零成本先问一句:发证机关自己有没有发计算工具/模板/Excel。",
+        "修订二(已落地):新增判据 8——付费广告密度是 G6 的正向旁证,不是 G3 的否决理由。gpsr 一条 SERP 顶部有四条付费广告(gdprrepresentative €290/年、Euverify、easecert、Pergamon Labs),说明付费者价值高到值得买流量;但自然位要与投广告的对手同场,这一点计入决策阶段评分,不据以否决。",
+        "修订三(已落地):判据 2 要区分「逐对象」的两种含义。epr 是逐管辖区 × 逐废弃物流反复注册与核对(天然带复购),cra 与 gpsr 更接近每个产品判定一次(判完就完,要靠产品线扩张或法规更新才有复购)。现要求写明是哪一种,它直接决定 G6 的单价与留存假设。",
+        "补上闸门契约的一个缺口:G3 第二问原先只写了纯小站(pass)与纯成规模厂商(进第三问)两种,漏了混合情形。cra 一条当场撞上——Keysight(成规模)与 cyberresilienceact.eu(单一法规专用小站)并存,无判据可依。已补:混合情形取 pass,判据是「只要其中有一个小而专的新站已经做起来,就证明这一格仍放人」。",
+        "需求真实性的一条现场旁证(非我方推断):r/Etsy 两周前的线程 64 条回答,最高票是一位英国卖家表示已彻底停止向欧盟及北爱尔兰销售,原因是搞不清 EPR 注册义务。这是任务成立且未被解决的直接证据。",
+        "G6 的一处欠账要记明:2026-08-23 修订要求写出「受约束付费者数 × 可行单价」两个数与出处。本轮只取到价格侧旁证(Eldris 按国按流年费、ppwrconnect €29/月起、gdprrepresentative €290/年),**付费者数量尚无实测来源**,三条候选的确认期都必须补这一项。",
+        "搜索健康度:Google 精确词搜索 5 次,另打开 1 个占位者站点核实其形态(eldris 是代办服务不是工具),全程未出现验证码或结果异常。Semrush 0 次。"
+      ]
+    },
+    {
+      "round": 2,
+      "sources_opened": [
+        "https://www.google.com/search?q=eudr+due+diligence+statement+geolocation+per+shipment+tool&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=machinery+regulation+2027+conformity+assessment+category+check+per+machine&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=textile+digital+product+passport+data+requirements+per+sku+tool&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=new+toy+safety+regulation+digital+product+passport+per+toy+requirements&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [
+        "cra-product-scope-classification",
+        "eu-machinery-regulation-risk-category"
+      ],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 7,
+        "rejected_zero_cost": 3,
+        "rejected_g1": 0,
+        "deep_audited": 4,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "本轮先验证了修订一(判据 6 与判据 2 提到零成本层)确实省钱:7 条义务里有 3 条在**没花任何 SERP**的情况下出局——forced labour regulation 死于判据 2(供应链层面尽职调查,同一条链上所有产品共享一次结论,不存在逐对象计算)、weee 归入已注册 EPR 候选的簇内变体避免重复评估、battery passport 补正式留痕(2026-08-22 校准轮已实测真工具 ≥4 且均成规模厂商)。剩 4 条进 G1。",
+        "本轮的主要产出不是候选,而是**推翻我自己当日上午的修订**。当日上午给 G3 第二问加的「小而专的新站 → pass」与「混合情形 → pass」,在本轮几乎放行了这个家族的一切:EUDR 真工具 ≥3(含单一用途域名 eudrvault.com)、纺织 DPP 3 个(含 dpp-tool.com)、TSR 约 4 个(含按行业分页的 eudigitalproductpassport.org)——因为这个家族里总能找到至少一个小而专的站。",
+        "TSR 一例是决定性的:Toy Safety Regulation (EU 2025/2509) 的 DPP 义务要到 2030-08-01 才适用,近四年后才产生需求,却已被约 4 个真工具占位。按当日上午的规则它会通过,而那显然不是开着的窗口。",
+        "回退的理由是证据等级不同,已写入闸门契约:「真工具 0–1 个 → pass」有实测支撑(来自 6 个翻案候选,占位者全是文章);而「小站存在 → 这一格仍放人」是**从 PPWR 单一案例推断的**——我证明的是 ppwrcopilot 成功了(市场是真的),从未证明第二、第三个进入者活得好。用一条推断放行整个家族,等于把样本量为一的猜测当定律。现行规则回退为:真工具 ≥2 个一律进第三问,不看占位者身份。",
+        "回退的代价我自己承担了:**推翻本运行第 1 轮的 cra-product-scope-classification 登记**,已由 tracking 转 rejected。它当时正是靠「混合情形 → pass」放行的;按回退后判据,Keysight 的 self-check tool 已把核心判定(产品的 CRA 分类与随之义务)工具化,加 cyberresilienceact.eu 的 Compliance Matrix,两个真工具均首页持续可见 → veto。重判未重跑 SERP,沿用第 1 轮现场读取,观察文件已写明不谎称重测。",
+        "本轮唯一存活并登记的是 eu-machinery-regulation-risk-category:真工具 **0 个**,占位者全是文章与指南(europa.eu、Nemko、Elomatic、Pilz、ies.co.uk 4 天前、TÜV SÜD 含 6.9 万播放视频、GetReady)。没有任何工具回答「我这台机器落在附件 I 哪一类、因此要不要 Notified Body」——而这一问直接决定成本与工期(现场读到评估前置期常为 4–10 个月)。零成本判据 6 已核对:欧委会只发法规与协调标准清单,不发分类工具(对照 CBAM——那里欧委会自带 Excel 计算器)。",
+        "占位者身份的一条观察值得留给后续:写机械法规指南的正是认证机构与安全自动化厂商本身(Nemko、TÜV SÜD、Pilz)。它们有动机解释规则(带来检测认证订单),但**没有动机做免费分类器**——那会减少咨询与预评估需求。这与 PPWR 同构:别人写「规则要求你算」,赢家做了那个算的东西。",
+        "累计命中率(两轮):测 11 条义务,新 G3 最终放行 3 条(epr、gpsr、machinery)、否决 8 条(cbam、cra、eudr、textile dpp、tsr、battery passport、forced labour、weee 归簇)。约 27%,而不是第 1 轮报的 75%——第 1 轮那个数是在被推翻的规则下算的,此处按回退后判据重算。",
+        "偿还上一轮记的 G6 欠账(部分):纺织 DPP 一格现场读到两个有出处的数字——Carbonfact 给出实际成本 **€1–10/SKU**,DPP-Tool 给出「一个品牌每季 500 个 SKU 需各自计算并核验」。这是本次运行第一次拿到可引用的单价与逐对象频次锚点,可用于同家族其他候选的 G6 估算;付费者数量侧仍无实测来源。",
+        "闸门契约仍未解决的一处:要把第二问重新变成放行条件,需要先补一个测量——在已被占的家族里查明第二/第三个进入者(ppwrconnect.com、gramta.com、dpp-tool.com)是否真的做起来了。有了这个证据再改,不要再从单一案例推断。已写入契约。",
+        "搜索健康度:Google 精确词搜索 4 次,累计本次运行 9 次,未出现验证码或结果异常。Semrush 0 次。"
+      ]
+    },
+    {
+      "round": 3,
+      "sources_opened": [
+        "https://gramta.com/",
+        "https://www.google.com/search?q=EPR+compliance+software+EU+sellers+multi-country+registration+platform&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=machinery+regulation+annex+i+classification+software+tool+notified+body+checker&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=GPSR+compliance+software+responsible+person+platform+tool+sellers&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [
+        "eu-multistate-packaging-epr-registration",
+        "gpsr-eu-responsible-person-determination"
+      ],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 0,
+        "rejected_zero_cost": 0,
+        "rejected_g1": 0,
+        "deep_audited": 0,
+        "queued": 0,
+        "carryover_audited": 3
+      },
+      "notes": [
+        "本轮按上一轮自己留下的建议执行:去补「已被占的家族里第二三个进入者是否真做起来了」这个测量,以决定 G3 第二问能否重新变成放行条件。守住校准纪律,只用公开页面证据,不动 Semrush(竞品流量实测属确认期动作,这几条候选还在追踪期)。",
+        "测量本身没做完,但撞上了一个更要紧的东西:**我第 1 轮的工具计数方法是错的**。直接访问 gramta.com 发现它就是 EPR 那个任务的完整判定工具——首屏自述「把销售与包装规格发来一次,算出哪些适用、按国准备到条款号的 EPR 报告、生成 PPWR 声明」,并设免费入口 Check if EPR or PPWR applies to you,另有具名客户见证。而我方 2026-08-18 的 ppwr 否决理由里其实点名过 gramta.com,当时误记为「PPWR 专栏」。",
+        "根因查明并已写进闸门契约 G3 第一问:**工具排名靠产品向措辞,不是用户问句**。EPR 一条用两个问句式措辞检索两次都得「真工具 0 个」;换一个产品向措辞(EPR compliance software ... platform)立刻出现 ≥6 个真工具:Lappa(自动化多国注册与量阈值追踪)、Interzero(31 国单一数字平台)、ForSURE、ecosistant(第 1 轮我误归为指南/服务)、regilient.ai、TraceX。GPSR 复现同一错误:问句式只见 1 个,产品向见到 ≥4 个,还包括 Amazon 自家的 compliance widget 与一位独立开发者做的免费 GPSR Checker。",
+        "契约已加硬要求:G3 第一问必须用两族措辞各检索一次——①用户问句式;②产品向(<义务> software / platform / tool / checker),缺一不可。同时写明反面:能同时通过两族措辞的 0 工具结论才可信。",
+        "代价:**推翻本运行第 1 轮的两条登记**,eu-multistate-packaging-epr-registration 与 gpsr-eu-responsible-person-determination 均由 tracking 转 rejected。加上第 2 轮已推翻的 cra,本运行第 1 轮登记的 3 条全部被自己否掉。",
+        "machinery 一条**在修正后的方法下反而更强了**:产品向措辞检索同样是 0 个分类工具。出现的只有官方 NANDO 公告机构名录(那是「谁能认证」的目录,不是「判你机器落在哪一类」的工具)、Intertek 与 Danish Technological Institute 在卖评估服务、TÜV SÜD 的新闻稿、Onix 的指南、以及一条与本任务无关的通用法规监控广告(Regology)。这是本次运行唯一经过两族措辞检验仍存活的候选。",
+        "累计命中率(经方法纠错后重算):测 11 条义务,最终存活 **1 条**(machinery),约 **9%**。三轮报过三个数——第 1 轮 75%、第 2 轮 27%、本轮 9%——每次下降都对应一次自己的错误被查出:第 1 轮错在从单一案例推断放行规则,本轮错在只用问句式措辞数工具。**9% 才是目前可信的数,而它仍然只是「通过 G3 的比例」,不是「能赚钱的比例」。**",
+        "第 2 轮留下的那个测量任务仍未完成:第二三个进入者(ppwrconnect、gramta、dpp-tool)是否真做起来了。本轮只查明 gramta 是完整产品且有具名客户,未取得任何一家的经营规模。G3 第二问继续保持关闭。",
+        "搜索健康度:Google 精确词搜索 3 次并直接访问 1 个占位者站点,累计本次运行 12 次查询,未出现验证码或结果异常。Semrush 0 次。"
+      ]
+    },
+    {
+      "round": 4,
+      "sources_opened": [
+        "https://www.google.com/search?q=number+of+machinery+manufacturing+enterprises+in+the+EU+Eurostat+statistics&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=notified+body+EU+type+examination+cost+machinery+CE+marking+consultancy+price&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=machinery+regulation+annex+i+high+risk+category+conformity+assessment&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [
+        "eu-machinery-regulation-risk-category"
+      ],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 0,
+        "rejected_zero_cost": 0,
+        "rejected_g1": 0,
+        "deep_audited": 0,
+        "queued": 0,
+        "carryover_audited": 1
+      },
+      "notes": [
+        "本轮把连续三轮记着欠账的那一项做掉:给唯一存活候选 eu-machinery-regulation-risk-category 找到 G6 两个数的出处。性质要说清——这是**为确认期预备数据,不是 G6 的正式结论**(正式结论要等它到 formation_confirmed)。",
+        "付费者规模侧,两个独立来源同一量级:IBISWorld 给出欧洲 Machinery & Equipment Manufacturing n.e.c.「142k businesses」(2020–2025 CAGR 1.6%);欧委会/Eurostat 的 KS-BW-09-001-10-EN PDF 给出 NACE Subsection DK 为 EU-27「174.0 thousand enterprises」的主营活动。",
+        "但这个数有重要保留,已同时写进候选观察与闸门契约:14.2 万–17.4 万是**行业规模,不是受附件 I 影响的子集**。附件 I 只列特定类别(车辆举升设备、锯床、压机等),真正面临该问的只是其中一部分,比例本次未取得,列为确认期必补的第一项。契约已加硬要求:估算付费者数时必须写出子集比例或说明未取得,不许拿行业规模充数。",
+        "赌注与价格侧:EcoComply 给出机械自我认证 €1,500–5,000+,而**需要 Notified Body 的路径 €13,000+**;mydpp.app(5 天前)给出同一量级;cemarking.net 记述实见  至 ,000 的跨度。结合第 2 轮读到的 4–10 个月评估前置期,判错类别的代价是每个产品线多付约 €8,000–11,000 并多等数月。这种五位数赌注才是付费意愿的依据——契约已加一条:G6 要写清赌注,不能只写任务存在。",
+        "可行单价的类比锚已一并写进契约 G6(均为本次运行现场读到):ppwrcopilot £49–199/月、ppwrconnect €29/月起、Fluxy.One €249、gdprrepresentative €290/年、Carbonfact €1–10/SKU。",
+        "顺带把 machinery 的首份 -track 观察做掉(此前只有 -scan),形成确认的 7 天跨度自今日起算,最早 2026-08-30 可达。观察内含 G0 零成本重核 pass、G1 重跑 pass、以及第三族措辞下的第三次工具计数——仍为 0 个分类工具(本次占位者:EU-OSHA、Intertek、Nemko Digital、LexisNexis、TÜV SÜD、Baker McKenzie、ResearchGate,全是文章与服务方解读)。",
+        "该候选现已用三族措辞检验过(问句式、产品向、法规术语式),三次均 0 个真工具。这是本次运行唯一经受住第 3 轮新增的两族措辞要求的方向。",
+        "如实标注该候选的结构性弱点:按修订后的判据 2,它属「每台/每型号判定一次」那一档,不是持续复购型——复购只来自新机型、重大改装与法规更新。含义是单价结构应偏按次评估或并入更宽的合规订阅,而不是独立月订阅。这是它相对 EPR 那类持续义务的劣势,不应在决策阶段被忽略。",
+        "Semrush 仍为 0 次:候选处于追踪期,契约只允许轻量形成信号探针,而本轮 G6 数据全部来自公开页面;竞品 footprint 实测属确认期动作,留到 formation_confirmed 之后。搜索健康度:Google 精确词搜索 3 次,累计本次运行 15 次,未出现验证码或结果异常。"
+      ]
+    },
+    {
+      "round": 5,
+      "sources_opened": [
+        "https://ppwrcopilot.com/",
+        "https://ppwrcopilot.com/ppwr-de-am-i-a-producer-verpackg-checker",
+        "https://gramta.com/do-i-need-epr"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 0,
+        "rejected_zero_cost": 0,
+        "rejected_g1": 0,
+        "deep_audited": 0,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "本轮性质是闸门校准的第六节,不是扫描轮,funnel 五项全 0。前五轮的判据一直在数「有几个占位者」,从没测过「占位的东西好不好」——本轮亲手用 PPWR 一族的免费入口补这个。边界:只输入非个人信息,一旦要求邮箱/公司信息/注册即停;而「要不要邮箱才给答案」本身就是测量结果。",
+        "本轮出发时要回答的是第 2 轮留下的任务(第二三个进入者是否真做起来了)。答案是**证据不足,第二问维持关闭**:ppwrcopilot 明确在营(£49–199/月 + £545 人工审阅,自述 890+ 份档案、190+ 家机构);ppwrconnect 上线且有定价(€29/月起)但无任何客户量证据;gramta 架构完整、判定器可用,但主 CTA 仍是 Request early access,尚未正式开放。这只构成「还有人在尝试」,不构成「市场能容纳多个进入者」。",
+        "本轮更重要的结论是**「工具 vs 文章」这条判据本身错配**。ppwrcopilot 的 SERP 表面是文章形态(判定页、分国指南),生意是工具形态(付费档案生成器)。它的 /ppwr-de-am-i-a-producer-verpackg-checker 名为 checker 实为高质量判定页(5 情形各给结论、3 步流程、罚款上限 €200,000、Last checked 2026-03-29,并专设一节区分「法律要求 vs 行业惯例」)。按我方判据这一页会被计为文章、得出「位置空着」——而它是通往付费产品的漏斗,背后是 6 个免费单一用途工具 + 3 份分国指南 + methodology + source-status + 不设门的样本档案 PDF + 付费主产品 + £545 服务。**这一族已满足本契约 G8 决策门对全站的要求,新进者面对的是建好了的对手。**",
+        "已把替代判据写进闸门契约 G3(位置在第一问之前):数工具前先问「有没有人已经把这一格当成生意在经营」,看三个信号——内容后面有没有付费产品、有没有按国/按任务的簇、有没有 methodology/source-status/last-checked/change-log 这类维护痕迹。三者齐备即按 veto 处理,不必再数工具形态。这是 G3 在同一天里的第三次修改(数量线 → 工具计数 → 经营信号优先),记下这个次数本身有用:它说明「从一个案例反推判据」有多容易出错。",
+        "machinery 经受住了这一层,且理由更清楚:占位者 Nemko/TÜV SÜD/Intertek/Pilz/Onix/ies.co.uk 确实是经营中的生意,但卖高接触评估服务(€13,000+)、内容是孤立指南而非按附件 I 类别成簇、没有面向该判定的自助付费产品——三个信号只中一个,故仍回到工具计数,三族措辞下均为 0,pass 维持。动机结构也讲得通:公告机构靠预评估与认证收费,做免费分类器会减少自己的咨询需求;而 PPWR 一族的赢家做工具,正因为它没有服务收入要保护。",
+        "如实记两处边界:①gramta 的判定器我点击 Yes 后按钮视觉选中但问卷未推进到第 2 问,**无法区分「工具没接好」与「自动化点击未触发处理函数」,故不下「工具是坏的」这个结论**;整页无任何邮箱输入框,可以确定它不是线索表单。②本轮没有拿到任何一家的真实营收或流量——ppwrcopilot 的 890+/190+ 是自述,另两家连自述都没有。要真正回答「第二个进入者能不能活」需要营收或流量证据,公开页面拿不到,应留到候选进确认期后按契约允许的竞品 footprint 实测去取。",
+        "只测了 PPWR 一族。DPP 一族(passportcraft、dpp-tool、digiprodpass)与 CRA 一族(cyberresilienceact.eu)未做同样的经营信号核对,是下一步可做的。",
+        "预算命中:用户同意的 5 轮已用完。Semrush 全程 0 次,额度未耗尽。搜索健康度:本轮无 Google 查询,3 次站点访问正常;累计本次运行 15 次 Google 查询,全程无验证码或结果异常。"
+      ]
+    }
+  ]
+}

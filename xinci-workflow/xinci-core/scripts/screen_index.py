@@ -27,6 +27,13 @@ from term_normalize import match_kind, normalize, similar
 
 INDEX_NAME = "淘汰方向.jsonl"
 MERGE_THRESHOLD = 3  # 同一结构性模式出现 3 次即应归并进陷阱类别(陷阱类别.md 追加规则)
+
+# 当前闸门版本。闸门契约每次实质修订都要在这里进号。
+# 为什么需要它:索引条目是永久的("永不复活"),而闸门会改。2026-08-23 的反向回测
+# (闸门校准.md)改了 G3 的否决线并给深审加了 G6 入口预检,此前按旧闸门写下的
+# 1400 余条永久否决因此可能包含误杀。记下版本号,check 才能把"旧闸门下的否决"
+# 单独标出来,让闸门修订可以触发选择性重开,而不是把错误永久固化。
+GATE_VERSION = "2026-08-23b"  # b: G6 两条盈利线 + G3 占位否决条件化 + 赛道推论(同日第二次实质修订)
 def _index_path(data_root) -> Path:
     return Path(data_root) / INDEX_NAME
 
@@ -103,7 +110,11 @@ def check(data_root, terms) -> dict:
         row = lambda rec: {"term": term, "matched": rec["term"], "gate": rec.get("gate", ""),
                            "reason": rec.get("reason", ""), "date": rec.get("date", ""),
                            "matched_task": rec.get("task", ""),
-                           "source_urls": rec.get("source_urls", [])}
+                           "source_urls": rec.get("source_urls", []),
+                           "gate_version": rec.get("gate_version", ""),
+                           # 该否决是否出自当前闸门。False 表示它写在闸门修订之前,
+                           # 可能是旧判据下的误杀,值得按现行闸门重看一遍。
+                           "current_gates": rec.get("gate_version", "") == GATE_VERSION}
         if hit:
             seen.append(row(hit))
         elif same:
@@ -133,7 +144,13 @@ def append(data_root, records) -> int:
                     continue
                 existing.append(norm)
                 row = {"date": rec.get("date", ""), "term": term,
-                       "gate": rec.get("gate", ""), "reason": rec.get("reason", "")}
+                       "gate": rec.get("gate", ""), "reason": rec.get("reason", ""),
+                       "gate_version": rec.get("gate_version") or GATE_VERSION,
+                       # 赛道。2026-08-23 开放 mature 道后新增:索引原本只服务新词道,
+                       # 不分道会让两条道的淘汰理由混在一起(新词道死于"Google 已答",
+                       # mature 道死于"量级不够"或"防守太强",不是同一件事)。
+                       # 历史 1502 行全部产自新词道,缺字段即视为 new,语义不变。
+                       "lane": rec.get("lane") or "new"}
                 if rec.get("pattern"):
                     row["pattern"] = rec["pattern"]
                 if rec.get("task"):
@@ -211,11 +228,16 @@ def main(argv=None):
         if a.json:
             print(json.dumps(r, ensure_ascii=False, indent=2))
         else:
+            stale = sum(1 for s in r["seen"] + r["review"] if not s["current_gates"])
             print(f"待查 {len(terms)} 条:精确见过 {len(r['seen'])},疑似重复待快审 {len(r['review'])},新 {len(r['fresh'])}")
+            if stale:
+                print(f"  其中 {stale} 条出自旧闸门(当前闸门版本 {GATE_VERSION}),按现行判据可能是误杀,值得重看")
             for s in r["seen"]:
-                print(f"  [见过] {s['term']} ← {s['date']} {s['matched']} ({s['gate']}: {s['reason']})")
+                tag = "见过" if s["current_gates"] else "见过·旧闸门"
+                print(f"  [{tag}] {s['term']} ← {s['date']} {s['matched']} ({s['gate']}: {s['reason']})")
             for s in r["review"]:
-                print(f"  [疑似重复·须快审] {s['term']} ≈ {s['date']} {s['matched']} ({s['gate']}: {s['reason']})")
+                tag = "疑似重复·须快审" if s["current_gates"] else "疑似重复·须快审·旧闸门"
+                print(f"  [{tag}] {s['term']} ≈ {s['date']} {s['matched']} ({s['gate']}: {s['reason']})")
             for t in r["fresh"]:
                 print(f"  [新] {t}")
         return 0

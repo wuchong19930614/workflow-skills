@@ -1,0 +1,28 @@
+{
+  "slug": "eu-machinery-regulation-risk-category",
+  "observed_at": "2026-08-23T11:25:58+00:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=machinery+regulation+annex+i+high+risk+category+conformity+assessment&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=number+of+machinery+manufacturing+enterprises+in+the+EU+Eurostat+statistics&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=notified+body+EU+type+examination+cost+machinery+CE+marking+consultancy+price&gl=us&hl=en&pws=0"
+  ],
+  "points": [
+    "本候选的首份 -track 观察,形成确认的 7 天跨度自今日起算(最早 2026-08-30 可达)。",
+    "G0 零成本重核:机械制造商判定自己产品的符合性评估路径是常规合规任务,未见违法、违反 ToS、欺诈供血或规避工具信号,G0 保持 pass。",
+    "G1 重跑(第三族措辞,美区桌面未登录):首屏无 featured snippet、无原生组件、无 knowledge panel、无 AI Overview。G1=pass。",
+    "G3 变化复看——这是第三族措辞下的第三次工具计数,仍为 0 个分类工具。本次占位者:EU-OSHA(法规条目)、Intertek(讲 Annex I Part B 可走 Module A 的条件)、Nemko Digital(指出 AI 承担安全功能即落入高风险)、LexisNexis、TÜV SÜD、Baker McKenzie、ResearchGate 论文。全部是文章与服务方解读,无一是替用户判定的工具。",
+    "按闸门契约 G3 第一问的两族措辞要求,本候选已用三族措辞检验(问句式、产品向 software/tool/checker、法规术语式),三次均 0 个真工具——这是本次运行唯一经受住该检验的方向。",
+    "G6 预备数据(付费者规模侧,两个独立来源同一量级):IBISWorld 给出欧洲 Machinery & Equipment Manufacturing n.e.c. 行业「142k businesses」(2020–2025 CAGR 1.6%);欧委会/Eurostat 的 KS-BW-09-001-10-EN PDF 给出 NACE Subsection DK 机械设备制造为 EU-27「174.0 thousand enterprises」的主营活动(2006 年数据)。另 Eurostat 口径:EU 制造业共 220 万家企业,且全 EU 企业 99% 为微型与小型。",
+    "付费者规模的重要保留:上述 14.2 万–17.4 万是**行业规模,不是受附件 I 影响的子集**。附件 I 只列举特定类别(车辆举升设备、锯床、压机等),真正面临「我是否落入高风险」这一问的是其中一部分。这个子集的比例本次未取得,是确认期必须补的第一项。",
+    "G6 预备数据(赌注与价格侧):EcoComply 给出 CE 标记成本区间——实验室检测约 €400–1,500,机械 €1,500–5,000+,而**需要 Notified Body 的路径 €13,000+**;mydpp.app(5 天前)给出同一量级(自我认证 €400–1,500,无线设备 €1,500–3,000+,需公告机构的路径更高);cemarking.net 记述实际见到过 $64 至 $64,000 的跨度。结合第 2 轮读到的评估前置期常为 4–10 个月,判错类别的代价是每个产品线多付约 €8,000–11,000 并多等数月。",
+    "可行单价的类比锚(均为本次运行现场读到的同类合规工具定价):ppwrcopilot £49–199/月、ppwrconnect €29/月起、Fluxy.One 的 GPSR 方案 €249、gdprrepresentative 的责任人服务 €290/年、Carbonfact 给出的纺织 DPP 实际成本 €1–10/SKU。",
+    "按修订后的判据 2 如实标注复购形态:本方向属「每台/每型号判定一次」那一档,不是持续复购型。复购只来自新机型、重大改装与法规更新。含义是单价结构应偏向按次评估或并入更宽的合规订阅,而不是独立的月订阅——这是它相对 EPR 那类持续义务的结构性弱点。",
+    "本次未跑 Semrush:候选处于追踪期,契约只允许轻量形成信号探针,而上述 G6 数据全部来自公开页面;竞品 footprint 实测属确认期动作,留到 formation_confirmed 之后。"
+  ],
+  "gates": {
+    "G0": "pass",
+    "G1": "pass",
+    "G3": "pass"
+  }
+}

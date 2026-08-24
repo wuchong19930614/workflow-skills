@@ -1,0 +1,197 @@
+{
+  "date": "2026-08-21",
+  "skill": "xinci-run",
+  "run_id": "run-20260821T063007Z-bef1c6da",
+  "sources_opened": [
+    "https://www.reddit.com/r/all/rising/",
+    "https://www.reddit.com/r/sysadmin+msp+devops+selfhosted+Accounting+smallbusiness+HVAC+electricians+solar+photography/new/",
+    "https://www.reddit.com/r/sysadmin+msp+devops+selfhosted+Accounting+smallbusiness+HVAC+electricians+solar+photography/top/?t=week",
+    "https://www.reddit.com/search/?q=%22is+there+a+name+for%22&sort=new&t=month",
+    "https://www.google.com/search?q=self-hosted+email+going+to+gmail+spam+how+to+fix&gl=us&hl=en&pws=0",
+    "https://www.reddit.com/r/3Dprinting+LocalLLaMA+buildapc+electricvehicles+flipperzero+homeassistant+homelab/top/?t=day",
+    "https://www.google.com/search?q=deepseek+v4+flash+vram+requirements&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=%22Aurora-80K%22+model&gl=us&hl=en&pws=0",
+    "https://www.reddit.com/r/AmazonSeller+Etsy+EtsySellers+FulfillmentByAmazon+ecommerce+shopify/top/?t=week",
+    "https://www.google.com/search?q=shopify+bot+traffic+from+singapore&gl=us&hl=en&pws=0",
+    "https://www.reddit.com/r/sysadmin/search/?q=broken+OR+down+OR+failing+OR+bricked&restrict_sr=1&sort=new&t=day",
+    "https://www.google.com/search?q=win32k.sys+stopcode+0x1a+bsod+spreading+2026&gl=us&hl=en&pws=0",
+    "https://www.reddit.com/r/Biohackers+Daytrading+Fitness+nutrition+options+productivity/top/?t=week",
+    "https://www.google.com/search?q=thorne+acquired+by+p%26g+supplement+quality+alternatives&gl=us&hl=en&pws=0"
+  ],
+  "sources_blocked": [],
+  "candidates_touched": [],
+  "billable_calls": 0,
+  "notes": [
+    "本次运行是上一轮运行(run-20260821T024756Z-a2592003,10 轮预算用完)之后,由用户在自己的 Chrome 里打开 Reddit 后开的新会话,预算 max_rounds=5,专打上一次运行唯一没测到的一面:社区对新事物的自然语言叫法。Reddit 在用户 Chrome 中可达(站点做了一次 JS 校验并自动通过,不是我过的验证码);Stack Overflow 用户表示稍后注册再解决,本次仍不可用。",
+    "步骤 1 无待办:captured 存量 0;tracking 11 个的第二份 -track 观察最早 2026-08-27 才满 7 天跨度,今天复查推不动状态,按反空烧纪律不动。carryover_audited=0。",
+    "本轮检验的假设是我此前八个陷阱类别都没覆盖的那条缝:全部死因都建立在「维护者用官方措辞写了答案」上,那么如果社区给新事物起了自己的叫法,官方页就未必在这个措辞上排名。",
+    "假设在三个探针上都不成立,而且失败方式各不相同,值得分别记下。①专业版 /new(10 个有预算群体的子版,25 条):几乎全是求职、职业咨询与个案求助,没有新事物命名。②同一批子版本周 /top(25 条):梗图、吐槽、晒机与晒仪表盘为主。③直接探命名空缺的「is there a name for」近月搜索(7 条):确实全是没有权威叫法的东西,但全落在消费者好奇心一侧(情绪、猫身上的白斑、鸡尾酒、恐惧症),付费者一环不成立——G6 的四项里缺「有预算付费者」与「自助变现路径」两项。",
+    "由此新增一条待验证 pattern「消费者好奇型命名空缺」:命名空缺真实存在,但它系统性地出现在没人付钱的地方。这与上一次运行的统一结论互补——那条说「付费者有钱就一定有人维护答案」,这条说「没人维护答案的地方通常没人付钱」,两条合起来是同一个约束的两面。",
+    "本轮唯一走到 G1 的方向是 google spams self-hosted email deliverability(Reddit 6452 分、467 评论,本周该批子版第 2 名)。特意选它是因为「厂商不会写怎么绕过自己的垃圾邮件判定」这一点确实成立,不属类别八的一次性开关。G1 pass,但 G3 决定性 veto 且非新词:r/selfhosted 有 6 年前的同问题线程,LinuxCommunity.io(2024-01)已给出完整清单,DuoCircle(2026-03)十步指南、四条 YouTube 教程(2022-07 至 2025-11)、HN Ask(2022-05)、Google 自家支持帖(2026-07)全部在位。6452 分是对一个四年老问题的新一轮愤怒,已按 pattern「讨论热度不等于新词」留痕。",
+    "提取 59 条(去重后全新),全部死在零成本批或该次 G3 现场验证;0 次深审,0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,未出现验证码或结果异常;Reddit 在用户 Chrome 中 4 次取页均正常。",
+    "注意一处环境事实以免误读:用户 Chrome 带登录态,/r/all/rising 被 Reddit 重定向到个性化 rising(取回的 3 条是宠物与同人),因此后续改用显式多子版聚合页与站内搜索,避开个性化首页。",
+    "步骤 1 无待办:captured 存量 0;tracking 11 个最早 2026-08-27 才满 7 天跨度。carryover_audited=0。",
+    "第 1 轮的教训是「命名信号不在专业版的职业闲聊里」,本轮据此换到对象密集的子版(r/LocalLLaMA、r/homeassistant、r/3Dprinting、r/homelab、r/buildapc、r/electricvehicles、r/flipperzero 当日榜)。素材质量确实不同:24 小时内就出现 Deepseek V4 Flash-0731、Hunyuan Hy4、Aurora-80K、Kia PV5、2027 Chevy Bolt、Bronze composite PLA 等全新命名对象。",
+    "本轮做了陷阱类别一明确要求的那件事——实测收录时差(该类别是验证型,理由正是「收录时差可能 4 天也可能几个月,不实测就只能猜」)。测了两个对象,结果把该类别的窗口赌注出口基本关上,已作为补记写进陷阱类别.md 类别一。",
+    "实测一:deepseek v4 flash-0731(有真实部署需求)根本不新,0731 即 7 月 31 日,Reddit 线程可追到三个月前;ApX Machine Learning 已按模型逐个建页并列出各量化档显存需求,WaveSpeedAI 指南发于 2026-03-03,ktransformers 文档直接给出硬件要求。G3=veto。",
+    "实测二:aurora-80k 发布 18 小时,发布方自己的 HuggingFace 模型卡与文件树已被收录并排第 2 位(文件树页自述 Added Core files in about 11 hours);通用显存计算器确实未收它,但它是正好 8 万参数、权重约 0.3MB 的玩具模型,没有任何人被迫使用——G6 的付费者与自助变现两项直接不成立。",
+    "两条合起来是一个互斥结构,也是本轮最有价值的结论:发布方自身页面的收录时差是**小时级**,通用工具的收录时差是**天级**;而通用工具只收有人真部署的模型。所以「通用工具还没收录」这个空位只存在于**没有任务**的那一行。想赌窗口就必须挑有任务的对象,而那一行恰恰是通用工具覆盖最快的。由此得到一条零成本预判:先问这个新对象有没有人被迫用它,答「没有」就在 G6 预筛出局,不必再花 G3 测收录时差。",
+    "另记一处措辞层面的坑:Aurora 80k 这个串与英雄联盟角色、薪资查询、服装商品列表严重碰撞。新对象的名字是否可搜,本身是个应该在零成本批就看一眼的事——名字太通用的对象,即使有任务也拿不到干净的查询。",
+    "提取 25 条(去重后全新),全部死在零成本批或两次现场 G3 验证;深审记 1 次(deepseek v4 flash 与 aurora-80k 合并为一次类别一验证,读了两个查询的完整首页);0 次 Semrush。搜索健康度:Google 精确词搜索 2 次,累计本次运行 3 次,未出现验证码或结果异常。",
+    "本轮的工作假设是本次会话里最有希望的一条,值得完整记下来以免后人重走:平台卖家群体(亚马逊/Etsy/Shopify)有真金白银、被平台政策变动反复逼着行动、且自己造词;而我以为平台官方帮助文档在**登录墙之后**,按闸门契约 G3 三分判据属「结构上进不来 SERP」,不占据位置——那正是 G3 判 pass 的那一支。",
+    "假设被现场实测直接推翻。以 shopify bot traffic from singapore(r/shopify 本周帖,33 评论)验证:community.shopify.com **完全公开且被完整收录**,以 5 条线程霸占首页(2026-04-22、2025-11-10、2025-12-27、2026-04-24、2026-04-07),每条都给出可执行答案(按国家 geo-block 新加坡、开启 Bot fight mode);另有 community.shopify.dev(2026-04-28)与 securecommerce.io 的专门页 Block Singapore Traffic on Shopify。登录墙挡的是卖家后台,不是帮助与社区内容。",
+    "由此得到全集维护者的**第三个变体**,已按 pattern「平台官方社区论坛即全集维护者」留痕:前两个变体是管辖机构自己的对象分页(类别六)与行业协会/四大的汇总页(第 7、9 轮),这一个是平台自家用户论坛——它按问题变体逐个建帖、公开可索引、且时间跨度以年计。对平台生态里的任何「怎么处理 X」,这个论坛就是在位答案。",
+    "另一次「讨论热度不等于新词」的确认:该新加坡机器人流量问题的线程可追到 2025-08,Reddit 本周帖是老问题的新一轮。这是本次会话第三次遇到同一形态(前两次是 cloudflare injects analytics 与 self-hosted email gmail spam),该 pattern 现已累计 3 次,但三例全落在同一天、同一来源家族(HN/Reddit),按独立性要求只构成待验证假设,未新建类别。",
+    "提取 25 条(去重后全新),全部死在零成本批或该次 G3 现场验证;深审 1 次;0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,累计本次运行 4 次,未出现验证码或结果异常;Reddit 在用户 Chrome 中取页正常。",
+    "本轮测的是社区面最后一个纯粹形态:**刚刚坏掉的东西**。前三轮每次都撞上「老问题的新一轮愤怒」,所以这次专挑几小时内发生的故障——付费者是被迫立刻处理的企业 IT,窗口按小时计,厂商的 KB 通常滞后。取素材用 r/sysadmin 站内搜索(broken/down/failing/bricked,近一日,按时间排)。",
+    "唯一形态对的是 Win32k.sys Stopcode (0x-1A). Issue spreading?(8 小时前)。实测否决,并得到一条新的钳形判据(已按 pattern「故障措辞两头都被占」留痕):**东西坏掉时,可搜的措辞要么是老的通用错误码,要么是新的版本号/KB 号**。0x1A MEMORY_MANAGEMENT 与 win32k.sys 属前者——r/buildapc(7 个月前 90+ 评论)、Microsoft Learn Q&A(2025-12、2026-05)、HP 与 Acer 官方社区、tenforums(2017)、修复视频全部在位,是互联网上最饱和的一类查询;若换成后者(某个 KB 引发蓝屏),则落进类别四由发布方 release notes 自带答案。两头都被占。",
+    "另记一处判断细节:该帖只有 8 赞 4 评论,SERP 也没有出现补丁相关的新鲜聚集,因此更可能是个案硬件问题而非扩散事件。这一点提醒:社区帖的早期票数与评论数是判断「共有问题 vs 个案」的可用信号,不该只看标题里有没有 spreading。",
+    "提取 7 条(去重后全新),全部死在零成本批或该次 G3 现场验证;深审 1 次;0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,累计本次运行 5 次,未出现验证码或结果异常。",
+    "本轮测社区面最后一个未试形态:社区给「做法/技法」造的词(健身、biohacking、交易、生产力)。选它的理由是——跟模型、法规、产品不同,俚语按定义没有全集维护者,而这些垂类的受众确实为产品花钱。",
+    "结果:本周这些子版没有产出任何新造词。25 条里是动员型鸡汤、盈亏晒单、观点吐槽,以及最饱和的一类常青提问(哪种补剂对焦虑/抑郁有效、睡够 8 小时还是昏沉、什么真的让你瘦了)。俚语确实没有全集维护者,但**本周没有新俚语被造出来**;而这些垂类既有的问题是全网 YMYL 竞争最激烈的一档。",
+    "唯一带新对象且有钱的是 p&g buying thorne(2026-08-04 宣布 38 亿美元收购),它给出本次会话**最紧的窗口测量**:P&G 自家新闻室页与 CNBC 当天即在位,Nutraceutical Business Review 次日跟上,一周内出现行业分析视频与多个营养师短视频(最近一条 4 小时前),r/Supplements 250+ 评论线程已把换牌讨论完;People also ask 直接是「Pure 还是 Thorne 更好」。补剂是本次会话见过联盟佣金最强的垂类,占位速度也最快——**窗口约 1 天**。这是陷阱类别七的第 4 例。",
+    "把本次会话测到的窗口按付费者金额排一下,规律非常干净:补剂消费(佣金最强)约 1 天;律所服务的 B2B 强制任务 3–5 小时;通用 AI 工具收录新模型 4 天;竞品迁移内容 4 天;发布方自身页面小时级。**付费者越有钱,窗口越短**——这正是上一次运行结论的定量版本。",
+    "提取 25 条(去重后全新),全部死在零成本批或该次 G3 现场验证;深审 1 次;0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,累计本次运行 6 次,全程未出现验证码、限流或结果异常;Reddit 在用户 Chrome 中全程可用。",
+    "预算命中:用户同意的 5 轮已用完。本次运行未产出任何 go 决策,未产出 formation_confirmed,Semrush 一次未用、额度未耗尽,未撞 blocker(Stack Overflow 仍不可用,用户表示稍后注册再解决)。"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "sources_opened": [
+        "https://www.reddit.com/r/all/rising/",
+        "https://www.reddit.com/r/sysadmin+msp+devops+selfhosted+Accounting+smallbusiness+HVAC+electricians+solar+photography/new/",
+        "https://www.reddit.com/r/sysadmin+msp+devops+selfhosted+Accounting+smallbusiness+HVAC+electricians+solar+photography/top/?t=week",
+        "https://www.reddit.com/search/?q=%22is+there+a+name+for%22&sort=new&t=month",
+        "https://www.google.com/search?q=self-hosted+email+going+to+gmail+spam+how+to+fix&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 59,
+        "rejected_zero_cost": 58,
+        "rejected_g1": 0,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "本次运行是上一轮运行(run-20260821T024756Z-a2592003,10 轮预算用完)之后,由用户在自己的 Chrome 里打开 Reddit 后开的新会话,预算 max_rounds=5,专打上一次运行唯一没测到的一面:社区对新事物的自然语言叫法。Reddit 在用户 Chrome 中可达(站点做了一次 JS 校验并自动通过,不是我过的验证码);Stack Overflow 用户表示稍后注册再解决,本次仍不可用。",
+        "步骤 1 无待办:captured 存量 0;tracking 11 个的第二份 -track 观察最早 2026-08-27 才满 7 天跨度,今天复查推不动状态,按反空烧纪律不动。carryover_audited=0。",
+        "本轮检验的假设是我此前八个陷阱类别都没覆盖的那条缝:全部死因都建立在「维护者用官方措辞写了答案」上,那么如果社区给新事物起了自己的叫法,官方页就未必在这个措辞上排名。",
+        "假设在三个探针上都不成立,而且失败方式各不相同,值得分别记下。①专业版 /new(10 个有预算群体的子版,25 条):几乎全是求职、职业咨询与个案求助,没有新事物命名。②同一批子版本周 /top(25 条):梗图、吐槽、晒机与晒仪表盘为主。③直接探命名空缺的「is there a name for」近月搜索(7 条):确实全是没有权威叫法的东西,但全落在消费者好奇心一侧(情绪、猫身上的白斑、鸡尾酒、恐惧症),付费者一环不成立——G6 的四项里缺「有预算付费者」与「自助变现路径」两项。",
+        "由此新增一条待验证 pattern「消费者好奇型命名空缺」:命名空缺真实存在,但它系统性地出现在没人付钱的地方。这与上一次运行的统一结论互补——那条说「付费者有钱就一定有人维护答案」,这条说「没人维护答案的地方通常没人付钱」,两条合起来是同一个约束的两面。",
+        "本轮唯一走到 G1 的方向是 google spams self-hosted email deliverability(Reddit 6452 分、467 评论,本周该批子版第 2 名)。特意选它是因为「厂商不会写怎么绕过自己的垃圾邮件判定」这一点确实成立,不属类别八的一次性开关。G1 pass,但 G3 决定性 veto 且非新词:r/selfhosted 有 6 年前的同问题线程,LinuxCommunity.io(2024-01)已给出完整清单,DuoCircle(2026-03)十步指南、四条 YouTube 教程(2022-07 至 2025-11)、HN Ask(2022-05)、Google 自家支持帖(2026-07)全部在位。6452 分是对一个四年老问题的新一轮愤怒,已按 pattern「讨论热度不等于新词」留痕。",
+        "提取 59 条(去重后全新),全部死在零成本批或该次 G3 现场验证;0 次深审,0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,未出现验证码或结果异常;Reddit 在用户 Chrome 中 4 次取页均正常。",
+        "注意一处环境事实以免误读:用户 Chrome 带登录态,/r/all/rising 被 Reddit 重定向到个性化 rising(取回的 3 条是宠物与同人),因此后续改用显式多子版聚合页与站内搜索,避开个性化首页。"
+      ]
+    },
+    {
+      "round": 2,
+      "sources_opened": [
+        "https://www.reddit.com/r/3Dprinting+LocalLLaMA+buildapc+electricvehicles+flipperzero+homeassistant+homelab/top/?t=day",
+        "https://www.google.com/search?q=deepseek+v4+flash+vram+requirements&gl=us&hl=en&pws=0",
+        "https://www.google.com/search?q=%22Aurora-80K%22+model&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 25,
+        "rejected_zero_cost": 24,
+        "rejected_g1": 0,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "步骤 1 无待办:captured 存量 0;tracking 11 个最早 2026-08-27 才满 7 天跨度。carryover_audited=0。",
+        "第 1 轮的教训是「命名信号不在专业版的职业闲聊里」,本轮据此换到对象密集的子版(r/LocalLLaMA、r/homeassistant、r/3Dprinting、r/homelab、r/buildapc、r/electricvehicles、r/flipperzero 当日榜)。素材质量确实不同:24 小时内就出现 Deepseek V4 Flash-0731、Hunyuan Hy4、Aurora-80K、Kia PV5、2027 Chevy Bolt、Bronze composite PLA 等全新命名对象。",
+        "本轮做了陷阱类别一明确要求的那件事——实测收录时差(该类别是验证型,理由正是「收录时差可能 4 天也可能几个月,不实测就只能猜」)。测了两个对象,结果把该类别的窗口赌注出口基本关上,已作为补记写进陷阱类别.md 类别一。",
+        "实测一:deepseek v4 flash-0731(有真实部署需求)根本不新,0731 即 7 月 31 日,Reddit 线程可追到三个月前;ApX Machine Learning 已按模型逐个建页并列出各量化档显存需求,WaveSpeedAI 指南发于 2026-03-03,ktransformers 文档直接给出硬件要求。G3=veto。",
+        "实测二:aurora-80k 发布 18 小时,发布方自己的 HuggingFace 模型卡与文件树已被收录并排第 2 位(文件树页自述 Added Core files in about 11 hours);通用显存计算器确实未收它,但它是正好 8 万参数、权重约 0.3MB 的玩具模型,没有任何人被迫使用——G6 的付费者与自助变现两项直接不成立。",
+        "两条合起来是一个互斥结构,也是本轮最有价值的结论:发布方自身页面的收录时差是**小时级**,通用工具的收录时差是**天级**;而通用工具只收有人真部署的模型。所以「通用工具还没收录」这个空位只存在于**没有任务**的那一行。想赌窗口就必须挑有任务的对象,而那一行恰恰是通用工具覆盖最快的。由此得到一条零成本预判:先问这个新对象有没有人被迫用它,答「没有」就在 G6 预筛出局,不必再花 G3 测收录时差。",
+        "另记一处措辞层面的坑:Aurora 80k 这个串与英雄联盟角色、薪资查询、服装商品列表严重碰撞。新对象的名字是否可搜,本身是个应该在零成本批就看一眼的事——名字太通用的对象,即使有任务也拿不到干净的查询。",
+        "提取 25 条(去重后全新),全部死在零成本批或两次现场 G3 验证;深审记 1 次(deepseek v4 flash 与 aurora-80k 合并为一次类别一验证,读了两个查询的完整首页);0 次 Semrush。搜索健康度:Google 精确词搜索 2 次,累计本次运行 3 次,未出现验证码或结果异常。"
+      ]
+    },
+    {
+      "round": 3,
+      "sources_opened": [
+        "https://www.reddit.com/r/AmazonSeller+Etsy+EtsySellers+FulfillmentByAmazon+ecommerce+shopify/top/?t=week",
+        "https://www.google.com/search?q=shopify+bot+traffic+from+singapore&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 25,
+        "rejected_zero_cost": 24,
+        "rejected_g1": 0,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "步骤 1 无待办:captured 存量 0;tracking 11 个最早 2026-08-27 才满 7 天跨度。carryover_audited=0。",
+        "本轮的工作假设是本次会话里最有希望的一条,值得完整记下来以免后人重走:平台卖家群体(亚马逊/Etsy/Shopify)有真金白银、被平台政策变动反复逼着行动、且自己造词;而我以为平台官方帮助文档在**登录墙之后**,按闸门契约 G3 三分判据属「结构上进不来 SERP」,不占据位置——那正是 G3 判 pass 的那一支。",
+        "假设被现场实测直接推翻。以 shopify bot traffic from singapore(r/shopify 本周帖,33 评论)验证:community.shopify.com **完全公开且被完整收录**,以 5 条线程霸占首页(2026-04-22、2025-11-10、2025-12-27、2026-04-24、2026-04-07),每条都给出可执行答案(按国家 geo-block 新加坡、开启 Bot fight mode);另有 community.shopify.dev(2026-04-28)与 securecommerce.io 的专门页 Block Singapore Traffic on Shopify。登录墙挡的是卖家后台,不是帮助与社区内容。",
+        "由此得到全集维护者的**第三个变体**,已按 pattern「平台官方社区论坛即全集维护者」留痕:前两个变体是管辖机构自己的对象分页(类别六)与行业协会/四大的汇总页(第 7、9 轮),这一个是平台自家用户论坛——它按问题变体逐个建帖、公开可索引、且时间跨度以年计。对平台生态里的任何「怎么处理 X」,这个论坛就是在位答案。",
+        "另一次「讨论热度不等于新词」的确认:该新加坡机器人流量问题的线程可追到 2025-08,Reddit 本周帖是老问题的新一轮。这是本次会话第三次遇到同一形态(前两次是 cloudflare injects analytics 与 self-hosted email gmail spam),该 pattern 现已累计 3 次,但三例全落在同一天、同一来源家族(HN/Reddit),按独立性要求只构成待验证假设,未新建类别。",
+        "提取 25 条(去重后全新),全部死在零成本批或该次 G3 现场验证;深审 1 次;0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,累计本次运行 4 次,未出现验证码或结果异常;Reddit 在用户 Chrome 中取页正常。"
+      ]
+    },
+    {
+      "round": 4,
+      "sources_opened": [
+        "https://www.reddit.com/r/sysadmin/search/?q=broken+OR+down+OR+failing+OR+bricked&restrict_sr=1&sort=new&t=day",
+        "https://www.google.com/search?q=win32k.sys+stopcode+0x1a+bsod+spreading+2026&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 7,
+        "rejected_zero_cost": 6,
+        "rejected_g1": 0,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "步骤 1 无待办:captured 存量 0;tracking 11 个最早 2026-08-27 才满 7 天跨度。carryover_audited=0。",
+        "本轮测的是社区面最后一个纯粹形态:**刚刚坏掉的东西**。前三轮每次都撞上「老问题的新一轮愤怒」,所以这次专挑几小时内发生的故障——付费者是被迫立刻处理的企业 IT,窗口按小时计,厂商的 KB 通常滞后。取素材用 r/sysadmin 站内搜索(broken/down/failing/bricked,近一日,按时间排)。",
+        "唯一形态对的是 Win32k.sys Stopcode (0x-1A). Issue spreading?(8 小时前)。实测否决,并得到一条新的钳形判据(已按 pattern「故障措辞两头都被占」留痕):**东西坏掉时,可搜的措辞要么是老的通用错误码,要么是新的版本号/KB 号**。0x1A MEMORY_MANAGEMENT 与 win32k.sys 属前者——r/buildapc(7 个月前 90+ 评论)、Microsoft Learn Q&A(2025-12、2026-05)、HP 与 Acer 官方社区、tenforums(2017)、修复视频全部在位,是互联网上最饱和的一类查询;若换成后者(某个 KB 引发蓝屏),则落进类别四由发布方 release notes 自带答案。两头都被占。",
+        "另记一处判断细节:该帖只有 8 赞 4 评论,SERP 也没有出现补丁相关的新鲜聚集,因此更可能是个案硬件问题而非扩散事件。这一点提醒:社区帖的早期票数与评论数是判断「共有问题 vs 个案」的可用信号,不该只看标题里有没有 spreading。",
+        "提取 7 条(去重后全新),全部死在零成本批或该次 G3 现场验证;深审 1 次;0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,累计本次运行 5 次,未出现验证码或结果异常。"
+      ]
+    },
+    {
+      "round": 5,
+      "sources_opened": [
+        "https://www.reddit.com/r/Biohackers+Daytrading+Fitness+nutrition+options+productivity/top/?t=week",
+        "https://www.google.com/search?q=thorne+acquired+by+p%26g+supplement+quality+alternatives&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 25,
+        "rejected_zero_cost": 24,
+        "rejected_g1": 0,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "步骤 1 无待办:captured 存量 0;tracking 11 个最早 2026-08-27 才满 7 天跨度。carryover_audited=0。",
+        "本轮测社区面最后一个未试形态:社区给「做法/技法」造的词(健身、biohacking、交易、生产力)。选它的理由是——跟模型、法规、产品不同,俚语按定义没有全集维护者,而这些垂类的受众确实为产品花钱。",
+        "结果:本周这些子版没有产出任何新造词。25 条里是动员型鸡汤、盈亏晒单、观点吐槽,以及最饱和的一类常青提问(哪种补剂对焦虑/抑郁有效、睡够 8 小时还是昏沉、什么真的让你瘦了)。俚语确实没有全集维护者,但**本周没有新俚语被造出来**;而这些垂类既有的问题是全网 YMYL 竞争最激烈的一档。",
+        "唯一带新对象且有钱的是 p&g buying thorne(2026-08-04 宣布 38 亿美元收购),它给出本次会话**最紧的窗口测量**:P&G 自家新闻室页与 CNBC 当天即在位,Nutraceutical Business Review 次日跟上,一周内出现行业分析视频与多个营养师短视频(最近一条 4 小时前),r/Supplements 250+ 评论线程已把换牌讨论完;People also ask 直接是「Pure 还是 Thorne 更好」。补剂是本次会话见过联盟佣金最强的垂类,占位速度也最快——**窗口约 1 天**。这是陷阱类别七的第 4 例。",
+        "把本次会话测到的窗口按付费者金额排一下,规律非常干净:补剂消费(佣金最强)约 1 天;律所服务的 B2B 强制任务 3–5 小时;通用 AI 工具收录新模型 4 天;竞品迁移内容 4 天;发布方自身页面小时级。**付费者越有钱,窗口越短**——这正是上一次运行结论的定量版本。",
+        "提取 25 条(去重后全新),全部死在零成本批或该次 G3 现场验证;深审 1 次;0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,累计本次运行 6 次,全程未出现验证码、限流或结果异常;Reddit 在用户 Chrome 中全程可用。",
+        "预算命中:用户同意的 5 轮已用完。本次运行未产出任何 go 决策,未产出 formation_confirmed,Semrush 一次未用、额度未耗尽,未撞 blocker(Stack Overflow 仍不可用,用户表示稍后注册再解决)。"
+      ]
+    }
+  ]
+}

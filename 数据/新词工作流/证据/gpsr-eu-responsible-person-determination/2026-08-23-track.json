@@ -1,0 +1,19 @@
+{
+  "slug": "gpsr-eu-responsible-person-determination",
+  "observed_at": "2026-08-23T11:25:58+00:00",
+  "stage": "track",
+  "source_urls": [
+    "https://www.google.com/search?q=GPSR+compliance+software+responsible+person+platform+tool+sellers&gl=us&hl=en&pws=0"
+  ],
+  "points": [
+    "同一方法纠错的第二例,依据是本轮新取的产品向措辞检索。",
+    "第 1 轮用问句式措辞只数到 1 个真工具(gdprrepresentative 的 Free Check),据此判 pass。",
+    "产品向措辞下真工具 ≥4 且形态更硬:Sustalium 的 GPSR 合规软件(自述自动化责任人指定、安全文件管理、事故报送、平台合规)、Fluxy.One 的 GPSR 方案(€249 明码,含 10 年存档与自动合规标签)、Taxually 面向 Amazon 卖家的责任人服务平台、Lappa 的 GPSR 责任人托管。",
+    "另有两个更关键的占位者:**Amazon 自己**在卖家后台提供 Add compliance information widget(据 Carbon6 记述),以及 r/AmazonFBATips 上一位独立开发者做的**免费 GPSR Checker**(自述可校验 listing 上的 RP 信息)。平台自带工具 + 免费独立工具同时存在,是这一格已被做透的直接证据。",
+    "按现行 G3:≥2 个真工具 → 第三问 → 均持续可见 → veto。",
+    "G0/G1/G4/G5 本次未重跑,沿用第 1 轮结论,不并入本次 gates。"
+  ],
+  "gates": {
+    "G3": "veto"
+  }
+}

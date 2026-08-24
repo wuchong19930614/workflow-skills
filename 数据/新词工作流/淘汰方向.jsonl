@@ -821,3 +821,686 @@
 {"date": "2026-08-21", "term": "fda endocrinologic metabolic drugs advisory committee renewal", "gate": "G6", "reason": "咨询委员会续期公告,无任务", "pattern": "无任务通知"}
 {"date": "2026-08-21", "term": "fda potency assessment active immunotherapy draft guidance", "gate": "G5", "reason": "命中陷阱类别三:付费者是生物药企,法规咨询与 CRO 行业已占位", "pattern": "厂商已占位的 B2B 强制任务"}
 {"date": "2026-08-21", "term": "aliexpress webaudio fingerprinting bluetooth multipoint", "gate": "G7", "reason": "G1 已跑并 pass,但整页是同一篇博文 24 小时内的新闻扩散(HN/X/Reddit/Threads/V2EX/Lemmy 同稿);属只产生一周好奇、无被迫重复任务、无付费者的方向,本应在零成本批筛掉,G1 是多花的", "pattern": "好奇非任务"}
+{"date": "2026-08-21", "term": "berkeley law ai use policy", "gate": "G6", "reason": "单个法学院的课堂政策,没有有预算的付费者被迫重复做的任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "no small software team anymore", "gate": "G6", "reason": "观点随笔,提不出任何页面能完成的任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "6 tesla hts dipole magnet 4.2k", "gate": "G4", "reason": "任务需要实验室低温与超导材料实做,无法完全在线完成"}
+{"date": "2026-08-21", "term": "hacking with claude on 27 dollar smart watch", "gate": "G6", "reason": "个人玩法分享,无被迫或重复任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "stop anthropomorphizing intermediate tokens", "gate": "G6", "reason": "arXiv 论述观点,无可由页面完成的付费者任务", "pattern": "科研新闻无付费者任务"}
+{"date": "2026-08-21", "term": "parqdb vector search in browser parquet", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布,搜索需求只有品牌本身", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "early life stress scar brain cells", "gate": "G6", "reason": "科研新闻,无任务", "pattern": "科研新闻无付费者任务"}
+{"date": "2026-08-21", "term": "tiktok instagram deactivates cognitive control network", "gate": "G6", "reason": "科研新闻,无被迫任务", "pattern": "科研新闻无付费者任务"}
+{"date": "2026-08-21", "term": "windows rorschach test oldnewthing", "gate": "G6", "reason": "2003 年旧文回流,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "project cybersyn", "gate": "G6", "reason": "历史题材长文,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "turns are better than radians", "gate": "G6", "reason": "数学表示法观点旧文,无被迫任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "the citizen developer massdriver", "gate": "G6", "reason": "厂商博客观点文,无被迫重复任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "wonders of male human pelvis", "gate": "G6", "reason": "科普长文,无任务", "pattern": "科研新闻无付费者任务"}
+{"date": "2026-08-21", "term": "omacosy omarchy tiling desktop macos no sip", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "open source stripe connect alternative zoneless", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "elliptic curve of rank 30", "gate": "G6", "reason": "数学成果新闻,无付费者任务", "pattern": "科研新闻无付费者任务"}
+{"date": "2026-08-21", "term": "ameliorate app", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "slack code salesforce", "gate": "G5", "reason": "命中陷阱类别四:厂商新产品发布,官方文档同步自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "chased a weather balloon across montana", "gate": "G6", "reason": "个人经历随笔,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "biggest 2d map of the universe", "gate": "G6", "reason": "科研发布新闻,无任务", "pattern": "科研新闻无付费者任务"}
+{"date": "2026-08-21", "term": "faster way to calculate day of the week", "gate": "G6", "reason": "星历算法是多年常青话题,非新词,且无新形成的措辞", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "1400 live streams from japan", "gate": "G5", "reason": "命中陷阱类别二:站点/品牌发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "gauguin descartes bayes diurnal golem brain", "gate": "G6", "reason": "学术随笔,无任务", "pattern": "科研新闻无付费者任务"}
+{"date": "2026-08-21", "term": "optimizing things in the ussr", "gate": "G6", "reason": "经济史旧文,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "sol loves to cheat", "gate": "G6", "reason": "个人随笔,无被迫任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "mlc unclaimed royalties check", "gate": "G7", "reason": "官方答案已在位:MLC 自家 Public Search 就是权威查询入口,第三方页面无位置", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "xorg-server 26.1.0 rc1", "gate": "G5", "reason": "命中陷阱类别四:版本发布,发布方 release notes 与升级文档自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "github autoscaling component substitution fallacy", "gate": "G6", "reason": "架构观点文,无被迫重复任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "vendo yc s26 users build features", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "fossilisation processes animal antiquity", "gate": "G6", "reason": "古生物学论文,无付费者任务", "pattern": "科研新闻无付费者任务"}
+{"date": "2026-08-21", "term": "darth vader flock cameras city council", "gate": "G6", "reason": "地方新闻趣闻,无重复任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "lightfield ai-native crm", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "viktor.com ai coworker", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "framer ai agents branching community", "gate": "G5", "reason": "命中陷阱类别四:厂商功能发布,官方文档与更新日志自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "protonote share ai-built prototypes", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "frigate compatible ip cameras data viewer", "gate": "G6", "reason": "Frigate 兼容摄像头是多年成熟采购查询,非新词;官方文档与社区清单已在位", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "takovm serverless file systems for agents", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "luoluoai openai claude messages api gateway", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "dumpsort screenshots pdfs named zip", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "molecule.dev ai-first composable packages", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "praxos team messaging with memory", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "wavehouse supabase for clickhouse", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "pingchange monitor pages openapi specs", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "corpusiq verified business dashboards mcp apps", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "sce simple console editor", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "sourcery benchmark search apis sources", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "streambench native mac kafka nats client", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "astronomy buddy telescope tonight", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "diaryof.me encrypt messages self-contained links", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "sierra games walking dead state auto patch", "gate": "G6", "reason": "极小众复古游戏修复,付费者规模不足且无自助变现路径", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "fillgood paint by numbers pixel art", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "superhuman for imessage notion calendar", "gate": "G5", "reason": "命中陷阱类别四:厂商集成发布,双方官方文档自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "meridian ai workjournal for devs", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "sitmap cold war scenario map maker", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "sentrint security scanner llm projects", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "trailers.fm movie trailers channel", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "playling language audio trainer", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "skilldocs figma for markdown", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "dont paste the ai please", "gate": "G6", "reason": "宣言/运动站,没有任何人被迫重复做的任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "bun 1.4", "gate": "G5", "reason": "命中陷阱类别四:版本发布,发布方 release notes 自带完整答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "stwipe acquires openwouter", "gate": "G6", "reason": "收购/恶搞新闻,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "stop eating lady gagas oreos", "gate": "G6", "reason": "随笔,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "ocean cleanup plastic pollution crisis", "gate": "G6", "reason": "环保评论,无付费者被迫任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "zuckerberg growth over child safety testimony", "gate": "G6", "reason": "听证会新闻,无重复任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "ai didnt erase junior engineer value", "gate": "G6", "reason": "职场观点文,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "netherlands lists israel national security threat", "gate": "G6", "reason": "地缘政治新闻,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "microsoft entertainment pack tetris sticker", "gate": "G6", "reason": "软件史趣闻,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "risk engineering", "gate": "G6", "reason": "已存在的教学资源站本身,不产生新任务", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "twenty years good at the wrong game", "gate": "G6", "reason": "职业反思随笔,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "firefox last major browser ublock origin", "gate": "G7", "reason": "Chrome MV2 淘汰是 2024-2025 的旧变化,窗口早关;且付费者是不付费的拦截用户,无自助变现路径", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "glm-5.3 frontier coding cyber capabilities", "gate": "G7", "reason": "命中陷阱类别一自带的 G7 观察:模型版本词随下一版发布过期,且距 2026-08-17 发布已 4 天,超过实测的通用工具收录时差", "pattern": "模型版本词随版本过期"}
+{"date": "2026-08-21", "term": "ai;dr ai didnt read", "gate": "G5", "reason": "命中陷阱类别二:运动/品牌名,无可搜索任务", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "israel fake think tank dupe ai chatbots", "gate": "G6", "reason": "新闻事件,推导出的任务过于思辨且无有预算付费者", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "joke domain purchase geopolitical warfare", "gate": "G6", "reason": "故事叙述,无重复任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "algorithm interview conversation between two parrots", "gate": "G6", "reason": "随笔,无任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "gitcharta github user global network snapshot", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "the amazon tax", "gate": "G6", "reason": "经济评论,无被迫任务", "pattern": "无被迫任务的观点或新闻"}
+{"date": "2026-08-21", "term": "信号面的观点、新闻与旧文回流", "gate": "G5", "reason": "[已归并] 见陷阱类别.md 类别五(前置筛除型·直接筛除型):社区高分条目若为随笔/观点/新闻/科研报道/旧文回流,零成本弃", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "medicare program hospital inpatient prospective payment systems for acut", "gate": "G6", "reason": "Medicare/Medicaid 年度费率与支付政策,任务确实被迫但医院财务与 RCM 需求由软件与咨询承接,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "establishing the national fraud enforcement division", "gate": "G6", "reason": "司法机构组织变更、单一化学品列管调整或民事罚则程序,受影响方极窄或无重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "corporate credit unions", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "accessible lavatories on single aisle aircraft and ensuring safe accommo", "gate": "G6", "reason": "铁路噪声标准、车辆安全标准或运输行政调整,受影响方为少数制造商与承运人,任务一次性", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "walnuts grown in california changes to administrative requirements", "gate": "G6", "reason": "单一作物委员会行政要求、州计划或公共土地政策调整,受影响方为少数处理商或州机构,无可自助变现的重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "national poultry improvement plan and auxiliary provisions", "gate": "G6", "reason": "单一作物委员会行政要求、州计划或公共土地政策调整,受影响方为少数处理商或州机构,无可自助变现的重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "supplemental nutrition assistance program changes in federal state admin", "gate": "G6", "reason": "单一作物委员会行政要求、州计划或公共土地政策调整,受影响方为少数处理商或州机构,无可自助变现的重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "special areas roadless area conservation", "gate": "G6", "reason": "单一作物委员会行政要求、州计划或公共土地政策调整,受影响方为少数处理商或州机构,无可自助变现的重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "rescission of rural development s construction and repair regulation", "gate": "G6", "reason": "单一作物委员会行政要求、州计划或公共土地政策调整,受影响方为少数处理商或州机构,无可自助变现的重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "revision of freedom of information act regulations", "gate": "G6", "reason": "联邦行政规章调整,提不出有预算付费者被迫重复完成的可搜索任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "medicare program fy 2027 hospice wage index and payment rate update and", "gate": "G6", "reason": "Medicare/Medicaid 年度费率与支付政策,任务确实被迫但医院财务与 RCM 需求由软件与咨询承接,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "medicare program inpatient rehabilitation facility prospective payment s", "gate": "G6", "reason": "Medicare/Medicaid 年度费率与支付政策,任务确实被迫但医院财务与 RCM 需求由软件与咨询承接,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "medicaid program prohibition on federal medicaid and children s health i", "gate": "G6", "reason": "Medicare/Medicaid 年度费率与支付政策,任务确实被迫但医院财务与 RCM 需求由软件与咨询承接,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "reducing federal burden for head start programs", "gate": "G6", "reason": "机构 FOIA 规章或社会服务项目标准调整,付费者是政府项目与受助机构,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "adoption and foster care analysis and reporting system", "gate": "G6", "reason": "机构 FOIA 规章或社会服务项目标准调整,付费者是政府项目与受助机构,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "reducing bureaucracy and burden in family violence and prevention servic", "gate": "G6", "reason": "机构 FOIA 规章或社会服务项目标准调整,付费者是政府项目与受助机构,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "drawbridge operation regulation drawbridge operation regulation san bern", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "drawbridge operation regulation old brazos river freeport texas", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone chevron genesis spar outer continental shelf facility green", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone whale floating production system outer continental shelf fac", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "security zone u s coast guard base los angeles harbor main channel los a", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "anchorages bolivar roads channel galveston tx", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone ohio river river aurora in", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zones recurring safety zones in captain of the port northern grea", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone lake erie madison township oh", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone rockport illuminations fireworks rockport harbor rockport ma", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone st johns river jacksonville fl", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "special local regulations marine events within the uscg east district", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zones annual events in the captain of the port detroit zone", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "special local regulations annual les cheneaux islands antique wooden boa", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone lake st clair grosse pointe farms mi", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zones annual events in the captain of the port eastern great lake", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "cancellation of obsolete navigation and vessel inspection circular", "gate": "G6", "reason": "海事行政通知(如作废过时的 NVIC),无有预算付费者的重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "safety zone lake michigan chicago il", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "special local regulation great lakes annual marine events cuyahoga river", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone t v denise foss o n 1254223 honolulu hi", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "special local regulation casco bay flotilla to fight cancer long island", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "special local regulation daugherty creek crisfield md", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone atlantic ocean culebra puerto rico", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone st clair river port huron mi", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone west passage narragansett bay narragansett ri", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "special local regulation chattawake wakesurfing event tennessee river ch", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone fox river green bay wi", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone anchor floating production unit fpu outer continental shelf", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone lake michigan gary in", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "safety zone ohio street beach swim course lake michigan chicago harbor c", "gate": "G7", "reason": "地点与日期特定的临时水域管制(安全区/特别地方规定/开合桥/锚地),事件结束即失效,不存在耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "takes of marine mammals incidental to specified activities taking marine", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "magnuson stevens fishery conservation and management act provisions fish", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "atlantic highly migratory species atlantic bluefin tuna fisheries closur", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "fisheries of the caribbean gulf of america and south atlantic reef fish", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "fisheries of the exclusive economic zone off alaska commercial salmon fi", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "magnuson stevens act provisions fisheries off west coast states pacific", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "pacific halibut fisheries of the west coast inseason action for the 2026", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "fisheries of the exclusive economic zone off alaska reapportionment of h", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "pacific halibut fisheries of the west coast 2026 catch sharing plan inse", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "fisheries of the exclusive economic zone off alaska reallocation of poll", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "fisheries off west coast states modification of the west coast salmon fi", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "atlantic highly migratory species north atlantic swordfish south atlanti", "gate": "G7", "reason": "季内配额调整、临时关闭或单次 MMPA 授权,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "conflicts and affiliations", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "community reinvestment act regulations", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "occ rules regarding the availability of occ information", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "restricted area naval weapons station seal beach", "gate": "G7", "reason": "地点特定的禁区/危险区调整,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "danger zone pacific ocean at marine corps base hawaii kaneohe bay island", "gate": "G7", "reason": "地点特定的禁区/危险区调整,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "amendment to 3 4 mdp 2 p methyl glycidic acid a list i chemical", "gate": "G6", "reason": "司法机构组织变更、单一化学品列管调整或民事罚则程序,受影响方极窄或无重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "schedules of controlled substances temporary placement of o desmethyltra", "gate": "G6", "reason": "司法机构组织变更、单一化学品列管调整或民事罚则程序,受影响方极窄或无重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "accreditation innovation and modernization the secretary s recognition o", "gate": "G6", "reason": "高校认证与拨款程序,付费者是院校与主管部门,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "final waiver and extension of the project period with funding for arts i", "gate": "G6", "reason": "高校认证与拨款程序,付费者是院校与主管部门,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "rescission of doe s procedures for traffic control on the nevada test si", "gate": "G6", "reason": "联邦行政规章调整,提不出有预算付费者被迫重复完成的可搜索任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval illinois 2015 ozone moderate and serious reasonably av", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "partial approval and partial disapproval of air quality state implementa", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval new hampshire repeal of motor vehicle inspection and m", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air quality plan arizona maricopa county air quality department gasoline", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "response to clean air act section 176a petition from new hampshire", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval commonwealth of virginia transfer of authority and req", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval iowa interstate transport requirements for the 2010 su", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval missouri moderate attainment plan elements for the 201", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval virginia 1997 8 hour ozone national ambient air qualit", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "receipt of pesticide petitions filed for residues of pesticide chemicals", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval south carolina minor source permit program revisions", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan partial approval and partial conditional approval south carolin", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "proposed deletion from the national priorities list", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "permethrin pesticide tolerances", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "isofetamid pesticide tolerances", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval connecticut plan for inclusion of a consent order no 8", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "alaska final authorization of state hazardous waste program", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "2 propenoic acid 2 methyl telomer with 1 dodecanethiol and 2 methyloxira", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "bacillus thuringiensis ecry1gb 1ig protein exemption from the requiremen", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "determination to defer sanctions arizona maricopa county air quality dep", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval illinois clean data determination for the illinois por", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval missouri clean data determination for the 2015 8 hour", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "determination of attainment by the attainment date and clean data determ", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "determination of attainment by the attainment date 1997 ozone standards", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "approval of source specific air quality implementation plan new york big", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "calcium carbonate exemption from the requirement of a pesticide toleranc", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval wisconsin moderate attainment plan elements for wiscon", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "cypermethrin pesticide tolerance s", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "deletion from the national priorities list", "gate": "G6", "reason": "州实施计划(SIP)批准、超级基金名录增删或单一物质容许量,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "amendment of class d and class e airspace morgantown wv withdrawal", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "establishment of class c airspace and removal of class d airspace wilmin", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "improving emergency medical kit efficacy and flexibility in commercial a", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "amendment of class d and class e airspace morgantown wv", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "transport airplane and propulsion certification modernization extension", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "airworthiness directives the boeing company airplanes", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "establishment of class e airspace coleman tx", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "establishment of class e airspace havana il", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "removal of faa third class medical certificate requirement for military", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "amendment of class d airspace and class e airspace over tri cities tn", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "establishment of class e airspace canton il", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus sas airplanes", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives rolls royce deutschland ltd co kg engines", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus helicopters", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "establishment of class e airspace dekalb il", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "revocation of class e airspace santa elena tx", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "establishment of class e airspace trading bay production airport trading", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "airworthiness directives dassault aviation airplanes", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "amendment of very high frequency omnidirectional range federal airways v", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "establishment of united states area navigation route t 581 in the vicini", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "airworthiness directives diamond aircraft industries inc airplanes", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "ifr altitudes miscellaneous amendments", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "amendment of united states area navigation route q 10 and revocation of", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "standard instrument approach procedures and takeoff minimums and obstacl", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "airworthiness directives bell textron canada limited helicopters", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives various helicopters", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "amendment of class d and class e airspace chicago rockford il", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "revocation of class e airspace lake geneva wi", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "special conditions atr gie avions de transport r gional model atr42 500", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "amendment of united states area navigation route t 373 in the vicinity o", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "amendment of class d and class e airspace and revocation of class e airs", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "amendment of class e airspace bedford in", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "amendment of class e airspace over staunton va", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "special conditions skyryse robinson helicopter company model r66 helicop", "gate": "G6", "reason": "空域/航路调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "airworthiness directives brp rotax gmbh co kg formerly brp powertrain gm", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives atr gie avions de transport r gional airplanes", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives air tractor inc airplanes", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives gulfstream aerospace lp type certificate previo", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives pratt whitney canada corp engines", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives international aero engines ag engines", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "auction of flexible use licenses in the upper c band for next generation", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "petition for reconsideration of action in rulemaking proceeding", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "build america eliminating barriers to wireline deployments", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "protecting against national security threats to the communications suppl", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "television broadcasting services elko nevada", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "television broadcasting services st george utah", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "fcc to review e rate program to ensure congress s vision", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "auction of fm broadcasting construction permits scheduled for february 2", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "empowering broadband consumers through transparency", "gate": "G6", "reason": "频道分配、拍卖程序或宽带标签调整,受影响方为持照广播商与少数竞标方,无可自助变现的大众任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "extensions of credit to insiders", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "requests for arbitration panels", "gate": "G6", "reason": "联邦行政规章调整,提不出有预算付费者被迫重复完成的可搜索任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "high speed train noise emission standards", "gate": "G6", "reason": "铁路噪声标准、车辆安全标准或运输行政调整,受影响方为少数制造商与承运人,任务一次性", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "loans to executive officers directors and principal shareholders of memb", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "regulatory modernization and relief for mutual holding companies", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "petition for rulemaking of matheus garcia pereira", "gate": "G6", "reason": "联邦行政规章调整,提不出有预算付费者被迫重复完成的可搜索任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "geographic targeting order imposing recordkeeping and reporting requirem", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "beneficial ownership information reporting requirement revision", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "modification of certain terminology in title 21 reopening of the comment", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "radiology devices reclassification of digital breast tomosynthesis syste", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "gastroenterology urology devices reclassification of diagnostic endoscop", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "medical devices classification of accessories distinct from other device", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "gnt usa llc filing of color additive petition", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "gardenia blue interest group filing of color additive petition", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "international association of color manufacturers filing of color additiv", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "micro tracers inc response to objections and requests for a public heari", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "medical devices radiology devices classification of the fludeoxyglucose", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "guide to minimize biological hazards in ready to eat fresh cut produce g", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hematology and pathology devices reclassification of in situ hybridizati", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "food additives permitted in feed and drinking water of animals chromium", "gate": "G6", "reason": "器械重分类、色素添加剂申请公示或单一饲料添加剂批准,受影响方是少数制造商或申请人,无大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "general services administration property management regulation gspmr non", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "personnel appeals board procedural rules", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "immigration bonds technical amendment", "gate": "G6", "reason": "移民保证金技术修订与单一法案要求的规章调整,任务一次性且无新增措辞", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "regulatory changes required by the energy security and lightering indepe", "gate": "G6", "reason": "移民保证金技术修订与单一法案要求的规章调整,任务一次性且无新增措辞", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hud s implementation of the fair housing act s disparate impact standard", "gate": "G6", "reason": "住房法规修订,读者为住房提供方与法律顾问,任务一次性且法律内容机器已占位", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "revising hud s noise abatement and control regulations correcting amendm", "gate": "G6", "reason": "住房法规修订,读者为住房提供方与法律顾问,任务一次性且法律内容机器已占位", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "oil and gas and sulfur operations on the outer continental shelf revisio", "gate": "G6", "reason": "矿业计划审批标准或州采矿计划批准,受影响方为少数矿业公司与州监管机构,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "ohio regulatory program", "gate": "G6", "reason": "矿业计划审批标准或州采矿计划批准,受影响方为少数矿业公司与州监管机构,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "north dakota regulatory program", "gate": "G6", "reason": "矿业计划审批标准或州采矿计划批准,受影响方为少数矿业公司与州监管机构,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "section 898 c transition rule for allocating foreign taxes and section 9", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "foreign currency gain or loss of controlled foreign corporations", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "proposed removal of a reporting requirement for trusts whose charitable", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "application of section 250 b 3 a i vii to sales or other dispositions of", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "application of the personal responsibility and work opportunity reconcil", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "determination of target normal cost and funding target for single employ", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "backup withholding on third party network transactions", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "adjudication of civil penalties against international marriage brokers", "gate": "G6", "reason": "司法机构组织变更、单一化学品列管调整或民事罚则程序,受影响方极窄或无重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "roof control plan approval criteria", "gate": "G6", "reason": "矿业计划审批标准或州采矿计划批准,受影响方为少数矿业公司与州监管机构,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "ventilation plan approval criteria", "gate": "G6", "reason": "矿业计划审批标准或州采矿计划批准,受影响方为少数矿业公司与州监管机构,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "appellate jurisdiction update ii", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "chartering and field of membership for federal credit unions interpretiv", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "credit union service contracts", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "limits on loans to other credit unions", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "purchase sale and pledge of eligible obligations", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "requirements for insurance", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "suretyship and guaranty segregated deposit and collateral", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "termination of excess insurance coverage", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "third party servicing of indirect vehicle loans", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "federal motor vehicle safety standards child restraint anchorage systems", "gate": "G6", "reason": "铁路噪声标准、车辆安全标准或运输行政调整,受影响方为少数制造商与承运人,任务一次性", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "nondiscrimination in federally assisted programs of the national science", "gate": "G6", "reason": "联邦行政规章调整,提不出有预算付费者被迫重复完成的可搜索任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "nrc modernization rulemaking procedure federal advisory committee act al", "gate": "G6", "reason": "核监管程序现代化与乏燃料容器证书修订,受影响方为极少数持照人", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "list of approved spent fuel storage casks nac international inc magnasto", "gate": "G6", "reason": "核监管程序现代化与乏燃料容器证书修订,受影响方为极少数持照人", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "reduction in force", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "reduction in force appeals", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "streamlining probationary and trial period appeals", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "suitability action appeals", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "differential pay for prescribed wildland fire activities", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "updates and amendments to the civil service rules", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials adoption of department of transportation special per", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials improving efficiencies for special permits and appro", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials modernizing payments to and from america s bank acco", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials reduce training burdens for america s farmers", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials reducing burdens by allowing continued use of depart", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials reducing costs to domestic shippers and carriers of", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials reducing recordkeeping requirements for domestic car", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials reducing undue paperwork burdens to domestic carrier", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials remove redundant list of u s epa cercla hazardous su", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials removing burdensome rail reporting requirements", "gate": "G6", "reason": "采纳既有 DOT 特别许可、精简报送与缴费流程,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "determining disability", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "jurisdiction determinations", "gate": "G6", "reason": "联邦人事或机构内部程序规章,付费者是联邦机构与雇员,无自助变现路径", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "investment company governance technical amendments", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "small business size standards revised size standards methodology", "gate": "G6", "reason": "8(a) 项目社会劣势推定改革与规模标准方法学说明,SBA 自带官方查询表,且 govcon 咨询行业已占位", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "reforms to 13 cfr 124 103 to remove sba s 8 a program s rebuttable presu", "gate": "G6", "reason": "8(a) 项目社会劣势推定改革与规模标准方法学说明,SBA 自带官方查询表,且 govcon 咨询行业已占位", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "implementation of the administrative false claims act", "gate": "G6", "reason": "签证程序技术修订,任务一次性", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "changes to delegations", "gate": "G6", "reason": "铁路噪声标准、车辆安全标准或运输行政调整,受影响方为少数制造商与承运人,任务一次性", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "genius act regulations on payment stablecoin issuance offer and sale", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "rescinding portions of department of the treasury title vi regulations t", "gate": "G6", "reason": "面向受监管金融机构的审慎规章,读者是机构合规岗,其雇主采购律所备忘录与合规软件,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "magnuson stevens act provisions fisheries off west coast s 2026-17003", "gate": "G7", "reason": "季内配额调整或修正,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "magnuson stevens act provisions fisheries off west coast s 2026-16049", "gate": "G7", "reason": "季内配额调整或修正,下一季即失效,无耐久重复任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "air plan approval south carolina minor source permit progr 2026-16930", "gate": "G6", "reason": "州实施计划(SIP)批准或农药容许量申请公示,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "air plan approval south carolina minor source permit progr 2026-16937", "gate": "G6", "reason": "州实施计划(SIP)批准或农药容许量申请公示,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "receipt of pesticide petitions filed for residues of pesti 2026-16976", "gate": "G6", "reason": "州实施计划(SIP)批准或农药容许量申请公示,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "receipt of pesticide petitions filed for residues of pesti 2026-16724", "gate": "G6", "reason": "州实施计划(SIP)批准或农药容许量申请公示,付费者是州政府或单一申请方,不是可自助变现的群体", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus helicopters 2026-16047", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus helicopters 2026-16505", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus helicopters 2026-16506", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus helicopters 2026-16507", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus helicopters 2026-16640", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus helicopters 2026-16641", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus sas airplanes 2026-16566", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus sas airplanes 2026-16567", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives airbus sas airplanes 2026-16874", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives rolls royce deutschland ltd co kg 2026-16502", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives rolls royce deutschland ltd co kg 2026-16636", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives rolls royce deutschland ltd co kg 2026-16705", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives rolls royce deutschland ltd co kg 2026-16956", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives the boeing company airplanes 2026-15936", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives the boeing company airplanes 2026-16157", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives the boeing company airplanes 2026-16389", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives the boeing company airplanes 2026-16504", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives the boeing company airplanes 2026-16795", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "airworthiness directives the boeing company airplanes 2026-17056", "gate": "G7", "reason": "官方答案已在位:FAA 自己发布 AD 全文与对应服务通告并永久收录于官方法规系统;单条 AD 只针对特定机型做一次性合规,无耐久重复任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "establishment of class e airspace havana il 2026-16258", "gate": "G6", "reason": "空域/航路与仪表进场程序调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "establishment of class e airspace havana il 2026-16539", "gate": "G6", "reason": "空域/航路与仪表进场程序调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "standard instrument approach procedures and takeoff minimu 2026-15852", "gate": "G6", "reason": "空域/航路与仪表进场程序调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "standard instrument approach procedures and takeoff minimu 2026-15853", "gate": "G6", "reason": "空域/航路与仪表进场程序调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "standard instrument approach procedures and takeoff minimu 2026-16887", "gate": "G6", "reason": "空域/航路与仪表进场程序调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "standard instrument approach procedures and takeoff minimu 2026-16888", "gate": "G6", "reason": "空域/航路与仪表进场程序调整通知,受影响方为持照运营人,无可自助变现的大众重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "chartering and field of membership for federal credit unio 2026-16028", "gate": "G6", "reason": "面向受监管信用社的审慎规章(作废旧解释性规则),读者是机构合规岗,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "chartering and field of membership for federal credit unio 2026-16031", "gate": "G6", "reason": "面向受监管信用社的审慎规章(作废旧解释性规则),读者是机构合规岗,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "chartering and field of membership for federal credit unio 2026-16024", "gate": "G6", "reason": "面向受监管信用社的审慎规章(作废旧解释性规则),读者是机构合规岗,第三方内容站没有自助变现路径", "pattern": "机构合规无自助变现"}
+{"date": "2026-08-21", "term": "nrc modernization rulemaking procedure federal advisory co 2026-16373", "gate": "G6", "reason": "核监管程序现代化,受影响方为极少数持照人", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "nrc modernization rulemaking procedure federal advisory co 2026-16374", "gate": "G6", "reason": "核监管程序现代化,受影响方为极少数持照人", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials adoption of department of transportati 2026-15819", "gate": "G6", "reason": "采纳既有 DOT 特别许可,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials adoption of department of transportati 2026-15817", "gate": "G6", "reason": "采纳既有 DOT 特别许可,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials adoption of department of transportati 2026-15818", "gate": "G6", "reason": "采纳既有 DOT 特别许可,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials adoption of department of transportati 2026-15820", "gate": "G6", "reason": "采纳既有 DOT 特别许可,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "hazardous materials adoption of department of transportati 2026-15816", "gate": "G6", "reason": "采纳既有 DOT 特别许可,受影响方本已持有该许可,PHMSA 自带许可全文,无新增重复任务", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "new mailing standards for live animals", "gate": "G3", "reason": "G3 veto:任务(可邮寄哪些活体、包装与标记要求)已被 USPS 自家 Postal Explorer 的 Pub 52 第 52/525/526 三节做完,官方域永久收录并占据首页多个位次,另有 USPS FAQ 的运费页;不是待收录的临时空位。命中「管辖机构自维护的对象全集权威查询」死因", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "imposition of import restrictions on categories of archaeological and et", "gate": "G3", "reason": "G3 veto:任务(哪些尼泊尔文物类别被限制进口、我的物件是否在列)由 Federal Register 的 designated list 与 State Dept「Current Agreements and Import Restrictions」权威全集页做完,两者永久收录;另有 Barnes Richardson 海关律所提示", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "importation of coffee into hawaii and puerto rico", "gate": "G3", "reason": "G3 veto:任务(生豆能否运入夏威夷/波多黎各、需要什么许可)由 APHIS 自家 ACIR 商品准入数据库(全集查询)与 APHIS 官方 PDF 做完,永久收录排首页;另有 International Trade Today 与商家自建的运输限制页", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "atlantic highly migratory species revisions to fishing gear regulations", "gate": "G3", "reason": "G3 veto:NOAA Fisheries 自设 HMS 专题页与该拟议规则的专用 action 页(含公开网络研讨会)已把任务做完,加 Federal Register 正式与公示两条、Reginfo.gov;官方域永久收录", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "establishment of the columbia hills viticultural area", "gate": "G3", "reason": "G3 veto:任务(新 AVA 的边界、所属州与产区背景)已被覆盖全部 280 个 AVA 的第三方全集数据库站做完——Vinerra 的 Columbia Hills AVA 页在 2026-09-16 生效前就已在位,Washington State Wine Commission 的 AVA 资源页同样;加 TTB 官方页与 Wine Industry Advisor/Wine Business 报道。新对象一进入全集即自动获得页面", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "substances generally recognized as safe", "gate": "G3", "reason": "G3 veto:命中陷阱类别三——付费者(食品与膳补制造商)明确且有预算,首页整版是 BigLaw 客户提示(Holland & Knight、Wiley Rein、Gibson Dunn、Akin Gump、Arnold & Porter、Morrison Foerster)加 HHS 官方 fact sheet 与 Food Safety Magazine,拟议规则发布 48 小时内即饱和", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "english language proficiency out of service criteria", "gate": "G3", "reason": "G3 veto 且非新词:ELP 入列 out-of-service 自 2025-05 部长令、2025-06-25 起执行,已一年余;FMCSA 自家执法政策页与 CVSA 官方页做完任务,另有 eSkill(测评厂商)的 How to Prepare 指南与 Hanson Bridgett 律所提示", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "employer contributions to trump accounts and nondiscrimination rules for", "gate": "G3", "reason": "G3 veto:命中陷阱类别三——付费者(雇主与福利管理方)明确且有预算,DOL 官方 Technical Release 2026-02 与 Congress.gov CRS 报告加 Ropes & Gray、DLA Piper、Morgan Lewis、Mercer Advisors、PSCA 已从 2026-02 起持续占位数月", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "hazardous materials reducing burdens on domestic companies using batter", "gate": "G3", "reason": "G3 veto:命中陷阱类别三——危险品培训厂商行业(Lion Technology、ICC Compliance Center、Daniels Training Services)加 PHMSA 与 DOT 官方页已把 MOT 例外的任务做完;NPRM 2025-07 起相关内容即已在位,并有 Cornell EHS 等机构页", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "管辖机构自维护的对象全集权威查询", "gate": "G5", "reason": "[已归并] 见陷阱类别.md 类别六(SERP 陷阱型·验证型):法规变化落在已有权威全集查询覆盖的对象类上时,新对象一进入全集即自动获得永久收录页面,第三方信息站无位置;仍须跑一次 G3 验证", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "proposed establishment of the kaw valley viticultural area", "gate": "G3", "reason": "G3 veto:与本轮实测的 columbia hills 同一对象类(AVA),全集维护者已确认——Vinerra 覆盖全部 280 个 AVA 且**连拟议阶段的 AVA 也已建页**(现场读到其 Columbia Hills 页自述 potential AVA),Washington State Wine Commission 一类产区机构页同理;TTB 自身也为每个拟议 AVA 出公告页。命中陷阱类别六", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "proposed establishment of the llano uplift and hickory sands district vi", "gate": "G3", "reason": "G3 veto:同上,AVA 对象类已有全集维护者(Vinerra 含拟议 AVA + TTB 逐个公告页),新 AVA 一出现即自动获得永久收录页面。命中陷阱类别六", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "proposed establishment of the mill creek walla walla valley viticultural", "gate": "G3", "reason": "G3 veto:同上,AVA 对象类已有全集维护者;且该名沿用既有 Walla Walla Valley 产区语汇,连新措辞都不成立。命中陷阱类别六", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "proposed establishment of the rancho santa fe viticultural area", "gate": "G3", "reason": "G3 veto:同上,AVA 对象类已有全集维护者(Vinerra 含拟议 AVA + TTB 逐个公告页)。命中陷阱类别六", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "hazardous materials reducing burdens on domestic aerosol shippers", "gate": "G3", "reason": "G3 veto:与本轮实测的 MOT 电池例外同一付费者群体(危险品托运方),厂商行业已确认占位——Lion Technology、ICC Compliance Center、Daniels Training Services 的培训内容机器加 PHMSA/DOT 官方页;命中陷阱类别三,该类别的方向级问题(这个付费者群体有没有对应厂商行业)本轮已实测为有", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "ask hn github employees whats going on", "gate": "G5", "reason": "命中陷阱类别五:向员工要内情的讨论帖,没有任何页面可以完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "ask hn how did you write code on restricted hardware", "gate": "G6", "reason": "经验征集类讨论,任务过宽且无有预算付费者被迫重复完成", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "qwen3.8 fetches weird urls", "gate": "G7", "reason": "单个模型版本的临时异常,厂商修一版即消失,无耐久任务", "pattern": "模型版本词随版本过期"}
+{"date": "2026-08-21", "term": "ask hn quit six systems for tracking my illness what works", "gate": "G6", "reason": "慢病症状追踪工具比较是多年成熟常青查询,非新词,且已被健康媒体与应用盘点占满", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "instantdb is shutting down", "gate": "G6", "reason": "迁出小体量产品的一次性任务,用户基数不足以让保守估算达到 $200/月,且是一次性而非重复", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "ask hn how do you review and validate llm generated code", "gate": "G6", "reason": "宽泛方法论讨论,无具体页面可完成的任务,且已被大量常青内容覆盖", "pattern": "成熟宽词"}
+{"date": "2026-08-21", "term": "are you good at ai or just using it", "gate": "G5", "reason": "命中陷阱类别五:观点帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "idea to reduce ai token use at large orgs", "gate": "G5", "reason": "命中陷阱类别五:想法征集帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "ask hn one ssh key or many ssh keys", "gate": "G6", "reason": "SSH 密钥管理是多年成熟常青话题,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "google cloud us-west1 down", "gate": "G7", "reason": "一次性区域故障,恢复即失效,无耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "ask hn no path from techie to management", "gate": "G5", "reason": "命中陷阱类别五:职业发展讨论帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "ask hn is ai the new spreadsheet", "gate": "G5", "reason": "命中陷阱类别五:类比式观点帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "ask hn do you automate your prospection", "gate": "G6", "reason": "销售开发方式的经验征集,无具体可完成任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "aws ri sp simulation engine", "gate": "G5", "reason": "命中陷阱类别二:作者自荐产品并问是否有价值,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "there are 67 items to manually delete in google my-activity", "gate": "G6", "reason": "付费者是普通消费者、无自助变现路径,且任务本身一次性", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "what i learned building an ai application", "gate": "G5", "reason": "命中陷阱类别五:个人复盘随笔,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "ask hn endgame of the ai comments buried in every post", "gate": "G5", "reason": "命中陷阱类别五:观察式讨论帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "ask hn self-modifying application with llms", "gate": "G6", "reason": "经验征集,尚无稳定叫法也无被迫重复任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "open source a book representation structure and transformation", "gate": "G5", "reason": "命中陷阱类别二:开源项目/书名发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "trump wants to make a trade deal with canada", "gate": "G5", "reason": "命中陷阱类别五:时事新闻,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "apple music to label ai-generated songs", "gate": "G5", "reason": "命中陷阱类别四:厂商产品公告,官方支持文档同步自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "sweden became a country of big-state libertarians", "gate": "G5", "reason": "命中陷阱类别五:经济评论,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "grimshaw vs ford motor co", "gate": "G5", "reason": "命中陷阱类别五:维基条目回流,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "the horse and sparrow economic theory", "gate": "G5", "reason": "命中陷阱类别五:经济思想史随笔,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "anolisa agentic os runtime security observability token compression", "gate": "G5", "reason": "命中陷阱类别二:阿里开源项目品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "permission layer for ai agents", "gate": "G5", "reason": "命中陷阱类别二:Show HN 自建产品,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "stock indices no longer reflect equity reality", "gate": "G5", "reason": "命中陷阱类别五:财经评论,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "fifteen buy a spot on a board where your position decays", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "roast my alarm mobile app", "gate": "G5", "reason": "命中陷阱类别二:求反馈的应用发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "three ways to smuggle sqlite into nix", "gate": "G6", "reason": "极窄技术实现分享,受众规模不足且无付费者", "pattern": "过窄技术实现"}
+{"date": "2026-08-21", "term": "can reddit survive in the ai era", "gate": "G5", "reason": "命中陷阱类别五:媒体评论,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "dolphinscheduler task group slots without timeout-based reclamation", "gate": "G5", "reason": "命中陷阱类别四:项目自家 Medium 内容营销,官方文档自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "deploying dolphinscheduler with docker on ubuntu", "gate": "G5", "reason": "命中陷阱类别四:项目自家 Medium 教程,官方文档自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "data ingestion must never be a black box", "gate": "G5", "reason": "命中陷阱类别四:项目自家 Medium 观点营销,无独立任务", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "codex as a platform build on the open agent harness", "gate": "G5", "reason": "命中陷阱类别四:OpenAI 自家开发者文档发布,官方答案同步在位", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "autonomous ai agent running one project for two months in public", "gate": "G5", "reason": "命中陷阱类别二:自媒体项目展示,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "bilibili indextts-2.5", "gate": "G7", "reason": "命中陷阱类别一自带的 G7 观察:模型版本词随下一版发布过期,且通用 TTS 评测与推理工具站收录以天计", "pattern": "模型版本词随版本过期"}
+{"date": "2026-08-21", "term": "newsletters should be the directors commentary of every creator", "gate": "G5", "reason": "命中陷阱类别五:创作者观点文,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "codex on aws bedrock bug causing 10x charges", "gate": "G7", "reason": "计费缺陷类临时事件,厂商修复即消失,官方答案在途,无耐久任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "against intellectual monopoly", "gate": "G5", "reason": "命中陷阱类别五:旧书回流,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "deepclause meets pi controlling pi with prolog", "gate": "G6", "reason": "极窄技术实验分享,无付费者规模", "pattern": "过窄技术实现"}
+{"date": "2026-08-21", "term": "the housing divergence why texas builds and california stalls", "gate": "G5", "reason": "命中陷阱类别五:政策评论长文,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "lean golf code golf proving theorems in lean", "gate": "G5", "reason": "命中陷阱类别二:站点/品牌发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "google is buying all of spirit airlines data to feed its ai models", "gate": "G5", "reason": "命中陷阱类别五:时事新闻,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "soar a package manager for linux", "gate": "G5", "reason": "命中陷阱类别二:纯品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "receive calls only from saved contacts", "gate": "G5", "reason": "命中陷阱类别二:应用商店条目发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "everyone says assembly is untyped everyone is wrong", "gate": "G5", "reason": "命中陷阱类别五:技术观点文,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "what zig felt like coming from rust", "gate": "G5", "reason": "命中陷阱类别五:语言体验随笔,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "open-sourcing openpubkey ssh opkssh single sign-on with ssh", "gate": "G5", "reason": "命中陷阱类别二:开源项目品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "if this is true the hyperscalers are toast", "gate": "G5", "reason": "命中陷阱类别五:行业观点帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "zero-knowledge proofs arent age verification silver bullets", "gate": "G5", "reason": "命中陷阱类别五:技术政策观点文,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "reclaim the terminal", "gate": "G5", "reason": "命中陷阱类别五:工具审美随笔,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "why compiling rust to webassembly is slow", "gate": "G6", "reason": "单篇性能分析,任务已由该文自身完成且受众窄", "pattern": "过窄技术实现"}
+{"date": "2026-08-21", "term": "plain text accounting is pretty cool", "gate": "G6", "reason": "纯文本记账是多年成熟话题,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "survival guide for a censored internet", "gate": "G6", "reason": "翻墙/抗审查指南是成熟常青题材,非新词,且已被大量指南站覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "emacs 31.1 release", "gate": "G5", "reason": "命中陷阱类别四:版本发布,项目 NEWS 与官方文档自带答案", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "opus minimal statically-scoped lisp dialect kernel f-expressions", "gate": "G5", "reason": "命中陷阱类别二:语言项目品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "sing-song speakable encoding for long numbers and keys", "gate": "G5", "reason": "命中陷阱类别二:编码方案品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "why i still hand write my commit messages", "gate": "G5", "reason": "命中陷阱类别五:工作习惯随笔,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "going freestanding", "gate": "G5", "reason": "命中陷阱类别五:技术随笔,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "reverse-engineering find my people to track a friend", "gate": "G6", "reason": "付费者是普通消费者、无自助变现路径,且属好奇型而非被迫重复任务", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "decoding magic school lunar save game format", "gate": "G6", "reason": "单个复古游戏存档格式,受众规模不足", "pattern": "过窄技术实现"}
+{"date": "2026-08-21", "term": "a personal computer for children of all cultures", "gate": "G5", "reason": "命中陷阱类别五:2019 年旧文回流,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "seedance 2.5 vs wan 3.0", "gate": "G3", "reason": "G3 veto:AI 视频模型对比这个对象类已有全集维护者——wan30ai.com 的 Compare 专页、WaveSpeedAI 自带 Wan 3.0 vs Wan 2.7 / vs Seedance 2.0 的对比矩阵、Atlas Cloud(8 天前给出 1080p/480p/720p 的具体差异)、Curious Refuge(6 天前给出结论),外加 JSFILMZ 三条与 Dom the AI Tutor 的 YouTube 深评(1 天至 1 周前)、Reddit、X。模型一发布数天内成对对比即已到位并稳定排名,非待收录空位。命中陷阱类别一(验证型)与新归并的类别七", "pattern": "跨厂商横向对比与迁移"}
+{"date": "2026-08-21", "term": "跨厂商横向对比与迁移", "gate": "G5", "reason": "[已归并] 见陷阱类别.md 类别七(SERP 陷阱型·验证型):alternatives to X / X vs Y / migrate off X 这一格有自己的全集维护者(替代品目录、分析机构榜单、社区 awesome 清单、成对对比站、竞品自建对比页);市场大则已被占满,市场小则够不着 G6 的 200 美元月线,两侧都不通;仍须跑一次 G3 验证", "pattern": "跨厂商横向对比与迁移"}
+{"date": "2026-08-21", "term": "twitch amazon ai training opt out", "gate": "G7", "reason": "G7 秒弃,厂商不利开关型任务的双重塌陷:①任务是一次性配置(找到并关掉一个开关),不构成有人被迫重复完成的耐久任务;②官方答案已在位——新闻标题本身即「Twitch Adds Opt-Out for Amazon AI Training」,厂商刚把开关做出来就会写进自家帮助中心,舆论压力越大写得越快。付费者一侧同样薄:多数 Twitch 创作者是无预算个人,自助变现路径不成立。命中新归并的陷阱类别八", "pattern": "厂商不利的开关型任务"}
+{"date": "2026-08-21", "term": "australian gambling advertising opt-out register", "gate": "G6", "reason": "付费者是澳洲普通消费者,无预算无自助变现路径;且是一次性登记动作", "pattern": "厂商不利的开关型任务"}
+{"date": "2026-08-21", "term": "wildfire alert backfires as public blocks all government warnings", "gate": "G6", "reason": "重新打开紧急警报是一次性设置动作,付费者是普通消费者、无自助变现路径", "pattern": "厂商不利的开关型任务"}
+{"date": "2026-08-21", "term": "columbia house is shutting down", "gate": "G5", "reason": "命中陷阱类别五:71 年老品牌停业的怀旧新闻,无被迫重复任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "alternative to internet archive", "gate": "G5", "reason": "命中陷阱类别七:alternatives to X 形态,该对象类已有替代品目录与社区清单占位", "pattern": "跨厂商横向对比与迁移"}
+{"date": "2026-08-21", "term": "onecli oss sandboxed agent harness for teams", "gate": "G5", "reason": "命中陷阱类别二:Launch HN 品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "hackerznews yet another hn client", "gate": "G5", "reason": "命中陷阱类别二:Show HN 客户端品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "why dont we version uis", "gate": "G5", "reason": "命中陷阱类别五:设计观点帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "resumeskip automatically tailor your resume to jobs", "gate": "G5", "reason": "命中陷阱类别二:Show HN 品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "always responsive ui for a coding agent", "gate": "G5", "reason": "命中陷阱类别二:Show HN 品牌名发布", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "厂商不利的开关型任务", "gate": "G5", "reason": "[已归并] 见陷阱类别.md 类别八(前置筛除型·直接筛除型):怎么关掉/退出/批量删除 X 的默认行为——双重塌陷,厂商真不写则任务一次性,任务真重要则厂商很快补上开关与帮助文档;付费者多为不付费消费者。死在 G6/G7 零成本预筛,不必读 SERP", "pattern": "厂商不利的开关型任务"}
+{"date": "2026-08-21", "term": "iso iec 27000:2026 information security standard", "gate": "G3", "reason": "G3 veto,付费墙不制造空位:本轮两次现场实测显示新标准一发布即被三类免费实现占满——①认证机构与培训商的转版材料(LRQA 的 ISO 14001:2026 就绪清单、NQA 的转版培训、msi-international、SIRIM Academy),②标准聚合站按标准逐个建页(iTeh Standards、store.astm.org),③专做标准追踪的内容站做月度盘点(standardshero.com)。命中陷阱类别三与类别六的叠加", "pattern": "付费墙标准的认证培训内容机器"}
+{"date": "2026-08-21", "term": "iso 9000:2026 quality management fundamentals", "gate": "G3", "reason": "G3 veto:同上,质量管理标准是认证培训行业的核心品类,内容机器最密集的一格", "pattern": "付费墙标准的认证培训内容机器"}
+{"date": "2026-08-21", "term": "iso 19011:2026 auditing guideline", "gate": "G3", "reason": "G3 veto:同上,现场已见 msi-international 直接讲解该版对齐要点", "pattern": "付费墙标准的认证培训内容机器"}
+{"date": "2026-08-21", "term": "iso 14001:2026 transition", "gate": "G3", "reason": "G3 veto:同上,现场已见 LRQA 的免费就绪清单与 NQA 的转版培训页,两个独立免费实现各自把任务做完", "pattern": "付费墙标准的认证培训内容机器"}
+{"date": "2026-08-21", "term": "iso 19697:2026 electronic standards", "gate": "G3", "reason": "G3 veto:同上,现场已见 iTeh Standards 为该标准单独建页", "pattern": "付费墙标准的认证培训内容机器"}
+{"date": "2026-08-21", "term": "astm accommodations for sustainable meetings specification", "gate": "G6", "reason": "非新词,且是我方误读的纠正:Google 摘要里的 newly published 出自 ASTM 一个 13 年前的新闻页,该规范实为 ASTM E2772(2013),同族 E2742 已于 2020 年撤销。ASTM 自己的免费新闻页已说明标准涵盖什么,另有 Events Industry Council、Green Lodging News、Trellis Group 占位", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "california replacement tire efficiency standards", "gate": "G7", "reason": "G7 veto,生效日远在未来:规则 2029 年才开始限制销售、2033 年才有 70% 现有型号退市(KTLA/KCRA/23ABC 三家现场给出同一时间线),今天没有任何人被迫做任何事——付费者的任务要到 2029 年才诞生,而 CEC 自己的 Replacement Tire Efficiency Program proceeding 页 2 小时前刚更新、必然远早于 2029 就把合规清单发出来。G1 已跑并 pass,但该判据(生效日 2029)在零成本批就可得,这一次 G1 是多花的。SERP 另已被 NYT 与 FOX 11/KTVU/KTLA/KCRA/23ABC 及 Kelley Blue Book 占满", "pattern": "生效日远在未来的变化"}
+{"date": "2026-08-21", "term": "massachusetts employers ice i-9 inspection notice obligations", "gate": "G5", "reason": "命中陷阱类别三:付费者(马萨诸塞雇主)明确且有预算,而现场看到的第一条就是 JD Supra 上的律所提示「5 Steps to Take Now」——雇佣法内容机器在规则出生当天即已占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "eu packaging rules manufacturers conformity identification design", "gate": "G5", "reason": "命中陷阱类别三:与账本中已 rejected 的 ppwr-empty-space-ratio 同一波(PPWR 2026-08-12 起适用),该类别表里已记录三个 PPWR 专用站(ppwrcopilot/ppwrconnect/gramta)占位;本轮现场又见 Lexology 的律所提示", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "genius act stablecoin rules occ deadline", "gate": "G5", "reason": "命中陷阱类别三:加密与银行法律所内容机器已占位,且 GENIUS Act 自 2025 年起已被写满", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "changes to medi-cal timeline and deadlines", "gate": "G6", "reason": "付费者是低收入受助人群,无预算无自助变现路径;加州官方与健康类非营利已占位", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "maryland october 1 deadline register vehicles in state", "gate": "G7", "reason": "官方答案已在位:马里兰 MVA 自己在发提醒,且落户登记是一次性动作", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "new hampshire nonresident park fees and tolls increase", "gate": "G6", "reason": "付费者是外州游客,无预算无自助变现路径;且州官方公告即权威答案", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "illinois bills approach deadline for governor signature", "gate": "G5", "reason": "命中陷阱类别五:立法程序新闻,无任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "south korea housing supply bills mixed-use development", "gate": "G6", "reason": "本工作流的目标是英文 Google 搜索词,该变化的付费者与讨论都在韩语市场,不产生英文任务", "pattern": "无英文任务"}
+{"date": "2026-08-21", "term": "trump tariff talks canada", "gate": "G5", "reason": "命中陷阱类别五:谈判进展新闻,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "georgia restaurants must post country of origin shrimp law", "gate": "G3", "reason": "G3 veto,窗口早过且已有全集维护者:HB 117 于 2026-05 签署、2026-07-01 生效,已 7 周;National Fisherman(2026-05-12)与 SeafoodSource 早已给出法定用语「FOREIGN IMPORTED」及两种合规方式,AP News 与 U.S. News 同步覆盖,而 Southern Shrimp Alliance 维护着跨州「Seafood Labeling Laws」全集页——正是横向问题的天然维护者。行业协会即全集维护者(第 2 例,第 1 例为第 3 轮的 Automotive Recyclers Association)", "pattern": "行业协会即全集维护者"}
+{"date": "2026-08-21", "term": "admt laws employers automated decision-making tools", "gate": "G5", "reason": "命中陷阱类别三与类别七叠加:多州 ADMT 立法的横向问题,现场第一条就是 Covington 旗下 Inside Privacy 的多州 round-up,隐私律所内容机器已在做这张表", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "revised form i-485 takes effect sept 18", "gate": "G5", "reason": "命中陷阱类别六与类别三:USCIS 为每个表格维护一页永久答案,移民律所内容机器同步占位", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "sba 8(a) rebuttable presumption removal effective september 10 2026", "gate": "G5", "reason": "命中陷阱类别三:政府合同咨询与律所(Faegre Drinker、PilieroMazza)在最终规则发布当周即已占位,且 SBA 自己发布规则全文", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "california employment arbitration agreement changes 2027", "gate": "G7", "reason": "生效日远在未来(2027),今天没人被迫做任何事;且现场即为 AALRR 律所提示,雇佣法内容机器已占位", "pattern": "生效日远在未来的变化"}
+{"date": "2026-08-21", "term": "irs section 163j interest expense limitation fact sheet fs-2026-14", "gate": "G5", "reason": "命中陷阱类别六:IRS 自己发 Fact Sheet 与新闻稿即官方答案,且税务技术条例的读者由大所与精算师服务,第三方内容站无自助变现路径", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "maryland famli program employer preparation", "gate": "G5", "reason": "命中陷阱类别三:马里兰劳工部自己发布雇主资源,Ogletree 等雇佣律所同步占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "new irs overtime rules restaurants w-2 reporting", "gate": "G5", "reason": "命中陷阱类别三:薪酬服务商与税务顾问是这个付费者群体的成规模行业,行业媒体 Nation's Restaurant News 已在规则生效当周做完解读", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "ofccp final rules federal contractors affirmative action obligations", "gate": "G5", "reason": "命中陷阱类别三:最终规则发布后 3–5 小时内 Ogletree 与 National Law Review 已双双占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "ofccp eliminates disability self-id requirement 7 percent utilization goal", "gate": "G5", "reason": "命中陷阱类别三:同上,同一批规则的另一面,律所内容机器以小时计", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "eu anti-deforestation rules west africa cocoa farmers traceability", "gate": "G5", "reason": "命中陷阱类别三:EUDR 已有成规模的可追溯性合规软件与咨询行业占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "h-2a foreign guest farmworker wage rule legal challenge fresno", "gate": "G7", "reason": "诉讼进行中、规则效力未定,今天无稳定可完成的任务;结果出来后又归农业劳工法律所占位", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "rsm nontraditional defense contractor fy26 ndaa", "gate": "G5", "reason": "命中陷阱类别三:会计与国防采购咨询行业(RSM 本身即是)已占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "jd supra weekly update government contractors august 2026", "gate": "G5", "reason": "命中陷阱类别五与类别三:律所周报聚合本身不是独立方向", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "gibson dunn digital assets updates june july 2026", "gate": "G5", "reason": "同上,律所月度汇总不是独立方向", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "lexology legal horizon august 2026", "gate": "G5", "reason": "同上,律所展望汇总不是独立方向", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "troutman pepper consumer financial services newsletter", "gate": "G5", "reason": "同上,律所周报且正在迁往 LinkedIn,不是独立方向", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "inflation reduction act of 2022", "gate": "G6", "reason": "2022 年法案,非新词,官方 DOE 页与四年积累的内容已占满", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "new jersey public contractors campaign contribution record 2025", "gate": "G5", "reason": "命中陷阱类别五:政治献金统计新闻,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "eight rules for eating out with kids", "gate": "G5", "reason": "命中陷阱类别五:生活方式随笔,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "appia appointment of president effective september 1 2026", "gate": "G5", "reason": "命中陷阱类别五:上市公司人事任命公告,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "bc record check certificate uber driver requirement", "gate": "G5", "reason": "命中陷阱类别四:Uber 自家帮助页说明其司机在 BC 的合规证明,官方答案即在发布方站内", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-21", "term": "njit roadmap nation's first ev battery management law", "gate": "G7", "reason": "生效日远在未来且义务尚未定义:新闻本身是「NJIT 受托制定路线图」,即规则细则还在编写中,今天没有任何人被迫做任何事;等义务成形后,汽车与回收行业的协会与咨询商会先占位(参见本运行第 3 轮 Automotive Recyclers Association 一例)", "pattern": "生效日远在未来的变化"}
+{"date": "2026-08-21", "term": "u of a nation's first md medical school on tribal land", "gate": "G6", "reason": "2027 年开办的单个院系,每年 10 名学生,无有预算付费者的重复任务", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "new hampshire first in the nation primary moved", "gate": "G5", "reason": "命中陷阱类别五:选举程序政治新闻,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "buffalo wild wings jimmy johns co-branded restaurant", "gate": "G5", "reason": "命中陷阱类别二:连锁品牌新店型发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "nation's first jellyfish museum florida", "gate": "G5", "reason": "命中陷阱类别五:新场馆开业新闻,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "aisha wahab east bay special election congress", "gate": "G5", "reason": "命中陷阱类别五:选举结果新闻,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "pwc pillar two country tracker", "gate": "G3", "reason": "G3 veto:跨国税制落地状态这个横向问题由四大自己维护全集追踪器(PwC Pillar Two Country Tracker Online),这是「有钱的付费者一定有组织替他汇总」的最强形态——维护者是四大而非流量站", "pattern": "行业协会即全集维护者"}
+{"date": "2026-08-21", "term": "uk subscription contract rules january 2027", "gate": "G7", "reason": "生效日远在未来(2027-01),且今秋还要再走一轮咨询;现场即为 Fieldfisher 律所的「what businesses need to do now」,英国雇佣与消费律所内容机器已占位", "pattern": "生效日远在未来的变化"}
+{"date": "2026-08-21", "term": "eu misses deadline for ppwr labelling rules", "gate": "G6", "reason": "规则本身尚未出台(欧委会错过通过调和回收标签细则的期限),没有可完成的任务——不是答案缺失,而是答案的对象还不存在", "pattern": "无任务通知"}
+{"date": "2026-08-21", "term": "uk trade union rules employment rights act employers", "gate": "G5", "reason": "命中陷阱类别三:英国会计师公会 ICAEW 已出雇主指南,英国雇佣法内容机器占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "eu empowering consumers green transition directive", "gate": "G5", "reason": "命中陷阱类别三:TLT LLP 等欧盟消费与环境律所已在做倒计时提示", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "us green card public charge new guidelines", "gate": "G5", "reason": "命中陷阱类别三与类别六:USCIS 自己发指南,移民律所与印度英文媒体(Times of India)同步覆盖", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "us treasury genius act notice of proposed rulemaking", "gate": "G5", "reason": "命中陷阱类别三:与本运行第 2 轮已记的 genius act 同一波,加密与银行律所内容机器占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "iran us truce extension deadline", "gate": "G5", "reason": "命中陷阱类别五:地缘时事新闻,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "us canada tariff three-day pause", "gate": "G5", "reason": "命中陷阱类别五:关税谈判进展新闻,三天暂停即失效,无耐久任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "china 2026 standards updates ccc related products", "gate": "G3", "reason": "G3 veto,翻译滞后被服务商填上:现场第一条即 MPR China Certification GmbH 的英文解读(6 天前,已列出车辆/锂电/氢瓶/汽车钢四类新标与 CCC 市场准入关系)。向进口商卖认证服务的咨询商有动机第一时间出英文内容,翻译滞后不构成空位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "dhl customs regulatory updates", "gate": "G3", "reason": "G3 veto:DHL 维护着覆盖各国海关法规更新的全集页,全球物流商是这个对象类的天然维护者(动机是客户服务而非流量),与四大维护 Pillar Two 追踪器同构", "pattern": "行业协会即全集维护者"}
+{"date": "2026-08-21", "term": "us 100 percent drone tariff china export controls components", "gate": "G5", "reason": "命中陷阱类别三:与本运行已 rejected 的 bis-drone-export-streamlining 同一付费者群体,出口管制咨询与律所内容机器已占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "critical minerals november 10 export control deadline", "gate": "G5", "reason": "命中陷阱类别三:与本运行已 rejected 的 bis-critical-minerals-export-restriction 同一波,投资与合规内容已占位", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "what are tariffs how do they work", "gate": "G6", "reason": "关税科普是常青成熟查询,非新词,BBC 一类大媒体长期占位", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "google spams self-hosted email deliverability", "gate": "G3", "reason": "G3 veto 且非新词:自建邮件被 Gmail 判垃圾是四年以上的常青问题。r/selfhosted 有 6 年前的同问题线程(另有 2025-01、2026-02 两条),LinuxCommunity.io(2024-01)已给出完整清单(SPF/DKIM/DMARC、黑名单申诉、IP 预热),DuoCircle(2026-03)的十步指南、四条 YouTube 教程(2022-07 至 2025-11)、HN Ask(2022-05)、Google 自家支持帖(2026-07)全部在位。Reddit 上 6452 分是对老问题的新一轮愤怒,不是新词——按 G7「好奇 vs 任务」与类别五的判据,讨论热度不等于任务新生", "pattern": "讨论热度不等于新词"}
+{"date": "2026-08-21", "term": "cima through gpap", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "accounting job hunt difficult cv attached", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "devops enjoy job hate deadlines", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "deloitte sc2 145k", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "job paying usd remotely in canada", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "acca with no accounting degree", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "free associates degree worth it", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "about to graduate no idea what to do", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "open house what questions to ask", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "50 days into us tax job no work", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "left accounting for different career", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "accounting career transition", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "project specialist or big4 accounting intern", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "how dangerous is accounting", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "electricians local 520", "gate": "G6", "reason": "职业闲聊与求职咨询:提问者是求职者或在职者本人,不是有预算的付费者,也不存在被迫重复完成的可搜索任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "sysadmin hey are you available rant", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "computers slow because theyre old rant", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "self-hosting everything meta post", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "selfhosted tools and apps i rely on dashboard", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "old kindle as e-ink homelab dashboard", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "homepage after 4 months self-hosting journey", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "21 gang electrical cover", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "electrician first shot without hickey", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "costco selling r22 refrigerant", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "accounting things should calm down every week", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "accounting status message screenshot", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "accounting late night consequences", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "accounting all hope leaves my soul", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "extrovert superpower in public accounting", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "accounting 60 hour weeks paycheck", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "electricians sometimes its the little things", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "hazbin will you open up your heart", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "halloween kitty combo my sweet boys", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "orangecats cooper looking handsome", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "franchises killing small locally owned businesses", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "simon dentremont uses ai slop", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "accounting major penn state cocaine ring", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "naming the monsters method", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "code switching to masc voice", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "autonomous workflow parallels fully modded skyrim", "gate": "G5", "reason": "命中陷阱类别五:社区梗图、吐槽、晒图或观点帖,不产生任何页面可完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "is there a name for this feeling", "gate": "G6", "reason": "消费者好奇型命名空缺:确实没有权威叫法,但付费者是好奇的个人,无预算、无自助变现路径,G6 四项缺两项", "pattern": "消费者好奇型命名空缺"}
+{"date": "2026-08-21", "term": "is there a name for these white spots tuxedo cat", "gate": "G6", "reason": "消费者好奇型命名空缺:确实没有权威叫法,但付费者是好奇的个人,无预算、无自助变现路径,G6 四项缺两项", "pattern": "消费者好奇型命名空缺"}
+{"date": "2026-08-21", "term": "is there a name for this drink cocktails", "gate": "G6", "reason": "消费者好奇型命名空缺:确实没有权威叫法,但付费者是好奇的个人,无预算、无自助变现路径,G6 四项缺两项", "pattern": "消费者好奇型命名空缺"}
+{"date": "2026-08-21", "term": "is there a name for this behaviour personality disorders", "gate": "G6", "reason": "消费者好奇型命名空缺:确实没有权威叫法,但付费者是好奇的个人,无预算、无自助变现路径,G6 四项缺两项", "pattern": "消费者好奇型命名空缺"}
+{"date": "2026-08-21", "term": "does anyone know what phobia this is", "gate": "G6", "reason": "消费者好奇型命名空缺:确实没有权威叫法,但付费者是好奇的个人,无预算、无自助变现路径,G6 四项缺两项", "pattern": "消费者好奇型命名空缺"}
+{"date": "2026-08-21", "term": "sparkyfitness self-hosted myfitnesspal alternative", "gate": "G5", "reason": "命中陷阱类别二:项目或产品品牌名发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "open-source self-hosted network operations ale omniswitch", "gate": "G5", "reason": "命中陷阱类别二:项目或产品品牌名发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "the urinal game pick a urinal percentage", "gate": "G5", "reason": "命中陷阱类别二:项目或产品品牌名发布,导航意图", "pattern": "纯品牌名发布"}
+{"date": "2026-08-21", "term": "selfhosted lost all my data backup failure", "gate": "G7", "reason": "一次性事件或个案求助,不构成有人被迫重复完成的耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "1200a 120/208v cummins generator single family home", "gate": "G7", "reason": "一次性事件或个案求助,不构成有人被迫重复完成的耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "took over billing found customer owes 200k", "gate": "G7", "reason": "一次性事件或个案求助,不构成有人被迫重复完成的耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "small business petty revenge", "gate": "G7", "reason": "一次性事件或个案求助,不构成有人被迫重复完成的耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "hvac second opinion dumped it or accident", "gate": "G7", "reason": "一次性事件或个案求助,不构成有人被迫重复完成的耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "connect gopro to zoom storage capacity", "gate": "G7", "reason": "一次性事件或个案求助,不构成有人被迫重复完成的耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "cheap surge protection from amazon", "gate": "G7", "reason": "一次性事件或个案求助,不构成有人被迫重复完成的耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "ti build-out dollar per square foot starting point", "gate": "G6", "reason": "成熟常青采购/选型问题(报价基准、支付网关选型、建站主机选型),非新词,且已被大量常青内容与类别七的替代品目录覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "payment gateway recommendations sewing supply business", "gate": "G6", "reason": "成熟常青采购/选型问题(报价基准、支付网关选型、建站主机选型),非新词,且已被大量常青内容与类别七的替代品目录覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "website host for seasonal decorating business", "gate": "G6", "reason": "成熟常青采购/选型问题(报价基准、支付网关选型、建站主机选型),非新词,且已被大量常青内容与类别七的替代品目录覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "deepseek v4 flash-0731 vram requirements", "gate": "G3", "reason": "G3 veto 且非新词:0731 即 2026-07-31,Reddit 线程可追到三个月前(另有 2026-07-31、2026-04-30 两条)。ApX Machine Learning 已按模型逐个建页并列出各量化档显存需求,WaveSpeedAI 的 GPU 需求指南发于 2026-03-03,ktransformers GitHub 文档直接给出 1×RTX 5090 + ≥200GB 内存 + ~340GB 权重的硬件要求,另有 NVIDIA 开发者论坛与多条实测视频。命中陷阱类别一", "pattern": "模型版本词随版本过期"}
+{"date": "2026-08-21", "term": "aurora-80k tiny language model", "gate": "G6", "reason": "发布 18 小时的全新模型,但 G6 付费者一环直接不成立:正好 8 万参数、权重约 0.3MB、在 40M token 上训练的玩具模型,没有任何人被迫使用它。实测发布方自己的 HuggingFace 模型卡与文件树 18 小时内已被收录并排第 2 位,通用显存计算器未收——但那正是「没有任务所以工具不收」的一侧。另有措辞污染:Aurora 80k 与英雄联盟角色、薪资查询、服装商品列表碰撞", "pattern": "没有任务的新对象"}
+{"date": "2026-08-21", "term": "tencent hunyuan hy4 testing", "gate": "G7", "reason": "尚在测试阶段、未正式发布,任务还没出生;发布后按类别一处置", "pattern": "生效日远在未来的变化"}
+{"date": "2026-08-21", "term": "qwen3.8 27b 1bit brain damage quant", "gate": "G5", "reason": "命中陷阱类别一:Qwen 3.8 27B 已于 2026-08-17 记入索引;且 brain damage quant 是社区玩笑说法,不会成为稳定搜索措辞", "pattern": "模型版本词随版本过期"}
+{"date": "2026-08-21", "term": "mini kimi-k3 from scratch under 250 dollars", "gate": "G6", "reason": "个人复现实验与教程,受众是学习者而非被迫完成任务的付费者", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "kia pv5 review", "gate": "G5", "reason": "命中陷阱类别六:新车型这个对象类有全集维护者,汽车媒体与选车站(Edmunds/KBB/InsideEVs/Car and Driver)按车型逐个建页,发布即在位", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "2027 chevy bolt review cheap evs", "gate": "G5", "reason": "命中陷阱类别六:同上,新车型全集维护者已在位", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "bronze composite pla", "gate": "G5", "reason": "命中陷阱类别六:3D 打印耗材这个对象类有全集维护者(厂商材料库与 All3DP/Prusa 知识库按材料逐个建页)", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "quick test for a dirty build plate", "gate": "G6", "reason": "3D 打印维护技巧是常青题材,非新词,已被打印机厂商知识库与 All3DP 一类站覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "snap-fit bag tag press-fit letter tolerances filaments", "gate": "G6", "reason": "压配公差是常青工程问题,非新词,且答案随材料与打印机变化、没有可页面化的定值", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "how long will 5800x3d rtx 5070 last at 1440p", "gate": "G5", "reason": "命中陷阱类别七:配置能撑多久属选型横向讨论,该格已有对比站与榜单占位", "pattern": "跨厂商横向对比与迁移"}
+{"date": "2026-08-21", "term": "london tax on polluting cars health study", "gate": "G5", "reason": "命中陷阱类别五:科研新闻,无被迫任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "aggressive driving degrades ev battery capacity", "gate": "G5", "reason": "命中陷阱类别五:科研新闻,无被迫任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "ikea side panels for server rack", "gate": "G5", "reason": "命中陷阱类别五:个人 DIY 晒图,无耐久任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "four 12gpu mining rigs for 20 dollars", "gate": "G5", "reason": "命中陷阱类别五:个案捡漏晒图,无耐久任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "thinkwall homelab", "gate": "G5", "reason": "命中陷阱类别五:homelab 晒机梗,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "truenas home server in powermac g4 cube", "gate": "G5", "reason": "命中陷阱类别五:个人改装展示,无耐久任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "minecraft server on amazon echo spot", "gate": "G5", "reason": "命中陷阱类别五:玩法梗图,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "16tb exos drive failure", "gate": "G5", "reason": "命中陷阱类别五:单盘故障晒图,无耐久任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "first mini-racks homelab", "gate": "G5", "reason": "命中陷阱类别五:晒机帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "warthog dash drifter halo 3d model", "gate": "G5", "reason": "命中陷阱类别五:3D 打印作品展示,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "5 foot 6 spiderman 3d print", "gate": "G5", "reason": "命中陷阱类别五:作品展示,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "3d printed heavy bag for a squirrel", "gate": "G5", "reason": "命中陷阱类别五:作品展示,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "3d printed benches in prague", "gate": "G5", "reason": "命中陷阱类别五:见闻分享,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "stopped buying smart home devices building my own", "gate": "G5", "reason": "命中陷阱类别五:DIY 观点帖,无具体可完成任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "shopify bot traffic from singapore", "gate": "G3", "reason": "G3 veto 且非新词,并推翻了本轮的工作假设:我原以为平台官方帮助在登录墙后、按 G3 三分属「结构上进不来 SERP」从而留出位置,实测相反——community.shopify.com 被完整收录并以 5 条线程霸占首页(2026-04-22、2025-11-10、2025-12-27、2026-04-24、2026-04-07),每条都直接给出答案(geo-block 新加坡、开启 Bot fight mode、按国家屏蔽);另有 community.shopify.dev(2026-04-28)与 securecommerce.io 的专门页「Block Singapore Traffic on Shopify」。Reddit 同问题线程可追到 2025-08。**平台自家用户论坛就是全集维护者**,按问题变体逐个建帖", "pattern": "平台官方社区论坛即全集维护者"}
+{"date": "2026-08-21", "term": "stolen sticker designs on temu", "gate": "G5", "reason": "命中陷阱类别三与类别六:Temu 自己有 IP 投诉入口与说明,知识产权律所与电商维权服务已围着这个付费者转;且平台盗图是常年问题非新词", "pattern": "厂商已占位的 B2B 强制任务"}
+{"date": "2026-08-21", "term": "shopify first chargeback", "gate": "G6", "reason": "拒付处理是电商常青题材,非新词,已被支付服务商、Shopify 社区与大量常青内容覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "etsy refuses to remove crude image in review", "gate": "G7", "reason": "单次客服申诉个案,Etsy 自有评价政策页,不构成有人被迫重复完成的耐久任务", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "etsy shop hacked", "gate": "G6", "reason": "账号被盗的处置由平台官方支持流程承接,第三方页面无位置,且属个案", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "false advertisement with ai pictures etsy rules", "gate": "G6", "reason": "平台规则解读由 Etsy 自家政策页承接,社区讨论无独立可完成任务", "pattern": "官方答案已在位"}
+{"date": "2026-08-21", "term": "is etsy becoming the thing it competed against", "gate": "G5", "reason": "命中陷阱类别五:平台走向的观点讨论帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "etsy q2 numbers sellers grew buyers shrank", "gate": "G5", "reason": "命中陷阱类别五:财报解读,无被迫任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "one month on etsy milestone", "gate": "G5", "reason": "命中陷阱类别五:里程碑晒单,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "first star seller badge", "gate": "G5", "reason": "命中陷阱类别五:徽章晒图,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "5 months selling digital products", "gate": "G5", "reason": "命中陷阱类别五:经验分享帖,无具体可完成任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "crossed 1m arr fba 40 percent margin ama", "gate": "G5", "reason": "命中陷阱类别五:AMA 成绩分享,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "etsy buyer advice needed", "gate": "G7", "reason": "买家个案求助,一次性", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "etsy seller refusing reasonable refund", "gate": "G7", "reason": "买卖纠纷个案,一次性", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "etsy is this real", "gate": "G7", "reason": "真伪辨识个案,一次性", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "seller says i must pay extra shipping two months later", "gate": "G7", "reason": "订单纠纷个案,一次性", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "etsy custom order vague buyer make it better", "gate": "G7", "reason": "定制订单纠纷个案,一次性", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "etsy handmade shop advice", "gate": "G6", "reason": "泛泛求建议,提不出具体可由页面完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "help me phrase this kindly etsy", "gate": "G6", "reason": "措辞求助,一次性且无付费者", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "how to deal with needy buyers etsy", "gate": "G6", "reason": "客户沟通是常青经验话题,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "one-star review for drop shipped item", "gate": "G6", "reason": "买家评价伦理讨论,无付费者被迫任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "does leaving a review help other etsy sellers", "gate": "G6", "reason": "买家行为疑问,无付费者被迫任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "the shipping thing that keeps me up at night", "gate": "G6", "reason": "运费焦虑吐槽,未提出具体可完成任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "steady etsy sales without social media", "gate": "G6", "reason": "Etsy 流量常青话题,非新词,已被大量常青内容与课程覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "helpful tip for keywords etsy", "gate": "G6", "reason": "Etsy 关键词优化是成熟常青题材,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "win32k.sys stopcode 0x1a issue spreading", "gate": "G3", "reason": "G3 veto 且非新词:0x1A MEMORY_MANAGEMENT 与 win32k.sys 是几十年的通用蓝屏码,r/buildapc(7 个月前 90+ 评论)、Microsoft Learn Q&A(2025-12、2026-05)、HP 支持社区(2026-07)、Acer 社区(2025-10)、tenforums(2017)与修复视频全部在位。原帖仅 8 赞 4 评论、SERP 无补丁引发的扩散迹象,更可能是个案硬件问题。由此得一条钳形判据:东西坏掉时可搜的措辞要么是老的通用错误码(最饱和的查询),要么是新的版本号/KB 号(发布方 release notes 自带答案,类别四),两头都被占", "pattern": "故障措辞两头都被占"}
+{"date": "2026-08-21", "term": "amc site keeps crashing sre explanation", "gate": "G6", "reason": "学生记者约访,不是可由页面完成的任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "employee info changes what systems fail to sync", "gate": "G6", "reason": "身份数据同步是常青架构话题,非新词,且已被 IAM 厂商内容机器覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "hospital infrastructure migration assessment", "gate": "G6", "reason": "单个机构的咨询求助,一次性且无可页面化的通用答案", "pattern": "一次性事件"}
+{"date": "2026-08-21", "term": "compsci degree just to be a sysadmin", "gate": "G6", "reason": "职业闲聊,无付费者被迫任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "higher patch volume current reality", "gate": "G6", "reason": "补丁运维的开放式讨论,无具体可完成任务;且该题材已被补丁管理厂商内容覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "active directory certificate services post-deployment incorrect parameter", "gate": "G6", "reason": "Windows Server 2019 上的既有报错,非新词,已被 Microsoft Q&A 与运维博客覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "p&g buying thorne supplement quality", "gate": "G3", "reason": "G3 veto,本次会话测到的最紧窗口:交易 2026-08-04 宣布,P&G 自家新闻室页与 CNBC **当天**即在位,Nutraceutical Business Review 次日跟上,一周内出现行业分析视频(Joshua Schall)与多个营养师短视频(最近一条 4 小时前),r/Supplements 的 250+ 评论线程与 r/Biohackers、r/ProactiveHealth 已把「要不要换牌子」讨论完。People also ask 直接是 Pure 还是 Thorne 更好——对比这一格属类别七且早被占。补剂垂类联盟佣金最强,占位也最快", "pattern": "跨厂商横向对比与迁移"}
+{"date": "2026-08-21", "term": "usda regenerative agriculture program 26000 farmers", "gate": "G5", "reason": "命中陷阱类别六:USDA 自己为该项目建页并公布申请情况,农业推广与咨询内容随后跟上", "pattern": "管辖机构自维护的对象全集权威查询"}
+{"date": "2026-08-21", "term": "supplements that actually work for anxiety", "gate": "G6", "reason": "全网最饱和的 YMYL 常青查询之一,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "which supplement helped most with depression", "gate": "G6", "reason": "同上,YMYL 常青查询,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "sleep 8 hours still wake up foggy", "gate": "G6", "reason": "常青健康提问,非新词,已被健康媒体与内容站占满", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "what actually decreased your weight", "gate": "G6", "reason": "减重经验征集,常青且最饱和的题材之一", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "intermittent fasting benefits overhyped", "gate": "G5", "reason": "命中陷阱类别五:BBC 科普报道,无被迫任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "tea bags nano and microplastics", "gate": "G5", "reason": "命中陷阱类别五:科研新闻,无被迫任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "high iq makes you an outsider", "gate": "G5", "reason": "命中陷阱类别五:大众心理观点文,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "do it anyways do it tired do it sad", "gate": "G5", "reason": "命中陷阱类别五:动员型鸡汤帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "trading ruined my life", "gate": "G5", "reason": "命中陷阱类别五:个人经历倾诉,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "full time trader what do you do all day", "gate": "G6", "reason": "职业日常好奇,无付费者被迫任务", "pattern": "职业闲聊与求职咨询"}
+{"date": "2026-08-21", "term": "dont be someone youre not trading", "gate": "G5", "reason": "命中陷阱类别五:心态建议帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "the effect of trading", "gate": "G5", "reason": "命中陷阱类别五:泛泛讨论,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "social media has ruined trading", "gate": "G5", "reason": "命中陷阱类别五:行业吐槽,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "retail trading failure rate makes no sense", "gate": "G5", "reason": "命中陷阱类别五:业内观察讨论,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "how long does it take to become profitable trading", "gate": "G6", "reason": "交易入门常青提问,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "best run in my trading career", "gate": "G5", "reason": "命中陷阱类别五:盈亏晒单,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "big premium is the market warning you", "gate": "G6", "reason": "期权定价直觉的教学帖,常青题材非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-21", "term": "ridiculous order book visualization", "gate": "G5", "reason": "命中陷阱类别五:可视化作品展示,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "quant dismantles discretionary trading", "gate": "G5", "reason": "命中陷阱类别五:观点视频转发,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "backtested the trading geeks strategy 130201 times", "gate": "G6", "reason": "针对某个博主策略的回测分享,受众绑定该博主、不构成独立可搜索任务", "pattern": "过窄技术实现"}
+{"date": "2026-08-21", "term": "letting claude handle money for a month", "gate": "G6", "reason": "个人实验展示,无被迫重复任务", "pattern": "无付费者"}
+{"date": "2026-08-21", "term": "undiagnosed adhd productivity advice", "gate": "G5", "reason": "命中陷阱类别五:社区观察帖,无任务", "pattern": "信号面的观点、新闻与旧文回流"}
+{"date": "2026-08-21", "term": "procrastination grief from wasted time", "gate": "G6", "reason": "拖延情绪求助,常青且付费者无预算", "pattern": "成熟工具词"}
+{"date": "2026-08-22", "term": "零回答与悬赏问题", "gate": "G5", "reason": "[已归并] 见陷阱类别.md 类别九(前置筛除型·直接筛除型):零回答不是答案缺失的证据,而是提问者孤立的证据。全站悬赏仅 4 个、最高分未回答问题清一色是死掉的技术栈、浏览量累积多年也只有 1k–9k,G6 的收入线在这个量级上无从谈起", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "elisp defmacro parameter inner cl-macrolet backquoted template", "gate": "G5", "reason": "命中陷阱类别九:300 声望悬赏、0 回答,elisp 宏展开极冷门,提问者孤立", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "call statically linked pascal function from c main", "gate": "G5", "reason": "命中陷阱类别九:200 声望悬赏、0 回答,Free Pascal FFI 极冷门", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "vba err.raise ignoring custom description and source", "gate": "G5", "reason": "命中陷阱类别九:50 声望悬赏,VBA 错误处理遗留技术栈,2774 浏览为多年累计", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "clang-format stack if-statement arguments too long", "gate": "G5", "reason": "命中陷阱类别九:50 声望悬赏,clang-format 配置细节,3434 浏览为多年累计", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "android ndk gdb loaded shared libraries missing oat", "gate": "G5", "reason": "命中陷阱类别九:全站最高分未回答问题(123 分),4410 浏览累积多年,受众是调试 NDK 的个人开发者,无自助变现路径", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "tdbctrlgrid vcl style custom class delphi xe2", "gate": "G5", "reason": "命中陷阱类别九:Delphi XE2 是 2011 年代技术,74 分累积多年", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "materialize value for type with one inhabitant scala shapeless", "gate": "G5", "reason": "命中陷阱类别九:Scala 类型级计算,68 分、1682 浏览累积多年", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "android accessibility service disabled upon each debug run", "gate": "G5", "reason": "命中陷阱类别九:调试期个案,62 分累积多年", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "rgraphviz pos argument fix node position", "gate": "G5", "reason": "命中陷阱类别九:R 绘图包冷门参数,1297 浏览累积多年", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "ios sectrustref always null", "gate": "G5", "reason": "命中陷阱类别九:Objective-C 遗留 SSL 接口,1727 浏览累积多年", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "chrome custom tabs not opening other apps", "gate": "G5", "reason": "命中陷阱类别九:Android 组件个案,3180 浏览累积多年", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "composite manifest microsoft smooth streaming", "gate": "G5", "reason": "命中陷阱类别九:Silverlight 平滑流,技术已死", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "openerp 7 product quantity base uom purchase uom", "gate": "G5", "reason": "命中陷阱类别九:OpenERP 7 已被 Odoo 取代多代", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "linkedin meta tags publish date not found", "gate": "G5", "reason": "命中陷阱类别九:9228 浏览是本批最高但仍是多年累计;且 Open Graph 标签本身是 SEO 与营销内容站高度饱和的题材", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "websphere commerce 7 remove language and store name from seo url", "gate": "G5", "reason": "命中陷阱类别九:Websphere Commerce 7 企业遗留平台,1016 浏览累积多年", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "xcode 6.1 update frames for all size classes storyboard", "gate": "G5", "reason": "命中陷阱类别九:Xcode 6.1 是 2014 年版本,1479 浏览累积多年", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "haskell repa parallel applications of sequential transform", "gate": "G5", "reason": "命中陷阱类别九:Haskell 数组库极冷门", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "windows clipboard interface with xming", "gate": "G5", "reason": "命中陷阱类别九:Xming 是 Windows 上的 X server,6405 浏览累积多年,受众极窄", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "chicago boss routes production mode erlang", "gate": "G5", "reason": "命中陷阱类别九:Erlang 的 Chicago Boss 框架已基本停止维护", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "workday core connector worker configuration", "gate": "G3", "reason": "G3 veto,登录墙不等于位置空着:Workday 官方文档确实在客户登录墙后(按 G3 三分本应属结构上进不来 SERP),但空位被培训行业填满——Evolution Cloud Services 的 LinkedIn 分步教程(1 年前,直接给出 Create integration system 任务与模板选择)、r/workday 三条线程(解释背后走 Get_Workers API)、四条 YouTube 完整走查(CyberBrainer 2025-05、Upptalk 2025-08 与 2024-07、ZaranTech 2024-09 的 54 分钟课)、workdaytrainings.com 课程页(4389 条评分),外加 Scribd 上转载的官方 Core Connectors Overview PDF。两条推论:培训与认证行业是全集维护者的一个变体,文档分享站会把墙后官方材料重新公开", "pattern": "登录墙后的官方文档被培训行业与转载站补位"}
+{"date": "2026-08-22", "term": "hermes-agent stack overflow tag", "gate": "G5", "reason": "命中陷阱类别二与类别四:AI agent 框架品牌名,且厂商自己写文档;新标签仅 1 个问题", "pattern": "纯品牌名发布"}
+{"date": "2026-08-22", "term": "falkordb graph database redis module", "gate": "G5", "reason": "命中陷阱类别四:厂商自建文档的开源产品;新标签 4 个问题为本批最快,留待第 3 轮按类别九的例外口单独验证", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-22", "term": "rspotify stack overflow tag", "gate": "G5", "reason": "命中陷阱类别二:Rust 的 Spotify 客户端库品牌名,1 个问题", "pattern": "纯品牌名发布"}
+{"date": "2026-08-22", "term": "fullcalendar-7 stack overflow tag", "gate": "G5", "reason": "命中陷阱类别四:库的大版本发布,官方迁移文档自带答案,1 个问题", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-22", "term": "booqable stack overflow tag", "gate": "G5", "reason": "命中陷阱类别二:租赁 SaaS 品牌名,创建 10 天 0 个问题", "pattern": "纯品牌名发布"}
+{"date": "2026-08-22", "term": "dotnet 11.0 stack overflow tag", "gate": "G5", "reason": "命中陷阱类别四:微软自家发布,release notes 与 learn.microsoft.com 同步在位。另记口径:该版本标签只有 1 个问题不等于 .NET 11 只产生 1 个问题——提问者多用 .net 或 c# 等既有标签,此处只说明版本专用标签的冷启动量级", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-22", "term": "opencl-svm stack overflow tag", "gate": "G5", "reason": "命中陷阱类别九:OpenCL 共享虚拟内存极冷门,1 个问题", "pattern": "零回答与悬赏问题"}
+{"date": "2026-08-22", "term": "rustfs stack overflow tag", "gate": "G5", "reason": "命中陷阱类别二:Rust 文件系统项目品牌名,1 个问题", "pattern": "纯品牌名发布"}
+{"date": "2026-08-22", "term": "mssql-python stack overflow tag", "gate": "G5", "reason": "命中陷阱类别四:微软自家的 SQL Server Python 驱动,官方文档自带答案,2 个问题", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-22", "term": "pseint stack overflow tag", "gate": "G5", "reason": "命中陷阱类别二:阿根廷的教学用伪代码解释器,受众是学生、无付费者,1 个问题", "pattern": "纯品牌名发布"}
+{"date": "2026-08-22", "term": "leader-line-js stack overflow tag", "gate": "G5", "reason": "命中陷阱类别二:连线绘制库品牌名,1 个问题", "pattern": "纯品牌名发布"}
+{"date": "2026-08-22", "term": "md4 stack overflow tag", "gate": "G6", "reason": "MD4 是 1990 年的哈希算法,标签新但对象极老,非新词;且已被密码学参考资料覆盖", "pattern": "成熟工具词"}
+{"date": "2026-08-22", "term": "thephpleague-csv stack overflow tag", "gate": "G5", "reason": "命中陷阱类别四:The PHP League 自建文档的成熟库,12 个问题", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-22", "term": "thephpleague-oauth2 stack overflow tag", "gate": "G5", "reason": "命中陷阱类别四:同上,14 个问题", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-22", "term": "macro-expansion stack overflow tag", "gate": "G6", "reason": "宏展开是编译原理通用概念,标签新但概念极老,非新词", "pattern": "成熟工具词"}
+{"date": "2026-08-22", "term": "best-practices stack overflow tag", "gate": "G6", "reason": "元标签,2899 个问题是回溯打到既有老问题上的,不是新技术;且 best practices 是最饱和的泛词", "pattern": "成熟宽词"}
+{"date": "2026-08-22", "term": "tooling-recommendation stack overflow tag", "gate": "G6", "reason": "同上,1029 个问题为回溯标注的元标签,且工具推荐类问题在 SO 已被规则限制", "pattern": "成熟宽词"}
+{"date": "2026-08-22", "term": "falkordb graphrag setup", "gate": "G3", "reason": "G3 veto,且核对出对象并不新:FalkorDB 官方文档站 docs.falkordb.com 占了 9 条网页结果里的 5 条(GraphRAG-SDK、GraphRAG Toolkit、AG2、GraphRAG SDK)加 falkordb.com 的博客与产品页,其中博客文章日期为 2025-03-12(17 个月前);另有 GitHub 的 FalkorDB/GraphRAG-SDK 自称 5-minute setup,以及三条 YouTube 教程(2025-09、2025-12 两条)。SO 标签建于 2026-08-16 只是标签的年龄,不是对象的年龄。命中陷阱类别四最纯粹的形态:厂商为自家产品写完整文档", "pattern": "厂商 release note 衍生任务"}
+{"date": "2026-08-23", "term": "闸门版本号自检占位方向", "gate": "G6", "reason": "校准后写入的首条,用于确认 gate_version 落盘", "gate_version": "2026-08-23"}
+{"date": "2026-08-23", "term": "cbam embedded emissions per shipment calculation", "gate": "G3", "reason": "G3 veto,且违反正向选择器判据 6:**欧委会自己发了计算工具**——taxation-customs.ec.europa.eu 的 PDF 明写「This Excel file is a tool that allows operators to determine the embedded emissions in CBAM goods according to the methodology specified in」。另有 ≥3 个真计算器且均出自成规模厂商:MAYGREEN CBAM Facilitator(算出所需 CBAM 证书数量)、kolum.earth 的免费 CBAM calculator(按产品与原产国估算证书成本)、CarbonChain 的 CBAM Exposure Calculator;Breathe ESG 另有「Top 7 CBAM-Ready 工具」盘点,说明该格已有至少七个产品。按新 G3 第一问 ≥2 个真工具、第二问均为成规模厂商、第三问全部稳定排名 → veto。教训:判据 6 应在零成本层先查「发证机关自己有没有发计算工具/模板/Excel」,这一步能省掉一次深审。", "gate_version": "2026-08-23", "pattern": "发证机关自带计算工具"}
+{"date": "2026-08-23", "term": "forced labour regulation supply chain due diligence per product", "gate": "G6", "reason": "零成本层按修订后的判据 2 淘汰:义务是**供应链层面的尽职调查**,不是逐个对象的可计算判定——同一条供应链上的所有产品共享一次调查结论,不存在「每个 SKU 各算一次」。判据 2 不成立即出局,不必进深审。付费者一侧另有隐患:该义务只咬到有能力做供应链审计的大企业,而它们买的是律所与咨询,不是自助工具", "gate_version": "2026-08-23", "pattern": "判据2不成立:非逐对象"}
+{"date": "2026-08-23", "term": "weee registration per member state waste stream", "gate": "G6", "reason": "零成本层按去重与范围淘汰:与本轮已注册的 eu-multistate-packaging-epr-registration 是同一个义务族的另一个废弃物流,该候选的任务描述已明确覆盖「每个成员国 × 每个废弃物流各注册一次」,单独立项会造成账本内重复评估。不另注册,归入该候选的簇内页面", "gate_version": "2026-08-23", "pattern": "同一候选簇内的变体"}
+{"date": "2026-08-23", "term": "battery passport carbon footprint declaration per model", "gate": "G3", "reason": "G3 veto(2026-08-22 校准轮已现场实测,本轮补正式留痕):真工具 ≥4 且均出自成规模厂商——circularise.com/battery-passport 专门产品页、digiprodpass.com(2026-01-08)、dpp-tool.com(2026-02-22)、makersite.io(可做 LCA 算碳足迹),另有 thebatterypass.eu 的碳足迹核算规则文档与 iTAC Software AG 一类工业软件商。按新 G3:第一问 ≥2 个真工具、第二问主体为成规模厂商、第三问全部稳定排名 → veto", "gate_version": "2026-08-23", "pattern": "发证机关自带计算工具"}
+{"date": "2026-08-23", "term": "eudr due diligence statement geolocation per shipment", "gate": "G3", "reason": "G3 veto(按 2026-08-23 回退后的判据):真工具 ≥3 且核心判定已被工具化——eudrvault.com 的 EUDR Due Diligence Tool 自述「生成尽职调查声明前先跑合规门禁检查,识别缺失数据、过期文件、不完整地理坐标」,Kohtas 提供 EUDR API 端到端方案(且在买这个查询的广告),osapiens 与 TraceX Technologies 是成规模可追溯性平台;另有 Meridia Land、ResourceWise 的地理数据能力与欧委会自己的 EUDR Information System(DDS 提交系统)。原「混合情形 → pass」会放行它,该规则同日已被推翻", "gate_version": "2026-08-23", "pattern": "核心判定已被工具化"}
+{"date": "2026-08-23", "term": "textile digital product passport data requirements per sku", "gate": "G3", "reason": "G3 veto(按 2026-08-23 回退后的判据):真工具约 3 个——dpp-tool.com(单一用途域名)、CISUTAC 项目的 Decision Support Tool(自述指出 17 个具体数据点)、Carbonfact 的 LCA 平台;另有 Fluxy.One、Renoon、Mimacom。且义务未适用(纺织品授权法案预计 2027 通过、2028/2029 才须合规),属抢跑已发生而需求未到。顺带留下两个有出处的 G6 价格锚:Carbonfact 给出实际成本 €1–10/SKU,DPP-Tool 给出一个品牌每季 500 个 SKU 各需计算与核验一次", "gate_version": "2026-08-23", "pattern": "抢跑已发生而需求未到"}
+{"date": "2026-08-23", "term": "toy safety regulation digital product passport per toy", "gate": "G3", "reason": "G3 veto(按 2026-08-23 回退后的判据),且是推翻我方旧规则的关键一例:Toy Safety Regulation (EU 2025/2509) 的 DPP 义务要到 **2030-08-01** 才适用,近四年后才产生需求,却已有约 4 个真工具占位——Tappr(usetappr.com)、Fluxy.One、EZ Lab 的区块链 DPP,以及 eudigitalproductpassport.org 这个按行业分页的 DPP 专用站(直接有 Toy 板块并写明 2030 期限);另有 Eurofins、Intertek 两家检测机构的解读。原「混合情形 → pass」会放行它,而四年后的需求配已被抢跑的位置显然不是开着的窗口——这一例直接促成同日回退", "gate_version": "2026-08-23", "pattern": "抢跑已发生而需求未到"}
+{"date": "2026-08-23", "term": "statute of limitations florida", "gate": "G2", "reason": "广告线量级算式通过(簇 10,000+ 词,前 15 行 111.6K/月,CPC 4.07–12.11 → RPM 参考 20–40,需求量约 16 万),死在防守:六条弱守信号只中 2 条(信号3无真工具、信号4格式错配偏弱)。#1/#2/#4 是佛州官方法条 leg.state.fl.us 与 flsenate.gov,加 FindLaw(Thomson Reuters);Kogan Firm 2026-06 已覆盖 HB 837 把人伤时效 4 年改 2 年,不存在内容老化;CPC 12.11 与多家律所专页、律所 YouTube 频道说明这一格是被多方当生意在经营(信号6强烈相反)。同时命中陷阱类别六:管辖机构自维护的对象全集权威查询。附带发现:本方向属 YMYL(法律),而方法的 YMYL 排除只列举了健身/补剂/交易/健康,没有画出类别边界。", "gate_version": "2026-08-23b", "lane": "mature", "pattern": "成熟错价词道:高 RPM 但管辖机构自维护", "task": "查佛罗里达州某类索赔的诉讼时效年限", "source_urls": ["https://www.google.com/search?q=statute+of+limitations+florida&gl=us&hl=en&num=20&pws=0", "https://www.semrush.com/analytics/keywordmagic/?db=us&keyword=statute+of+limitations"]}
+{"date": "2026-08-23", "term": "cost per square foot", "gate": "G6", "reason": "广告线量级不过。簇 10,000+ 词但极扁平,无头部词:前 15 行合计仅 31.0K/月(最高 carpet cost per square foot 4.4K)。CPC 1.15–2.68 → RPM 参考 6,按算式需求会话 33,333/月、需求簇内量约 66.7 万/月,靠 1.6K 量级长尾需三百多词全部排上首位,新站不可行。另有 cost per square foot calculator(2.4K,KD 49)存在,命中成熟工具词反向排除;HomeAdvisor/Angi/Fixr 一类已把这一格当生意经营。", "gate_version": "2026-08-23b", "lane": "mature", "pattern": "成熟错价词道:无管辖机构维护但 RPM 过低", "task": "查某种材料或工程按每平方英尺计的造价", "source_urls": ["https://www.semrush.com/analytics/keywordmagic/?db=us&keyword=cost+per+square+foot"]}
+{"date": "2026-08-23", "term": "commercial rent per square foot", "gate": "G6", "reason": "广告线量级不过,且差两个数量级。簇仅 290+ 词(对比另两个种子的 10,000+),头部词 commercial rent per square foot 只有 140/月,前 9 行合计 670/月。CPC 2.85–4.85 → RPM 参考 15,按算式需求簇内量约 26.7 万/月,实际全簇约 2–3K/月。窄 B2B 垂类的通病:单价好、总量无。", "gate_version": "2026-08-23b", "lane": "mature", "pattern": "成熟错价词道:CPC 尚可但簇本身太小", "task": "查某市场某类商业物业的每平方英尺租金水平", "source_urls": ["https://www.semrush.com/analytics/keywordmagic/?db=us&keyword=commercial+rent+per+square+foot"]}
+{"date": "2026-08-23", "term": "john deere d130 mower deck belt size", "gate": "G2", "reason": "六条弱守信号 0–1/6,完败。首页被零售商与购物卡片占满(Amazon、Walmart、Home Depot、Lowe's),V-Belt Guys 已把逐型号适配表建成自己的生意并直接给出 0.50\" × 104.00\";不存在内容老化、无格式错配、无意图错配,信号六强烈相反。与同日通过弱守检验的 lug nut torque spec 对照后得出新判据(修订五):逐对象查表要挑答案是一个数字的,避开答案是一件可购买商品的——没人卖 80 ft-lbs,所以没有零售商有动机建那张表;而皮带尺寸的答案是一个 SKU,零件商建适配表等于建自己的商品目录。", "gate_version": "2026-08-23b", "lane": "mature", "pattern": "成熟错价词道:逐对象查表但答案是可购买商品", "task": "查某型号骑乘式割草机的割草盘皮带尺寸", "source_urls": ["https://www.google.com/search?q=john+deere+d130+mower+deck+belt+size&gl=us&hl=en&num=20&pws=0"]}

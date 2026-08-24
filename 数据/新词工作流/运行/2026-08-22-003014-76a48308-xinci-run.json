@@ -1,0 +1,123 @@
+{
+  "date": "2026-08-22",
+  "skill": "xinci-run",
+  "run_id": "run-20260822T003014Z-76a48308",
+  "sources_opened": [
+    "https://stackoverflow.com/questions?tab=Bounties",
+    "https://stackoverflow.com/unanswered?tab=frequent",
+    "https://stackoverflow.com/tags?tab=new",
+    "https://www.google.com/search?q=workday+core+connector+worker+configuration&gl=us&hl=en&pws=0",
+    "https://www.google.com/search?q=falkordb+graphrag+setup&gl=us&hl=en&pws=0"
+  ],
+  "sources_blocked": [
+    "https://stackoverflow.com/search?q=answers%3A0+views%3A500+created%3A7d(搜索端点即使在用户已登录的 Chrome 里仍跳 /nocaptcha 人机验证页;按契约验证码属 blocker,未过验证、未改用 API,改走非搜索端点)"
+  ],
+  "candidates_touched": [],
+  "billable_calls": 0,
+  "notes": [
+    "本次运行是用户注册 Stack Overflow 后开的第三次会话,预算 max_rounds=3,专测上两次运行都没能用上的这个来源。日期已跨到 2026-08-22。步骤 1 仍无待办:captured 存量 0;11 个 tracking 候选的首份 -track 是 2026-08-20(vercel-kms-jwt-signing 是 08-21),第二份要满 7 天跨度得等 2026-08-27 与 08-28。carryover_audited=0。",
+    "选这个来源的理由与前面所有来源都不同:它自带「任务存在」的证据。有人提问即任务成立,零回答即答案难找,而悬赏问题更强——提问者在花代价买答案。我事先也标了反向假设:零回答可能恰恰意味着只有这一个人有这个问题。",
+    "搜索端点被人机验证拦住(/nocaptcha),因此无法按「零回答 + 高浏览 + 近 7 天」精确过滤。改用两个非搜索端点:Bountied 标签与 Highly-scored-unanswered 榜。这个替代方案取到的是全站累计而非近期,口径要点记在下面。",
+    "反向假设成立,而且证据很硬。①全站悬赏问题只有 4 个(SO 共 2410 万问题):elisp 的 cl-macrolet 反引用模板宏展开(300 声望、0 回答)、从 C 主程序调用静态链接的 Pascal 函数(200 声望、0 回答)、VBA 的 Err.Raise 自定义描述失效、clang-format 的 if 参数折行。②全站最高分未回答问题前 16 条清一色是死掉或极冷门的技术栈:android-ndk/gdb 的 *.oat 缺失(123 分)、Delphi XE2 的 VCL 自绘类(74 分)、Scala shapeless 类型级计算(68 分)、Silverlight 平滑流复合清单、OpenERP 7、Websphere Commerce 7、Xcode 6.1 的 size class、Haskell repa、Xming 剪贴板、Erlang 的 Chicago Boss。",
+    "关键的量化上限:这批全站最高分未回答问题的浏览量区间是 1,016 至 9,228 次,而且是累积多年的总量。也就是说「被证明存在且无人解答的开发者任务」这个集合的天花板,是一个页面多年累计几千次浏览——G6 的保守 /月在这个量级上无从谈起。这个数字是本次三次会话里对 G6 收入线最直接的一次量化否决。",
+    "已归并成陷阱类别九「零回答与悬赏问题」(前置筛除型·直接筛除型)。它关掉的是一个直觉上很吸引人、且很容易被反复重试的发现策略,因此值得单独成册。死因写成一句反向选择:很多人有这个问题则已经有人把答案变现了(前十五轮所有死因的共同形态);没人有这个问题则提问者只能悬赏,因为他是一个人。SO 的悬赏页与未回答榜就是这条二分法的直接物证。",
+    "类别九留了两个口:①近期零回答问题若在同一周内由多个独立提问者反复出现、或提问量在上升,说明它正从一个人的问题变成很多人的问题,不属反向选择,按正常序列跑 G1/G2/G3;②有回答但回答明显过时或被投票否决的高浏览问题不属本类别,那是「答案在位但答错了」,是另一回事。",
+    "提取 19 条(4 条悬赏 + 15 条最高分未回答,去重后全新),全部零成本淘汰,0 次深审、0 次 G1、0 次 Semrush。搜索健康度:本轮未做 Google 查询;Stack Overflow 两个非搜索端点在 Chrome 中取页正常,搜索端点被验证页拦住已如实记录。",
+    "步骤 1 无待办:captured 存量 0;tracking 11 个最早 2026-08-27 才满 7 天跨度。carryover_audited=0。",
+    "本轮测的是陷阱类别九自己留下的那个口子:近期零回答问题若由多个独立提问者反复出现、或提问量在上升,就不属反向选择。测法是看 SO 的新标签榜——新技术进入词汇表的第一站就是新标签。",
+    "数据很干净,而且把那个口子在「新标签阶段」这一段关上了:全部 18 个新标签的问题数是 workday-core-connector-worker 1、hermes-agent 1、falkordb 4、rspotify 1、fullcalendar-7 1、booqable 0、macro-expansion 1、.net-11.0 1、opencl-svm 1、rustfs 1、mssql-python 2、pseint 1、leader-line-js 1、md4 1、thephpleague-csv 12、thephpleague-oauth2 14,另有 best-practices 2899 与 tooling-recommendation 1029。后两个是回溯打到既有老问题上的元标签、不是新技术;真正的新技术标签在头一到四周只累积 0–4 个问题。所谓「提问量在上升」在这个阶段根本不出现。",
+    "一处口径要说清以免夸大:.net-11.0 只有 1 个问题,不等于 .NET 11 只产生 1 个问题——提问者多用 .net 或 c# 等既有标签。这个数字只说明版本专用标签的冷启动量级。",
+    "本轮唯一走到 G1 的是 workday-core-connector-worker,选它是因为它是 G3 三分判据里「结构上进不来 SERP」那一支的干净样本:Workday 官方文档确实在客户登录墙(Workday Community)之后,而付费者是按小时计费的 Workday 集成顾问。G1 pass。",
+    "G3 veto,而且否决方式本身是新发现:**登录墙不等于位置空着**。空位被两股力量填满——①培训与认证行业:Evolution Cloud Services 的 LinkedIn 分步教程(1 年前,直接给出 Create integration system 任务与模板选择)、四条 YouTube 完整走查(CyberBrainer 2025-05、Upptalk 2025-08 与 2024-07、ZaranTech 2024-09 的 54 分钟课)、workdaytrainings.com 的课程页(4389 条评分),外加 r/workday 三条线程解释背后走 Get_Workers API;②文档转载站:Scribd 上有被公开转载的官方 Core Connectors Overview PDF。",
+    "这条不推翻 G3 的三分判据(被登录墙挡住的实现确实不占位),但补上一个实践结论:判 pass 之前要多问一句「有没有培训行业或转载站在替它补位」。已按 pattern「登录墙后的官方文档被培训行业与转载站补位」留痕;它实质上是类别六全集维护者的第四个变体(前三个是管辖机构对象分页、行业协会与四大汇总页、平台官方社区论坛)。",
+    "提取 18 条(去重后全新),全部淘汰:1 条走 G1+G3 现场验证,17 条零成本(以类别四厂商自建文档与类别二品牌名为主)。0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,累计本次运行 1 次,未出现验证码;SO 的 tags 非搜索端点取页正常。",
+    "本轮是一次定向的例外检验而非广度扫描,提取量 1 条,如实记录原因:第 2 轮把陷阱类别九的例外口(多个独立提问者、提问量上升)在新标签阶段关上了,但那批里 falkordb 是唯一像样的候选——6 天 4 个问题,是全部 18 个新标签里上升最快的真新技术,且付费者(做 GraphRAG 的开发者)确实花钱。值得单独测一次,否则类别九的例外口就是靠推理关的而不是靠实测关的。",
+    "结果:G1 pass、G3 veto,而且核对出对象并不新。docs.falkordb.com 占了 9 条网页结果里的 5 条(GraphRAG-SDK、GraphRAG Toolkit、AG2、GraphRAG SDK),加 falkordb.com 的博客与产品页,其中博客文章日期为 2025-03-12——对象至少 17 个月大;另有 GitHub 的 FalkorDB/GraphRAG-SDK 自称 5-minute setup,以及三条 YouTube 教程(2025-09 与 2025-12 两条)。SO 标签建于 2026-08-16 只是标签的年龄。命中类别四最纯粹的形态:厂商为自家产品写完整文档。",
+    "由此在陷阱类别.md 里单独加了一条执行纪律(不是新类别):零成本批要先从对象自身的官方页面读出首次发布日期,别采信来源列表的「新」标记。三次独立踩坑并列为证——2026-08-21 Google 摘要把 ASTM E2772(2013)描述为 newly published;同日 r/LocalLLaMA 当日榜的 Deepseek V4 Flash-0731 其实是 7 月 31 日;本轮 SO 新标签 falkordb 背后是 17 个月大的产品。这一步零成本,却能省掉后面的 G1 与 G3。",
+    "预算命中:用户同意的 3 轮已用完。本次运行三轮共提取 38 个方向、0 个存活;2 次 G1 全部 pass 但随后 G3 均 veto;0 次 Semrush,额度未耗尽。Stack Overflow 的搜索端点全程被人机验证拦住(已换非搜索端点),其余端点可用。"
+  ],
+  "rounds": [
+    {
+      "round": 1,
+      "sources_opened": [
+        "https://stackoverflow.com/questions?tab=Bounties",
+        "https://stackoverflow.com/unanswered?tab=frequent"
+      ],
+      "sources_blocked": [
+        "https://stackoverflow.com/search?q=answers%3A0+views%3A500+created%3A7d(搜索端点即使在用户已登录的 Chrome 里仍跳 /nocaptcha 人机验证页;按契约验证码属 blocker,未过验证、未改用 API,改走非搜索端点)"
+      ],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 19,
+        "rejected_zero_cost": 19,
+        "rejected_g1": 0,
+        "deep_audited": 0,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "本次运行是用户注册 Stack Overflow 后开的第三次会话,预算 max_rounds=3,专测上两次运行都没能用上的这个来源。日期已跨到 2026-08-22。步骤 1 仍无待办:captured 存量 0;11 个 tracking 候选的首份 -track 是 2026-08-20(vercel-kms-jwt-signing 是 08-21),第二份要满 7 天跨度得等 2026-08-27 与 08-28。carryover_audited=0。",
+        "选这个来源的理由与前面所有来源都不同:它自带「任务存在」的证据。有人提问即任务成立,零回答即答案难找,而悬赏问题更强——提问者在花代价买答案。我事先也标了反向假设:零回答可能恰恰意味着只有这一个人有这个问题。",
+        "搜索端点被人机验证拦住(/nocaptcha),因此无法按「零回答 + 高浏览 + 近 7 天」精确过滤。改用两个非搜索端点:Bountied 标签与 Highly-scored-unanswered 榜。这个替代方案取到的是全站累计而非近期,口径要点记在下面。",
+        "反向假设成立,而且证据很硬。①全站悬赏问题只有 4 个(SO 共 2410 万问题):elisp 的 cl-macrolet 反引用模板宏展开(300 声望、0 回答)、从 C 主程序调用静态链接的 Pascal 函数(200 声望、0 回答)、VBA 的 Err.Raise 自定义描述失效、clang-format 的 if 参数折行。②全站最高分未回答问题前 16 条清一色是死掉或极冷门的技术栈:android-ndk/gdb 的 *.oat 缺失(123 分)、Delphi XE2 的 VCL 自绘类(74 分)、Scala shapeless 类型级计算(68 分)、Silverlight 平滑流复合清单、OpenERP 7、Websphere Commerce 7、Xcode 6.1 的 size class、Haskell repa、Xming 剪贴板、Erlang 的 Chicago Boss。",
+        "关键的量化上限:这批全站最高分未回答问题的浏览量区间是 1,016 至 9,228 次,而且是累积多年的总量。也就是说「被证明存在且无人解答的开发者任务」这个集合的天花板,是一个页面多年累计几千次浏览——G6 的保守 /月在这个量级上无从谈起。这个数字是本次三次会话里对 G6 收入线最直接的一次量化否决。",
+        "已归并成陷阱类别九「零回答与悬赏问题」(前置筛除型·直接筛除型)。它关掉的是一个直觉上很吸引人、且很容易被反复重试的发现策略,因此值得单独成册。死因写成一句反向选择:很多人有这个问题则已经有人把答案变现了(前十五轮所有死因的共同形态);没人有这个问题则提问者只能悬赏,因为他是一个人。SO 的悬赏页与未回答榜就是这条二分法的直接物证。",
+        "类别九留了两个口:①近期零回答问题若在同一周内由多个独立提问者反复出现、或提问量在上升,说明它正从一个人的问题变成很多人的问题,不属反向选择,按正常序列跑 G1/G2/G3;②有回答但回答明显过时或被投票否决的高浏览问题不属本类别,那是「答案在位但答错了」,是另一回事。",
+        "提取 19 条(4 条悬赏 + 15 条最高分未回答,去重后全新),全部零成本淘汰,0 次深审、0 次 G1、0 次 Semrush。搜索健康度:本轮未做 Google 查询;Stack Overflow 两个非搜索端点在 Chrome 中取页正常,搜索端点被验证页拦住已如实记录。"
+      ]
+    },
+    {
+      "round": 2,
+      "sources_opened": [
+        "https://stackoverflow.com/tags?tab=new",
+        "https://www.google.com/search?q=workday+core+connector+worker+configuration&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 18,
+        "rejected_zero_cost": 17,
+        "rejected_g1": 0,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "步骤 1 无待办:captured 存量 0;tracking 11 个最早 2026-08-27 才满 7 天跨度。carryover_audited=0。",
+        "本轮测的是陷阱类别九自己留下的那个口子:近期零回答问题若由多个独立提问者反复出现、或提问量在上升,就不属反向选择。测法是看 SO 的新标签榜——新技术进入词汇表的第一站就是新标签。",
+        "数据很干净,而且把那个口子在「新标签阶段」这一段关上了:全部 18 个新标签的问题数是 workday-core-connector-worker 1、hermes-agent 1、falkordb 4、rspotify 1、fullcalendar-7 1、booqable 0、macro-expansion 1、.net-11.0 1、opencl-svm 1、rustfs 1、mssql-python 2、pseint 1、leader-line-js 1、md4 1、thephpleague-csv 12、thephpleague-oauth2 14,另有 best-practices 2899 与 tooling-recommendation 1029。后两个是回溯打到既有老问题上的元标签、不是新技术;真正的新技术标签在头一到四周只累积 0–4 个问题。所谓「提问量在上升」在这个阶段根本不出现。",
+        "一处口径要说清以免夸大:.net-11.0 只有 1 个问题,不等于 .NET 11 只产生 1 个问题——提问者多用 .net 或 c# 等既有标签。这个数字只说明版本专用标签的冷启动量级。",
+        "本轮唯一走到 G1 的是 workday-core-connector-worker,选它是因为它是 G3 三分判据里「结构上进不来 SERP」那一支的干净样本:Workday 官方文档确实在客户登录墙(Workday Community)之后,而付费者是按小时计费的 Workday 集成顾问。G1 pass。",
+        "G3 veto,而且否决方式本身是新发现:**登录墙不等于位置空着**。空位被两股力量填满——①培训与认证行业:Evolution Cloud Services 的 LinkedIn 分步教程(1 年前,直接给出 Create integration system 任务与模板选择)、四条 YouTube 完整走查(CyberBrainer 2025-05、Upptalk 2025-08 与 2024-07、ZaranTech 2024-09 的 54 分钟课)、workdaytrainings.com 的课程页(4389 条评分),外加 r/workday 三条线程解释背后走 Get_Workers API;②文档转载站:Scribd 上有被公开转载的官方 Core Connectors Overview PDF。",
+        "这条不推翻 G3 的三分判据(被登录墙挡住的实现确实不占位),但补上一个实践结论:判 pass 之前要多问一句「有没有培训行业或转载站在替它补位」。已按 pattern「登录墙后的官方文档被培训行业与转载站补位」留痕;它实质上是类别六全集维护者的第四个变体(前三个是管辖机构对象分页、行业协会与四大汇总页、平台官方社区论坛)。",
+        "提取 18 条(去重后全新),全部淘汰:1 条走 G1+G3 现场验证,17 条零成本(以类别四厂商自建文档与类别二品牌名为主)。0 次 Semrush。搜索健康度:Google 精确词搜索 1 次,累计本次运行 1 次,未出现验证码;SO 的 tags 非搜索端点取页正常。"
+      ]
+    },
+    {
+      "round": 3,
+      "sources_opened": [
+        "https://www.google.com/search?q=falkordb+graphrag+setup&gl=us&hl=en&pws=0"
+      ],
+      "sources_blocked": [],
+      "candidates_touched": [],
+      "billable_calls": 0,
+      "funnel": {
+        "extracted": 1,
+        "rejected_zero_cost": 0,
+        "rejected_g1": 0,
+        "deep_audited": 1,
+        "queued": 0,
+        "carryover_audited": 0
+      },
+      "notes": [
+        "步骤 1 无待办:captured 存量 0;tracking 11 个最早 2026-08-27 才满 7 天跨度。carryover_audited=0。",
+        "本轮是一次定向的例外检验而非广度扫描,提取量 1 条,如实记录原因:第 2 轮把陷阱类别九的例外口(多个独立提问者、提问量上升)在新标签阶段关上了,但那批里 falkordb 是唯一像样的候选——6 天 4 个问题,是全部 18 个新标签里上升最快的真新技术,且付费者(做 GraphRAG 的开发者)确实花钱。值得单独测一次,否则类别九的例外口就是靠推理关的而不是靠实测关的。",
+        "结果:G1 pass、G3 veto,而且核对出对象并不新。docs.falkordb.com 占了 9 条网页结果里的 5 条(GraphRAG-SDK、GraphRAG Toolkit、AG2、GraphRAG SDK),加 falkordb.com 的博客与产品页,其中博客文章日期为 2025-03-12——对象至少 17 个月大;另有 GitHub 的 FalkorDB/GraphRAG-SDK 自称 5-minute setup,以及三条 YouTube 教程(2025-09 与 2025-12 两条)。SO 标签建于 2026-08-16 只是标签的年龄。命中类别四最纯粹的形态:厂商为自家产品写完整文档。",
+        "由此在陷阱类别.md 里单独加了一条执行纪律(不是新类别):零成本批要先从对象自身的官方页面读出首次发布日期,别采信来源列表的「新」标记。三次独立踩坑并列为证——2026-08-21 Google 摘要把 ASTM E2772(2013)描述为 newly published;同日 r/LocalLLaMA 当日榜的 Deepseek V4 Flash-0731 其实是 7 月 31 日;本轮 SO 新标签 falkordb 背后是 17 个月大的产品。这一步零成本,却能省掉后面的 G1 与 G3。",
+        "预算命中:用户同意的 3 轮已用完。本次运行三轮共提取 38 个方向、0 个存活;2 次 G1 全部 pass 但随后 G3 均 veto;0 次 Semrush,额度未耗尽。Stack Overflow 的搜索端点全程被人机验证拦住(已换非搜索端点),其余端点可用。"
+      ]
+    }
+  ]
+}

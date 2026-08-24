@@ -111,6 +111,56 @@ class RegistrarTest(unittest.TestCase):
 
     # ---- 用例 ----
 
+    # ---- 两条赛道(2026-08-23 新增) ----
+
+    def test_lane_defaults_to_new_and_accepts_mature(self):
+        """lane 原为 schema 里的预留字段(const new)。2026-08-23 开放 mature:
+        广告线需要真实搜索量才可能成立,而"查无"正是 new 道的定义属性,
+        所以广告线只能在 mature 道上工作。"""
+        a = self.register("lane-default")
+        self.assertEqual(self.load(a)["lane"], "new")
+        ev = mk_evidence(self.root, "lane-mature", "2026-08-23-scan.json")
+        R.register(self.root, slug="lane-mature", term="lane mature", source_url="https://e.com/t",
+                   task="t", evidence=[ev], lane="mature")
+        self.assertEqual(self.load("lane-mature")["lane"], "mature")
+
+    def test_unknown_lane_refused(self):
+        ev = mk_evidence(self.root, "lane-bad", "2026-08-23-scan.json")
+        with self.assertRaisesRegex(R.RegistrarError, "lane"):
+            R.register(self.root, slug="lane-bad", term="lane bad", source_url="https://e.com/t",
+                       task="t", evidence=[ev], lane="mispriced")
+
+    # ---- 证据覆盖防线(2026-08-22 事故回归) ----
+
+    def test_reused_evidence_filename_that_drops_earlier_gates_is_refused(self):
+        """复现真实事故:连续运行复用同日文件名写新观察,覆盖了同一路径上前一次的观察,
+        使已记录 history 的闸门失去证据支撑。当时由 validate_ledger 事后才发现,
+        现在必须在写入时就拦住——覆盖已被引用的证据是不可逆的信息损失。"""
+        slug = "clobber-demo"
+        ev = mk_evidence(self.root, slug, "2026-08-21-scan.json",
+                         gates={"G0": "pass", "G4": "pass", "G5": "pass"})
+        R.register(self.root, slug=slug, term="clobber demo", source_url="https://e.com/t",
+                   task="t", evidence=[ev], gates={"G0": "pass", "G4": "pass", "G5": "pass"},
+                   expiry="2026-09-11")
+        # 同一路径改写成只带 G3=veto —— 上一次的 G0/G4/G5 结论被覆盖掉
+        mk_evidence(self.root, slug, "2026-08-21-scan.json", gates={"G3": "veto"})
+        with self.assertRaisesRegex(R.RegistrarError, "覆盖"):
+            R.transition(self.root, slug, to="rejected", by="xinci-scan",
+                         gates={"G3": "veto"}, evidence=[ev], reason="G3 veto")
+
+    def test_new_filename_for_new_observation_is_accepted(self):
+        """正解:本次观察另起文件名,旧证据不动,两条 history 各有支撑。"""
+        slug = "no-clobber-demo"
+        ev1 = mk_evidence(self.root, slug, "2026-08-21-scan.json",
+                          gates={"G0": "pass", "G4": "pass", "G5": "pass"})
+        R.register(self.root, slug=slug, term="no clobber demo", source_url="https://e.com/t",
+                   task="t", evidence=[ev1], gates={"G0": "pass", "G4": "pass", "G5": "pass"},
+                   expiry="2026-09-11")
+        ev2 = mk_evidence(self.root, slug, "2026-08-21-1320-scan.json", gates={"G3": "veto"})
+        R.transition(self.root, slug, to="rejected", by="xinci-scan",
+                     gates={"G3": "veto"}, evidence=[ev2], reason="G3 veto")
+        self.assertEqual(self.load(slug)["state"], "rejected")
+
     def test_register_creates_captured(self):
         slug = self.register()
         rec = self.load(slug)

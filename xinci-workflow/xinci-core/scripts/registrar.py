@@ -87,6 +87,11 @@ WINDOWS = {"days", "weeks", "months"}
 BUILD_PLAYS = {"single_domain", "cluster_expansion"}
 # 形成期以周计(生命周期契约):-track 观察最早与最新须相隔 ≥7 天,单次连续运行凑不出形成确认
 MIN_TRACK_SPAN_DAYS = 7
+# 两条赛道(lane)。原 schema 已把 lane 预留为"本套固定为 new;为未来成熟词道预留"。
+# 2026-08-23 开放 mature:两条盈利线(订阅 / 广告)对量级的要求方向相反,
+# 广告线必须有真实搜索量才可能成立,而"查无"正是 new 道的定义属性——
+# 所以广告线只能在 mature 道上工作,且该道不适用 new 道的 Semrush 禁令。
+LANES = {"new", "mature"}
 VALID_ACTORS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run", "user"}
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 GATE_NAMES = {f"G{i}" for i in range(9)}
@@ -286,6 +291,33 @@ def _check_gate_evidence(data_root: Path, refs, gates, context: str) -> None:
                      "(免费实现 URL、上一个同类对象收录时差、天数和理由)")
 
 
+def _check_evidence_reuse(data_root: Path, rec: dict, refs) -> None:
+    """拒收「已被历史条目引用、但当前内容已不再支撑那条历史闸门」的观察文件。
+
+    出处是 2026-08-22 的一次真实事故:连续运行复用同日文件名 `<日期>-scan.json`
+    写本轮观察,覆盖了同一路径上前一次的观察,使 24 条 history 的闸门失去证据支撑,
+    最后由 validate_ledger 事后才发现。把这道检查提到写入时,让它 fail fast——
+    覆盖已被引用的证据是不可逆的信息损失,事后只能靠 git 或原文侥幸恢复。
+    """
+    for ref in refs:
+        for i, h in enumerate(rec.get("history") or []):
+            if ref not in (h.get("evidence") or []):
+                continue
+            claimed = h.get("gates") or {}
+            if not claimed:
+                continue
+            try:
+                obs_gates = _load_observation(data_root, ref).get("gates") or {}
+            except (OSError, ValueError):
+                continue
+            lost = {g: v for g, v in claimed.items() if obs_gates.get(g) != v}
+            _require(not lost,
+                     f"观察文件 {ref} 已被 history[{i}] 引用并提交 "
+                     + ",".join(f"{g}={v}" for g, v in sorted(lost.items()))
+                     + ",但该文件当前内容已不再支撑这些结论——极可能是复用同名文件把上一次的观察覆盖了。"
+                       "请另起文件名(如加 <HHMM> 后缀)写本次观察,不要覆盖已被引用的证据。")
+
+
 def _obs_time(data_root: Path, ref: str) -> datetime:
     """读观察文件的 observed_at,统一为 aware datetime(naive 视为 UTC)。"""
     obs = json.loads((Path(data_root) / ref).read_text(encoding="utf-8"))
@@ -336,7 +368,7 @@ def _check_decision_files(data_root: Path, decision_ref: str) -> str:
 
 def register(data_root, slug, term, source_url, task, evidence,
              source_note="", aliases=None, by="xinci-scan", gates=None, expiry=None,
-             run_id=None):
+             run_id=None, lane="new"):
     """注册新候选(→captured)。
 
     gates 可选:扫描漏斗中"本轮没走完深审"的存活候选注册成 captured 排队时,带上已得的
@@ -352,11 +384,12 @@ def register(data_root, slug, term, source_url, task, evidence,
     _check_actor(data_root, by, run_id)
     with _locked(data_root):
         return _register_locked(data_root, slug, term, source_url, task, evidence,
-                                source_note, aliases, by, gates, expiry, run_id)
+                                source_note, aliases, by, gates, expiry, run_id, lane)
 
 
 def _register_locked(data_root, slug, term, source_url, task, evidence,
-                     source_note, aliases, by, gates=None, expiry=None, run_id=None):
+                     source_note, aliases, by, gates=None, expiry=None, run_id=None,
+                     lane="new"):
     try:
         require_clean(data_root)
     except TransactionError as e:
@@ -399,6 +432,7 @@ def _register_locked(data_root, slug, term, source_url, task, evidence,
                          f"与 {existing!r} 的去重裁决缺审计字段;请用新版 resolve 重新裁决")
                 _require(decision["decision"] == "distinct",
                          f"去重裁决已判定与{owner}的 {existing!r} 为 same;不得重复注册")
+    _require(lane in LANES, f"lane 只能是 {sorted(LANES)},当前 {lane!r}")
     refs = _check_evidence(data_root, evidence, slug=slug)
     _require(len(refs) >= 1, "注册候选要求至少 1 个证据文件")
     _check_gate_evidence(data_root, refs, gates, "register")
@@ -414,7 +448,7 @@ def _register_locked(data_root, slug, term, source_url, task, evidence,
         "term": term,
         "aliases": list(aliases or []),
         "state": "captured",
-        "lane": "new",
+        "lane": lane,
         "first_observed_at": now,
         "last_checked_at": now,
         "expiry": expiry,
@@ -480,6 +514,7 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
 
     refs = _check_evidence(data_root, evidence, slug=slug)
     _check_gate_evidence(data_root, refs, gates, f"{frm}→{to}")
+    _check_evidence_reuse(data_root, rec, refs)
     merged_refs = rec["evidence_refs"] + [r for r in refs if r not in rec["evidence_refs"]]
 
     if to == "screened":
@@ -745,6 +780,7 @@ def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invali
         amended = []
         refs = _check_evidence(data_root, evidence, slug=slug)
         _check_gate_evidence(data_root, refs, gates, "amend")
+        _check_evidence_reuse(data_root, rec, refs)
         if refs:
             rec["evidence_refs"] += [r for r in refs if r not in rec["evidence_refs"]]
             amended.append("evidence")
@@ -802,6 +838,8 @@ def main(argv=None):
     p.add_argument("--source-url", required=True)
     p.add_argument("--source-note", default="")
     p.add_argument("--task", required=True)
+    p.add_argument("--lane", default="new", choices=sorted(["new", "mature"]),
+                   help="new=新词道(默认);mature=成熟错价词道,广告线只能在此道工作")
     p.add_argument("--aliases", default="", help="逗号分隔")
     p.add_argument("--evidence", action="append", required=True)
     p.add_argument("--by", default="xinci-scan")
@@ -860,7 +898,8 @@ def main(argv=None):
             rec = register(a.data_root, a.slug, a.term, a.source_url, a.task, a.evidence,
                            source_note=a.source_note,
                            aliases=[x for x in a.aliases.split(",") if x], by=a.by,
-                           gates=_parse_gates(a.gates), expiry=a.expiry, run_id=a.run_id)
+                           gates=_parse_gates(a.gates), expiry=a.expiry, run_id=a.run_id,
+                           lane=a.lane)
         elif a.cmd == "transition":
             rec = transition(a.data_root, a.slug, a.to, a.by,
                              gates=_parse_gates(a.gates), window_estimate=a.window_estimate,

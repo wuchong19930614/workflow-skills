@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "run_id": "run-20260821T063007Z-bef1c6da",
+  "mode": "continuous",
+  "status": "budget_reached",
+  "started_at": "2026-08-21T06:30:07+00:00",
+  "updated_at": "2026-08-21T06:48:11+00:00",
+  "max_rounds": 5,
+  "max_hours": null,
+  "rounds_completed": 5,
+  "current_round": null,
+  "confirmations": {},
+  "finish_reason": "用户同意的 5 轮预算已用完,第 5 轮已 record-round 收尾。本次运行专打上一次运行唯一未测到的社区面(用户在自己的 Chrome 里打开 Reddit 后授权使用),五轮共提取 141 个方向、0 个存活:5 次现场 G3 验证全部判 veto,无一条判出 veto_window_bet,因此无 fast_grab_ready;账本无 formation_confirmed/qualified 存量且 7 天跨度闸未满,因此无 build_ready/pilot_ready。Semrush 一次未用,额度未耗尽。Reddit 全程可用;Stack Overflow 仍不可用(用户表示稍后注册再解决),已如实记录,不构成 blocker。产出为陷阱类别一的收录时差实测补记,以及六条新增待验证 pattern(消费者好奇型命名空缺、讨论热度不等于新词、平台官方社区论坛即全集维护者、故障措辞两头都被占、没有任务的新对象、职业闲聊与求职咨询)。validate_ledger 0 错误 0 警告。",
+  "finished_at": "2026-08-21T06:48:11+00:00"
+}

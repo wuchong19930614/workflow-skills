@@ -1544,7 +1544,7 @@
       "slug": "cf-unified-routes-dashboard",
       "term": "Manage all your routes from one page in the dashboard",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T09:12:18+00:00",
       "last_checked_at": "2026-08-20T11:51:30+00:00",
@@ -1562,7 +1562,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -1572,7 +1573,8 @@
       ],
       "evidence_refs": [
         "证据/cf-unified-routes-dashboard/2026-08-20-scan.json",
-        "证据/cf-unified-routes-dashboard/2026-08-20-track.json"
+        "证据/cf-unified-routes-dashboard/2026-08-20-track.json",
+        "证据/cf-unified-routes-dashboard/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -1640,6 +1642,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 1
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/cf-unified-routes-dashboard/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -3522,7 +3537,7 @@
       "slug": "gcp-migrate-app-engine-push-queues-to-cloud-tasks-go",
       "term": "Migrate App Engine push queues to Cloud Tasks Go",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:21:57+00:00",
       "last_checked_at": "2026-08-20T12:36:16+00:00",
@@ -3540,7 +3555,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -3550,7 +3566,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-migrate-app-engine-push-queues-to-cloud-tasks-go/2026-08-20-scan.json",
-        "证据/gcp-migrate-app-engine-push-queues-to-cloud-tasks-go/2026-08-20-track.json"
+        "证据/gcp-migrate-app-engine-push-queues-to-cloud-tasks-go/2026-08-20-track.json",
+        "证据/gcp-migrate-app-engine-push-queues-to-cloud-tasks-go/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -3618,6 +3635,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 2
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-migrate-app-engine-push-queues-to-cloud-tasks-go/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -3741,7 +3771,7 @@
       "slug": "gcp-upgrade-google-distributed-cloud-vmware-1-34-800",
       "term": "Upgrade Google Distributed Cloud VMware 1.34.800",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:21:58+00:00",
       "last_checked_at": "2026-08-20T13:05:24+00:00",
@@ -3759,7 +3789,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -3769,7 +3800,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-upgrade-google-distributed-cloud-vmware-1-34-800/2026-08-20-scan.json",
-        "证据/gcp-upgrade-google-distributed-cloud-vmware-1-34-800/2026-08-20-track.json"
+        "证据/gcp-upgrade-google-distributed-cloud-vmware-1-34-800/2026-08-20-track.json",
+        "证据/gcp-upgrade-google-distributed-cloud-vmware-1-34-800/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -3837,6 +3869,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 3
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-upgrade-google-distributed-cloud-vmware-1-34-800/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -3913,7 +3958,7 @@
       "slug": "gcp-private-service-connect-multi-regional-service-endpoints",
       "term": "Private Service Connect multi-regional service endpoints",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:21:59+00:00",
       "last_checked_at": "2026-08-20T13:06:37+00:00",
@@ -3931,7 +3976,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -3941,7 +3987,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-private-service-connect-multi-regional-service-endpoints/2026-08-20-scan.json",
-        "证据/gcp-private-service-connect-multi-regional-service-endpoints/2026-08-20-track.json"
+        "证据/gcp-private-service-connect-multi-regional-service-endpoints/2026-08-20-track.json",
+        "证据/gcp-private-service-connect-multi-regional-service-endpoints/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -4009,6 +4056,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 3
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-private-service-connect-multi-regional-service-endpoints/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -4016,7 +4076,7 @@
       "slug": "gcp-migrate-app-engine-images-service-to-cloud-run-java",
       "term": "Migrate App Engine Images service to Cloud Run Java",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:21:59+00:00",
       "last_checked_at": "2026-08-20T12:35:05+00:00",
@@ -4034,7 +4094,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -4044,7 +4105,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-migrate-app-engine-images-service-to-cloud-run-java/2026-08-20-scan.json",
-        "证据/gcp-migrate-app-engine-images-service-to-cloud-run-java/2026-08-20-track.json"
+        "证据/gcp-migrate-app-engine-images-service-to-cloud-run-java/2026-08-20-track.json",
+        "证据/gcp-migrate-app-engine-images-service-to-cloud-run-java/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -4112,6 +4174,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 2
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-migrate-app-engine-images-service-to-cloud-run-java/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -4235,7 +4310,7 @@
       "slug": "gcp-configure-backup-and-dr-multi-party-approval-for-project-l",
       "term": "Configure Backup and DR multi-party approval for project liens",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:21:59+00:00",
       "last_checked_at": "2026-08-20T12:32:50+00:00",
@@ -4253,7 +4328,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -4263,7 +4339,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-configure-backup-and-dr-multi-party-approval-for-project-l/2026-08-20-scan.json",
-        "证据/gcp-configure-backup-and-dr-multi-party-approval-for-project-l/2026-08-20-track.json"
+        "证据/gcp-configure-backup-and-dr-multi-party-approval-for-project-l/2026-08-20-track.json",
+        "证据/gcp-configure-backup-and-dr-multi-party-approval-for-project-l/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -4331,6 +4408,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 2
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-configure-backup-and-dr-multi-party-approval-for-project-l/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -4407,7 +4497,7 @@
       "slug": "gcp-restore-soft-delete-cloud-storage-buckets-after-project-de",
       "term": "Restore soft-delete Cloud Storage buckets after project deletion",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:22:01+00:00",
       "last_checked_at": "2026-08-20T13:07:38+00:00",
@@ -4425,7 +4515,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -4435,7 +4526,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-restore-soft-delete-cloud-storage-buckets-after-project-de/2026-08-20-scan.json",
-        "证据/gcp-restore-soft-delete-cloud-storage-buckets-after-project-de/2026-08-20-track.json"
+        "证据/gcp-restore-soft-delete-cloud-storage-buckets-after-project-de/2026-08-20-track.json",
+        "证据/gcp-restore-soft-delete-cloud-storage-buckets-after-project-de/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -4503,6 +4595,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 3
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-restore-soft-delete-cloud-storage-buckets-after-project-de/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -4631,7 +4736,7 @@
       "slug": "gcp-migrate-looker-ci-from-legacy-spectacles-service",
       "term": "Migrate Looker CI from legacy Spectacles service",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:22:01+00:00",
       "last_checked_at": "2026-08-20T12:37:32+00:00",
@@ -4649,7 +4754,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -4659,7 +4765,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-migrate-looker-ci-from-legacy-spectacles-service/2026-08-20-scan.json",
-        "证据/gcp-migrate-looker-ci-from-legacy-spectacles-service/2026-08-20-track.json"
+        "证据/gcp-migrate-looker-ci-from-legacy-spectacles-service/2026-08-20-track.json",
+        "证据/gcp-migrate-looker-ci-from-legacy-spectacles-service/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -4727,6 +4834,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 2
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-migrate-looker-ci-from-legacy-spectacles-service/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -4734,7 +4854,7 @@
       "slug": "gcp-set-up-secure-source-manager-mcp-server",
       "term": "Set up Secure Source Manager MCP server",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:22:02+00:00",
       "last_checked_at": "2026-08-20T13:10:24+00:00",
@@ -4752,7 +4872,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -4762,7 +4883,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-set-up-secure-source-manager-mcp-server/2026-08-20-scan.json",
-        "证据/gcp-set-up-secure-source-manager-mcp-server/2026-08-20-track.json"
+        "证据/gcp-set-up-secure-source-manager-mcp-server/2026-08-20-track.json",
+        "证据/gcp-set-up-secure-source-manager-mcp-server/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -4830,6 +4952,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 3
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-set-up-secure-source-manager-mcp-server/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -4975,7 +5110,7 @@
       "slug": "gcp-google-error-reporting-rust-std-backtrace-setup",
       "term": "Google Error Reporting Rust std::backtrace setup",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:22:03+00:00",
       "last_checked_at": "2026-08-20T12:33:56+00:00",
@@ -4993,7 +5128,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -5003,7 +5139,8 @@
       ],
       "evidence_refs": [
         "证据/gcp-google-error-reporting-rust-std-backtrace-setup/2026-08-20-scan.json",
-        "证据/gcp-google-error-reporting-rust-std-backtrace-setup/2026-08-20-track.json"
+        "证据/gcp-google-error-reporting-rust-std-backtrace-setup/2026-08-20-track.json",
+        "证据/gcp-google-error-reporting-rust-std-backtrace-setup/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -5071,6 +5208,19 @@
           ],
           "run_id": "run-20260820T113403Z-67553e0e",
           "round": 2
+        },
+        {
+          "at": "2026-08-23T11:25:59+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/gcp-google-error-reporting-rust-std-backtrace-setup/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -5268,7 +5418,7 @@
       "slug": "aws-bedrock-external-web-access",
       "term": "Launching External Web Access for Web Search on Amazon Bedrock",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:10+00:00",
       "last_checked_at": "2026-08-20T10:33:10+00:00",
@@ -5283,7 +5433,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5333,6 +5483,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:10+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-bedrock-external-web-access/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5340,7 +5505,7 @@
       "slug": "aws-bedrock-web-search-filtering",
       "term": "Web Search in Amazon Bedrock AgentCore adds domain and published date filtering",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:10+00:00",
       "last_checked_at": "2026-08-20T10:33:10+00:00",
@@ -5355,7 +5520,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5405,6 +5570,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:10+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-bedrock-web-search-filtering/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5412,7 +5592,7 @@
       "slug": "aws-cloudwatch-log-tag-propagation",
       "term": "Amazon CloudWatch Log Centralization log group tag propagation",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:10+00:00",
       "last_checked_at": "2026-08-20T10:33:10+00:00",
@@ -5427,7 +5607,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5477,6 +5657,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:10+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-cloudwatch-log-tag-propagation/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5484,7 +5679,7 @@
       "slug": "aws-sagemaker-trusted-identity-notebooks",
       "term": "Amazon SageMaker notebooks trusted identity propagation",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:10+00:00",
       "last_checked_at": "2026-08-20T10:33:10+00:00",
@@ -5499,7 +5694,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5549,6 +5744,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:10+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-sagemaker-trusted-identity-notebooks/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5556,7 +5766,7 @@
       "slug": "aws-cloudwatch-geoip-rds-xml-processors",
       "term": "Amazon CloudWatch pipelines GeoIP RDS XML processors",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:10+00:00",
       "last_checked_at": "2026-08-20T10:33:10+00:00",
@@ -5571,7 +5781,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5621,6 +5831,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:10+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-cloudwatch-geoip-rds-xml-processors/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5628,7 +5853,7 @@
       "slug": "aws-cost-anomaly-third-party-bedrock-models",
       "term": "AWS Cost Anomaly Detection third-party models on Amazon Bedrock",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -5643,7 +5868,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5693,6 +5918,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:10+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-cost-anomaly-third-party-bedrock-models/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5700,7 +5940,7 @@
       "slug": "aws-quick-deny-default-permissions",
       "term": "Amazon Quick deny by default for custom permissions",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -5715,7 +5955,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5765,6 +6005,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:10+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-quick-deny-default-permissions/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5772,7 +6027,7 @@
       "slug": "aws-workspaces-applications-monitoring",
       "term": "Amazon WorkSpaces Applications in-console monitoring",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -5787,7 +6042,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5837,6 +6092,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:10+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-workspaces-applications-monitoring/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5844,7 +6114,7 @@
       "slug": "aws-storage-gateway-fips-privatelink",
       "term": "AWS Storage Gateway FIPS private connectivity for Tape and Volume Gateway",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -5859,7 +6129,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5909,6 +6179,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:11+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-storage-gateway-fips-privatelink/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5916,7 +6201,7 @@
       "slug": "aws-agentcore-payments",
       "term": "Amazon Bedrock AgentCore payments setup",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -5931,7 +6216,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -5981,6 +6266,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:11+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-agentcore-payments/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -5988,7 +6288,7 @@
       "slug": "aws-sagemaker-data-profiling",
       "term": "Amazon SageMaker Unified Studio data profiling and anomaly detection",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -6003,7 +6303,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -6053,6 +6353,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:11+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-sagemaker-data-profiling/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -6060,7 +6375,7 @@
       "slug": "aws-mwaa-serverless-python-bash-operators",
       "term": "Amazon MWAA Serverless PythonOperator and BashOperator",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:11+00:00",
       "last_checked_at": "2026-08-20T10:33:11+00:00",
@@ -6075,7 +6390,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -6125,6 +6440,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:11+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-mwaa-serverless-python-bash-operators/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -6272,7 +6602,7 @@
       "slug": "aws-ec2-autoscaling-batch-termination",
       "term": "Amazon EC2 Auto Scaling batch instance termination",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:12+00:00",
       "last_checked_at": "2026-08-20T10:33:12+00:00",
@@ -6287,7 +6617,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -6337,6 +6667,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:11+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-ec2-autoscaling-batch-termination/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -6344,7 +6689,7 @@
       "slug": "aws-msk-custom-domain-names",
       "term": "Amazon MSK custom domain names for provisioned clusters",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:12+00:00",
       "last_checked_at": "2026-08-20T10:33:12+00:00",
@@ -6359,7 +6704,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -6409,6 +6754,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:11+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-msk-custom-domain-names/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -6416,7 +6776,7 @@
       "slug": "aws-network-firewall-rule-hit-counts",
       "term": "AWS Network Firewall stateful rule hit counts",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:12+00:00",
       "last_checked_at": "2026-08-20T10:33:12+00:00",
@@ -6431,7 +6791,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -6481,6 +6841,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:11+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-network-firewall-rule-hit-counts/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -6488,7 +6863,7 @@
       "slug": "aws-cloudshell-visual-file-editor",
       "term": "AWS CloudShell built-in visual file editor",
       "aliases": [],
-      "state": "captured",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T10:33:12+00:00",
       "last_checked_at": "2026-08-20T10:33:12+00:00",
@@ -6503,7 +6878,7 @@
       "gates": {
         "G0": "pass",
         "G4": "pass",
-        "G5": "pass",
+        "G5": "veto",
         "G1": "pass"
       },
       "score": null,
@@ -6553,6 +6928,21 @@
             "expiry",
             "gates"
           ]
+        },
+        {
+          "at": "2026-08-21T02:53:11+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/aws-cloudshell-visual-file-editor/2026-08-21-scan.json"
+          ],
+          "reason": "G5 命中陷阱类别四「厂商 release note / changelog 衍生任务」(SERP 陷阱型·直接筛除型):方向出自 AWS what’s-new 自家变更公告,任务是「怎么配这个新功能」。该类别已于 2026-08-21 按跨 3 日期 / 3 来源家族 / 3 独立发布方(Apple、GitHub、AWS)的独立性依据改标为直接筛除型,结构性死因固定为:①发布方同日或次日发出分步官方文档;②docs.aws.amazon.com 域永久收录且在该查询上有持续可见度,连 veto_window_bet 都判不出来,只能是 veto;③聚合站 24 小时内填满剩余位置。归并的意义正是不做第四次同死因验证,故零成本弃、不跑 SERP、不占深审配额;现场证据落在 xinci-workflow/xinci-core/陷阱类别.md 类别四(含 2026-08-21 同源 AWS what’s-new 五例 G2 pass / G3 veto 实测)。",
+          "gates": {
+            "G5": "veto"
+          }
         }
       ]
     },
@@ -7026,10 +7416,10 @@
       "slug": "vercel-kms-jwt-signing",
       "term": "Sign JWTs from your Functions without managing private keys",
       "aliases": [],
-      "state": "tracking",
+      "state": "rejected",
       "lane": "new",
       "first_observed_at": "2026-08-20T13:02:11+00:00",
-      "last_checked_at": "2026-08-20T13:02:11+00:00",
+      "last_checked_at": "2026-08-21T02:55:57+00:00",
       "expiry": "2026-09-10",
       "source": {
         "url": "https://vercel.com/changelog/sign-jwts-from-your-functions-without-managing-private-keys",
@@ -7044,7 +7434,8 @@
         "G5": "pass",
         "G1": "pass",
         "G2": "pass",
-        "G3": "pass"
+        "G3": "pass",
+        "G6": "veto"
       },
       "score": null,
       "invalidation": [
@@ -7052,7 +7443,9 @@
         "Google 原生结果直接完成签名代码生成"
       ],
       "evidence_refs": [
-        "证据/vercel-kms-jwt-signing/2026-08-20-scan.json"
+        "证据/vercel-kms-jwt-signing/2026-08-20-scan.json",
+        "证据/vercel-kms-jwt-signing/2026-08-21-track.json",
+        "证据/vercel-kms-jwt-signing/2026-08-23-track.json"
       ],
       "decision_ref": null,
       "superseded_by": null,
@@ -7105,6 +7498,30 @@
             "前两页出现至少两个独立可运行的 Vercel KMS JWT 完整教程",
             "Google 原生结果直接完成签名代码生成"
           ]
+        },
+        {
+          "at": "2026-08-21T02:55:57+00:00",
+          "from": "tracking",
+          "to": "tracking",
+          "by": "xinci-run",
+          "checked": [
+            "证据/vercel-kms-jwt-signing/2026-08-21-track.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1
+        },
+        {
+          "at": "2026-08-23T11:26:00+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "user",
+          "evidence": [
+            "证据/vercel-kms-jwt-signing/2026-08-23-track.json"
+          ],
+          "reason": "G6 双线都不过(生命周期契约 rejected 边第⑦种情形)。订阅线:深审入口预检答否——任务是一次性读一遍厂商自家功能说明,非有预算付费者逐个对象重复完成,厂商已免费提供文档,受约束付费者数×可行单价=0。广告线:lane=new 在结构上无法证明量级(查无是该道定义属性),且开发者垂类 RPM 最低档下 200 美元/月需数十万级簇内月搜索量,相差数个量级。此前 G3=pass 不构成利好——G6 修订前不是筛选闸门,没人占位的真实原因是这一格没有钱。",
+          "gates": {
+            "G6": "veto"
+          }
         }
       ]
     },
@@ -7242,6 +7659,1276 @@
             "G2": "pass",
             "G3": "veto"
           }
+        }
+      ]
+    },
+    "go-127-generic-methods": {
+      "slug": "go-127-generic-methods",
+      "term": "go 1.27 generic methods",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:13:23+00:00",
+      "last_checked_at": "2026-08-21T03:13:23+00:00",
+      "expiry": null,
+      "source": {
+        "url": "https://news.ycombinator.com/news?p=2",
+        "note": "HN 第 2 页第 44 位:Generic Methods in Go 1.27(dominik.info,61 分,11 小时前)"
+      },
+      "task": "理解并使用 Go 1.27 的泛型方法(含 interface 不支持泛型方法的限制)并评估升级影响",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/go-127-generic-methods/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:13:23+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/go-127-generic-methods/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1
+        },
+        {
+          "at": "2026-08-21T03:13:23+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/go-127-generic-methods/2026-08-21-scan.json"
+          ],
+          "reason": "G3 veto:两页 SERP 数到 6 个以上免费实现把任务做完且持续可见——go.dev 官方 release notes(永久收录、位次 1)、victoriametrics.com(2026-07-31)、gopherguides.com(2026-07-10)、corentings.dev(2026-04-27)、markhuang.ai(2026-08-02 专写升级风险)、Medium devtips(讲清具体类型可以/interface 不可以),外加 Reddit r/golang 三条高票线程。日期跨 4 月至 8 月、全部已收录并稳定排名,提案 1 月提出 5 月通过,发布当日讲解市场已饱和,不构成待收录的临时空位,故非 veto_window_bet。G2 两页读完无质量断层。",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "harvest-bending-spoons-price-hike": {
+      "slug": "harvest-bending-spoons-price-hike",
+      "term": "harvest bending spoons price increase",
+      "aliases": [
+        "harvest price increase 2026",
+        "harvest alternatives after price increase"
+      ],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:15:30+00:00",
+      "last_checked_at": "2026-08-21T03:15:30+00:00",
+      "expiry": null,
+      "source": {
+        "url": "https://hn.algolia.com/?dateRange=last24h&page=2&prefix=false&query=&sort=byPopularity&type=story",
+        "note": "HN 近 24 小时榜:Harvest hikes bills by 1500% after purchased by Bending Spoons"
+      },
+      "task": "搞清 Harvest 2026 新定价改了什么、以及从 Harvest 迁到哪个替代品",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/harvest-bending-spoons-price-hike/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:15:30+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/harvest-bending-spoons-price-hike/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1
+        },
+        {
+          "at": "2026-08-21T03:15:30+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 1,
+          "evidence": [
+            "证据/harvest-bending-spoons-price-hike/2026-08-21-scan.json"
+          ],
+          "reason": "G3 veto:数到两家独立竞品内容站把任务整段做完且都在首页——productive.io(2026-07-14,标题即『What Changed + What to Do』,已收录五周稳定排名)与 operating.app(4 天前,专写迁移替代与新定价两层结构),外加 Reddit r/projectmanagement 三条线程和 Bloomberg/Bloomberg Law 的权威事实。operating.app 仅 4 天即排上首页,直接证明这个付费者群体的厂商内容机器收录以天计,位置是被占而非待收录,故非 veto_window_bet;Reddit 最早线程到 2026-01-14、收购在 2025 年中,变化已数月不新。G2 两页读完,第 2 页整页漂向 Bending Spoons 的 IPO/估值内容,属明显质量断层。命中陷阱类别三第 4 例。",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "nps-powered-micromobility-devices": {
+      "slug": "nps-powered-micromobility-devices",
+      "term": "powered micromobility devices",
+      "aliases": [
+        "nps powered micromobility rule",
+        "e scooter national park rules 2026"
+      ],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:33:32+00:00",
+      "last_checked_at": "2026-08-21T03:33:32+00:00",
+      "expiry": null,
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/12/powered-micromobility-devices",
+        "note": "Federal Register 2026-08-12 Interior/NPS 最终规则,2026-09-11 生效:powered micromobility devices 默认禁止,由各园区园长指定可用区域,荒野区禁止携带"
+      },
+      "task": "判断自己的电动滑板车/悬浮板/Segway 在某个国家公园能不能骑、哪些区域被指定为可用",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/nps-powered-micromobility-devices/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:33:32+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/nps-powered-micromobility-devices/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2
+        },
+        {
+          "at": "2026-08-21T03:33:32+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "evidence": [
+            "证据/nps-powered-micromobility-devices/2026-08-21-scan.json"
+          ],
+          "reason": "G3 veto,两层任务都被占满。第一层「新规改了什么」:10 天内 nps.gov 官方框架页加 GearJunkie、GovTech、E&E/POLITICO、MLive、Nature World News、RV Trader、RVtravel 等 15 家以上做完并已收录排名。第二层「按园区能不能骑」这个本来最有希望的耐久任务,实测 are electric scooters allowed in yosemite national park 后同样否决:parkplanning.nps.gov 首位、nps.gov/yose/planyourvisit/biking(2024-03-25)与 nps.gov thingstodo/bikingyosemite(2025-09-10)都已写明该园的电动滑板车政策,永久收录稳定排名,商业价值高的园区还有本地租赁商 yosemiteebiking.com 专文补位。位置是被占而非待收录,故非 veto_window_bet。G2 两页读完无质量断层。",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "bis-drone-export-streamlining": {
+      "slug": "bis-drone-export-streamlining",
+      "term": "streamlining export controls for drone exports",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:35:39+00:00",
+      "last_checked_at": "2026-08-21T03:35:39+00:00",
+      "expiry": "2026-09-11",
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/14/2026-16628/streamlining-export-controls-for-drone-exports",
+        "note": "Federal Register 2026-08-14 Rule:Streamlining Export Controls for Drone Exports"
+      },
+      "task": "无人机出口商判断自家机型在放宽后适用哪一档管制与许可要求",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/bis-drone-export-streamlining/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:35:39+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/bis-drone-export-streamlining/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass"
+          },
+          "expiry": "2026-09-11"
+        },
+        {
+          "at": "2026-08-21T03:41:58+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/bis-drone-export-streamlining/2026-08-21-scan.json"
+          ],
+          "reason": "补跑 G1=pass 后 G3=veto。命中陷阱类别三:付费者(无人机出口商)明确且有预算,出口合规培训与律所内容机器已占位。 现场数到的免费实现与持续可见度实测见观察文件 证据/bis-drone-export-streamlining/2026-08-21-scan.json;全部已收录并稳定排名,不是待收录的临时空位,故非 veto_window_bet。按验证型类别处置跳过 G2 结构阅读,且 G3 否决线在第一页即已满足。",
+          "gates": {
+            "G1": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "copyright-news-website-group-registration": {
+      "slug": "copyright-news-website-group-registration",
+      "term": "group registration of updates to a news website",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:35:39+00:00",
+      "last_checked_at": "2026-08-21T03:35:39+00:00",
+      "expiry": "2026-09-11",
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/13/2026-16465/group-registration-of-updates-to-a-news-website",
+        "note": "Federal Register 2026-08-13 Rule:Group Registration of Updates to a News Website"
+      },
+      "task": "新闻网站运营方按新规把网站更新做集体版权登记",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/copyright-news-website-group-registration/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:35:39+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/copyright-news-website-group-registration/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass"
+          },
+          "expiry": "2026-09-11"
+        },
+        {
+          "at": "2026-08-21T03:41:58+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/copyright-news-website-group-registration/2026-08-21-scan.json"
+          ],
+          "reason": "补跑 G1=pass 后 G3=veto。命中陷阱类别六:版权局为每个登记选项维护一页永久答案(GRNW 有自己的固定页),对象全集已被官方覆盖。 现场数到的免费实现与持续可见度实测见观察文件 证据/copyright-news-website-group-registration/2026-08-21-scan.json;全部已收录并稳定排名,不是待收录的临时空位,故非 veto_window_bet。按验证型类别处置跳过 G2 结构阅读,且 G3 否决线在第一页即已满足。",
+          "gates": {
+            "G1": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "dea-orexin-antagonist-schedule-v": {
+      "slug": "dea-orexin-antagonist-schedule-v",
+      "term": "rescheduling of suvorexant lemborexant and daridorexant from schedule iv into schedule v",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:35:39+00:00",
+      "last_checked_at": "2026-08-21T03:35:39+00:00",
+      "expiry": "2026-09-11",
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/11/2026-16375/schedules-of-controlled-substances-rescheduling-of-suvorexant-lemborexant-and-daridorexant-from",
+        "note": "Federal Register 2026-08-11 Proposed Rule:Schedules of Controlled Substances: Rescheduling of Suvorexant, Lemborexant, and Daridorexant From Schedule IV Into Schedule V"
+      },
+      "task": "药房与处方医师搞清三种食欲素受体拮抗剂改列 Schedule V 后处方、存储与报送要求怎么变",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/dea-orexin-antagonist-schedule-v/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:35:39+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/dea-orexin-antagonist-schedule-v/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass"
+          },
+          "expiry": "2026-09-11"
+        },
+        {
+          "at": "2026-08-21T03:41:58+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/dea-orexin-antagonist-schedule-v/2026-08-21-scan.json"
+          ],
+          "reason": "补跑 G1=pass 后 G3=veto。命中陷阱类别六,且暴露出该类别最强的一层:Federal Register 这个对象类本身有多个自动全集镜像。 现场数到的免费实现与持续可见度实测见观察文件 证据/dea-orexin-antagonist-schedule-v/2026-08-21-scan.json;全部已收录并稳定排名,不是待收录的临时空位,故非 veto_window_bet。按验证型类别处置跳过 G2 结构阅读,且 G3 否决线在第一页即已满足。",
+          "gates": {
+            "G1": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "dhs-uscis-mandatory-efiling": {
+      "slug": "dhs-uscis-mandatory-efiling",
+      "term": "mandatory electronic filing e filing",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:35:39+00:00",
+      "last_checked_at": "2026-08-21T03:35:39+00:00",
+      "expiry": "2026-09-11",
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/11/2026-16313/mandatory-electronic-filing-e-filing",
+        "note": "Federal Register 2026-08-11 Rule:Mandatory Electronic Filing (e-Filing)"
+      },
+      "task": "移民申请人与代理判断哪些表格自何时起必须电子递交、纸质件如何处理",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/dhs-uscis-mandatory-efiling/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:35:39+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/dhs-uscis-mandatory-efiling/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass"
+          },
+          "expiry": "2026-09-11"
+        },
+        {
+          "at": "2026-08-21T03:41:58+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/dhs-uscis-mandatory-efiling/2026-08-21-scan.json"
+          ],
+          "reason": "补跑 G1=pass 后 G3=veto。命中陷阱类别三:移民付费者明确且有预算,移民律所与签证服务内容机器 24 小时内饱和。 现场数到的免费实现与持续可见度实测见观察文件 证据/dhs-uscis-mandatory-efiling/2026-08-21-scan.json;全部已收录并稳定排名,不是待收录的临时空位,故非 veto_window_bet。按验证型类别处置跳过 G2 结构阅读,且 G3 否决线在第一页即已满足。",
+          "gates": {
+            "G1": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "dhs-h1b-l1-biometric-fee": {
+      "slug": "dhs-h1b-l1-biometric-fee",
+      "term": "9 11 response and biometric entry exit fee for h 1b and l 1 visas",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:35:40+00:00",
+      "last_checked_at": "2026-08-21T03:35:40+00:00",
+      "expiry": "2026-09-11",
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/10/2026-16231/9-11-response-and-biometric-entry-exit-fee-for-h-1b-and-l-1-visas",
+        "note": "Federal Register 2026-08-10 Rule:9-11 Response and Biometric Entry-Exit Fee for H-1B and L-1 Visas"
+      },
+      "task": "H-1B/L-1 申请方搞清新增的 9-11 与生物识别出入境费金额、由谁缴、怎么缴",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/dhs-h1b-l1-biometric-fee/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:35:40+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/dhs-h1b-l1-biometric-fee/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass"
+          },
+          "expiry": "2026-09-11"
+        },
+        {
+          "at": "2026-08-21T03:41:58+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/dhs-h1b-l1-biometric-fee/2026-08-21-scan.json"
+          ],
+          "reason": "补跑 G1=pass 后 G3=veto。命中陷阱类别三:雇主付费者明确且有预算,AILA 与移民律所已占位;且费用本身自 2015 年 Public Law 114-113 即存在。 现场数到的免费实现与持续可见度实测见观察文件 证据/dhs-h1b-l1-biometric-fee/2026-08-21-scan.json;全部已收录并稳定排名,不是待收录的临时空位,故非 veto_window_bet。按验证型类别处置跳过 G2 结构阅读,且 G3 否决线在第一页即已满足。",
+          "gates": {
+            "G1": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "phmsa-fireworks-certification-agencies": {
+      "slug": "phmsa-fireworks-certification-agencies",
+      "term": "allowing fireworks certification agencies fcas to approve professional fireworks",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:35:40+00:00",
+      "last_checked_at": "2026-08-21T03:35:40+00:00",
+      "expiry": "2026-09-11",
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/07/2026-16111/hazardous-materials-allowing-fireworks-certification-agencies-fcas-to-approve-professional-fireworks",
+        "note": "Federal Register 2026-08-07 Rule:Hazardous Materials: Allowing Fireworks Certification Agencies (FCAs) To Approve Professional Fireworks"
+      },
+      "task": "专业烟花制造与进口方走 FCA 审批路径取得产品批准",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/phmsa-fireworks-certification-agencies/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:35:40+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/phmsa-fireworks-certification-agencies/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass"
+          },
+          "expiry": "2026-09-11"
+        },
+        {
+          "at": "2026-08-21T03:41:58+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/phmsa-fireworks-certification-agencies/2026-08-21-scan.json"
+          ],
+          "reason": "补跑 G1=pass 后 G3=veto。命中陷阱类别六:PHMSA 为烟花审批维护专门的永久页面(energetic-materials-approvals),对象全集已被官方覆盖;另有 J.J. Keller 危险品合规厂商占位。 现场数到的免费实现与持续可见度实测见观察文件 证据/phmsa-fireworks-certification-agencies/2026-08-21-scan.json;全部已收录并稳定排名,不是待收录的临时空位,故非 veto_window_bet。按验证型类别处置跳过 G2 结构阅读,且 G3 否决线在第一页即已满足。",
+          "gates": {
+            "G1": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "bis-critical-minerals-export-restriction": {
+      "slug": "bis-critical-minerals-export-restriction",
+      "term": "dpas directive allocation order recoverable critical minerals",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:35:40+00:00",
+      "last_checked_at": "2026-08-21T03:35:40+00:00",
+      "expiry": "2026-09-11",
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/06/2026-16078/dpas-directive-allocation-order-and-additional-requirements-for-recoverable-critical-minerals-and",
+        "note": "Federal Register 2026-08-06 Rule:DPAS Directive Allocation Order and Additional Requirements for Recoverable Critical Minerals and Materials"
+      },
+      "task": "关键矿物与可回收材料的出口方判断自家料号是否落入新的临时出口限制并办理合规",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/bis-critical-minerals-export-restriction/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:35:40+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/bis-critical-minerals-export-restriction/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass"
+          },
+          "expiry": "2026-09-11"
+        },
+        {
+          "at": "2026-08-21T03:41:58+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/bis-critical-minerals-export-restriction/2026-08-21-scan.json"
+          ],
+          "reason": "补跑 G1=pass 后 G3=veto。命中陷阱类别三:付费者(黑粉/可回收关键矿物卖方与电池回收商)明确且有预算,行业协会、律所与行业厂商已占位。 现场数到的免费实现与持续可见度实测见观察文件 证据/bis-critical-minerals-export-restriction/2026-08-21-scan.json;全部已收录并稳定排名,不是待收录的临时空位,故非 veto_window_bet。按验证型类别处置跳过 G2 结构阅读,且 G3 否决线在第一页即已满足。",
+          "gates": {
+            "G1": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "state-visa-bond-program": {
+      "slug": "state-visa-bond-program",
+      "term": "visas visa bond program",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:35:40+00:00",
+      "last_checked_at": "2026-08-21T03:35:40+00:00",
+      "expiry": "2026-09-11",
+      "source": {
+        "url": "https://www.federalregister.gov/documents/2026/08/03/2026-15726/visas-visa-bond-program",
+        "note": "Federal Register 2026-08-03 Rule:Visas: Visa Bond Program"
+      },
+      "task": "受列国签证申请人搞清签证保证金金额、缴纳与退还流程",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/state-visa-bond-program/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:35:40+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/state-visa-bond-program/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 2,
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass"
+          },
+          "expiry": "2026-09-11"
+        },
+        {
+          "at": "2026-08-21T03:41:58+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/state-visa-bond-program/2026-08-21-scan.json"
+          ],
+          "reason": "补跑 G1=pass 后 G3=veto。命中陷阱类别六与类别三双重死因:国务院自维护『受签证保证金约束的国家』全集页,移民律所另行占位。 现场数到的免费实现与持续可见度实测见观察文件 证据/state-visa-bond-program/2026-08-21-scan.json;全部已收录并稳定排名,不是待收录的临时空位,故非 veto_window_bet。按验证型类别处置跳过 G2 结构阅读,且 G3 否决线在第一页即已满足。",
+          "gates": {
+            "G1": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "github-alternatives-migration-wave": {
+      "slug": "github-alternatives-migration-wave",
+      "term": "alternatives to github",
+      "aliases": [
+        "migrate company off github",
+        "github alternatives 2026"
+      ],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-21T03:50:11+00:00",
+      "last_checked_at": "2026-08-21T03:50:11+00:00",
+      "expiry": null,
+      "source": {
+        "url": "https://news.ycombinator.com/ask",
+        "note": "HN Ask/Tell 列表:Ask HN: Alternatives to GitHub(640 分/430 评论,3 天前)与 Ask HN: GitHub employees what's going on? Why?(320 分/260 评论),同期首页另有 github.blog 的 August 17 outage 复盘(351 分/399 评论)"
+      },
+      "task": "GitHub 停机与信任风波后,开发团队评估迁到哪个代码托管平台并执行迁移",
+      "window_estimate": null,
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/github-alternatives-migration-wave/2026-08-21-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-20",
+      "history": [
+        {
+          "at": "2026-08-21T03:50:11+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/github-alternatives-migration-wave/2026-08-21-scan.json"
+          ],
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3
+        },
+        {
+          "at": "2026-08-21T03:50:12+00:00",
+          "from": "captured",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260821T024756Z-a2592003",
+          "round": 3,
+          "evidence": [
+            "证据/github-alternatives-migration-wave/2026-08-21-scan.json"
+          ],
+          "reason": "G3 veto:两页 SERP 数到至少八个免费实现把任务做完且持续可见——Gartner 的 GitHub Alternatives & Competitors 榜、european-alternatives.eu 替代品目录、refine.dev(2025-10-01)、eesel AI(2026-06-23,自称实测过)、Towards AI(2026-06-02)、nixCraft(2024-07-03)、Opensource.com(2020-11)、buddy.works 竞品对比页,外加 awesome-github-alternatives 社区全集清单与 Reddit r/devops(180+ 帖)、r/opensource、Quora、HN 的多条高票线程。日期跨 2020 至 2026、全部已收录稳定排名,非临时空位。G2 两页读完无质量断层。结构性结论:「alternatives to X」这个对象类同样有全集维护者(替代品目录站、分析机构榜单、社区 awesome 清单、竞品自建对比页),跨厂商横向格因此是个钳形——X 市场大则已被占满,X 市场小则够不着 G6 的 200 美元月收入线。",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "eu-multistate-packaging-epr-registration": {
+      "slug": "eu-multistate-packaging-epr-registration",
+      "term": "which eu countries require packaging epr registration",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-23T07:07:03+00:00",
+      "last_checked_at": "2026-08-23T07:07:03+00:00",
+      "expiry": "2026-11-30",
+      "source": {
+        "url": "https://environment.ec.europa.eu/topics/waste-and-recycling/packaging-waste_en",
+        "note": "欧盟包装 EPR 义务按成员国分别注册(德国 LUCID、法国 CITEO、意大利 CONAI 等),PPWR 2026-08-12 起适用后强制面扩大;Amazon 要求每个销售国各有一个独立注册号"
+      },
+      "task": "向欧盟多国发货的卖家判定自己需要在哪些成员国、按哪些废弃物流注册 EPR,并确认是否已全部注册到位",
+      "window_estimate": "months",
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [
+        "前两页出现 ≥2 个自助的跨成员国 EPR 义务判定工具",
+        "Amazon 或其他市场平台把逐 SKU 的义务判定内建进卖家后台",
+        "欧委会发布统一的跨国注册单一入口"
+      ],
+      "evidence_refs": [
+        "证据/eu-multistate-packaging-epr-registration/2026-08-23-scan.json",
+        "证据/eu-multistate-packaging-epr-registration/2026-08-23-track.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-22",
+      "history": [
+        {
+          "at": "2026-08-23T07:07:03+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/eu-multistate-packaging-epr-registration/2026-08-23-scan.json"
+          ],
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1
+        },
+        {
+          "at": "2026-08-23T07:07:03+00:00",
+          "from": "captured",
+          "to": "screened",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1,
+          "evidence": [
+            "证据/eu-multistate-packaging-epr-registration/2026-08-23-scan.json"
+          ],
+          "reason": "按 2026-08-23 修订的 G3 三问放行:真工具计数 ≤1 或占位者含做得起来的小而专新站;深审入口预检已过(逐对象、企业付费者、反复发生)",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "pass"
+          },
+          "window_estimate": "months",
+          "expiry": "2026-11-30"
+        },
+        {
+          "at": "2026-08-23T07:07:03+00:00",
+          "from": "screened",
+          "to": "tracking",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1,
+          "evidence": [
+            "证据/eu-multistate-packaging-epr-registration/2026-08-23-scan.json"
+          ],
+          "reason": "窗口以月计(持续性合规义务,非天级抢位),按契约转入追踪",
+          "expiry": "2026-11-30",
+          "invalidation": [
+            "前两页出现 ≥2 个自助的跨成员国 EPR 义务判定工具",
+            "Amazon 或其他市场平台把逐 SKU 的义务判定内建进卖家后台",
+            "欧委会发布统一的跨国注册单一入口"
+          ]
+        },
+        {
+          "at": "2026-08-23T08:51:49+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 3,
+          "evidence": [
+            "证据/eu-multistate-packaging-epr-registration/2026-08-23-track.json"
+          ],
+          "reason": "方法纠错后的重判,推翻本运行第 1 轮自己的放行。第 1 轮只用问句式措辞数工具,两次均得 0;本轮直接访问 gramta.com 确认它就是该任务的完整判定工具(含免费判定入口与具名客户见证),再用产品向措辞检索立刻出现 ≥6 个真工具(Lappa、Interzero 的 31 国平台、ForSURE、ecosistant、regilient.ai、TraceX)。根因是工具排名靠产品向措辞而非用户问句,只按问句式数会系统性漏计。已把「两族措辞各检索一次」写进闸门契约 G3 第一问。",
+          "gates": {
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "gpsr-eu-responsible-person-determination": {
+      "slug": "gpsr-eu-responsible-person-determination",
+      "term": "do i need an eu responsible person for my product",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-23T07:07:03+00:00",
+      "last_checked_at": "2026-08-23T07:07:03+00:00",
+      "expiry": "2026-11-30",
+      "source": {
+        "url": "https://single-market-economy.ec.europa.eu/sectors/consumer-goods-and-services/general-product-safety-regulation_en",
+        "note": "GPSR(EU 2023/988)第 16 条要求落在欧盟境内的责任人;无责任人不得在欧盟市场投放,平台据此下架"
+      },
+      "task": "向欧盟销售的卖家判定自己的产品是否需要指定 EU Responsible Person,以及由谁可以担任",
+      "window_estimate": "months",
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [
+        "前两页出现 ≥2 个自助的 GPSR 责任人判定工具",
+        "欧委会或成员国上线官方判定问答",
+        "主要平台把判定内建进卖家后台"
+      ],
+      "evidence_refs": [
+        "证据/gpsr-eu-responsible-person-determination/2026-08-23-scan.json",
+        "证据/gpsr-eu-responsible-person-determination/2026-08-23-track.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-22",
+      "history": [
+        {
+          "at": "2026-08-23T07:07:03+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/gpsr-eu-responsible-person-determination/2026-08-23-scan.json"
+          ],
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1
+        },
+        {
+          "at": "2026-08-23T07:07:04+00:00",
+          "from": "captured",
+          "to": "screened",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1,
+          "evidence": [
+            "证据/gpsr-eu-responsible-person-determination/2026-08-23-scan.json"
+          ],
+          "reason": "按 2026-08-23 修订的 G3 三问放行:真工具计数 ≤1 或占位者含做得起来的小而专新站;深审入口预检已过(逐对象、企业付费者、反复发生)",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "pass"
+          },
+          "window_estimate": "months",
+          "expiry": "2026-11-30"
+        },
+        {
+          "at": "2026-08-23T07:07:04+00:00",
+          "from": "screened",
+          "to": "tracking",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1,
+          "evidence": [
+            "证据/gpsr-eu-responsible-person-determination/2026-08-23-scan.json"
+          ],
+          "reason": "窗口以月计(持续性合规义务,非天级抢位),按契约转入追踪",
+          "expiry": "2026-11-30",
+          "invalidation": [
+            "前两页出现 ≥2 个自助的 GPSR 责任人判定工具",
+            "欧委会或成员国上线官方判定问答",
+            "主要平台把判定内建进卖家后台"
+          ]
+        },
+        {
+          "at": "2026-08-23T08:51:49+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 3,
+          "evidence": [
+            "证据/gpsr-eu-responsible-person-determination/2026-08-23-track.json"
+          ],
+          "reason": "方法纠错后的重判,推翻本运行第 1 轮自己的放行。第 1 轮用问句式措辞只见 1 个真工具;产品向措辞下见到 ≥4 个(Sustalium、Fluxy.One €249、Taxually、Lappa),外加 Amazon 自家的 compliance widget 与一位独立开发者做的免费 GPSR Checker。平台自带工具与免费独立工具并存,说明这一格已被做透。",
+          "gates": {
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "cra-product-scope-classification": {
+      "slug": "cra-product-scope-classification",
+      "term": "does my product fall under cyber resilience act",
+      "aliases": [],
+      "state": "rejected",
+      "lane": "new",
+      "first_observed_at": "2026-08-23T07:07:04+00:00",
+      "last_checked_at": "2026-08-23T07:07:04+00:00",
+      "expiry": "2026-11-30",
+      "source": {
+        "url": "https://digital-strategy.ec.europa.eu/en/policies/cyber-resilience-act",
+        "note": "CRA 主产品制度 2027-12-11 适用;分类决定符合性评估路径,现场读到评估前置期常为 4–10 个月"
+      },
+      "task": "把带数字要素的产品对照 CRA 三档风险分类,判定适用哪条符合性评估路径与哪些义务",
+      "window_estimate": "months",
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "veto"
+      },
+      "score": null,
+      "invalidation": [
+        "前两页出现 ≥2 个由小而专新站提供的 CRA 分类工具且各自稳定排名",
+        "欧委会或 ENISA 上线官方分类问答",
+        "主要认证机构把免费分类器做成入口"
+      ],
+      "evidence_refs": [
+        "证据/cra-product-scope-classification/2026-08-23-scan.json",
+        "证据/cra-product-scope-classification/2026-08-23-track.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": "2026-09-22",
+      "history": [
+        {
+          "at": "2026-08-23T07:07:04+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/cra-product-scope-classification/2026-08-23-scan.json"
+          ],
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1
+        },
+        {
+          "at": "2026-08-23T07:07:04+00:00",
+          "from": "captured",
+          "to": "screened",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1,
+          "evidence": [
+            "证据/cra-product-scope-classification/2026-08-23-scan.json"
+          ],
+          "reason": "按 2026-08-23 修订的 G3 三问放行:真工具计数 ≤1 或占位者含做得起来的小而专新站;深审入口预检已过(逐对象、企业付费者、反复发生)",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "pass"
+          },
+          "window_estimate": "months",
+          "expiry": "2026-11-30"
+        },
+        {
+          "at": "2026-08-23T07:07:04+00:00",
+          "from": "screened",
+          "to": "tracking",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 1,
+          "evidence": [
+            "证据/cra-product-scope-classification/2026-08-23-scan.json"
+          ],
+          "reason": "窗口以月计(持续性合规义务,非天级抢位),按契约转入追踪",
+          "expiry": "2026-11-30",
+          "invalidation": [
+            "前两页出现 ≥2 个由小而专新站提供的 CRA 分类工具且各自稳定排名",
+            "欧委会或 ENISA 上线官方分类问答",
+            "主要认证机构把免费分类器做成入口"
+          ]
+        },
+        {
+          "at": "2026-08-23T08:03:18+00:00",
+          "from": "tracking",
+          "to": "rejected",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 2,
+          "evidence": [
+            "证据/cra-product-scope-classification/2026-08-23-track.json"
+          ],
+          "reason": "同日闸门回退后的重判,推翻本运行第 1 轮自己的放行。第 1 轮依据是当日上午新增的「混合情形 → pass」,该规则同日下午被前瞻检验推翻(在本家族几乎放行一切,且 TSR 一例的义务要到 2030-08-01 才适用却已被抢跑)。按回退后的 G3:真工具 2 个(Keysight 的 self-check tool 与 cyberresilienceact.eu 的 Compliance Matrix)均在首页持续可见,且 Keysight 已把核心判定——产品的 CRA 分类与随之义务——工具化,故第三问判 veto。未重跑 SERP,沿用第 1 轮现场读取,不谎称已重测。",
+          "gates": {
+            "G3": "veto"
+          }
+        }
+      ]
+    },
+    "eu-machinery-regulation-risk-category": {
+      "slug": "eu-machinery-regulation-risk-category",
+      "term": "machinery regulation annex i high risk category conformity assessment",
+      "aliases": [
+        "does my machine need a notified body",
+        "machinery regulation high risk annex i check"
+      ],
+      "state": "tracking",
+      "lane": "new",
+      "first_observed_at": "2026-08-23T08:02:38+00:00",
+      "last_checked_at": "2026-08-23T09:48:50+00:00",
+      "expiry": "2026-11-30",
+      "source": {
+        "url": "https://single-market-economy.ec.europa.eu/sectors/mechanical-engineering/machinery_en",
+        "note": "Machinery Regulation (EU) 2023/1230 自 2027-01-20 适用;被判入高风险类别即强制第三方 Notified Body 评估,失去自我认证资格"
+      },
+      "task": "机械制造商与进口商判定自己的机器是否落入附件 I 高风险类别、因此适用哪条符合性评估路径",
+      "window_estimate": "months",
+      "play": null,
+      "gates": {
+        "G0": "pass",
+        "G4": "pass",
+        "G5": "pass",
+        "G1": "pass",
+        "G2": "pass",
+        "G3": "pass"
+      },
+      "score": null,
+      "invalidation": [
+        "前两页出现 ≥2 个附件 I 高风险类别自助分类器",
+        "官方上线分类问答",
+        "某个 Notified Body 把免费分类器做成获客入口"
+      ],
+      "evidence_refs": [
+        "证据/eu-machinery-regulation-risk-category/2026-08-23-scan.json",
+        "证据/eu-machinery-regulation-risk-category/2026-08-23-track.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": null,
+      "history": [
+        {
+          "at": "2026-08-23T08:02:38+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "xinci-run",
+          "evidence": [
+            "证据/eu-machinery-regulation-risk-category/2026-08-23-scan.json"
+          ],
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 2
+        },
+        {
+          "at": "2026-08-23T08:02:38+00:00",
+          "from": "captured",
+          "to": "screened",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 2,
+          "evidence": [
+            "证据/eu-machinery-regulation-risk-category/2026-08-23-scan.json"
+          ],
+          "reason": "新 G3 第一问真工具 0 个即放行;零成本判据 6 已核对(欧委会不发分类工具);深审入口预检已过",
+          "gates": {
+            "G0": "pass",
+            "G4": "pass",
+            "G5": "pass",
+            "G1": "pass",
+            "G2": "pass",
+            "G3": "pass"
+          },
+          "window_estimate": "months",
+          "expiry": "2026-11-30"
+        },
+        {
+          "at": "2026-08-23T08:02:38+00:00",
+          "from": "screened",
+          "to": "tracking",
+          "by": "xinci-run",
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 2,
+          "evidence": [
+            "证据/eu-machinery-regulation-risk-category/2026-08-23-scan.json"
+          ],
+          "reason": "窗口以月计,2027-01-20 适用前的持续义务",
+          "expiry": "2026-11-30",
+          "invalidation": [
+            "前两页出现 ≥2 个附件 I 高风险类别自助分类器",
+            "官方上线分类问答",
+            "某个 Notified Body 把免费分类器做成获客入口"
+          ]
+        },
+        {
+          "at": "2026-08-23T09:48:50+00:00",
+          "from": "tracking",
+          "to": "tracking",
+          "by": "xinci-run",
+          "checked": [
+            "证据/eu-machinery-regulation-risk-category/2026-08-23-track.json"
+          ],
+          "run_id": "run-20260823T000938Z-9080d1d8",
+          "round": 4
+        }
+      ]
+    },
+    "vehicle-fastener-torque-specs": {
+      "slug": "vehicle-fastener-torque-specs",
+      "term": "lug nut torque spec",
+      "aliases": [],
+      "state": "captured",
+      "lane": "mature",
+      "first_observed_at": "2026-08-24T02:29:29+00:00",
+      "last_checked_at": "2026-08-24T02:29:29+00:00",
+      "expiry": "2026-09-23",
+      "source": {
+        "url": "https://www.google.com/search?q=2015+honda+civic+lug+nut+torque+spec&gl=us&hl=en&num=20&pws=0",
+        "note": ""
+      },
+      "task": "查某年款某车型某个紧固件的扭矩规格(ft-lbs / Nm)与拧紧顺序",
+      "window_estimate": null,
+      "play": null,
+      "gates": {},
+      "score": null,
+      "invalidation": [],
+      "evidence_refs": [
+        "证据/vehicle-fastener-torque-specs/2026-08-23-scan.json"
+      ],
+      "decision_ref": null,
+      "superseded_by": null,
+      "recheck_after": null,
+      "history": [
+        {
+          "at": "2026-08-24T02:29:29+00:00",
+          "from": null,
+          "to": "captured",
+          "by": "user",
+          "evidence": [
+            "证据/vehicle-fastener-torque-specs/2026-08-23-scan.json"
+          ],
+          "expiry": "2026-09-23"
         }
       ]
     }
