@@ -14,7 +14,17 @@
 | [xinci-decide](xinci-workflow/xinci-decide/SKILL.md) | 建站决策:页面地图 + 收入模型 + md/html 双格式决策书 |
 | [xinci-core](xinci-workflow/xinci-core/) | 共享核心:契约、闸门、schema、registrar / screen_index 等脚本(判断标准唯一来源) |
 
-设计文档:[设计/新词工作流skill设计-2026-08-17.md](设计/新词工作流skill设计-2026-08-17.md)。数据区:`数据/新词工作流/`(账本 / 证据 / 决策书 / 运行 / 淘汰方向索引 `淘汰方向.jsonl`,后者由 `screen_index.py` 读写,勿手工编辑)。
+## 仓库边界(2026-08-24 起)
+
+**本仓库只放 skill 与契约,不放执行产出。** 账本、证据、决策书、运行清单、运行状态、淘汰方向索引、去重裁决一律住在同级仓库 `keywords-macdownds` 的 `数据/新词工作流/` 下;设计与落地计划文档也迁到了那里。
+
+脚本按 `XINCI_DATA_ROOT` 环境变量定位数据区;未设置时按"两个仓库是同级目录"回退到 `../keywords-macdownds/数据/新词工作流`。**契约文档里写作 `数据/新词工作流/...` 的路径,一律指数据区内部的相对位置。**
+
+```bash
+export XINCI_DATA_ROOT=/path/to/keywords-macdownds/数据/新词工作流
+```
+
+数据区内容:账本 / 证据 / 决策书 / 运行 / 运行状态 / 淘汰方向索引 `淘汰方向.jsonl`(由 `screen_index.py` 读写,**勿手工编辑**)/ 去重裁决 `去重裁决.jsonl`。
 
 ## 双环境接入(symlink,不入库)
 

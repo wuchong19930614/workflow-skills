@@ -38,7 +38,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --decision-ref "决策书/<slug>.md" --play single_domain
 ```
 
-`--play` 二选一,按页面地图的形状定,与 build_ready/pilot_ready 无关:`single_domain`(一个词簇撑一个站,pilot 默认走这个)、`cluster_expansion`(多簇分站或子目录扩张)。`--decision-ref` 是**相对数据区**的路径(`决策书/<slug>.md`),而下面生成 html 的脚本吃的是相对仓库根的路径(`数据/新词工作流/决策书/<slug>.md`)——两者基准不同,别互相套用。
+`--play` 二选一,按页面地图的形状定,与 build_ready/pilot_ready 无关:`single_domain`(一个词簇撑一个站,pilot 默认走这个)、`cluster_expansion`(多簇分站或子目录扩张)。`--decision-ref` 是**相对数据区**的路径(`决策书/<slug>.md`),而下面生成 html 的脚本吃的是**文件系统路径**——数据区自 2026-08-24 起不在本仓库内(见生命周期契约「数据区在哪」),所以那条命令要拼出数据区的真实位置。两者基准不同,别互相套用。
 
 no-go(hold / no_site)只带 reason,不出决策书、不带 decision-ref。
 
@@ -80,7 +80,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
 - `决策书/<slug>.html` —— 给人读;**不手写**,由脚本从 md 生成(单文件、内联样式、零外部依赖,双击即开):
 
 ```bash
-python3 xinci-workflow/xinci-core/scripts/build_decision_html.py "数据/新词工作流/决策书/<slug>.md"
+python3 xinci-workflow/xinci-core/scripts/build_decision_html.py "${XINCI_DATA_ROOT:-../keywords-macdownds/数据/新词工作流}/决策书/<slug>.md"
 ```
 
 - md 每次修改后重跑脚本再生成 html,禁止手改 html。生成器把 md 的 SHA-256 写入 html meta;registrar 同时校验源哈希与**完整确定性渲染结果**,旧 html、伪造 meta 或手改 html 一律拒收。

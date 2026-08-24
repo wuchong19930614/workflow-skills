@@ -46,7 +46,14 @@ except ImportError:  # Windows
         msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
 
 # 数据区在仓库根(代码与数据分离):xinci-workflow/xinci-core/scripts/ 向上三级
-DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[3] / "数据" / "新词工作流"
+# 数据区不在本仓库内。xinci-workflow 只放 skill 与契约,执行产出(账本、证据、
+# 索引、运行清单)住在同级的 keywords-macdownds 仓库。
+# 优先读环境变量 XINCI_DATA_ROOT;没设则按"两个仓库是同级目录"回退。
+# parents[3]=workflow-skills, parents[4]=两仓库的公共父目录。
+DEFAULT_DATA_ROOT = Path(
+    os.environ.get("XINCI_DATA_ROOT")
+    or Path(__file__).resolve().parents[4] / "keywords-macdownds" / "数据" / "新词工作流"
+)
 
 STATES = {
     "captured", "screened", "tracking", "formation_confirmed", "qualified",

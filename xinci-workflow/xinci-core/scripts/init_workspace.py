@@ -1,12 +1,20 @@
 #!/usr/bin/env python3
 """初始化 数据/新词工作流/ 目录结构与空账本。幂等:已存在的文件与目录不动。"""
+import os
 import argparse
 import json
 import sys
 from pathlib import Path
 
 # 数据区在仓库根(代码与数据分离):xinci-workflow/xinci-core/scripts/ 向上三级
-DEFAULT_DATA_ROOT = Path(__file__).resolve().parents[3] / "数据" / "新词工作流"
+# 数据区不在本仓库内。xinci-workflow 只放 skill 与契约,执行产出(账本、证据、
+# 索引、运行清单)住在同级的 keywords-macdownds 仓库。
+# 优先读环境变量 XINCI_DATA_ROOT;没设则按"两个仓库是同级目录"回退。
+# parents[3]=workflow-skills, parents[4]=两仓库的公共父目录。
+DEFAULT_DATA_ROOT = Path(
+    os.environ.get("XINCI_DATA_ROOT")
+    or Path(__file__).resolve().parents[4] / "keywords-macdownds" / "数据" / "新词工作流"
+)
 SUBDIRS = ("账本", "证据", "决策书", "运行", "运行状态", "运行状态/事务")
 
 
