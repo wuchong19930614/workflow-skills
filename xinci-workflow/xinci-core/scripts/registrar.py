@@ -207,7 +207,7 @@ def _check_evidence(data_root: Path, refs, slug=None) -> list:
 
 
 OBS_FIELDS = {"slug", "observed_at", "stage", "source_urls", "points", "gates",
-              "g6_lines", "income_score", "window_bet"}
+              "g6_lines", "g6_tentative_lines", "income_score", "window_bet"}
 WINDOW_BET_FIELDS = {"implementation_urls", "lag_sample_url", "lag_days", "rationale"}
 
 
@@ -252,6 +252,22 @@ def _check_observation(path: Path, ref: str, slug) -> None:
                  f"观察文件 g6_lines 必须完整包含 subscription/advertising: {ref}")
         _require(all(v in {"pass", "veto", "N/A"} for v in g6_lines.values()),
                  f"观察文件 g6_lines 结论只能是 pass/veto/N/A: {ref}")
+    g6_tentative_lines = obs.get("g6_tentative_lines")
+    if g6_tentative_lines is not None:
+        _require(obs["stage"] in {"scan", "track"},
+                 f"观察文件 g6_tentative_lines 只适用于 scan/track 窗口期: {ref}")
+        _require(g6_lines is None,
+                 f"观察文件不得同时写 g6_tentative_lines 与正式 g6_lines: {ref}")
+        _require(isinstance(g6_tentative_lines, dict)
+                 and set(g6_tentative_lines) == {"subscription", "advertising"},
+                 f"观察文件 g6_tentative_lines 必须完整包含 subscription/advertising: {ref}")
+        _require(all(v in {"tentative_pass", "tentative_veto", "N/A"}
+                     for v in g6_tentative_lines.values()),
+                 f"观察文件 g6_tentative_lines 结论只能是 "
+                 f"tentative_pass/tentative_veto/N/A: {ref}")
+    if obs["stage"] in {"scan", "track"} and "G3" in gates:
+        _require(g6_tentative_lines is not None,
+                 f"scan/track 观察提交 G3 时必须同时写 g6_tentative_lines: {ref}")
     obs_income_score = obs.get("income_score")
     if obs_income_score is not None:
         _require(isinstance(obs_income_score, int) and not isinstance(obs_income_score, bool)

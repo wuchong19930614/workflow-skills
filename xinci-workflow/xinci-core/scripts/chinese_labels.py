@@ -28,7 +28,7 @@ SESSION_STATUS_ALIASES = {
 CANDIDATE_STATE_LABELS = {
     "captured": "已捕获，待补闸",
     "screened": "窗口初筛通过",
-    "tracking": "跟踪中",
+    "tracking": "追踪中",
     "formation_confirmed": "需求形成已确认",
     "qualified": "机会已认定",
     "build_ready": "建站就绪",

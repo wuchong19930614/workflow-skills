@@ -41,12 +41,12 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
 对用户指定的每个候选执行;本次调用未指定候选时,遍历全部 `tracking` 状态:
 
 1. **重跑 G1,同批零成本重核 G0。** 真浏览器搜精确词(美区桌面未登录)。首屏若已完成任务,G1 翻转,提议 `rejected`。G0(合法性与安全)按闸门契约先于一切执行,复查时零成本再问一次:目标平台 ToS 改了吗?这个任务的市场是否已被欺诈供血?G0 翻转同样提议 `rejected`——出口清单里的"G0 或 G1 翻转"就是指这两道。
-2. **看 SERP 变化(即 G2/G3 的变化复看)。** 对照上次观察:竞品到位了吗?官方文档/工具出现了吗?谁在占坑?读完整首页,按"做什么"分类。竞品占位到 G3 否决线即提议 `rejected`。
+2. **看 SERP 变化(即 G2/G3 的变化复看)。** 对照上次观察:竞品到位了吗?官方文档/工具出现了吗?谁在占坑?读完整首页,按"做什么"分类。先沿用并复核扫描观察的 `g6_tentative_lines`,并把当次结论写入新的 track 观察:只有当前仍是“仅广告线暂定可行”时,竞品占位到 G3 否决线才提议 `rejected`;订阅线暂定可行时,占位事实只更新竞争记录,G3 有效门结论仍为 pass。暂定线证据不足时不下最终 G3,如实留在 tracking 补证据。
    **复查范围就是 G0/G1 + G2/G3,不复查 G4/G5**——那两道是方向的固有属性,扫描期定了就不随时间变化(理由见闸门契约时间光谱表下「形成期为什么不是 G1–G5 全复查」)。**唯一的例外不由本 skill 触发**:扫描侧新归并出一个陷阱类别、而某个在追踪的候选正好命中它时,那是重新认识,由做归并的一方当场提议 `tracking→rejected`(生命周期契约 rejected 边第⑥种情形);本 skill 不为此例行重跑 G5。
 3. **看命名定型。** 回访来源社区:叫法统一了还是分裂了?aliases 有没有胜出者?
 4. **看需求形成信号。** 自动补全出现?首批 Semrush 行出现?讨论持续增长?(形成期允许轻量 Semrush 探针,仅限能改变决策的查询。)
 5. **对照 expiry 与失效条件。** 失效条件命中或 expiry 已过 → 如实报告。
-6. **写观察文件并登记复查:** observation 的 `gates` 只列本次实际重跑的门(至少写本次 G1 结论),`source_urls` 列实际打开的页面。仅登记复查而不转移时用 checked;随后若 transition 提交 gates,复用这份观察作为 `--evidence`,registrar 会逐门核对。
+6. **写观察文件并登记复查:** observation 的 `gates` 只列本次实际重跑的门(至少写本次 G1 结论),`g6_tentative_lines` 写本次复核后的逐线暂定结论,`source_urls` 列实际打开的页面。仅登记复查而不转移时用 checked;随后若 transition 提交 gates,复用这份观察作为 `--evidence`,registrar 会逐门核对。
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py checked \
@@ -64,7 +64,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
 ```
 
    - 提议 `formation_confirmed`(要求:累计 ≥2 次 -track 观察且最早与最新相隔 ≥7 天、命名定型、≥1 项形成信号、本次 G1=pass);
-   - 提议 `expired`(expiry 已过/失效条件命中)或 `rejected`(G0 或 G1 翻转、竞品占位)。(「命中新归并的陷阱类别」那一条 rejected 由扫描侧提议,不在本清单里,见上第 2 步。)
+   - 提议 `expired`(expiry 已过/失效条件命中)或 `rejected`(G0/G1 翻转,或占位否决按盈利线生效时竞品到达 G3 否决线)。(「命中新归并的陷阱类别」那一条 rejected 由扫描侧提议,不在本清单里,见上第 2 步。)
 8. **用户确认后**才执行对应 transition;写运行清单 `运行/<日期>-xinci-track.json`(同日再次运行加 HHMM 后缀)。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
 
 ## 硬规则

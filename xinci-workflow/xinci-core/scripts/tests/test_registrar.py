@@ -34,6 +34,15 @@ def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
         "points": ["测试观察要点"],
     }
     obs.update(overrides)
+    if ("g6_tentative_lines" not in overrides and stage in {"scan", "track"}
+            and "G3" in obs.get("gates", {})):
+        if obs["gates"]["G3"] == "pass":
+            obs["g6_tentative_lines"] = {
+                "subscription": "tentative_pass", "advertising": "N/A"}
+        else:
+            # 状态机兼容 mature / 历史窗口赌注证据;不代表 new 扫描可新造该结论。
+            obs["g6_tentative_lines"] = {
+                "subscription": "tentative_veto", "advertising": "tentative_pass"}
     if obs.get("gates"):
         obs.setdefault("source_urls", ["https://e.com/source"])
         if obs["gates"].get("G3") == R.G3_WINDOW_BET:
@@ -1109,6 +1118,40 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaisesRegex(R.RegistrarError, "source_urls"):
             R.register(self.root, slug=slug, term="t", source_url="https://e.com",
                        task="t", evidence=[bad6])
+        # 暂定盈利线有独立字段,不冒充正式 G6
+        tentative = mk_evidence(
+            self.root, slug, "2026-08-25-scan.json",
+            g6_tentative_lines={"subscription": "tentative_pass", "advertising": "N/A"})
+        R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                   task="t", evidence=[tentative])
+        self.assertEqual(self.load(slug)["state"], "captured")
+
+    def test_tentative_g6_lines_reject_formal_values_and_formal_stage(self):
+        slug = "tentative-lines"
+        bad_value = mk_evidence(
+            self.root, slug, "2026-08-25-scan.json",
+            g6_tentative_lines={"subscription": "pass", "advertising": "N/A"})
+        with self.assertRaisesRegex(R.RegistrarError, "tentative_pass"):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[bad_value])
+        bad_stage = mk_evidence(
+            self.root, slug, "2026-08-26-qualify.json",
+            g6_tentative_lines={"subscription": "tentative_pass", "advertising": "N/A"})
+        with self.assertRaisesRegex(R.RegistrarError, "scan/track"):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[bad_stage])
+
+    def test_scan_g3_requires_tentative_g6_lines(self):
+        slug = "g3-without-lines"
+        missing = mk_evidence(
+            self.root, slug, "2026-08-26-scan.json", gates={"G3": "pass"},
+            g6_tentative_lines=None)
+        with self.assertRaisesRegex(R.RegistrarError, "G3.*g6_tentative_lines"):
+            R.register(self.root, slug=slug, term="t", source_url="https://e.com",
+                       task="t", evidence=[missing])
+
+    def test_evidence_optional_gate_fields_are_accepted(self):
+        slug = "optional-fields"
         # 合法观察(含可选字段)通过
         ok = mk_evidence(self.root, slug, "2026-08-21-scan.json",
                          source_urls=["https://e.com/thread"], gates={"G1": "pass"})

@@ -77,8 +77,8 @@ class ReportStatusTest(unittest.TestCase):
         future = (date.today() + timedelta(days=5)).isoformat()
         self._mk("fresh-one", state="tracking", expiry=future)
         text = S.render_text(S.build_report(self.root))
-        self.assertIn("跟踪中：1", text)
-        self.assertIn("【跟踪中】", text)
+        self.assertIn("追踪中：1", text)
+        self.assertIn("【追踪中】", text)
         self.assertIn("失效日", text)
         self.assertNotIn("[tracking]", text)
 

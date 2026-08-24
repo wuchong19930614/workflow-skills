@@ -30,6 +30,16 @@
       "additionalProperties": false,
       "description": "正式 G6 的逐线结论。qualified 观察必填两项；lane=new 的 advertising 应为 N/A,mature 两项只能 pass/veto。算式、假设与出处写入 points/source_urls"
     },
+    "g6_tentative_lines": {
+      "type": "object",
+      "required": ["subscription", "advertising"],
+      "properties": {
+        "subscription": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
+        "advertising": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] }
+      },
+      "additionalProperties": false,
+      "description": "窗口期 scan/track 观察的逐线暂定结论，仅供当期 G3 判断占位否决是否生效。它不是正式 G6，不得与 g6_lines 并存；lane=new 的 advertising 应为 N/A。依据写入 points/source_urls"
+    },
     "income_score": {
       "type": "integer",
       "minimum": 1,
@@ -53,5 +63,34 @@
       "additionalProperties": false
     }
   },
+  "allOf": [
+    {
+      "not": {
+        "required": ["g6_lines", "g6_tentative_lines"]
+      }
+    },
+    {
+      "if": {
+        "required": ["g6_tentative_lines"]
+      },
+      "then": {
+        "properties": {
+          "stage": { "enum": ["scan", "track"] }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "stage": { "enum": ["scan", "track"] },
+          "gates": { "required": ["G3"] }
+        },
+        "required": ["stage", "gates"]
+      },
+      "then": {
+        "required": ["g6_tentative_lines"]
+      }
+    }
+  ],
   "additionalProperties": false
 }

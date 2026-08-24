@@ -460,8 +460,10 @@ def main(argv=None):
     ap.add_argument("--json", action="store_true", help="输出稳定机器格式；面向用户时不要使用")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser("start")
-    p.add_argument("--max-rounds", type=int, default=6)
-    p.add_argument("--max-hours", type=float)
+    p.add_argument("--max-rounds", type=int, default=6,
+                   help="轮次上限；始终存在，未传时默认 6")
+    p.add_argument("--max-hours", type=float,
+                   help="可选时长上限；不替代 max-rounds，两项谁先命中谁生效")
     sub.add_parser("list", help="列出会话摘要并直接给出活动运行编号")
     for name in ("begin-round", "show"):
         p = sub.add_parser(name)
