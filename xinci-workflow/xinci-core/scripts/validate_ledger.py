@@ -12,7 +12,7 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
 - 状态不变式:screened 必有 window_estimate;tracking 必有 expiry;
   captured 若带闸门结论(排队位)必有 expiry(否则窗口过了无处可去、无声腐烂);
   fast_grab_ready 必有 expiry、window_estimate=days、play=fast_grab、score 为 null(快道不得声称全站分数);
-  过 screened 的非终态必有 G0–G5 全 pass(G3 可为 veto_window_bet 快道降级结论);
+  过 screened 的非终态必有 G0/G1/G2/G4/G5=pass,G3 可为 pass 或 veto_window_bet 快道降级结论;
   带 G3=veto_window_bet 的候选只能停在 captured(挂起待确认)/screened/fast_grab_ready 或终态,
   且在 screened/fast_grab_ready 上 window_estimate=days;qualified 及其后继(build_ready/pilot_ready/hold)必有 G6–G8 全 pass;
   formation_confirmed 及其后继必有 ≥2 个 -track 观察且跨度 ≥7 天;
@@ -174,8 +174,8 @@ def validate(data_root):
             if g3 not in ("pass", G3_WINDOW_BET):
                 bad.append("G3")
             if bad:
-                errors.append(f"{where} {state} 要求 G0–G5 全 pass"
-                              f"(G3 可为 {G3_WINDOW_BET}),未满足: {bad}")
+                errors.append(f"{where} {state} 要求 G0/G1/G2/G4/G5=pass,"
+                              f"G3=pass 或 {G3_WINDOW_BET},未满足: {bad}")
         if g3 == G3_WINDOW_BET:
             # 降级结论只通向快道:出现在 tracking 及其后继意味着绕过了 G3
             if state not in WINDOW_BET_STATES:

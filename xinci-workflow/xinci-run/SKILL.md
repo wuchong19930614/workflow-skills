@@ -1,6 +1,6 @@
 ---
 name: xinci-run
-description: '新词工作流的一体入口与连续运行驱动器:调用本 skill 即启动整个工作流,不间断循环"推进存量候选→扫描新候选→初筛→决策",直到产出任一 go 决策(完整模式的 build_ready / pilot_ready,或一份标好价的快道赌注)、Semrush 网页版额度实际耗尽,或预算用完(未指定时默认 max_rounds=6)才停,连续 5 轮零存活则停止扫描转入闸门校准;会话资源耗尽或撞上 blocker 时,如实报告后停,不伪装成完成。启动暗号 xinci_run:用户消息中出现该暗号即启动。也在用户说启动新词工作流、一直跑到找到为止、连续运行、run until found 时使用。单步操作用 xinci-scan/track/qualify/decide,看状态用 xinci-status。'
+description: '新词工作流的一体入口与连续运行驱动器:调用本 skill 即启动整个工作流,不间断循环"推进存量候选→扫描新候选→初筛→决策"。产出任一 go 决策(完整模式的 build_ready / pilot_ready,或一份标好价的快道赌注)或实际观察到 Semrush 网页版额度耗尽时正常终止;预算用完(未指定时默认 max_rounds=6)、连续 5 轮无方向进入普通深审或排队、会话资源耗尽或撞上 blocker 时按契约收尾/中止,如实报告且不伪装成完成。启动暗号 xinci_run:用户消息中出现该暗号即启动。也在用户说启动新词工作流、一直跑到找到为止、连续运行、run until found 时使用。单步操作用 xinci-scan/track/qualify/decide,看状态用 xinci-status。'
 ---
 
 # xinci-run 一体入口·连续运行驱动器
@@ -70,7 +70,7 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
    - screened 候选 → expiry 已过先按下面到期规则转 expired;未过期且 window_estimate=days 的立即按 xinci-decide 快道模式出决策;未过期且 window_estimate=weeks/months 的按 xinci-scan 分流要求转 tracking(带 expiry、失效条件与证据)。若它带 `G3=veto_window_bet`,说明此前已由用户单步确认完成出闸,只准走快道,不得进 tracking;
    - formation_confirmed 候选 → 按 xinci-qualify 流程认定(G6–G8 + 竞争审计 + 评分);
    - tracking 候选 → 按 xinci-track 流程复查(重跑 G1,看形成信号);达标即转 formation_confirmed,expiry 过/失效条件命中即转 expired,G0/G1 翻转即转 rejected。**单次运行内每个 tracking 候选至多复查一次**——SERP 在几小时内不会变,重复复查是空烧;形成以真实天数计,registrar 的 7 天跨度闸也不接受当日凑数;
-   - **captured 候选(上轮扫描排队的)→ 严格按 `gates` 只补缺失的门**:缺 G1 的(上轮超 G1 上限没搜)**先补 G1**;G1 已过后只补尚缺的 G2/G3,已有的 `G3=pass` 不重复验证——排队身份不豁免任何闸门,G1 永不跳过。排队 expiry 已过的,**即转** `captured→expired`(标准授权覆盖它,不必回头问用户),不占深审配额。带 `G3=veto_window_bet` 挂起等确认的**不再补门**;没有一次性确认就不出闸,取得确认后由同一 run_id 出闸,不占深审配额;但**它的 expiry 过了照常即转 `captured→expired`**——挂起不免疫过期,收它是契约内的既定路径、不降低任何闸门,在标准授权内。
+   - **captured 候选(上轮扫描排队的)→ 严格按 `gates` 只补缺失的门**:缺 G1 的(上轮超 G1 上限没搜)**先补 G1**;只有美区、桌面、未登录的合规环境才能写 G1,环境污染时只记观察、不写 G1、不转移,候选继续排队等待合规复查。G1 已过后只补尚缺的 G2/G3,已有的 `G3=pass` 不重复验证——排队身份不豁免任何闸门,G1 永不跳过。排队 expiry 已过的,**即转** `captured→expired`(标准授权覆盖它,不必回头问用户),不占深审配额。带 `G3=veto_window_bet` 挂起等确认的**不再补门**;没有一次性确认就不出闸,取得确认后由同一 run_id 出闸,不占深审配额;但**它的 expiry 过了照常即转 `captured→expired`**——挂起不免疫过期,收它是契约内的既定路径、不降低任何闸门,在标准授权内。
      这是上轮欠的债,**必须在本轮扫描产生新债之前还**。**还债深审有自己的配额(默认 ≤5;`captured` 存量 >20 时按下面软闸表提到 ≤10),与步骤 2 扫描的 ≤5 深审配额彼此独立**——还债不吃掉本轮新扫描的深审名额,否则扫出来的存活方向只能全部排队,积压反而更快。还债深审的次数记进本轮 `funnel.carryover_audited`(不参与加总等式,它不属于本轮 `extracted`)。
      **存量 captured 的消化归本步骤**:派子代理执行步骤 2 的扫描时,子代理从 xinci-scan 第 1 层开始,不再重跑它的第 0 层接队——两处都做会重复深审、双花配额。
    - **到期清理(`screened` / `fast_grab_ready`)**:`screened` 候选 expiry 已过(既没排上快道、也没转进追踪,窗口自己过了)→ **即转** `screened→expired`;`fast_grab_ready` 候选 expiry 已过、或窗口已关闭(通用工具已收录该对象、赌注前提消失)→ **即转** `fast_grab_ready→expired`。两条都由标准授权直接转,不必回头问用户,也不占深审配额;它们没有失败的闸门,**不许塞进 `rejected`**。单步模式下这两条归 xinci-decide 提议(前者是它快道模式的输入、后者是它的产出),四条 expired 边的提议人见生命周期契约。
@@ -104,7 +104,7 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
 - **正常终止 B——额度耗尽**:Semrush 网页版界面**实际出现**额度耗尽提示;把提示要点记入运行清单后停,报告推进到了哪。假设或报错猜测不算。
 - **正常收尾 C——会话资源耗尽**:上下文/会话资源接近极限时,完成当前动作、写运行清单、如实报告"会话资源耗尽,任务未完成、额度未耗尽"后停。这是操作边界不是任务终点,不得伪装成 A 或 B;已完成的转移保持有效,下次启动从账本现状继续。
 - **正常收尾 D——预算命中**:任一预算先用完——始终存在的 `max_rounds`(未显式指定时为 6),或可选的 `max_hours`。两项同时存在时不是二选一,谁先命中就收尾。处理同 C:完成当前动作、写运行清单、如实报告推进到哪与预算命中,下次启动从账本现状继续。
-- **正常收尾 E——连续空轮触发闸门校准**:连续 5 轮 `funnel.deep_audited + funnel.queued` 均为 0(连续五轮没有任何方向活到深审或排队)→ 停止扫描,转入闸门校准(方法与记录见 xinci-workflow/xinci-core/闸门校准.md),不再换来源扫第六轮。这**不是**"因为找不到就停"——换来源继续的前提是筛子是对的,连续五轮零存活该怀疑的是筛子本身。处理同 C/D:完成当前动作、写运行清单(`--status` 传"已触发闸门校准")、如实报告并说明下一步是回测而不是继续扫描。
+- **正常收尾 E——连续五轮无普通深审/排队触发闸门校准**:连续 5 轮 `funnel.deep_audited + funnel.queued` 均为 0(连续五轮没有任何方向进入第 4 层普通 G2/G3 深审或排队)→ 停止扫描,转入闸门校准(方法与记录见 xinci-workflow/xinci-core/闸门校准.md),不再换来源扫第六轮。该公式不表示“零存活”,也不表示“本轮没打开浏览器”:`rejected_zero_cost` 可包含第 2 层验证型类别的 G3 复核。这**不是**"因为找不到就停"——换来源继续的前提是筛子是对的,连续五轮无普通深审/排队该怀疑的是筛子本身。处理同 C/D:完成当前动作、写运行清单(`--status` 传"已触发闸门校准")、如实报告并说明下一步是回测而不是继续扫描。
 - **异常中止**:blocker(认证/CAPTCHA/支付/浏览器封锁)使所有可行工作停摆。如实报告 blocker,不伪装成完成。
 - **禁止停止**:扫描空轮、候选池空、"看起来找不到"、时间长、轮次多。空轮换来源换角度继续——直到触发收尾 E 的五轮线。(收尾 C/D 属操作边界与用户主权、收尾 E 是校准触发,均不在此列。)
 
@@ -117,8 +117,8 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
 - **调用即开跑**:被触发后读必读文件、报一句"进入连续运行"即进入循环;不询问"是否开始"、不列计划等确认、不因参数缺失暂停(本 skill 无必填参数,一切以账本现状为输入)。
 - 不注册域名、不花钱、不发布——找到词就停,建站是用户的动作。
 - 标准授权只覆盖 registrar 转移与既定流程内的浏览/记录;不覆盖任何契约外的新动作。
-- **`G3=veto_window_bet` 的出闸不在默认标准授权内**。判出后候选留在 `captured` 挂起。用户读完证据并明确接受风险时,才执行 `run_controller.py confirm-window-bet --run-id <run_id> --slug <slug>`;确认记录一次性消费,未取得时 registrar 拒收出闸。不得转 `rejected` 或伪造单步 `--by`。
-  - **gates 写进账本的两种写法**:本轮新扫的候选在 `register` 时把 gates、expiry 与支撑同一结论的 `--evidence` 一次带齐;**上轮已注册的排队候选**用 `registrar.py amend --slug <slug> --by xinci-run --gates G3=veto_window_bet --evidence <本次观察> --reason "<降级依据>"` 补记。observation 必须有相同 gates、非空 source_urls 和结构化 window_bet。
+- **账本中历史兼容的 `G3=veto_window_bet` 候选,其出闸不在默认标准授权内**。候选留在 `captured` 挂起。用户读完证据并明确接受风险时,才执行 `run_controller.py confirm-window-bet --run-id <run_id> --slug <slug>`;确认记录一次性消费,未取得时 registrar 拒收出闸。不得转 `rejected` 或伪造单步 `--by`。
+  - **历史兼容候选的 gates 写法**:连续模式不从本轮 new 扫描新造这一档。账本中已合法存在的历史兼容排队候选,若补审时才形成该结论,用 `registrar.py amend --slug <slug> --by xinci-run --gates G3=veto_window_bet --evidence <本次观察> --reason "<降级依据>"` 补记。observation 必须有相同 gates、非空 source_urls 和结构化 window_bet。
   - **唯一的例外动作是过期**:挂着期间 expiry 过了,照常按标准授权转 `captured→expired`(见步骤 1 的到期清理)。它没有失败的闸门,过期不是 rejected;不收的话,闸门契约 G3 给它列的第四个出口在连续运行下就没有提议人。
 - Semrush 纪律仍为 decision-changing only;为触发终止条件而空烧额度是禁止的。
 - 快道决策书照常必含"跳过的闸门清单 + 风险确认"章节——运行停止后由用户阅读决策书完成风险确认,建站与否是用户的决定。连续模式下登记的 fast_grab_ready 未经用户事前逐条确认,history 的 by=xinci-run 即此含义的记录。

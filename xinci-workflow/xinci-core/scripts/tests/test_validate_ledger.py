@@ -134,7 +134,7 @@ class ValidateLedgerTest(unittest.TestCase):
         ledger_gates = dict(GATES_SCREEN)
         ledger_gates["G3"] = "veto"
         self.corrupt(slug, gates=ledger_gates)
-        self.assertTrue(any("G0–G5 全 pass" in e and "G3" in e for e in self.errors()))
+        self.assertTrue(any("G0/G1/G2/G4/G5=pass" in e and "G3" in e for e in self.errors()))
 
     def test_detects_qualify_gate_missing(self):
         slug = self.build_chain(until="qualified")

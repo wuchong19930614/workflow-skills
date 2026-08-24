@@ -90,7 +90,7 @@ same 后续归入 `[见过]`;distinct 后续归入 `[新]`。历史索引条目�
 
 - **G0**(合法性与安全):违法、违反 ToS、欺诈供血、规避工具方向直接弃;
 - **G4**(任务可完全在线完成):需要实地、物理、持照到场的任务直接弃——放在开浏览器之前,一次 SERP 都不浪费;
-- **G5**(陷阱类别):**按命中类别节自带的处置档执行**——标「直接筛除型」的零成本判定即弃,一次 SERP 都不跑(死因已结构性确定,第四次验证不会有不同结论);标「验证型」的先记为“待 G3 验证”,继续完成下面的 G6/G7 预筛与 G6 深审入口预检,形成暂定盈利线结论后才打开浏览器跑 G3。原始占位事实必须先按盈利线判断是否具有否决效力:只有效力生效时 `veto` 才弃、`veto_window_bet` 才走降级出口;订阅线 `tentative_pass` 时占位事实只记作竞争输入,G3 有效门结论写 `pass`。存活后 G5 记 pass 并回正常序列补 G1、G2(闸门缺一不可);
+- **G5**(陷阱类别):**按命中类别节自带的处置档执行**——标「直接筛除型」的零成本判定即弃,一次 SERP 都不跑(死因已结构性确定,第四次验证不会有不同结论);标「验证型」的先记为“待 G3 验证”,继续完成下面的 G6/G7 预筛与 G6 深审入口预检。本 skill 只扫 `lane=new`:订阅线为 `tentative_veto` 时已无可用盈利线,按 G6 预筛出局,不再打开浏览器;为 `tentative_pass` 时才跑 G3,占位事实只记作竞争输入,G3 有效门结论写 `pass`。**当前 new 扫描不会新造 `veto` 或 `veto_window_bet`**。验证完成后 G5 记 pass 并回正常序列补 G1、G2(闸门缺一不可);
 - **G6/G7 零成本预筛**:没有被迫/重复任务(只值一周好奇)、或官方答案明显在途/任务本身一次性的,同批弃(判据见闸门契约「G6/G7 的扫描期用法」;这是预筛,不产生认定阶段的 G6/G7 结论);
 - **G6 深审入口预检(强制,仅 `lane=new`)**:先问这个任务是否要求**有预算的付费者逐个对象重复完成**(每个 SKU / 场址 / 批次 / 市场各做一次)?答否即订阅线结构 veto；广告线在 new 道为 `N/A`,所以候选即弃——典型是“查一次某厂商新功能怎么配”,读完即走、没有可卖之物(gate 记 G6;全文见闸门契约 G6「深审入口预检」。回测显示 75% 的 G3 否决本该死在这一问,它是最省钱的一道)。答是只取得继续建立盈利线证据的资格,**不等于订阅线暂定通过**;随后按订阅线四项结构硬门形成 `g6_tentative_lines`(对 new 道是 `subscription=tentative_pass|tentative_veto`,`advertising=N/A`) 并在 points/source_urls 写依据,仅供本轮 G3 使用。它不是正式 G6 结论,不得在账本 gates 写 G6=pass,也不得写进正式 `g6_lines`;若暂定结论仍无法建立,候选留在 `captured` 补证据,不得下最终 G3;
 - **无任务**:提不出任何页面能完成的任务的,同批弃。
@@ -104,9 +104,9 @@ printf '%s\n' "词|G0|违反 ToS" "词|G4|需要到场" "词|G7|官方答案在�
 
 同型的结构性模式在第 4 个字段标 `pattern`;**认出新模式即按陷阱类别.md 的追加规则归并建类,不必凑满三次**,`screen_index.py stats` 的 ≥3 次提示只是漏归并的兜底提醒(**它只统计索引这一侧**;深审否决的模式在账本里、`stats` 数不到,那一侧要把模式名记进运行清单 notes,见第 4 层)。不注册进账本。**预期本层砍掉 85%**,剩 30–50 条进 G1。
 
-**本层唯一的浏览器动作是验证型类别的 G3 验证**(其余都是零成本推理)。它虽然动用了真实 SERP,判 `veto` 时留痕仍走索引一侧:该模式已是正式类别,单个方向没有独立留档价值;这一次数到的免费实现清单按陷阱类别.md 的追加规则写进该类别节里。funnel 上它计入 `rejected_zero_cost`(本层筛除),不计 `rejected_g1`。
+**本层唯一可能发生的浏览器动作是验证型类别的 G3 验证**(其余都是零成本推理;当前 new 道若盈利线已在 G6 预筛判否,则不打开浏览器)。漏斗字段 `rejected_zero_cost` 是为了历史兼容保留的机器名,它的准确语义是**“第 2 层筛除”,不等于“从未打开浏览器”**:历史或兼容记录中,验证型类别跑 G3 后判 `veto` 仍计入本格,不计 `deep_audited`。当前 new 扫描按上一段处理,不再新造该类 G3=`veto`。
 
-**例外:验证判出 `pass` 或 `veto_window_bet` 的方向存活**,按**排队位**注册进账本(`captured` + gates(含本次 G3 结论)+ expiry——注册时它还缺 G1/G2,而带 `--gates` 就被 registrar 强制要 `--expiry`;见生命周期契约「留痕分界」①的 b 类),然后**回正常序列、在本轮继续补 G1/G2**:G3 那笔全流程最贵的钱已经花了,没有理由让它白等一轮。留痕分界第 1 条命中了它:它还有下一步。
+**验证判出 `pass` 的方向存活**,按**排队位**注册进账本(`captured` + gates(含本次 G3 结论)+ expiry——注册时它还缺 G1/G2,而带 `--gates` 就被 registrar 强制要 `--expiry`;见生命周期契约「留痕分界」①的 b 类),然后**回正常序列、在本轮继续补 G1/G2**:G3 那笔全流程最贵的钱已经花了,没有理由让它白等一轮。留痕分界第 1 条命中了它:它还有下一步。
 
 funnel 按它**本轮**实际走到哪一层记,但**它已经在账本里,`rejected_g1` 那一格与它无关**——那一格记的是索引一侧。本轮三种去向:**本轮**补完 G1 被否 → 走 `captured→rejected`(reason 写清首屏是什么把任务做完了,见生命周期契约 rejected 边第⑤种情形),funnel 记 `deep_audited`(它做过 G3 深审、留痕在账本,与深审判否的候选同构);**本轮**走完 G2 深审 → 同样记 `deep_audited`;**本轮没排上(超 G1 上限或超深审配额)→ 记 `queued`,留在 `captured` 到下轮;下轮再深审它就属于存量,记 `carryover_audited`**。
 
@@ -121,6 +121,8 @@ https://www.google.com/search?q=<精确词>&gl=us&hl=en&pws=0
 **只看首屏,只判一件事**:Google 自己把任务做完了吗(完整作答的 featured snippet、原生计算器/转换器组件、承载全部答案的 knowledge panel、把任务做完的 AI Overview)?
 
 **不翻第二页、不读完整结构、不打开竞品**——那些是第 4 层的事。G1 是一票否决且永不跳过,但它本身应该很快。
+
+**只有美区、桌面、未登录的环境才能下 G1 结论。**无法退出登录、无法切换地区或结果明显个性化时,本次只记录受污染的观察,不写 G1=`pass|veto`,不进淘汰索引;需要留位的方向以缺 G1 的 `captured` + expiry 排队,归 `queued`,之后在合规环境重跑。污染观察可以有 `points` 与 `source_urls`,但不得为了凑 gates 把观察事实包装成门结论。
 
 被 G1 否决的:**批量追加一行进淘汰方向索引,不注册进账本**——`gate` 记 G1,`reason` 写清是什么把任务做完了(featured snippet / 原生组件 / knowledge panel / AI Overview):
 
@@ -141,9 +143,9 @@ printf '%s\n' "词|G1|原生单位转换器组件直接作答" "词|G1|AI Overvi
 对过了 G1 的候选,按"离建站决策最近"排序,取配额内的做完整审计。**进入本层的候选都应已在第 2 层过了深审入口预检**;漏问的此刻补问(有预算的付费者逐个对象重复完成?),答否即按秒弃留痕进索引(gate 记 G6),不占深审配额:
 
 - **G2 完整首页结构**:读完第一页,继续到第二页或明显质量断层为止,禁止 top-3 定论;
-- **G3 exact-task completion**:每个结果按"做什么"分类,永不按"是谁";先按本轮 G6 预检之后写入 `g6_tentative_lines` 的**逐线暂定结论**判断占位否决是否生效,再执行三问。窗口期只用浏览器可得证据判否决线(footprint 实测属确认期,见闸门契约 G3 分层);观察必须同时留下 `tentative_pass|tentative_veto` 依据与原始竞争事实,不得把“逐对象重复=是”当成订阅线已过,也不得把暂定线写成 G6=pass。暂定线仍未建立时不作最终 G3 结论,候选留在 `captured` 补证据。**本 skill 只扫 new 道**:订阅线 `tentative_pass` 时占位事实不否决,G3 有效门结论写 `pass`;订阅线 `tentative_veto` 时没有可用盈利线,按 G6 预筛出局。下面 `veto` / `veto_window_bet` 的处置只用于占位否决确实生效的 mature 单步候选,以及账本中已合法存在的历史兼容候选,不得由当前 new 扫描新造。
-  **在占位否决生效的前提下判出 `veto_window_bet` 时**:单步模式按第 5 层提议接受窗口赌注风险后走快道;连续运行模式只处理账本中已合法存在的历史兼容候选,先把候选**留在 `captured`**——带上 gates(含 `G3=veto_window_bet`)与 expiry,观察文件记明降级依据,运行清单 notes 记一句"待用户单步确认窗口赌注",然后继续跑。用户确认后用 `run_controller.py confirm-window-bet` 记录一次性授权,再以同一 run_id 出闸;未确认时 registrar 拒收。不许转 `rejected`(它仍有待确认的快道出口),也不许换个 `by` 硬推 `screened`。funnel 上它计 `deep_audited`(本轮确实深审完了)。
-  **gates 怎么写进账本,按候选注册过没有分两种写法**:本轮新扫的方向还没注册,直接 `register --gates G0=pass,G4=pass,G5=pass,G1=pass,G2=pass,G3=veto_window_bet --expiry <日期>` 一次带齐;**上轮已注册的排队候选**(还债深审才判出这一档的)则用 amend 补记——`captured` 上的闸门结论只能这样写,`captured→captured` 不是转移、transition 写不了它,不补记就只剩在观察文件里、账本上看不见这个挂起:
+- **G3 exact-task completion**:每个结果按"做什么"分类,永不按"是谁";先按本轮 G6 预检之后写入 `g6_tentative_lines` 的**逐线暂定结论**判断占位否决是否生效,再执行三问。窗口期只用浏览器可得证据判否决线(footprint 实测属确认期,见闸门契约 G3 分层);观察必须同时留下 `tentative_pass|tentative_veto` 依据与原始竞争事实,不得把“逐对象重复=是”当成订阅线已过,也不得把暂定线写成 G6=pass。暂定线仍未建立时不作最终 G3 结论,候选留在 `captured` 补证据。**本 skill 只扫 new 道**:订阅线 `tentative_pass` 时占位事实不否决,G3 有效门结论写 `pass`;订阅线 `tentative_veto` 时没有可用盈利线,按 G6 预筛出局。mature 单步候选由其单步流程按闸门契约处理,不由本 skill 新造;下面只保留账本中已合法存在的历史兼容候选接续流程。
+  **以下 `veto_window_bet` 只是历史兼容候选的接续流程,不是本轮 new 扫描的产出分支。**当账本中已合法存在的 `captured` 候选补审后仍需记录该结论时,单步模式按第 5 层提议接受窗口赌注风险;连续运行模式先把候选**留在 `captured`**,运行清单 notes 记一句"待用户单步确认窗口赌注",然后继续跑。用户确认后用 `run_controller.py confirm-window-bet` 记录一次性授权,再以同一 run_id 出闸;未确认时 registrar 拒收。不许转 `rejected`(它仍有待确认的快道出口),也不许换个 `by` 硬推 `screened`。funnel 上它计 `carryover_audited`(它是存量候选,不属于本轮 `extracted`)。
+  **该候选已经注册,只用 amend 补记结论**——`captured` 上的闸门结论只能这样写,`captured→captured` 不是转移、transition 写不了它,不补记就只剩在观察文件里、账本上看不见这个挂起:
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
@@ -152,7 +154,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
   --reason "降级依据:数到 N 个免费实现;实测某通用实现收录上一个同类对象用了 M 天"
 ```
   observation 必须在 `gates.G3` 写 `veto_window_bet`,并填写 schema 的 `window_bet` 四个结构化字段;只把判断写进 points 不再够用。
-  **只有占位否决生效时**,数完"几个免费实现做完了任务"之后才把可见度映射为门结论:在且稳定 → `veto`;排不上但只因对象太新还没被收录 → `veto_window_bet`(临时空位,只准走快道),**判这一档前必须实测一个通用实现对上一个同类对象的收录时差**(打开它的页面看日期),没做这个实测只准判 `veto`;结构上进不来 SERP(站内应用页、登录墙后、平台内嵌、只在 App)→ 不具备持续可见度,不计入否决,记 `pass`。订阅线暂定可行时三类事实照样记录,但不映射为 veto/window_bet,G3 有效门结论写 `pass`。三分判据与出口限制见闸门契约 G3。
+  对上述历史兼容候选,**只有占位否决生效时**,数完"几个免费实现做完了任务"之后才把可见度映射为门结论:在且稳定 → `veto`;排不上但只因对象太新还没被收录 → `veto_window_bet`(临时空位,只准走快道),**判这一档前必须实测一个通用实现对上一个同类对象的收录时差**(打开它的页面看日期),没做这个实测只准判 `veto`;结构上进不来 SERP(站内应用页、登录墙后、平台内嵌、只在 App)→ 不具备持续可见度,不计入否决,记 `pass`。订阅线暂定可行时三类事实照样记录,但不映射为 veto/window_bet,G3 有效门结论写 `pass`。三分判据与出口限制见闸门契约 G3。
 
 **深审判否的处置也在本层,不要拖到第 5 层**——第 5 层只处理深审存活的候选,一个 G2 判否、或在占位否决生效前提下 G3 判 `veto` 的方向没有窗口可估、也不会出闸。它的留痕是**注册进账本再转 rejected**,不是一行索引:
 
@@ -205,7 +207,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
 
 理由与第 4 层同一条:**`register` 带 `--gates` 就会被 registrar 强制要 `--expiry`**,而 `--expiry` 在 `captured` 上的语义是**排队过期出口**(「这个方向大约还值得几天深审」,见 candidate.schema),一个下一步就出闸的候选没有排队期可言。**排队候选带的那个 expiry 不是问题,前提是出闸时用 `--expiry` 覆盖它**(见下面出闸命令的注释:语义从「还值得几天深审」切换为「窗口失效日」);漏了这一步,旧值就会残留到 `screened` 被按窗口失效日误读。同理,`register` **没有** `--window-estimate` 参数——窗口评估也在出闸那一步写入。
 
-**第一步一律是出闸 `captured → screened`,这一步不能跳。** register 出来的候选状态是 `captured`,而 `tracking` 与快道**都只从 `screened` 出发**(registrar 的合法边是 captured→screened→tracking / →fast_grab_ready,直接 `--to tracking` 会被判"非法转移")。窗口评估(`window_estimate`)与 G0–G5 全 pass 的校验也都落在这一步:
+**第一步一律是出闸 `captured → screened`,这一步不能跳。** register 出来的候选状态是 `captured`,而 `tracking` 与快道**都只从 `screened` 出发**(registrar 的合法边是 captured→screened→tracking / →fast_grab_ready,直接 `--to tracking` 会被判"非法转移")。窗口评估(`window_estimate`)与出闸条件校验也都落在这一步:G0/G1/G2/G4/G5 必须 `pass`,G3 可为 `pass` 或状态机兼容的 `veto_window_bet`。
 
 ```bash
 # 上轮排队的候选:注册时已带 G0/G4/G5/G1,本次只补 G2/G3
@@ -216,7 +218,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --expiry <YYYY-MM-DD> \
   --evidence "证据/<slug>/<日期>-scan.json"
 
-# 本轮走完全程的候选:register 没带 gates,这一步要交齐 G0–G5 六道
+# 本轮走完全程的 new 候选:register 没带 gates,这一步交齐五道 pass + G3=pass
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to screened --by xinci-scan \
   --gates G0=pass,G4=pass,G5=pass,G1=pass,G2=pass,G3=pass \
@@ -224,7 +226,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --evidence "证据/<slug>/<日期>-scan.json"
 ```
 
-registrar 按**合并结果**(账本已有 gates + 本次提交)校验 G0–G5 全 pass,所以两种写法各自交齐自己那部分即可。
+registrar 按**合并结果**(账本已有 gates + 本次提交)校验:G0/G1/G2/G4/G5 全部 `pass`,G3 为 `pass` 或兼容的 `veto_window_bet`。两种写法各自交齐自己那部分即可。
 
 **两条命令都必须带 `--expiry`,写的是窗口失效日**;registrar 已强制这一点。对排队候选,它同时把 expiry 从“还值得几天深审”切换为“窗口失效日”。`G3=veto_window_bet` 还要求 days + reason;连续模式下先挂起,用户明确确认后由 `run_controller.py confirm-window-bet` 记录一次性确认,再用同一 run_id 出闸。
 
@@ -232,10 +234,10 @@ registrar 按**合并结果**(账本已有 gates + 本次提交)校验 G0–G5 �
 
 - 有效初筛结论满足出闸要求(G0/G1/G2/G4/G5=`pass`,G3=`pass`)、窗口以周/月计 → 提议 `screened → tracking`(带 expiry 与失效条件);
 - 有效初筛结论满足出闸要求、窗口以天计 → 提议走快道(转给 xinci-decide 快速模式,它核对的输入正是 `screened` + `window_estimate=days`);状态机兼容的 `G3=veto_window_bet` 也能出闸,但不是“全过”,且只准走下一条所述快道;
-- G3 判定为**临时空位**(`veto_window_bet`)、窗口以天计 → 出闸时就带上降级依据(`--reason`:数到的免费实现清单 + 为何判定它们只是还没被收录),观察文件记明该判断,然后提议走快道。该候选**在 `captured`/`screened` 上**的合法出口共四个:`fast_grab_ready`(快道 go)、`rejected`(快道读完证据判定这个赌注不值)、`withdrawn`(用户撤回),以及 expiry 过了的 `expired`(挂在 `captured` 排队过期,或已出闸到 `screened` 后窗口自己过了,两条来路都算);走通快道之后还有 `fast_grab_ready → built`;`superseded` 仅可从非终态以及 `disqualified/no_site` 转入,不是任何状态都可用。上述都是 go 后或候选替换的后续,不在四个窗口出口之列。**唯独不得进 tracking**(理由见闸门契约 G3「唯一的降级出口」;`validate_ledger` 的 `WINDOW_BET_STATES` 同样只放行 `captured`/`screened`/`fast_grab_ready` 与终态,出现在 tracking 及其后继一律报错)。
-  **连续运行模式可以判定并登记这一档,但不得未经确认执行 `captured→screened`**:此时候选**留在 `captured`**,带 gates 与 expiry 挂着等用户单步确认,清单 notes 记一句待确认——这是它的合法挂起位,不是失败,不许转 rejected。取得一次性确认后可由同一活动 run_id 出闸。
+- **历史兼容候选**的 G3 已为临时空位(`veto_window_bet`)、窗口以天计 → 出闸时带上降级依据(`--reason`:数到的免费实现清单 + 为何判定它们只是还没被收录),观察文件记明该判断,然后提议走快道。该候选**在 `captured`/`screened` 上**的合法出口共四个:`fast_grab_ready`(快道 go)、`rejected`(快道读完证据判定这个赌注不值)、`withdrawn`(用户撤回),以及 expiry 过了的 `expired`(挂在 `captured` 排队过期,或已出闸到 `screened` 后窗口自己过了,两条来路都算);走通快道之后还有 `fast_grab_ready → built`;`superseded` 仅可从非终态以及 `disqualified/no_site` 转入,不是任何状态都可用。上述都是 go 后或候选替换的后续,不在四个窗口出口之列。**唯独不得进 tracking**(理由见闸门契约 G3「唯一的降级出口」;`validate_ledger` 的 `WINDOW_BET_STATES` 同样只放行 `captured`/`screened`/`fast_grab_ready` 与终态,出现在 tracking 及其后继一律报错)。
+  **连续运行模式遇到账本中已合法存在的历史兼容候选时,可以接续登记这一档,但不得未经确认执行 `captured→screened`**:此时候选**留在 `captured`**,带 gates 与 expiry 挂着等用户单步确认,清单 notes 记一句待确认——这是它的合法挂起位,不是失败,不许转 rejected。取得一次性确认后可由同一活动 run_id 出闸。
 
-(**深审被否决的候选不在本清单里**:它在第 4 层就走完了 register + `→rejected`,不进第 5 层——第 5 层只处理深审存活的候选,出闸的前提是 G0–G5 全 pass。)
+(**深审被否决的候选不在本清单里**:它在第 4 层就走完了 register + `→rejected`,不进第 5 层——第 5 层只处理深审存活的候选;出闸要求 G0/G1/G2/G4/G5=`pass`,G3=`pass` 或兼容的 `veto_window_bet`。)
 
 ### 第 6 层:写运行清单(含漏斗数据)
 
@@ -244,7 +246,7 @@ registrar 按**合并结果**(账本已有 gates + 本次提交)校验 G0–G5 �
 ```json
 "funnel": {
   "extracted": 240,           // 第 1 层提取、经第 0 层去重后进入筛选的方向数(常态目标 200–300;连续模式积压时按软闸下调)
-  "rejected_zero_cost": 204,  // 第 2 层筛除(含验证型类别 G3 判 veto;已进淘汰索引;预期约 85%)
+  "rejected_zero_cost": 204,  // 第 2 层筛除的历史机器名;可含验证型类别 G3 判 veto,不代表零浏览器成本
   "rejected_g1": 18,          // 第 3 层 G1 否决(已进淘汰索引;预期约剩余的一半)
   "deep_audited": 5,          // 第 4 层实际深审(配额 ≤5)
   "queued": 13,               // 本轮没走完的存活方向(超深审配额 + 超 G1 上限未搜),注册为 captured 待下轮
