@@ -86,7 +86,7 @@ class ReportStatusTest(unittest.TestCase):
         past = (date.today() - timedelta(days=2)).isoformat()
         self._mk("was-tracked", state="tracking", expiry=past)
         R.transition(self.root, "was-tracked", to="expired", by="xinci-track",
-                     reason="expiry 已过,用户确认")
+                     reason="expiry 已过,用户确认", expiry_trigger="date")
         report = S.build_report(self.root)
         self.assertEqual(report["expired_unhandled"], [])
 

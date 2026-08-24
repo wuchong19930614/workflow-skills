@@ -264,6 +264,15 @@
             "type": "string",
             "description": "快照:本次提交/修订的失效日"
           },
+          "expiry_trigger": {
+            "type": "string",
+            "enum": [
+              "date",
+              "invalidation",
+              "window_closed"
+            ],
+            "description": "转 expired 的机器可审计触发类型:到达失效日、命中失效条件、快道窗口关闭"
+          },
           "invalidation": {
             "type": "array",
             "items": {

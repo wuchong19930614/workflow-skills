@@ -1,6 +1,6 @@
 ---
 name: xinci-qualify
-description: '对形成确认(formation_confirmed)的新词候选做深度认定,也受理决策阶段搁置(hold)候选的重审:G6 商业闭环、G7 耐久性、G8 簇广度、完整竞争审计与 100 分制评分(80 分线)。当用户说认定候选 X、判断这个机会是否真实、给 X 打分时使用。English triggers: qualify candidate, keyword qualification, score keyword opportunity. “值不值得建站”与建站 go/no-go 决策用 xinci-decide。'
+description: '对已进入形成确认(formation_confirmed)的 new 或 mature 候选做深度认定,也受理决策阶段搁置(hold)候选的重审:G6 商业闭环、G7 耐久性、G8 簇广度、完整竞争审计与 100 分制评分(80 分线)。当用户说认定候选 X、判断这个机会是否真实、给 X 打分时使用。English triggers: qualify candidate, keyword qualification, score keyword opportunity. mature 的发现与 formation_confirmed 前推进不由本 skill 承接。“值不值得建站”与建站 go/no-go 决策用 xinci-decide。'
 ---
 
 # xinci-qualify 深度认定
@@ -42,7 +42,7 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
 
 ## 工作流
 
-1. **核对输入。** 候选状态是 formation_confirmed(首次认定)或 hold(重审);通读其全部历史观察,先掌握已知,再花新的注意力。hold 重审只需针对搁置理由指向的那几道门补审,不重做整套。**状态到了就是确认期**:Semrush 与 footprint 实测在此解禁,不看候选年龄(最快第 7 天到此,见闸门契约时间光谱)。
+1. **核对输入。** 候选状态是 formation_confirmed(首次认定)或 hold(重审),lane 可为 `new` 或 `mature`;mature 只有已经合法到达 formation_confirmed 才由本 skill 接手,不替它补做前半程。通读其全部历史观察,先掌握已知,再花新的注意力。hold 重审只需针对搁置理由指向的那几道门补审,不重做整套。**状态到了就是确认期**:Semrush 与 footprint 实测在此解禁,不看候选年龄(最快第 7 天到此,见闸门契约时间光谱)。
 2. **G6 商业闭环(方案 C)。** 逐线判定,任一条 pass 即放行。订阅线的四个结构硬门是:明确付费者、被迫/重复任务、自助路径、同周期的「受约束付费客户数 × 可行单价 − 获客与交付成本」有出处且 base case > 0；金额大小进入评分,没有统一金额硬线。广告线必须用实测簇量 × 现实可达 CTR ÷ 1000 × 有出处的 RPM 算出 base case,**达到 $200/月才 pass**。`lane=new` 把广告线明确记 `N/A`,不取不存在的量；`lane=mature` 两条都判 pass/veto。观察逐线写结论、算式、假设、出处；账本用 `g6_passed_lines` 记实际通过线——G3 的占位否决是否生效取决于它。
 3. **G7 耐久性。** 版本更替风险、官方答案风险、好奇 vs 重复任务,逐一排查并记录判断依据。
 4. **G8 簇广度(硬门)。** 枚举意图簇:≥3 个任务型查询 × ≥2 个独立 family;合并表述性变体,不许同义改写凑数。达不到即 disqualified——pilot 由决策阶段的页面地图线触发,不是 G8 的降级出口。

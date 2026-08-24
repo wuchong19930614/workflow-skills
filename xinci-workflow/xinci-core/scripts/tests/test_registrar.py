@@ -5,7 +5,7 @@ import sys
 import tempfile
 import unittest
 from unittest.mock import patch
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -142,6 +142,27 @@ class RegistrarTest(unittest.TestCase):
             R.register(self.root, slug="lane-bad", term="lane bad", source_url="https://e.com/t",
                        task="t", evidence=[ev], lane="mispriced")
 
+    def test_xinci_run_cannot_register_or_advance_mature_preformation(self):
+        slug = "mature-manual-captured"
+        ev2 = mk_evidence(self.root, slug, "2026-08-23-scan.json")
+        R.register(self.root, slug=slug, term="mature manual captured",
+                   source_url="https://e.com/t", task="t", evidence=[ev2],
+                   lane="mature", by="user")
+
+        session = RC.start(self.root)
+        run_id = session["run_id"]
+        RC.begin_round(self.root, run_id)
+        ev = mk_evidence(self.root, "mature-run-register", "2026-08-23-scan.json")
+        with self.assertRaisesRegex(R.RegistrarError, "mature 前半程"):
+            R.register(
+                self.root, slug="mature-run-register", term="mature run register",
+                source_url="https://e.com/t", task="t", evidence=[ev], lane="mature",
+                by="xinci-run", run_id=run_id)
+
+        with self.assertRaisesRegex(R.RegistrarError, "mature 前半程"):
+            R.transition(self.root, slug, to="withdrawn", by="xinci-run",
+                         run_id=run_id, reason="不得由连续运行撤回")
+
     # ---- 证据覆盖防线(2026-08-22 事故回归) ----
 
     def test_reused_evidence_filename_that_drops_earlier_gates_is_refused(self):
@@ -172,6 +193,31 @@ class RegistrarTest(unittest.TestCase):
         R.transition(self.root, slug, to="rejected", by="xinci-scan",
                      gates={"G3": "veto"}, evidence=[ev2], reason="G3 veto")
         self.assertEqual(self.load(slug)["state"], "rejected")
+
+    def test_captured_can_be_rejected_by_tentative_g6_without_formal_gate(self):
+        """窗口期盈利线全灭由 g6_tentative_lines 支撑,不得伪造正式 G6=veto。"""
+        slug = self.register("tentative-g6-veto")
+        ev = mk_evidence(
+            self.root, slug, "2026-08-22-scan.json",
+            source_urls=["https://e.com/payer-evidence"],
+            g6_tentative_lines={
+                "subscription": "tentative_veto", "advertising": "N/A"})
+        R.transition(self.root, slug, to="rejected", by="xinci-scan",
+                     evidence=[ev], reason="订阅线暂定否决;广告线不适用")
+        rec = self.load(slug)
+        self.assertEqual(rec["state"], "rejected")
+        self.assertNotIn("G6", rec["gates"])
+
+    def test_captured_tentative_g6_pass_cannot_fake_rejection(self):
+        slug = self.register("tentative-g6-pass")
+        ev = mk_evidence(
+            self.root, slug, "2026-08-22-scan.json",
+            source_urls=["https://e.com/payer-evidence"],
+            g6_tentative_lines={
+                "subscription": "tentative_pass", "advertising": "N/A"})
+        with self.assertRaisesRegex(R.RegistrarError, "没有适用盈利线"):
+            R.transition(self.root, slug, to="rejected", by="xinci-scan",
+                         evidence=[ev], reason="不能把可行线说成全灭")
 
     def test_register_creates_captured(self):
         slug = self.register()
@@ -609,11 +655,12 @@ class RegistrarTest(unittest.TestCase):
         slug = "queued-term"
         gates = {"G0": "pass", "G4": "pass", "G5": "pass", "G1": "pass"}
         ev = mk_evidence(self.root, slug, "2026-08-18-scan.json", gates=gates)
+        past = (date.today() - timedelta(days=1)).isoformat()
         R.register(self.root, slug=slug, term="queued term", source_url="https://e.com",
-                   task="t", evidence=[ev], expiry="2026-08-25",
+                   task="t", evidence=[ev], expiry=past,
                    gates=gates)
         R.transition(self.root, slug, to="expired", by="xinci-scan",
-                     reason="排队 expiry 已过,经用户确认不再深审")
+                     reason="排队 expiry 已过,经用户确认不再深审", expiry_trigger="date")
         self.assertEqual(self.load(slug)["state"], "expired")
 
     def test_screened_can_expire(self):
@@ -621,9 +668,50 @@ class RegistrarTest(unittest.TestCase):
         # 与 captured→expired 同一条理由——它没有失败的闸门,不该被硬塞进 rejected。
         slug = self.register()
         self.to_screened(slug)
+        past = (date.today() - timedelta(days=1)).isoformat()
+        R.amend(self.root, slug, by="xinci-scan", reason="测试改为已过期日期", expiry=past)
         R.transition(self.root, slug, to="expired", by="xinci-scan",
-                     reason="窗口以周计但始终没推进,expiry 已过经用户确认")
+                     reason="窗口以周计但始终没推进,expiry 已过经用户确认",
+                     expiry_trigger="date")
         self.assertEqual(self.load(slug)["state"], "expired")
+
+    def test_expired_rejects_future_date_and_wrong_trigger(self):
+        slug = "future-expiry"
+        ev = mk_evidence(self.root, slug, "2026-08-18-scan.json", gates={"G1": "pass"})
+        future = (date.today() + timedelta(days=2)).isoformat()
+        R.register(self.root, slug=slug, term="future expiry", source_url="https://e.com",
+                   task="t", evidence=[ev], expiry=future, gates={"G1": "pass"})
+        with self.assertRaisesRegex(R.RegistrarError, "尚未到期"):
+            R.transition(self.root, slug, to="expired", by="xinci-scan",
+                         reason="不能提前过期", expiry_trigger="date")
+        with self.assertRaisesRegex(R.RegistrarError, "不接受"):
+            R.transition(self.root, slug, to="expired", by="xinci-scan",
+                         reason="captured 不能用窗口关闭", expiry_trigger="window_closed")
+
+    def test_tracking_invalidation_and_fast_window_closed_are_audited(self):
+        tracked = self.register("tracked-invalidation")
+        self.to_screened(tracked)
+        self.to_tracking(tracked)
+        with self.assertRaisesRegex(R.RegistrarError, "原样点名"):
+            R.transition(self.root, tracked, to="expired", by="xinci-track",
+                         reason="某个未登记的新风险出现",
+                         expiry_trigger="invalidation")
+        R.transition(self.root, tracked, to="expired", by="xinci-track",
+                     reason="已命中失效条件:官方工具上线",
+                     expiry_trigger="invalidation")
+        self.assertEqual(self.load(tracked)["history"][-1]["expiry_trigger"],
+                         "invalidation")
+
+        fast = self.register("fast-window-closed")
+        self.to_screened(fast, window="days")
+        decision = mk_decision(self.root, fast)
+        R.transition(self.root, fast, to="fast_grab_ready", by="xinci-decide",
+                     decision_ref=decision, expiry="2026-10-01", play="fast_grab")
+        R.transition(self.root, fast, to="expired", by="xinci-decide",
+                     reason="通用工具已收录该对象,窗口关闭",
+                     expiry_trigger="window_closed")
+        self.assertEqual(self.load(fast)["history"][-1]["expiry_trigger"],
+                         "window_closed")
 
     def test_expired_requires_reason(self):
         slug = "queued-term"

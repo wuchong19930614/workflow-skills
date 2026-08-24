@@ -87,6 +87,7 @@ G3_WINDOW_BET = "veto_window_bet"
 QUALIFY_GATES = ("G6", "G7", "G8")
 WINDOWS = {"days", "weeks", "months"}
 BUILD_PLAYS = {"single_domain", "cluster_expansion"}
+EXPIRY_TRIGGERS = {"date", "invalidation", "window_closed"}
 # 形成期以周计(生命周期契约):-track 观察最早与最新须相隔 ≥7 天,单次连续运行凑不出形成确认
 MIN_TRACK_SPAN_DAYS = 7
 # 两条赛道(lane)。原 schema 已把 lane 预留为"本套固定为 new;为未来成熟词道预留"。
@@ -164,6 +165,18 @@ def _check_actor(data_root: Path, by: str, run_id=None) -> None:
                     "请先恢复或结束该运行")
     except (RunControllerError, TransactionError) as e:
         raise RegistrarError(str(e))
+
+
+MATURE_MANUAL_STATES = {"captured", "screened", "tracking"}
+
+
+def _check_run_lane_boundary(by: str, lane: str, state: str) -> None:
+    """mature 在 formation_confirmed 前不属于 xinci-run 的标准授权范围。"""
+    _require(not (by == "xinci-run" and lane == "mature"
+                  and state in MATURE_MANUAL_STATES),
+             f"xinci-run 不自动推进 mature 前半程(state={state});"
+             "按数据采集指南以 --by user 手工推进到 formation_confirmed,"
+             "或显式单步调用 xinci-decide 处理已合法 screened 的快道候选")
 
 
 def _run_history_fields(data_root: Path, run_id):
@@ -298,6 +311,34 @@ def _load_observation(data_root: Path, ref: str) -> dict:
     return json.loads((Path(data_root) / ref).read_text(encoding="utf-8"))
 
 
+def _has_no_applicable_tentative_g6(data_root: Path, refs, lane: str) -> bool:
+    """本次窗口期证据是否证明没有任何适用盈利线。
+
+    暂定结论只存在于 observation.g6_tentative_lines,不得伪装成正式 gates.G6。
+    因此已注册的 captured/tracking 候选按该理由出清时,registrar 直接核对本次证据。
+    """
+    observations = [_load_observation(data_root, ref) for ref in refs
+                    if Path(ref).parts and Path(ref).parts[0] == "证据"
+                    and Path(ref).suffix == ".json"]
+    for obs in observations:
+        if obs.get("stage") not in {"scan", "track"}:
+            continue
+        lines = obs.get("g6_tentative_lines")
+        if not isinstance(lines, dict):
+            continue
+        if lane == "new":
+            no_line = (lines.get("subscription") == "tentative_veto"
+                       and lines.get("advertising") == "N/A")
+        else:
+            no_line = (lines.get("subscription") == "tentative_veto"
+                       and lines.get("advertising") == "tentative_veto")
+        if no_line:
+            _require(bool(obs.get("source_urls")),
+                     "暂定 G6 无适用盈利线的支撑观察必须包含实际打开的 source_urls")
+            return True
+    return False
+
+
 def _check_gate_evidence(data_root: Path, refs, gates, context: str) -> None:
     """闸门提交必须由本次新观察直接支撑，不能拿无关文件充数。"""
     gates = gates or {}
@@ -413,6 +454,7 @@ def register(data_root, slug, term, source_url, task, evidence,
     _check_gate_payload(gates)
     _check_url(source_url, "source_url")
     _check_actor(data_root, by, run_id)
+    _check_run_lane_boundary(by, lane, "captured")
     with _locked(data_root):
         return _register_locked(data_root, slug, term, source_url, task, evidence,
                                 source_note, aliases, by, gates, expiry, run_id, lane)
@@ -509,7 +551,8 @@ def _register_locked(data_root, slug, term, source_url, task, evidence,
 def transition(data_root, slug, to, by, gates=None, window_estimate=None, expiry=None,
                invalidation=None, score=None, income_score=None, g6_passed_lines=None,
                decision_ref=None, play=None,
-               reason=None, evidence=None, superseded_by=None, run_id=None):
+               reason=None, evidence=None, superseded_by=None, expiry_trigger=None,
+               run_id=None):
     data_root = Path(data_root)
     _check_gate_payload(gates)
     _check_actor(data_root, by, run_id)
@@ -517,13 +560,13 @@ def transition(data_root, slug, to, by, gates=None, window_estimate=None, expiry
         return _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                                   invalidation, score, income_score, g6_passed_lines,
                                   decision_ref, play,
-                                  reason, evidence, superseded_by, run_id)
+                                  reason, evidence, superseded_by, expiry_trigger, run_id)
 
 
 def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                        invalidation, score, income_score, g6_passed_lines,
                        decision_ref, play,
-                       reason, evidence, superseded_by, run_id):
+                       reason, evidence, superseded_by, expiry_trigger, run_id):
     try:
         require_clean(data_root)
     except TransactionError as e:
@@ -533,6 +576,7 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
     rec = ledger["candidates"][slug]
     candidate_before = copy.deepcopy(rec)
     frm = rec["state"]
+    _check_run_lane_boundary(by, rec.get("lane", "new"), frm)
     _require(to in STATES, f"未知状态: {to}")
     if to != "qualified":
         _require(income_score is None and g6_passed_lines is None,
@@ -591,9 +635,12 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         _require(bool(reason), "rejected 要求 reason(失败闸门 + 现场证据要点)")
         if frm in {"captured", "tracking"}:
             merged_gates = dict(rec.get("gates") or {}, **(gates or {}))
-            _require(any(v == "veto" for v in merged_gates.values()),
-                     f"{frm}→rejected 要求至少一道实际检查的闸门=veto;"
-                     "没有失败闸门的到期候选应走 expired")
+            no_tentative_line = _has_no_applicable_tentative_g6(
+                data_root, refs, rec.get("lane", "new"))
+            _require(any(v == "veto" for v in merged_gates.values()) or no_tentative_line,
+                     f"{frm}→rejected 要求至少一道实际检查的闸门=veto,"
+                     "或本次 scan/track 证据的 g6_tentative_lines 证明没有适用盈利线;"
+                     "没有失败闸门且未过期的候选应保留,到期候选走 expired")
     elif to == "tracking":
         if frm == "built":  # 升级通路
             _require(bool(reason), "built→tracking 要求 reason(升级理由)")
@@ -630,8 +677,30 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         _check_gates(gates, ("G1",), "tracking→formation_confirmed")
         _require(len(refs) >= 1, "tracking→formation_confirmed 要求本次至少 1 个证据")
     elif to == "expired":
-        _require(bool(reason), "expired 要求 reason(expiry 已过经用户确认 / 失效条件命中)")
+        _require(bool(reason),
+                 "expired 要求 reason(失效日已到 / 失效条件命中 / 快道窗口关闭)")
         _require(bool(rec.get("expiry")), "expired 要求候选已有 expiry;无失效日不得用过期出口")
+        _require(expiry_trigger in EXPIRY_TRIGGERS,
+                 f"expired 要求 expiry_trigger 属于 {sorted(EXPIRY_TRIGGERS)},"
+                 f"当前 {expiry_trigger!r}")
+        allowed_triggers = {
+            "captured": {"date"},
+            "screened": {"date"},
+            "tracking": {"date", "invalidation"},
+            "fast_grab_ready": {"date", "window_closed"},
+        }
+        _require(expiry_trigger in allowed_triggers.get(frm, set()),
+                 f"{frm}→expired 不接受 expiry_trigger={expiry_trigger};"
+                 f"允许 {sorted(allowed_triggers.get(frm, set()))}")
+        if expiry_trigger == "date":
+            expiry_date = date.fromisoformat(rec["expiry"])
+            _require(expiry_date <= date.today(),
+                     f"expiry 尚未到期:{rec['expiry']};不得提前转 expired")
+        elif expiry_trigger == "invalidation":
+            _require(bool(rec.get("invalidation")),
+                     "tracking 以 invalidation 触发 expired 时,候选必须已有失效条件")
+            _require(any(condition in reason for condition in rec["invalidation"]),
+                     "tracking 以 invalidation 触发 expired 时,reason 必须原样点名至少一条已登记失效条件")
     elif to == "qualified":
         _require(isinstance(score, int) and score >= 80, f"qualified 要求整数 score ≥80,当前 {score!r}")
         _require(isinstance(income_score, int) and not isinstance(income_score, bool)
@@ -710,7 +779,7 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                        ("expiry", expiry), ("invalidation", invalidation), ("score", score),
                        ("income_score", income_score), ("g6_passed_lines", g6_passed_lines),
                        ("play", play), ("decision_ref", decision_ref),
-                       ("superseded_by", superseded_by)):
+                       ("superseded_by", superseded_by), ("expiry_trigger", expiry_trigger)):
         if value not in (None, {}, [], ""):
             entry[key] = value
     rec["history"].append(entry)
@@ -807,6 +876,7 @@ def checked(data_root, slug, evidence, by="xinci-track", run_id=None):
         ledger = _load(data_root)
         _require(slug in ledger["candidates"], f"候选不存在: {slug}")
         rec = ledger["candidates"][slug]
+        _check_run_lane_boundary(by, rec.get("lane", "new"), rec["state"])
         _require(rec["state"] not in TERMINAL, f"终态候选无需复查: {rec['state']}")
         refs = _check_evidence(data_root, evidence, slug=slug)
         _require(len(refs) >= 1, "checked 要求至少 1 个证据文件")
@@ -847,6 +917,7 @@ def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invali
         ledger = _load(data_root)
         _require(slug in ledger["candidates"], f"候选不存在: {slug}")
         rec = ledger["candidates"][slug]
+        _check_run_lane_boundary(by, rec.get("lane", "new"), rec["state"])
         _require(rec["state"] not in TERMINAL, f"终态候选不可修订: {rec['state']}")
         amended = []
         refs = _check_evidence(data_root, evidence, slug=slug)
@@ -928,6 +999,8 @@ def main(argv=None):
     p.add_argument("--gates", default="", help="如 G1=pass,G2=pass")
     p.add_argument("--window-estimate", choices=sorted(WINDOWS))
     p.add_argument("--expiry")
+    p.add_argument("--expiry-trigger", choices=sorted(EXPIRY_TRIGGERS),
+                   help="转 expired 时必填:date / invalidation / window_closed")
     p.add_argument("--invalidation", default="", help="分号分隔")
     p.add_argument("--score", type=int)
     p.add_argument("--income-score", type=int,
@@ -989,7 +1062,7 @@ def main(argv=None):
                                               if x.strip()] or None,
                              decision_ref=a.decision_ref, play=a.play,
                              reason=a.reason, evidence=a.evidence, superseded_by=a.superseded_by,
-                             run_id=a.run_id)
+                             expiry_trigger=a.expiry_trigger, run_id=a.run_id)
         elif a.cmd == "amend":
             rec = amend(a.data_root, a.slug, by=a.by, reason=a.reason, expiry=a.expiry,
                         add_aliases=a.add_alias,
