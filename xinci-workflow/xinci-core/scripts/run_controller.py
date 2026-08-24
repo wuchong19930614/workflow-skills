@@ -3,7 +3,7 @@
 
 连续模式的授权不再只靠调用者自报 ``--by xinci-run``。每次运行先创建会话，
 每轮显式 begin/record-round；registrar 只接受处于 active/current_round 状态的 run_id。
-会话文件位于 数据/新词工作流/运行状态/<run-id>.json，并使用原子替换写入。
+会话文件位于 <数据区>/运行状态/<run-id>.json，并使用原子替换写入。
 """
 import argparse
 import json

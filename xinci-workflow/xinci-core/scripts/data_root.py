@@ -89,3 +89,17 @@ def resolve_or_exit(explicit=None) -> Path:
     except DataRootNotConfigured as e:
         print(str(e), file=sys.stderr)
         raise SystemExit(2)
+
+
+def main(argv=None):
+    """CLI:打印解析出的数据区路径,供命令模板以 $(...) 取用;未配置时退出码 2。"""
+    import argparse
+    ap = argparse.ArgumentParser(description="打印数据区路径(唯一解析入口的 CLI 形态,不猜位置)")
+    ap.add_argument("--data-root", default=None, help="显式指定(优先级最高)")
+    a = ap.parse_args(argv)
+    print(resolve_or_exit(a.data_root))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

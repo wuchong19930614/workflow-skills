@@ -6,7 +6,7 @@
 几十 k token——而它的唯一用途只是回答"这个方向见过没有"。改成 JSONL + 脚本
 查询后,上下文里只留命中结果,索引本身多大都不进上下文。
 
-存储:数据/新词工作流/淘汰方向.jsonl,每行一条:
+存储:<数据区>/淘汰方向.jsonl,每行一条:
   {"date": "2026-08-18", "term": "...", "gate": "G0", "reason": "...",
    "pattern": "可选,结构性模式名(归并统计用)"}
 
@@ -14,7 +14,7 @@
   check   从 stdin 逐行读待查方向,报告哪些见过(附原因)、哪些是新的
   append  从 stdin 逐行读 JSON 或 "词|门|理由[|模式]",批量追加
   resolve 登记疑似重复的 same/distinct 裁决，后续 check 与 registrar 共用
-  stats   总量、按闸门分布、达到归并阈值(≥3 次)的模式
+  stats   总量、按闸门分布、累计 ≥3 次仍未归并的模式(兜底提醒;建类本身发现即做)
 """
 import argparse
 import json
@@ -27,7 +27,7 @@ from dedup_decisions import DedupDecisionError, find as find_decision, resolve a
 from term_normalize import match_kind, normalize, similar
 
 INDEX_NAME = "淘汰方向.jsonl"
-MERGE_THRESHOLD = 3  # 同一结构性模式出现 3 次即应归并进陷阱类别(陷阱类别.md 追加规则)
+MERGE_THRESHOLD = 3  # stats 的兜底提醒线:累计 ≥3 次仍未归并的模式该被注意了;建类本身发现即做(陷阱类别.md 追加规则)
 
 # 当前闸门版本。闸门契约每次实质修订都要在这里进号。
 # 为什么需要它:索引条目是永久的("永不复活"),而闸门会改。2026-08-23 的反向回测
@@ -207,7 +207,7 @@ def main(argv=None):
     p = sub.add_parser("append", help='从 stdin 逐行读 JSON 或 "词|门|理由[|模式]"')
     p.add_argument("--date", default="", help="统一日期 YYYY-MM-DD(行内未给时使用)")
 
-    sub.add_parser("stats", help="总量、闸门分布、达到归并阈值的模式")
+    sub.add_parser("stats", help="总量、闸门分布、累计 ≥3 次仍未归并的模式(兜底提醒)")
     p = sub.add_parser("resolve", help="登记疑似重复裁决")
     p.add_argument("--term", required=True)
     p.add_argument("--matched", required=True)
@@ -295,7 +295,7 @@ def main(argv=None):
     if s["patterns"]:
         print("模式计数:", json.dumps(s["patterns"], ensure_ascii=False))
     if s["merge_due"]:
-        print(f"达到归并阈值(≥{MERGE_THRESHOLD})的模式,应归并进陷阱类别.md: {s['merge_due']}")
+        print(f"累计 ≥{MERGE_THRESHOLD} 次仍未归并的模式(兜底提醒,建类应发现即做),该归并进陷阱类别.md: {s['merge_due']}")
     return 0
 
 

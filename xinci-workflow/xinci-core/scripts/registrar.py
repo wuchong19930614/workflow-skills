@@ -2,7 +2,7 @@
 """xinci 候选账本 registrar:唯一的状态转移入口。
 
 规则来源:xinci-core/生命周期契约.md(合法转移表 + 每转移证据要求)。
-账本:数据/新词工作流/账本/候选账本.json,本脚本独占写入,原子替换。
+账本:<数据区>/账本/候选账本.json,本脚本独占写入,原子替换。
 """
 import argparse
 import copy

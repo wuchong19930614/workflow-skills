@@ -87,6 +87,7 @@ class CliRefusalTest(unittest.TestCase):
     不许其中任何一个漏掉这道检查。"""
 
     ENTRIES = [
+        ("data_root.py", []),
         ("validate_ledger.py", []),
         ("report_status.py", []),
         ("init_workspace.py", []),
@@ -117,6 +118,15 @@ class CliRefusalTest(unittest.TestCase):
                                    capture_output=True, text=True, env=env)
                 self.assertEqual(r.returncode, 2, f"{script} 未拒绝: {r.stdout}{r.stderr}")
                 self.assertIn("先问用户", r.stderr)
+
+    def test_data_root_cli_prints_resolved_path(self):
+        """data_root.py 的 CLI 形态供命令模板以 $(...) 取路径:已配置时只打印路径本身。"""
+        env = {k: v for k, v in os.environ.items() if k != data_root.ENV_VAR}
+        r = subprocess.run([sys.executable, str(SCRIPTS / "data_root.py"),
+                            "--data-root", "/tmp/某数据区"],
+                           capture_output=True, text=True, env=env)
+        self.assertEqual(r.returncode, 0, r.stderr)
+        self.assertEqual(r.stdout.strip(), "/tmp/某数据区")
 
     def test_init_workspace_does_not_create_anything_when_unconfigured(self):
         """最关键的一条:拒绝时不能已经把目录建出来了。"""

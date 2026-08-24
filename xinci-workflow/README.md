@@ -17,6 +17,8 @@
 
 两道共用一条限制:**KD 与域名指标不得用于判断竞争强弱**,竞争强弱只由 G2 完整结构阅读与 G3 三问判定。
 
+> `mature` 道目前只有契约与 schema 支持,**尚无 skill 承接**:xinci-scan / xinci-run 只跑 `new` 道,mature 道按[数据采集指南](xinci-core/数据采集指南.md)「广告线的选源方法」手工单步执行(`--lane mature`、`--by user`)。方法未经前瞻验证前不改 skill,理由见[闸门校准.md](xinci-core/闸门校准.md) 第 8.1 节。
+
 ## 两条盈利线(G6,任一条过即放行)
 
 | | 收入算式 | 卡在哪 |
@@ -52,11 +54,11 @@ rejected              fast_grab_ready              rejected           qualified 
 | 闸门 | 判什么 | 性质 |
 | --- | --- | --- |
 | **G0** | 合法性与安全 | 硬否决,先于一切 |
-| **G1** | Google 首屏是否已把任务做完(featured snippet / 原生计算器 / knowledge panel / AI Overview) | 硬否决,永不复活 |
+| **G1** | Google 首屏是否已把任务做完(featured snippet / 原生计算器 / knowledge panel / AI Overview) | 硬否决;未注册方向不复活,已注册候选可受控重开 |
 | **G2** | 完整首页结构阅读 | 结构判断 |
 | **G3** | exact-task completion:有没有人已经真把这件事做完了 | 三档:`pass` / `veto` / `veto_window_bet` |
 | **G4** | 任务能否完全在线完成 | 零成本 |
-| **G5** | 陷阱类别检查(9 类) | 零成本,按类别处置档执行 |
+| **G5** | 陷阱类别检查(9 类) | 按处置档执行:直接筛除型零成本,验证型当场跑 G3 验证 |
 | **G6** | 商业闭环 + 两条盈利线算式 | 认定门,含强制的深审入口预检 |
 | **G7** | 耐久性 | 认定门 |
 | **G8** | 簇广度 | 认定门 |

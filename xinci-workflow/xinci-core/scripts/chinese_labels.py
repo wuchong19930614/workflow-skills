@@ -10,6 +10,7 @@ SESSION_STATUS_LABELS = {
     "quota_exhausted": "查询额度已用完",
     "budget_reached": "运行预算已用完",
     "resource_exhausted": "会话资源已用完",
+    "calibration_triggered": "已触发闸门校准",
     "blocked": "执行受阻",
     "cancelled": "已取消",
 }
@@ -19,6 +20,7 @@ SESSION_STATUS_ALIASES = {
     "额度已用完": "quota_exhausted",
     "预算已用完": "budget_reached",
     "资源已用完": "resource_exhausted",
+    "触发校准": "calibration_triggered",
     "受阻": "blocked",
     "取消": "cancelled",
 }
@@ -64,6 +66,7 @@ def humanize_text(value):
         ("budget_reached", "运行预算已用完"),
         ("quota_exhausted", "查询额度已用完"),
         ("resource_exhausted", "会话资源已用完"),
+        ("calibration_triggered", "已触发闸门校准"),
         ("unusual traffic", "异常流量提示"),
         ("SERP", "搜索结果页"),
         ("GO", "可交付"),

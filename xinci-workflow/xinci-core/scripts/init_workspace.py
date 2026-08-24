@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""初始化 数据/新词工作流/ 目录结构与空账本。幂等:已存在的文件与目录不动。"""
+"""初始化数据区目录结构与空账本。幂等:已存在的文件与目录不动。"""
 import os
 import argparse
 import json

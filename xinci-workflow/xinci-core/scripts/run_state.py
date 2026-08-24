@@ -10,7 +10,7 @@ SESSION_DIR = "运行状态"
 RUN_ID_RE = re.compile(r"^run-\d{8}T\d{6}Z-[a-f0-9]{8}$")
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FINAL_STATUSES = {"go", "quota_exhausted", "budget_reached", "resource_exhausted",
-                  "blocked", "cancelled"}
+                  "calibration_triggered", "blocked", "cancelled"}
 STATUSES = {"active"} | FINAL_STATUSES
 FIELDS = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
           "finished_at", "max_rounds", "max_hours", "rounds_completed", "current_round",
