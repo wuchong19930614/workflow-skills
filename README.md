@@ -14,6 +14,8 @@
 | [xinci-decide](xinci-workflow/xinci-decide/SKILL.md) | 建站决策:页面地图 + 收入模型 + md/html 双格式决策书 |
 | [xinci-core](xinci-workflow/xinci-core/) | 共享核心:契约、闸门、schema、registrar / screen_index 等脚本(判断标准唯一来源) |
 
+工作流本身怎么运转(核心前提、两条赛道与两条盈利线、状态机、九道闸门、契约地图、当前状态与已知缺口):**[xinci-workflow/README.md](xinci-workflow/README.md)**。
+
 ## 仓库边界(2026-08-24 起)
 
 **本仓库只放 skill 与契约,不放执行产出。** 账本、证据、决策书、运行清单、运行状态、淘汰方向索引、去重裁决一律住在同级仓库 `keywords-macdownds` 的 `数据/新词工作流/` 下;设计与落地计划文档也迁到了那里。
