@@ -7,7 +7,7 @@
     "schema_version": { "type": "integer", "const": 1 },
     "run_id": { "type": "string", "pattern": "^run-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$" },
     "mode": { "type": "string", "const": "continuous" },
-    "status": { "type": "string", "enum": ["active", "go", "quota_exhausted", "budget_reached", "resource_exhausted", "blocked", "cancelled"] },
+    "status": { "type": "string", "enum": ["active", "go", "quota_exhausted", "budget_reached", "resource_exhausted", "calibration_triggered", "blocked", "cancelled"] },
     "started_at": { "type": "string" },
     "updated_at": { "type": "string" },
     "finished_at": { "type": "string" },

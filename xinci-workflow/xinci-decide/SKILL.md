@@ -37,17 +37,17 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
 
 - xinci-workflow/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
 - xinci-workflow/xinci-core/闸门契约.md(G8 认定门与决策门;**pilot 由决策门触发**;快道要引用的 G3 三分与 `veto_window_bet` 出口限制)
-- xinci-workflow/xinci-core/评分契约.md(收入可行性的 $200/月 参考下限,不是硬闸;硬否决不产生分数;`veto_window_bet` 只走快道、而快道本身不评分)
+- xinci-workflow/xinci-core/评分契约.md(方案 C:订阅金额进入评分,广告线 $200/月是该线硬门,且 income_score ≥1;硬否决不产生分数;`veto_window_bet` 只走快道、而快道本身不评分)
 - xinci-workflow/xinci-core/数据采集指南.md(补缺口审计时的真浏览器原则与 Semrush decision-changing 纪律)
 
 ## 完整模式工作流
 
 1. **核对输入**:状态 qualified,或 `hold`(用户送回重出决策——它已带 G6–G8 全 pass 与分数,出口是 build_ready / pilot_ready / no_site;`hold → hold` 不是合法转移,重审后仍无法决断就说明缺的是证据不是决策,如实说明并停);通读认定观察,不重做已做过的审计,只补缺口。若为补缺口做了新审计,把新观察落一份 `证据/<slug>/<日期>-decide.json` 并随转移提交;没有新观察就不写——决策阶段的产出是决策书,`-decide` 观察是可选的(数据极简)。
 2. **页面地图**:≥12 个任务互异页面 × ≥3 个簇 + ≥1 个自助产品资产;合并表述性变体。不足 → pilot(5–8 页有界实验)或 no_site。
-3. **收入三情景**:downside / base / upside;base 对照 **$200/月 参考下限**(不是硬闸——与闸门契约 G6、评分契约同一口径:估算连这条线都够不着的通常不值一个域名;够不着时把差距如实写进决策书,由决策定夺,不自动判 no_site)、无主动销售、保守假设逐条标注来源、所需流量不超**自有意图流量**的保守估计(owned-intent:只算页面地图里那些页面自己的目标查询能带来的流量,不把品牌词、外部推荐、社媒爆量算进来)。
+3. **收入三情景**:downside / base / upside,沿用认定时实际通过的盈利线与证据,不得在决策阶段换线绕门。广告线的 base 在 G6 已达到 $200/月硬门,这里复核假设是否仍成立；订阅线没有统一金额硬线,这里把金额偏小、CAC 与交付成本的不确定性纳入 go/no-go。无主动销售、保守假设逐条标注来源、所需流量不超**自有意图流量**的保守估计(owned-intent:只算页面地图里那些页面自己的目标查询能带来的流量,不把品牌词、外部推荐、社媒爆量算进来)。
 4. **风险清单**:技术可行性、合规、免费与付费替代、维护负担、数据/API 成本。
 5. **红队复核**:换立场反驳整个决策一轮,成立的反驳如实写入。
-6. **写决策书两份**(见下"双格式约定"),**提议决策**,用户确认后:
+6. **先提议决策。** 拟议结论为 go(`build_ready` / `pilot_ready`)时,才按下文“双格式约定”写 md+html 两份决策书,用户确认后执行对应转移;拟议结论为 no-go(`hold` / `no_site`)时不写决策书,只提交决定性理由,与下文 no-go 约定一致。go 的命令示例:
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \

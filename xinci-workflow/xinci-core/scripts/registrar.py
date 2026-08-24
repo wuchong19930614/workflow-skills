@@ -206,7 +206,8 @@ def _check_evidence(data_root: Path, refs, slug=None) -> list:
     return refs
 
 
-OBS_FIELDS = {"slug", "observed_at", "stage", "source_urls", "points", "gates", "window_bet"}
+OBS_FIELDS = {"slug", "observed_at", "stage", "source_urls", "points", "gates",
+              "g6_lines", "income_score", "window_bet"}
 WINDOW_BET_FIELDS = {"implementation_urls", "lag_sample_url", "lag_days", "rationale"}
 
 
@@ -244,6 +245,18 @@ def _check_observation(path: Path, ref: str, slug) -> None:
     _require(isinstance(gates, dict) and all(isinstance(v, str) for v in gates.values()),
              f"观察文件 gates 必须是 闸门→字符串结论 的对象: {ref}")
     _check_gate_payload(gates)
+    g6_lines = obs.get("g6_lines")
+    if g6_lines is not None:
+        _require(isinstance(g6_lines, dict)
+                 and set(g6_lines) == {"subscription", "advertising"},
+                 f"观察文件 g6_lines 必须完整包含 subscription/advertising: {ref}")
+        _require(all(v in {"pass", "veto", "N/A"} for v in g6_lines.values()),
+                 f"观察文件 g6_lines 结论只能是 pass/veto/N/A: {ref}")
+    obs_income_score = obs.get("income_score")
+    if obs_income_score is not None:
+        _require(isinstance(obs_income_score, int) and not isinstance(obs_income_score, bool)
+                 and 1 <= obs_income_score <= 20,
+                 f"观察文件 income_score 必须是 1–20 的整数: {ref}")
     window_bet = obs.get("window_bet")
     if window_bet is not None:
         _require(isinstance(window_bet, dict), f"观察文件 window_bet 必须是对象: {ref}")
@@ -460,6 +473,8 @@ def _register_locked(data_root, slug, term, source_url, task, evidence,
         "play": None,
         "gates": dict(gates or {}),
         "score": None,
+        "income_score": None,
+        "g6_passed_lines": [],
         "invalidation": [],
         "evidence_refs": refs,
         "decision_ref": None,
@@ -476,19 +491,22 @@ def _register_locked(data_root, slug, term, source_url, task, evidence,
 
 
 def transition(data_root, slug, to, by, gates=None, window_estimate=None, expiry=None,
-               invalidation=None, score=None, decision_ref=None, play=None,
+               invalidation=None, score=None, income_score=None, g6_passed_lines=None,
+               decision_ref=None, play=None,
                reason=None, evidence=None, superseded_by=None, run_id=None):
     data_root = Path(data_root)
     _check_gate_payload(gates)
     _check_actor(data_root, by, run_id)
     with _locked(data_root):
         return _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
-                                  invalidation, score, decision_ref, play,
+                                  invalidation, score, income_score, g6_passed_lines,
+                                  decision_ref, play,
                                   reason, evidence, superseded_by, run_id)
 
 
 def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
-                       invalidation, score, decision_ref, play,
+                       invalidation, score, income_score, g6_passed_lines,
+                       decision_ref, play,
                        reason, evidence, superseded_by, run_id):
     try:
         require_clean(data_root)
@@ -500,6 +518,9 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
     candidate_before = copy.deepcopy(rec)
     frm = rec["state"]
     _require(to in STATES, f"未知状态: {to}")
+    if to != "qualified":
+        _require(income_score is None and g6_passed_lines is None,
+                 "income_score / g6_passed_lines 只能在 →qualified 时提交")
 
     if to == "withdrawn":
         _require(frm not in TERMINAL, f"终态候选不可再转移: {frm}")
@@ -597,8 +618,35 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         _require(bool(rec.get("expiry")), "expired 要求候选已有 expiry;无失效日不得用过期出口")
     elif to == "qualified":
         _require(isinstance(score, int) and score >= 80, f"qualified 要求整数 score ≥80,当前 {score!r}")
+        _require(isinstance(income_score, int) and not isinstance(income_score, bool)
+                 and 1 <= income_score <= 20,
+                 f"qualified 要求 income_score 为 1–20 的整数(收入维度不得为 0),"
+                 f"当前 {income_score!r}")
+        lines = list(dict.fromkeys(g6_passed_lines or []))
+        allowed_lines = {"subscription", "advertising"}
+        _require(lines and set(lines) <= allowed_lines,
+                 "qualified 要求 g6_passed_lines 至少包含 subscription / advertising 之一")
+        _require(rec.get("lane") != "new" or "advertising" not in lines,
+                 "lane=new 的广告线结构上不适用,g6_passed_lines 不得包含 advertising")
+        g6_passed_lines = lines
         _check_gates(gates, QUALIFY_GATES, "formation_confirmed→qualified")
         _require(len(refs) >= 1, "formation_confirmed→qualified 要求本次至少 1 个证据")
+        observations = [_load_observation(data_root, ref) for ref in refs
+                        if Path(ref).suffix == ".json"]
+        qualify_obs = [obs for obs in observations
+                       if obs.get("stage") == "qualify"
+                       and obs.get("gates", {}).get("G6") == "pass"]
+        _require(bool(qualify_obs),
+                 "formation_confirmed→qualified 要求 qualify 观察结构化记录 G6")
+        expected_line_results = {line: ("pass" if line in lines else "veto")
+                                 for line in ("subscription", "advertising")}
+        if rec.get("lane") == "new":
+            expected_line_results["advertising"] = "N/A"
+        _require(all(obs.get("g6_lines") == expected_line_results for obs in qualify_obs),
+                 f"qualify 观察 g6_lines 必须与赛道及 g6_passed_lines 一致,"
+                 f"期望 {expected_line_results}")
+        _require(all(obs.get("income_score") == income_score for obs in qualify_obs),
+                 "qualify 观察 income_score 必须与 transition 参数一致")
     elif to == "disqualified":
         _require(bool(reason), "disqualified 要求 reason(决定性缺口:哪一项、差多少)")
     elif to in {"build_ready", "pilot_ready"}:
@@ -620,6 +668,10 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         rec["invalidation"] = list(dict.fromkeys(rec["invalidation"] + list(invalidation)))
     if score is not None:
         rec["score"] = score
+    if income_score is not None:
+        rec["income_score"] = income_score
+    if g6_passed_lines is not None:
+        rec["g6_passed_lines"] = g6_passed_lines
     if decision_ref:
         rec["decision_ref"] = decision_ref
     if play:
@@ -640,6 +692,7 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         entry["evidence"] = refs
     for key, value in (("reason", reason), ("gates", gates), ("window_estimate", window_estimate),
                        ("expiry", expiry), ("invalidation", invalidation), ("score", score),
+                       ("income_score", income_score), ("g6_passed_lines", g6_passed_lines),
                        ("play", play), ("decision_ref", decision_ref),
                        ("superseded_by", superseded_by)):
         if value not in (None, {}, [], ""):
@@ -861,6 +914,10 @@ def main(argv=None):
     p.add_argument("--expiry")
     p.add_argument("--invalidation", default="", help="分号分隔")
     p.add_argument("--score", type=int)
+    p.add_argument("--income-score", type=int,
+                   help="收入可行性维度得分;qualified 必填且须为 1–20")
+    p.add_argument("--g6-passed-lines", default="",
+                   help="qualified 必填;逗号分隔 subscription,advertising")
     p.add_argument("--decision-ref")
     p.add_argument("--play")
     p.add_argument("--reason")
@@ -911,7 +968,10 @@ def main(argv=None):
                              gates=_parse_gates(a.gates), window_estimate=a.window_estimate,
                              expiry=a.expiry,
                              invalidation=[x for x in a.invalidation.split(";") if x] or None,
-                             score=a.score, decision_ref=a.decision_ref, play=a.play,
+                             score=a.score, income_score=a.income_score,
+                             g6_passed_lines=[x.strip() for x in a.g6_passed_lines.split(",")
+                                              if x.strip()] or None,
+                             decision_ref=a.decision_ref, play=a.play,
                              reason=a.reason, evidence=a.evidence, superseded_by=a.superseded_by,
                              run_id=a.run_id)
         elif a.cmd == "amend":

@@ -55,9 +55,13 @@ class ValidateLedgerTest(unittest.TestCase):
         if until == "formation_confirmed":
             return slug
         R.transition(self.root, slug, to="qualified", by="xinci-qualify", score=85,
+                     income_score=12, g6_passed_lines=["subscription"],
                      gates=dict(GATES_678),
                      evidence=[mk_evidence(self.root, slug, "2026-09-10-qualify.json",
-                                           gates=dict(GATES_678))])
+                                           gates=dict(GATES_678),
+                                           g6_lines={"subscription": "pass",
+                                                     "advertising": "N/A"},
+                                           income_score=12)])
         if until == "qualified":
             return slug
         ref = mk_decision(self.root, slug)
@@ -163,6 +167,32 @@ class ValidateLedgerTest(unittest.TestCase):
         slug = self.build_chain(until="qualified")
         self.corrupt(slug, score=79)
         self.assertTrue(any("score" in e for e in self.errors()))
+
+    def test_detects_missing_or_zero_income_score_on_qualified(self):
+        slug = self.build_chain(until="qualified")
+        self.corrupt(slug, income_score=0)
+        self.assertTrue(any("income_score" in e for e in self.errors()), self.errors())
+
+    def test_detects_invalid_g6_passed_lines(self):
+        slug = self.build_chain(until="qualified")
+        self.corrupt(slug, g6_passed_lines=[])
+        self.assertTrue(any("g6_passed_lines" in e for e in self.errors()), self.errors())
+
+    def test_detects_advertising_line_on_new_lane(self):
+        slug = self.build_chain(until="qualified")
+        self.corrupt(slug, g6_passed_lines=["advertising"])
+        self.assertTrue(any("lane=new" in e for e in self.errors()), self.errors())
+
+    def test_detects_qualify_observation_income_contract_drift(self):
+        slug = self.build_chain(until="qualified")
+        path = self.root / "证据" / slug / "2026-09-10-qualify.json"
+        obs = json.loads(path.read_text(encoding="utf-8"))
+        obs["income_score"] = 11
+        obs["g6_lines"] = {"subscription": "veto", "advertising": "N/A"}
+        path.write_text(json.dumps(obs, ensure_ascii=False), encoding="utf-8")
+        errs = self.errors()
+        self.assertTrue(any("qualify 观察 income_score" in e for e in errs), errs)
+        self.assertTrue(any("qualify 观察 g6_lines" in e for e in errs), errs)
 
     def test_detects_bad_play_on_build_ready(self):
         slug = self.build_chain(until="build_ready")

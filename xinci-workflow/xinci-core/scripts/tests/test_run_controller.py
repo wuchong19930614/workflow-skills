@@ -8,6 +8,7 @@ from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import run_controller as RC
+import run_state as RS
 
 
 class RunControllerTest(unittest.TestCase):
@@ -49,6 +50,12 @@ class RunControllerTest(unittest.TestCase):
         RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         done = RC.finish(self.root, run["run_id"], "budget_reached", "测试预算命中")
         self.assertEqual(done["status"], "budget_reached")
+
+    def test_run_session_schema_statuses_match_runtime_contract(self):
+        schema_path = Path(__file__).resolve().parents[2] / "数据结构" / "run-session.schema.json"
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        schema_statuses = set(schema["properties"]["status"]["enum"])
+        self.assertEqual(schema_statuses, RS.STATUSES)
 
     def test_only_one_active_session(self):
         run = RC.start(self.root)

@@ -16,7 +16,8 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
   带 G3=veto_window_bet 的候选只能停在 captured(挂起待确认)/screened/fast_grab_ready 或终态,
   且在 screened/fast_grab_ready 上 window_estimate=days;qualified 及其后继(build_ready/pilot_ready/hold)必有 G6–G8 全 pass;
   formation_confirmed 及其后继必有 ≥2 个 -track 观察且跨度 ≥7 天;
-  qualified/build_ready/pilot_ready/hold 必有整数 score ≥80(hold 是认定后的搁置,分数已经产生);
+  qualified/build_ready/pilot_ready/hold 必有整数 score ≥80、income_score 1–20、
+  至少一条 g6_passed_lines(hold 是认定后的搁置,分数与 G6 结论已经产生);
   build_ready/pilot_ready 的 play ∈ {single_domain, cluster_expansion};
 - go 决策态(build_ready/pilot_ready/fast_grab_ready)必须有 decision_ref,且 md+html 双文件存在;
 - hold/no_site 不得携带 decision_ref(no-go 不出决策书);
@@ -206,6 +207,47 @@ def validate(data_root):
             score = rec.get("score")
             if not (isinstance(score, int) and score >= 80):
                 errors.append(f"{where} {state} 必有整数 score ≥80,当前 {score!r}")
+            income_score = rec.get("income_score")
+            if not (isinstance(income_score, int) and not isinstance(income_score, bool)
+                    and 1 <= income_score <= 20):
+                errors.append(f"{where} {state} 必有 1–20 的整数 income_score,"
+                              f"当前 {income_score!r}")
+            lines = rec.get("g6_passed_lines")
+            allowed_lines = {"subscription", "advertising"}
+            if not (isinstance(lines, list) and lines and len(lines) == len(set(lines))
+                    and set(lines) <= allowed_lines):
+                errors.append(f"{where} {state} 必有非空且合法的 g6_passed_lines,"
+                              f"当前 {lines!r}")
+            elif rec.get("lane") == "new" and "advertising" in lines:
+                errors.append(f"{where} lane=new 的 g6_passed_lines 不得包含 advertising")
+            qualified_entry = next((h for h in reversed(hist) if h.get("to") == "qualified"), None)
+            if qualified_entry is None:
+                errors.append(f"{where} {state} 缺 →qualified history 快照")
+            else:
+                if qualified_entry.get("income_score") != income_score:
+                    errors.append(f"{where} 顶层 income_score 与 →qualified history 快照不一致")
+                if qualified_entry.get("g6_passed_lines") != lines:
+                    errors.append(f"{where} 顶层 g6_passed_lines 与 →qualified history 快照不一致")
+                qualify_obs = []
+                for ref in qualified_entry.get("evidence", []):
+                    try:
+                        obs = json.loads((data_root / ref).read_text(encoding="utf-8"))
+                    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                        continue
+                    if (obs.get("stage") == "qualify"
+                            and obs.get("gates", {}).get("G6") == "pass"):
+                        qualify_obs.append(obs)
+                if not qualify_obs:
+                    errors.append(f"{where} →qualified history 缺结构化 G6 qualify 观察")
+                elif isinstance(lines, list):
+                    expected = {line: ("pass" if line in lines else "veto")
+                                for line in ("subscription", "advertising")}
+                    if rec.get("lane") == "new":
+                        expected["advertising"] = "N/A"
+                    if any(obs.get("g6_lines") != expected for obs in qualify_obs):
+                        errors.append(f"{where} qualify 观察 g6_lines 与账本不一致")
+                    if any(obs.get("income_score") != income_score for obs in qualify_obs):
+                        errors.append(f"{where} qualify 观察 income_score 与账本不一致")
         if state in {"build_ready", "pilot_ready"} and rec.get("play") not in BUILD_PLAYS:
             errors.append(f"{where} {state} 的 play 必须属于 {sorted(BUILD_PLAYS)},当前 {rec.get('play')!r}")
 

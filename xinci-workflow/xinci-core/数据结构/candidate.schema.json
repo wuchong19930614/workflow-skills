@@ -136,6 +136,27 @@
       ],
       "description": "认定阶段 100 分制得分,未认定为 null"
     },
+    "income_score": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 1,
+      "maximum": 20,
+      "description": "认定阶段收入可行性维度得分。qualified 及其后继须为 1–20,用于阻止收入维度 0 分但总分仍过 80"
+    },
+    "g6_passed_lines": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "subscription",
+          "advertising"
+        ]
+      },
+      "description": "正式 G6 通过的盈利线。qualified 及其后继至少一项;lane=new 不得含 advertising"
+    },
     "invalidation": {
       "type": "array",
       "items": {
@@ -148,7 +169,7 @@
       "items": {
         "type": "string"
       },
-      "description": "观察文件路径,相对 数据/新词工作流/"
+      "description": "观察文件路径,相对已配置的数据区根目录"
     },
     "decision_ref": {
       "type": [
@@ -253,6 +274,24 @@
           "score": {
             "type": "integer",
             "description": "快照:本次提交的认定分数"
+          },
+          "income_score": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 20,
+            "description": "快照:本次提交的收入可行性维度得分"
+          },
+          "g6_passed_lines": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "type": "string",
+              "enum": [
+                "subscription",
+                "advertising"
+              ]
+            },
+            "description": "快照:本次正式通过 G6 的盈利线"
           },
           "play": {
             "type": "string",

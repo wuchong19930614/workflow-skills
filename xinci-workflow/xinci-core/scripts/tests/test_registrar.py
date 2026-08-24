@@ -101,9 +101,12 @@ class RegistrarTest(unittest.TestCase):
                      gates={"G1": "pass"}, evidence=[ev])
 
     def to_qualified(self, slug):
-        ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678))
+        ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678),
+                         g6_lines={"subscription": "pass", "advertising": "N/A"},
+                         income_score=1)
         R.transition(self.root, slug, to="qualified", by="xinci-qualify",
-                     score=80, gates=dict(GATES_678), evidence=[ev])
+                     score=80, income_score=1, g6_passed_lines=["subscription"],
+                     gates=dict(GATES_678), evidence=[ev])
 
     def load(self, slug):
         ledger = json.loads((self.root / "账本" / "候选账本.json").read_text(encoding="utf-8"))
@@ -253,9 +256,77 @@ class RegistrarTest(unittest.TestCase):
         ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678))
         with self.assertRaises(R.RegistrarError):
             R.transition(self.root, slug, to="qualified", by="xinci-qualify",
-                         score=79, gates=dict(GATES_678), evidence=[ev])
+                         score=79, income_score=1, g6_passed_lines=["subscription"],
+                         gates=dict(GATES_678), evidence=[ev])
         self.to_qualified(slug)
         self.assertEqual(self.load(slug)["state"], "qualified")
+
+    def test_qualified_requires_nonzero_income_score_and_passed_line(self):
+        slug = self.register("income-guard")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678))
+        with self.assertRaisesRegex(R.RegistrarError, "income_score"):
+            R.transition(self.root, slug, to="qualified", by="xinci-qualify",
+                         score=90, income_score=0, g6_passed_lines=["subscription"],
+                         gates=dict(GATES_678), evidence=[ev])
+        with self.assertRaisesRegex(R.RegistrarError, "g6_passed_lines"):
+            R.transition(self.root, slug, to="qualified", by="xinci-qualify",
+                         score=90, income_score=10,
+                         gates=dict(GATES_678), evidence=[ev])
+
+    def test_new_lane_cannot_pass_on_advertising_line(self):
+        slug = self.register("new-ad-line")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678))
+        with self.assertRaisesRegex(R.RegistrarError, "lane=new"):
+            R.transition(self.root, slug, to="qualified", by="xinci-qualify",
+                         score=90, income_score=10, g6_passed_lines=["advertising"],
+                         gates=dict(GATES_678), evidence=[ev])
+
+    def test_mature_lane_can_pass_on_advertising_line(self):
+        slug = "mature-ad-line"
+        ev0 = mk_evidence(self.root, slug, "2026-08-17-scan.json")
+        R.register(self.root, slug=slug, term="mature ad line", source_url="https://e.com/t",
+                   task="t", evidence=[ev0], lane="mature")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678),
+                         g6_lines={"subscription": "veto", "advertising": "pass"},
+                         income_score=8)
+        R.transition(self.root, slug, to="qualified", by="xinci-qualify",
+                     score=82, income_score=8, g6_passed_lines=["advertising"],
+                     gates=dict(GATES_678), evidence=[ev])
+        self.assertEqual(self.load(slug)["g6_passed_lines"], ["advertising"])
+
+    def test_qualified_snapshots_income_contract(self):
+        slug = self.register("income-history")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        self.to_qualified(slug)
+        rec = self.load(slug)
+        self.assertEqual(rec["income_score"], 1)
+        self.assertEqual(rec["g6_passed_lines"], ["subscription"])
+        self.assertEqual(rec["history"][-1]["income_score"], 1)
+        self.assertEqual(rec["history"][-1]["g6_passed_lines"], ["subscription"])
+
+    def test_qualified_rejects_g6_observation_mismatch(self):
+        slug = self.register("income-evidence")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678),
+                         g6_lines={"subscription": "veto", "advertising": "N/A"},
+                         income_score=2)
+        with self.assertRaisesRegex(R.RegistrarError, "g6_lines"):
+            R.transition(self.root, slug, to="qualified", by="xinci-qualify",
+                         score=90, income_score=2, g6_passed_lines=["subscription"],
+                         gates=dict(GATES_678), evidence=[ev])
 
     def test_build_ready_requires_dual_format(self):
         slug = self.register()

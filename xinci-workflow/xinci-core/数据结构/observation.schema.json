@@ -20,6 +20,22 @@
       "additionalProperties": { "type": "string" },
       "description": "本次涉及的闸门结论(G0–G8 → pass/veto;G3 另有第三种结论 veto_window_bet,见闸门契约 G3),仅列实际检查过的"
     },
+    "g6_lines": {
+      "type": "object",
+      "required": ["subscription", "advertising"],
+      "properties": {
+        "subscription": { "type": "string", "enum": ["pass", "veto", "N/A"] },
+        "advertising": { "type": "string", "enum": ["pass", "veto", "N/A"] }
+      },
+      "additionalProperties": false,
+      "description": "正式 G6 的逐线结论。qualified 观察必填两项；lane=new 的 advertising 应为 N/A,mature 两项只能 pass/veto。算式、假设与出处写入 points/source_urls"
+    },
+    "income_score": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 20,
+      "description": "正式认定的收入可行性维度得分；qualified 观察必填并与 transition 参数一致"
+    },
     "window_bet": {
       "type": "object",
       "required": ["implementation_urls", "lag_sample_url", "lag_days", "rationale"],

@@ -1,11 +1,11 @@
 ---
 name: xinci-track
-description: '复查新词工作流中处于追踪状态的候选:重跑 G1、看 SERP 变化、命名定型与需求形成信号,向用户提议继续追踪/续期修订/形成确认/过期/否决。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 由用户指定查什么、何时查;本 skill 不自我调度。'
+description: '复查新词工作流中处于追踪状态的候选:重跑 G1、看 SERP 变化、命名定型与需求形成信号,向用户提议继续追踪/续期修订/形成确认/过期/否决。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 何时查由用户决定;可指定候选,未指定时该次调用默认授权遍历全部 tracking 候选。本 skill 不自我调度。'
 ---
 
 # xinci-track 追踪复查
 
-对用户指定的 tracking 候选逐个复查。新词的观察会腐烂:第 3 天判断"竞争空场"的候选,第 17 天可能已经死了——所以每次复查必须重跑 G1,并把结论落成带日期的新观察。
+对本次调用覆盖的 tracking 候选逐个复查:用户可明确指定;未指定时按下段规则遍历全部。新词的观察会腐烂:第 3 天判断"竞争空场"的候选,第 17 天可能已经死了——所以每次复查必须重跑 G1,并把结论落成带日期的新观察。
 
 何时复查由用户决定;本 skill 被调用才动,不设节奏、不催促。用户可指定候选;若只调用本 skill 而未给候选,该次调用默认授权遍历全部 `tracking` 候选。
 
