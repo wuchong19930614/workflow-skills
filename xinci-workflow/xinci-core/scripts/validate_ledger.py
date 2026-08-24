@@ -36,7 +36,8 @@ import sys
 from datetime import date
 from pathlib import Path
 
-from registrar import (STATES, DEFAULT_DATA_ROOT, WINDOWS, BUILD_PLAYS,
+import data_root
+from registrar import (STATES, WINDOWS, BUILD_PLAYS,
                        SCREEN_GATES, QUALIFY_GATES, MIN_TRACK_SPAN_DAYS,
                        G3_WINDOW_BET, TERMINAL, RegistrarError, _obs_time,
                        SLUG_RE, VALID_ACTORS, _check_decision_files,
@@ -267,8 +268,12 @@ def validate(data_root):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="校验 xinci 候选账本与运行清单完整性")
-    ap.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
+    ap.add_argument("--data-root", default=None,
+                    help="数据区路径。不给则按 XINCI_DATA_ROOT 环境变量、再按仓库配置 .xinci-data-root 解析;都没有则拒绝执行并提示先问用户")
     a = ap.parse_args(argv)
+    # 数据区未配置时在这里就停,并打印「先问用户」的指引,
+    # 不让空路径流进下游写操作(理由见 data_root.py)。
+    a.data_root = data_root.resolve_or_exit(a.data_root)
     errors, warnings = validate(a.data_root)
     errors += validate_runs(a.data_root)
     for w in warnings:

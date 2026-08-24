@@ -16,6 +16,23 @@ description: '对形成确认(formation_confirmed)的新词候选做深度认定
 >
 > **`--by` 约定**:下面的 registrar 命令模板写的是**单步形态**(`--by xinci-qualify`)。**在 xinci-run 连续运行下(含被它派出的子代理)一律改成 `--by xinci-run` 再执行,照抄模板是错的**。取值规则见生命周期契约「registrar 用法」的 `--by` 取值节。
 
+## 第 0 步:确认数据区(强制,先于一切写操作)
+
+**第一次执行本工作流、或换了机器/checkout 时,必须先确认执行产出存到哪里。** 零成本一条命令:
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/report_status.py
+```
+
+- 正常返回看板 → 数据区已配置,直接往下走,**别再问**。
+- **退出码 2、提示「数据区未配置」→ 停下来问用户数据区放哪,不要替他选。** 这不是故障,是脚本刻意不猜(理由见生命周期契约「开工第一步」)。
+
+拿到路径后固定下来(幂等,已存在的文件不动):
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户给的路径>
+```
+
 ## 行动前必读
 
 - xinci-workflow/xinci-core/闸门契约.md(G6/G7/G8 定义;KD/KGR 统一立场)

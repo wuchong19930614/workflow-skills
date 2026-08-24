@@ -21,7 +21,8 @@ import json
 import sys
 from pathlib import Path
 
-from registrar import DEFAULT_DATA_ROOT, _flock, _funlock
+import data_root
+from registrar import _flock, _funlock
 from dedup_decisions import DedupDecisionError, find as find_decision, resolve as resolve_decision
 from term_normalize import match_kind, normalize, similar
 
@@ -196,7 +197,8 @@ def _parse_append_line(line: str) -> dict:
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="淘汰方向索引:批量去重与追加")
-    ap.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
+    ap.add_argument("--data-root", default=None,
+                    help="数据区路径。不给则按 XINCI_DATA_ROOT 环境变量、再按仓库配置 .xinci-data-root 解析;都没有则拒绝执行并提示先问用户")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("check", help="从 stdin 逐行读待查方向,报告见过/新的")
@@ -221,6 +223,9 @@ def main(argv=None):
     p.add_argument("--supersedes", help="修订错误裁决时指向当前 decision_id")
 
     a = ap.parse_args(argv)
+    # 数据区未配置时在这里就停,并打印「先问用户」的指引,
+    # 不让空路径流进下游写操作(理由见 data_root.py)。
+    a.data_root = data_root.resolve_or_exit(a.data_root)
 
     if a.cmd == "check":
         terms = [l.strip() for l in sys.stdin.read().splitlines() if l.strip()]

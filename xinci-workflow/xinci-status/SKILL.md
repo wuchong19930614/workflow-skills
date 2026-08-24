@@ -13,6 +13,23 @@ description: '新词工作流状态看板,只读汇报候选账本的全局事�
 
 > **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-status/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
 
+## 第 0 步:确认数据区(强制,先于一切写操作)
+
+**第一次执行本工作流、或换了机器/checkout 时,必须先确认执行产出存到哪里。** 零成本一条命令:
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/report_status.py
+```
+
+- 正常返回看板 → 数据区已配置,直接往下走,**别再问**。
+- **退出码 2、提示「数据区未配置」→ 停下来问用户数据区放哪,不要替他选。** 这不是故障,是脚本刻意不猜(理由见生命周期契约「开工第一步」)。
+
+拿到路径后固定下来(幂等,已存在的文件不动):
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户给的路径>
+```
+
 ## 行动前必读
 
 - xinci-workflow/xinci-core/生命周期契约.md(状态词汇与时间字段约定)

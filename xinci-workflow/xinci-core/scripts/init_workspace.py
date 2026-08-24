@@ -6,15 +6,10 @@ import json
 import sys
 from pathlib import Path
 
-# 数据区在仓库根(代码与数据分离):xinci-workflow/xinci-core/scripts/ 向上三级
-# 数据区不在本仓库内。xinci-workflow 只放 skill 与契约,执行产出(账本、证据、
-# 索引、运行清单)住在同级的 keywords-macdownds 仓库。
-# 优先读环境变量 XINCI_DATA_ROOT;没设则按"两个仓库是同级目录"回退。
-# parents[3]=workflow-skills, parents[4]=两仓库的公共父目录。
-DEFAULT_DATA_ROOT = Path(
-    os.environ.get("XINCI_DATA_ROOT")
-    or Path(__file__).resolve().parents[4] / "keywords-macdownds" / "数据" / "新词工作流"
-)
+import data_root
+
+# 数据区的定位统一走 data_root 模块:显式参数 > 环境变量 > 仓库配置 > 拒绝执行。
+# 这里刻意不再留任何默认值——数据区放哪是用户的决定,脚本不猜(理由见 data_root.py)。
 SUBDIRS = ("账本", "证据", "决策书", "运行", "运行状态", "运行状态/事务")
 
 
@@ -44,11 +39,23 @@ def init_workspace(data_root) -> list:
 
 
 def main(argv=None):
-    ap = argparse.ArgumentParser(description="初始化 xinci 数据区")
-    ap.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
+    ap = argparse.ArgumentParser(
+        description="初始化 xinci 数据区。这是「数据区放哪」这个决定被落盘的地方——"
+                    "显式给了 --data-root 就把它写进仓库配置,之后所有脚本都按它走。")
+    ap.add_argument("--data-root", default=None,
+                    help="数据区路径。不给则按 XINCI_DATA_ROOT 环境变量、再按仓库配置 .xinci-data-root 解析;都没有则拒绝执行并提示先问用户")
+    ap.add_argument("--no-save", action="store_true",
+                    help="只创建目录,不把路径写进仓库配置(一次性用途)")
     a = ap.parse_args(argv)
-    created = init_workspace(a.data_root)
+    explicit = a.data_root
+    root = data_root.resolve_or_exit(explicit)
+    created = init_workspace(root)
+    print("数据区:" + str(root))
     print("已创建:" + (", ".join(created) if created else "无(全部已存在)"))
+    # 只有用户显式给了路径才落盘:那一次调用就是他做出决定的时刻。
+    # 从环境变量或既有配置解析出来的不重复写。
+    if explicit and not a.no_save:
+        print("已记入仓库配置:" + str(data_root.save(root)))
     return 0
 
 

@@ -10,7 +10,8 @@ import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
-from registrar import TERMINAL, DEFAULT_DATA_ROOT
+import data_root
+from registrar import TERMINAL
 from chinese_labels import candidate_state_label
 
 
@@ -82,9 +83,13 @@ def render_text(report) -> str:
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="xinci 全局状态汇报(只读)")
-    ap.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
+    ap.add_argument("--data-root", default=None,
+                    help="数据区路径。不给则按 XINCI_DATA_ROOT 环境变量、再按仓库配置 .xinci-data-root 解析;都没有则拒绝执行并提示先问用户")
     ap.add_argument("--json", action="store_true")
     a = ap.parse_args(argv)
+    # 数据区未配置时在这里就停,并打印「先问用户」的指引,
+    # 不让空路径流进下游写操作(理由见 data_root.py)。
+    a.data_root = data_root.resolve_or_exit(a.data_root)
     try:
         report = build_report(a.data_root)
     except FileNotFoundError as e:

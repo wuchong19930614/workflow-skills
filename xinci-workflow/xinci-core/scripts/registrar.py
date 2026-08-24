@@ -15,6 +15,8 @@ import tempfile
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
+
+import data_root
 from urllib.parse import urlparse
 
 from run_controller import (RunControllerError, active_sessions,
@@ -45,15 +47,8 @@ except ImportError:  # Windows
         f.seek(0)
         msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
 
-# 数据区在仓库根(代码与数据分离):xinci-workflow/xinci-core/scripts/ 向上三级
-# 数据区不在本仓库内。xinci-workflow 只放 skill 与契约,执行产出(账本、证据、
-# 索引、运行清单)住在同级的 keywords-macdownds 仓库。
-# 优先读环境变量 XINCI_DATA_ROOT;没设则按"两个仓库是同级目录"回退。
-# parents[3]=workflow-skills, parents[4]=两仓库的公共父目录。
-DEFAULT_DATA_ROOT = Path(
-    os.environ.get("XINCI_DATA_ROOT")
-    or Path(__file__).resolve().parents[4] / "keywords-macdownds" / "数据" / "新词工作流"
-)
+# 数据区的定位统一走 data_root 模块:显式参数 > 环境变量 > 仓库配置 > 拒绝执行。
+# 这里刻意不再留任何默认值——数据区放哪是用户的决定,脚本不猜(理由见 data_root.py)。
 
 STATES = {
     "captured", "screened", "tracking", "formation_confirmed", "qualified",
@@ -836,7 +831,8 @@ def _parse_gates(text):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description="xinci 候选账本 registrar")
-    ap.add_argument("--data-root", default=str(DEFAULT_DATA_ROOT))
+    ap.add_argument("--data-root", default=None,
+                    help="数据区路径。不给则按 XINCI_DATA_ROOT 环境变量、再按仓库配置 .xinci-data-root 解析;都没有则拒绝执行并提示先问用户")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p = sub.add_parser("register", help="注册新候选(→captured)")
@@ -900,6 +896,9 @@ def main(argv=None):
     p.add_argument("--evidence", action="append", required=True)
 
     a = ap.parse_args(argv)
+    # 数据区未配置时在这里就停,并打印「先问用户」的指引,
+    # 不让空路径流进下游写操作(理由见 data_root.py)。
+    a.data_root = data_root.resolve_or_exit(a.data_root)
     try:
         if a.cmd == "register":
             rec = register(a.data_root, a.slug, a.term, a.source_url, a.task, a.evidence,

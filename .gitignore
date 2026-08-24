@@ -2,3 +2,7 @@
 __pycache__/
 *.pyc
 .DS_Store
+
+# 数据区位置是每个 checkout 的本地选择,由 init_workspace.py 写入,不入库。
+# 入库会让别人一 clone 就继承你机器上的路径,等于绕过了「先问用户」。
+.xinci-data-root

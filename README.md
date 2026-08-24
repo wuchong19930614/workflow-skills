@@ -18,10 +18,22 @@
 
 **本仓库只放 skill 与契约,不放执行产出。** 账本、证据、决策书、运行清单、运行状态、淘汰方向索引、去重裁决一律住在同级仓库 `keywords-macdownds` 的 `数据/新词工作流/` 下;设计与落地计划文档也迁到了那里。
 
-脚本按 `XINCI_DATA_ROOT` 环境变量定位数据区;未设置时按"两个仓库是同级目录"回退到 `../keywords-macdownds/数据/新词工作流`。**契约文档里写作 `数据/新词工作流/...` 的路径,一律指数据区内部的相对位置。**
+**契约文档里写作 `数据/新词工作流/...` 的路径,一律指数据区内部的相对位置。**
+
+### 第一次使用:先定数据区
+
+脚本**不猜**数据区在哪。没配置过就一律拒绝执行(退出码 2)并提示先问用户——账本是整套流程唯一的事实来源,落错地方等于在错的地方留痕。
 
 ```bash
-export XINCI_DATA_ROOT=/path/to/keywords-macdownds/数据/新词工作流
+python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <数据区路径>
+```
+
+这条命令创建目录结构与空账本(幂等),并把路径记进 `.xinci-data-root`(不入库)。已有数据区要接入的用同一条命令。
+
+解析顺序:`--data-root` > 环境变量 `XINCI_DATA_ROOT` > 仓库配置 `.xinci-data-root` > 拒绝执行。临时切换用:
+
+```bash
+export XINCI_DATA_ROOT=/path/to/数据/新词工作流
 ```
 
 数据区内容:账本 / 证据 / 决策书 / 运行 / 运行状态 / 淘汰方向索引 `淘汰方向.jsonl`(由 `screen_index.py` 读写,**勿手工编辑**)/ 去重裁决 `去重裁决.jsonl`。
