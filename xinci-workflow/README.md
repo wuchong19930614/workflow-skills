@@ -17,7 +17,7 @@
 
 两道共用一条限制:**KD、Authority Score、外链数等域名强度代理不得决定 G2/G3 的放行、否决或竞争强弱**;门结论只由 G2 完整结构阅读与 G3 三问判定。确认期可以实测竞品 footprint(流量、覆盖词量、增速)来回答“实际占了多少市场”,它只进入竞争评分与风险说明,不反向改写 G2/G3。
 
-> `mature` 道目前**尚无发现/连续运行 skill 承接**:xinci-scan / xinci-run 只跑 `new` 道,mature 的选源、量级前筛、注册与形成确认前推进按[数据采集指南](xinci-core/数据采集指南.md)「广告线的选源方法」手工单步执行(`--lane mature`、`--by user`)。候选一旦合法进入 `formation_confirmed`,现有 xinci-qualify / xinci-decide 可以按各自已写明的 mature 分支继续承接。方法未经更多前瞻验证前不把 mature 接入自动发现循环,理由见[闸门校准.md](xinci-core/闸门校准.md) 第 8.1 节。
+> `mature` 道目前**尚无发现/连续运行 skill 承接**:xinci-scan / xinci-run 只跑 `new` 道,mature 的选源、量级前筛、注册与形成确认前推进按[数据采集指南](xinci-core/数据采集指南.md)「广告线的选源方法」手工单步执行(`--lane mature`、`--by user`)。候选一旦合法进入 `formation_confirmed`,现有 xinci-qualify / xinci-decide 可以按各自已写明的 mature 分支继续承接。方法未经更多前瞻验证前不把 mature 接入自动发现循环——方法未验证就先改 skill 是本末倒置(出处见[闸门校准.md](xinci-core/闸门校准.md) 第 8.1 节;该节另记的「skill 全文未出现 lane」是当时状况,现两 skill 已显式排除 mature,不再作为理由)。
 
 ## 两条盈利线(G6,任一条过即放行)
 
@@ -30,7 +30,7 @@
 
 ## 候选生命周期
 
-状态只存在于账本,**只能由 `registrar.py` 写入**。共 16 个状态,内部有 7 个归档/决策终局状态;其中 `built` 保留一条人工发起的升级通路,所以不是通常意义上的“再无出边”。
+状态只存在于账本,**只能由 `registrar.py` 写入**。共 16 个状态,内部有 7 个归档/决策终局状态;终局不等于全部“再无出边”:`built` 保留一条人工发起的升级通路,`disqualified` / `no_site` 还可被更好措辞的候选取代(`→ superseded`)。
 
 ```
 captured ──有效初筛结论满足出闸要求──→ screened ──登记 expiry──→ tracking ──形成达标──→ formation_confirmed
@@ -45,7 +45,7 @@ rejected              fast_grab_ready              rejected           qualified 
 
 “有效初筛结论满足出闸要求”指 G0/G1/G2/G4/G5=`pass`,G3=`pass` 或状态机兼容的 `veto_window_bet`;后者不是“全过”,只可按其专用快道出口推进。
 
-归档/决策终局:`rejected` / `expired` / `superseded` / `withdrawn` / `built` / `disqualified` / `no_site`。`built` 的唯一例外出边是人工发起的 `built → tracking` 升级。
+归档/决策终局:`rejected` / `expired` / `superseded` / `withdrawn` / `built` / `disqualified` / `no_site`。终局的例外出边共两种:人工发起的 `built → tracking` 升级,以及 `disqualified` / `no_site` → `superseded`(被更好措辞的候选取代)。
 
 **留痕分界**:还有下一步的、以及走完 G2/G3 深审的候选进**账本**;零成本秒弃与 G1 否决只追加一行**淘汰方向索引**。
 
@@ -65,7 +65,7 @@ rejected              fast_grab_ready              rejected           qualified 
 | **G7** | 耐久性 | 认定门 |
 | **G8** | 簇广度 | 认定门 |
 
-G6 的**深审入口预检**是最省钱的一道:开审前先问"这个任务是否要求有预算的付费者逐个对象重复完成?"答否即弃,不读任何 SERP;答是只取得继续建立订阅线证据的资格,不自动等于订阅线暂定通过。
+G6 的**深审入口预检**是最省钱的一道,限 `new` 道:开审前先问"这个任务是否要求有预算的付费者逐个对象重复完成?"答否即弃,不读任何 SERP(`mature` 道不照搬这条秒弃——广告线量级已实测可行时,订阅预检答否也继续 G2/G3);答是只取得继续建立订阅线证据的资格,不自动等于订阅线暂定通过。
 
 ## 契约文件:判断标准的唯一来源
 

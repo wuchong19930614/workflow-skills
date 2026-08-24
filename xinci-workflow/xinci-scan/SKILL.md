@@ -1,6 +1,6 @@
 ---
 name: xinci-scan
-description: '扫描发现新兴/全新的英文 Google 搜索词候选:真浏览器直读 Reddit/Product Hunt/Hacker News/X/应用商店等信号面,或从有日期的法规/平台/技术变化推导付费者任务,捕获即跑 G0–G5 初筛:存活的与深审判否的注册进账本,秒弃与 G1 否决留痕进淘汰方向索引。当用户说扫一下今天有什么新词、发现新机会、跑一轮雷达时使用。English triggers: scan new keywords, keyword radar, discover emerging terms. 看状态用 xinci-status,复查已有候选用 xinci-track。'
+description: '扫描发现新兴/全新的英文 Google 搜索词候选:真浏览器直读 Reddit/Product Hunt/Hacker News/X/应用商店等信号面,或从有日期的法规/平台/技术变化推导付费者任务,捕获即跑初筛(G0–G5 加 G6/G7 零成本预筛):存活的与深审判否的注册进账本,秒弃与 G1 否决留痕进淘汰方向索引。当用户说扫一下今天有什么新词、发现新机会、跑一轮雷达时使用。English triggers: scan new keywords, keyword radar, discover emerging terms. 看状态用 xinci-status,复查已有候选用 xinci-track。'
 ---
 
 # xinci-scan 扫描发现
@@ -234,7 +234,7 @@ registrar 按**合并结果**(账本已有 gates + 本次提交)校验:G0/G1/G2/
 
 - 有效初筛结论满足出闸要求(G0/G1/G2/G4/G5=`pass`,G3=`pass`)、窗口以周/月计 → 提议 `screened → tracking`(带 expiry 与失效条件);
 - 有效初筛结论满足出闸要求、窗口以天计 → 提议走快道(转给 xinci-decide 快速模式,它核对的输入正是 `screened` + `window_estimate=days`);状态机兼容的 `G3=veto_window_bet` 也能出闸,但不是“全过”,且只准走下一条所述快道;
-- **历史兼容候选**的 G3 已为临时空位(`veto_window_bet`)、窗口以天计 → 出闸时带上降级依据(`--reason`:数到的免费实现清单 + 为何判定它们只是还没被收录),观察文件记明该判断,然后提议走快道。该候选**在 `captured`/`screened` 上**的合法出口共四个:`fast_grab_ready`(快道 go)、`rejected`(快道读完证据判定这个赌注不值)、`withdrawn`(用户撤回),以及 expiry 过了的 `expired`(挂在 `captured` 排队过期,或已出闸到 `screened` 后窗口自己过了,两条来路都算);走通快道之后还有 `fast_grab_ready → built`;`superseded` 仅可从非终态以及 `disqualified/no_site` 转入,不是任何状态都可用。上述都是 go 后或候选替换的后续,不在四个窗口出口之列。**唯独不得进 tracking**(理由见闸门契约 G3「唯一的降级出口」;`validate_ledger` 的 `WINDOW_BET_STATES` 同样只放行 `captured`/`screened`/`fast_grab_ready` 与终态,出现在 tracking 及其后继一律报错)。
+- **历史兼容候选**的 G3 已为临时空位(`veto_window_bet`)、窗口以天计 → 出闸时带上降级依据(`--reason`:数到的免费实现清单 + 为何判定它们只是还没被收录),观察文件记明该判断,然后提议走快道。该候选**在 `captured`/`screened` 上**的合法出口共四个,按状态拆开读:`fast_grab_ready`(快道 go,仅从 `screened`)、`rejected`(仅从 `screened`,快道读完证据判定这个赌注不值——`captured` 挂起候选不得转 rejected,它仍有待确认的快道出口)、`withdrawn`(用户撤回,两态皆可),以及 expiry 过了的 `expired`(挂在 `captured` 排队过期,或已出闸到 `screened` 后窗口自己过了,两条来路都算);走通快道之后还有 `fast_grab_ready → built`;`superseded` 仅可从非终态以及 `disqualified/no_site` 转入,不是任何状态都可用。上述都是 go 后或候选替换的后续,不在四个窗口出口之列。**唯独不得进 tracking**(理由见闸门契约 G3「唯一的降级出口」;`validate_ledger` 的 `WINDOW_BET_STATES` 同样只放行 `captured`/`screened`/`fast_grab_ready` 与终态,出现在 tracking 及其后继一律报错)。
   **连续运行模式遇到账本中已合法存在的历史兼容候选时,可以接续登记这一档,但不得未经确认执行 `captured→screened`**:此时候选**留在 `captured`**,带 gates 与 expiry 挂着等用户单步确认,清单 notes 记一句待确认——这是它的合法挂起位,不是失败,不许转 rejected。取得一次性确认后可由同一活动 run_id 出闸。
 
 (**深审被否决的候选不在本清单里**:它在第 4 层就走完了 register + `→rejected`,不进第 5 层——第 5 层只处理深审存活的候选;出闸要求 G0/G1/G2/G4/G5=`pass`,G3=`pass` 或兼容的 `veto_window_bet`。)
