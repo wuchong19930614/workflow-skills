@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import run_controller as RC
 import run_state as RS
+import stage_checkpoint as SC
 
 
 class RunControllerTest(unittest.TestCase):
@@ -96,6 +97,16 @@ class RunControllerTest(unittest.TestCase):
         RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         with self.assertRaises(RC.RunControllerError):
             RC.begin_round(self.root, run["run_id"])
+
+    def test_record_round_refuses_open_stage_checkpoint(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        SC.start(self.root, run["run_id"], 1, ["alpha"])
+        with self.assertRaisesRegex(RC.RunControllerError, "阶段检查点"):
+            RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+        SC.mark(self.root, run["run_id"], 1, "alpha", "zero_cost")
+        SC.finish(self.root, run["run_id"], 1)
+        RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
 
     def test_confirmation_is_single_use(self):
         run = RC.start(self.root)

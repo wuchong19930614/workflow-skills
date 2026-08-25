@@ -27,14 +27,11 @@ def init_workspace(data_root) -> list:
             json.dumps({"schema_version": 1, "candidates": {}}, ensure_ascii=False, indent=2) + "\n",
             encoding="utf-8")
         created.append(str(ledger))
-    index = data_root / "淘汰方向.jsonl"
-    if not index.is_file():
-        index.write_text("", encoding="utf-8")
-        created.append(str(index))
-    decisions = data_root / "去重裁决.jsonl"
-    if not decisions.is_file():
-        decisions.write_text("", encoding="utf-8")
-        created.append(str(decisions))
+    for name in ("淘汰方向.jsonl", "淘汰方向修订.jsonl", "触发池.jsonl", "去重裁决.jsonl"):
+        path = data_root / name
+        if not path.is_file():
+            path.write_text("", encoding="utf-8")
+            created.append(str(path))
     return created
 
 

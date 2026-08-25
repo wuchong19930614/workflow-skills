@@ -10,6 +10,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import registrar as R
 import validate_ledger as V
 import run_controller as RC
+import screen_index as SI
+import stage_checkpoint as SC
 from test_registrar import mk_evidence, mk_decision, GATES_SCREEN, GATES_678
 
 
@@ -85,6 +87,26 @@ class ValidateLedgerTest(unittest.TestCase):
         self.build_chain(until="build_ready")
         self.build_chain(slug="fast-one", until="fast_grab_ready", window="days")
         self.assertEqual(self.errors(), [])
+
+    def test_index_missing_date_requires_append_only_correction(self):
+        ledger_dir = self.root / "账本"; ledger_dir.mkdir(parents=True)
+        (ledger_dir / "候选账本.json").write_text(
+            json.dumps({"schema_version": 1, "candidates": {}}), encoding="utf-8")
+        (self.root / SI.INDEX_NAME).write_text(
+            json.dumps({"date": "", "term": "missing date term", "gate": "G0"}) + "\n",
+            encoding="utf-8")
+        self.assertTrue(any("缺合法 date" in e for e in self.errors()))
+        SI.repair_dates(self.root, ["missing date term"], value="2026-08-25",
+                        reason="从运行清单重建", actor="user")
+        self.assertEqual(self.errors(), [])
+
+    def test_open_stage_checkpoint_is_integrity_error(self):
+        ledger_dir = self.root / "账本"; ledger_dir.mkdir(parents=True)
+        (ledger_dir / "候选账本.json").write_text(
+            json.dumps({"schema_version": 1, "candidates": {}}), encoding="utf-8")
+        run = RC.start(self.root); RC.begin_round(self.root, run["run_id"])
+        SC.start(self.root, run["run_id"], 1, ["alpha"])
+        self.assertTrue(any("未完成阶段检查点" in e for e in self.errors()))
 
     def test_detects_missing_window_on_screened(self):
         slug = self.build_chain(until="screened")

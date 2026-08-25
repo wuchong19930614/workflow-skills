@@ -26,6 +26,7 @@ from run_manifest import (RunManifestError, append_round, candidates_by_run,
                           validate_runs)
 from chinese_labels import (humanize_text, normalize_session_status,
                             session_status_label)
+from stage_checkpoint import StageCheckpointError, require_no_open
 
 try:
     import fcntl
@@ -196,6 +197,10 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
         if not isinstance(funnel, dict):
             raise RunControllerError("record-round 必须提交 funnel 对象;未扫描时五项都写 0")
         current = obj["current_round"]
+        try:
+            require_no_open(data_root, run_id, current)
+        except StageCheckpointError as e:
+            raise RunControllerError(str(e))
         manifest_path, manifest = find_run_manifest(data_root, run_id)
         existing_rounds = manifest.get("rounds", []) if manifest else []
         already = existing_rounds[-1] if len(existing_rounds) == current else None

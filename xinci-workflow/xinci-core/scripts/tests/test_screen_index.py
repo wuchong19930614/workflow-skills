@@ -226,6 +226,36 @@ class ScreenIndexTest(unittest.TestCase):
     def test_append_ignores_blank_terms(self):
         self.assertEqual(S.append(self.root, [{"term": "  "}, {"term": ""}]), 0)
 
+    def test_append_rejects_missing_or_invalid_date_before_write(self):
+        with self.assertRaisesRegex(S.ScreenIndexError, "date"):
+            S.append(self.root, [{"term": "fresh direction without date", "gate": "G0"}])
+        with self.assertRaisesRegex(S.ScreenIndexError, "date"):
+            S.append(self.root, [{"date": "2026-02-30", "term": "invalid date direction"}])
+        self.assertFalse((self.root / S.INDEX_NAME).exists())
+
+    def test_append_accepts_valid_observation_date(self):
+        self.assertEqual(S.append(self.root, [{
+            "date": "2026-08-25", "term": "dated direction", "gate": "G0"}]), 1)
+        self.assertEqual(S.load(self.root)[0]["date"], "2026-08-25")
+
+    def test_missing_historical_date_can_only_be_fixed_append_only(self):
+        (self.root / S.INDEX_NAME).write_text(
+            json.dumps({"date": "", "term": "historical missing date", "gate": "G0"}) + "\n",
+            encoding="utf-8")
+        self.assertEqual(len(S.validate_index(self.root)), 1)
+        n = S.repair_dates(self.root, ["historical missing date"], value="2026-08-24",
+                           reason="从轮次清单重建观察日", actor="user")
+        self.assertEqual(n, 1)
+        self.assertEqual(S.validate_index(self.root), [])
+        row = S.load(self.root)[0]
+        self.assertEqual(row["date"], "2026-08-24")
+        self.assertTrue(row["date_corrected"])
+        original = json.loads((self.root / S.INDEX_NAME).read_text(encoding="utf-8"))
+        self.assertEqual(original["date"], "")
+        with self.assertRaisesRegex(S.ScreenIndexError, "不可覆盖"):
+            S.repair_dates(self.root, ["historical missing date"], value="2026-08-23",
+                           reason="试图覆盖", actor="user")
+
     def test_append_is_additive_across_calls(self):
         S.append(self.root, [{"date": "2026-08-18", "term": "first direction one", "gate": "G0"}])
         S.append(self.root, [{"date": "2026-08-18", "term": "second direction two", "gate": "G4"}])

@@ -27,6 +27,8 @@ from build_decision_html import render as render_decision_html
 from dedup_decisions import DedupDecisionError, find as find_dedup_decision
 from transaction_journal import (TransactionError, prepare_window_bet,
                                  mark_committed, require_clean)
+from run_policy import evaluate as evaluate_run_policy
+from trigger_pool import TriggerPoolError, current as current_triggers
 
 # 文件锁跨平台:POSIX 用 fcntl.flock,Windows(如 Codex 多环境)降级 msvcrt.locking
 try:
@@ -440,7 +442,7 @@ def _check_decision_files(data_root: Path, decision_ref: str) -> str:
 
 def register(data_root, slug, term, source_url, task, evidence,
              source_note="", aliases=None, by="xinci-scan", gates=None, expiry=None,
-             run_id=None, lane="new"):
+             run_id=None, lane="new", origin=None, trigger_ref=None):
     """注册新候选(→captured)。
 
     gates 可选:扫描漏斗中"本轮没走完深审"的存活候选注册成 captured 排队时,带上已得的
@@ -457,12 +459,37 @@ def register(data_root, slug, term, source_url, task, evidence,
     _check_run_lane_boundary(by, lane, "captured")
     with _locked(data_root):
         return _register_locked(data_root, slug, term, source_url, task, evidence,
-                                source_note, aliases, by, gates, expiry, run_id, lane)
+                                source_note, aliases, by, gates, expiry, run_id, lane,
+                                origin, trigger_ref)
+
+
+def require_formal_admission(data_root, by, run_id, term=None, origin=None, trigger_ref=None):
+    """正式 CLI 写入口的硬闸；迁移与单元测试可继续直接调用库函数。"""
+    if by != "xinci-run":
+        return
+    policy = evaluate_run_policy(data_root, run_id)
+    _require(policy.get("formal_admission") is True,
+             "运行策略禁止新增正式候选: mode=" + str(policy.get("mode"))
+             + "; " + "; ".join(policy.get("reasons") or ["未满足 admission 条件"]))
+    _require(origin in {"signal", "trigger"},
+             "xinci-run register 必须声明 --origin signal|trigger")
+    if origin == "trigger":
+        _require(bool(trigger_ref), "origin=trigger 要求 --trigger-id")
+        try:
+            trigger = current_triggers(data_root).get(trigger_ref)
+        except TriggerPoolError as e:
+            raise RegistrarError(str(e))
+        _require(trigger and trigger.get("status") == "approved",
+                 "--trigger-id 必须指向 approved trigger")
+        _require(normalize_term(trigger.get("query", "")) == normalize_term(term or ""),
+                 "candidate term 必须与 approved trigger.query 精确归一化一致")
+    else:
+        _require(not trigger_ref, "origin=signal 不得携带 --trigger-id")
 
 
 def _register_locked(data_root, slug, term, source_url, task, evidence,
                      source_note, aliases, by, gates=None, expiry=None, run_id=None,
-                     lane="new"):
+                     lane="new", origin=None, trigger_ref=None):
     try:
         require_clean(data_root)
     except TransactionError as e:
@@ -527,6 +554,8 @@ def _register_locked(data_root, slug, term, source_url, task, evidence,
         "expiry": expiry,
         "source": {"url": source_url, "note": source_note},
         "task": task,
+        **({"origin": origin} if origin else {}),
+        **({"trigger_ref": trigger_ref} if trigger_ref else {}),
         "window_estimate": None,
         "play": None,
         "gates": dict(gates or {}),
@@ -987,6 +1016,9 @@ def main(argv=None):
     p.add_argument("--evidence", action="append", required=True)
     p.add_argument("--by", default="xinci-scan")
     p.add_argument("--run-id", help="by=xinci-run 时必填的活动运行会话")
+    p.add_argument("--origin", choices=["signal", "trigger"],
+                   help="xinci-run 注册必填；trigger 还须 --trigger-id")
+    p.add_argument("--trigger-id")
     p.add_argument("--gates", default="", help="已得的闸门结论,如 G0=pass,G4=pass,G5=pass,G1=pass"
                                               "(排队的 captured 候选用;缺哪门下轮补哪门)")
     p.add_argument("--expiry", help="排队位的失效日 YYYY-MM-DD(带 --gates 时必填)")
@@ -1047,11 +1079,13 @@ def main(argv=None):
     a.data_root = data_root.resolve_or_exit(a.data_root)
     try:
         if a.cmd == "register":
+            require_formal_admission(a.data_root, a.by, a.run_id, a.term,
+                                     a.origin, a.trigger_id)
             rec = register(a.data_root, a.slug, a.term, a.source_url, a.task, a.evidence,
                            source_note=a.source_note,
                            aliases=[x for x in a.aliases.split(",") if x], by=a.by,
                            gates=_parse_gates(a.gates), expiry=a.expiry, run_id=a.run_id,
-                           lane=a.lane)
+                           lane=a.lane, origin=a.origin, trigger_ref=a.trigger_id)
         elif a.cmd == "transition":
             rec = transition(a.data_root, a.slug, a.to, a.by,
                              gates=_parse_gates(a.gates), window_estimate=a.window_estimate,

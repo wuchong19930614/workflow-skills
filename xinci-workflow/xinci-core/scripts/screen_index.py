@@ -19,6 +19,7 @@
 import argparse
 import json
 import sys
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import data_root
@@ -27,6 +28,7 @@ from dedup_decisions import DedupDecisionError, find as find_decision, resolve a
 from term_normalize import match_kind, normalize, similar
 
 INDEX_NAME = "淘汰方向.jsonl"
+CORRECTIONS_NAME = "淘汰方向修订.jsonl"
 MERGE_THRESHOLD = 3  # stats 的兜底提醒线:累计 ≥3 次仍未归并的模式该被注意了;建类本身发现即做(陷阱类别.md 追加规则)
 
 # 当前闸门版本。闸门契约每次实质修订都要在这里进号。
@@ -35,8 +37,65 @@ MERGE_THRESHOLD = 3  # stats 的兜底提醒线:累计 ≥3 次仍未归并的�
 # 1400 余条永久否决因此可能包含误杀。记下版本号,check 才能把"旧闸门下的否决"
 # 单独标出来,让闸门修订可以触发选择性重开,而不是把错误永久固化。
 GATE_VERSION = "2026-08-23b"  # b: G6 两条盈利线 + G3 占位否决条件化 + 赛道推论(同日第二次实质修订)
+
+
+class ScreenIndexError(Exception):
+    pass
+
+
 def _index_path(data_root) -> Path:
     return Path(data_root) / INDEX_NAME
+
+
+def _corrections_path(data_root) -> Path:
+    return Path(data_root) / CORRECTIONS_NAME
+
+
+def _valid_date(value) -> bool:
+    if not isinstance(value, str) or len(value) != 10:
+        return False
+    try:
+        return date.fromisoformat(value).isoformat() == value
+    except ValueError:
+        return False
+
+
+def _load_corrections(data_root, strict=False) -> list:
+    path = _corrections_path(data_root)
+    if not path.is_file():
+        return []
+    out = []
+    for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as e:
+            if strict:
+                raise ScreenIndexError(f"{CORRECTIONS_NAME} 第 {i} 行不是合法 JSON: {e}")
+            print(f"警告: 日期修订第 {i} 行不是合法 JSON,已跳过", file=sys.stderr)
+            continue
+        required = {"term", "field", "value", "corrected_at", "reason", "actor"}
+        if (not isinstance(row, dict) or not required <= set(row)
+                or row.get("field") != "date" or not normalize(row.get("term", ""))
+                or not _valid_date(row.get("value")) or not row.get("reason")
+                or row.get("actor") not in {"user", "xinci-run"}
+                or (row.get("actor") == "xinci-run" and not row.get("run_id"))):
+            if strict:
+                raise ScreenIndexError(f"{CORRECTIONS_NAME} 第 {i} 行字段非法")
+            print(f"警告: 日期修订第 {i} 行字段非法,已跳过", file=sys.stderr)
+            continue
+        try:
+            at = datetime.fromisoformat(row["corrected_at"])
+            if at.tzinfo is None:
+                raise ValueError
+        except (TypeError, ValueError):
+            if strict:
+                raise ScreenIndexError(f"{CORRECTIONS_NAME} 第 {i} 行 corrected_at 非法")
+            print(f"警告: 日期修订第 {i} 行 corrected_at 非法,已跳过", file=sys.stderr)
+            continue
+        out.append(row)
+    return out
 
 
 def load(data_root) -> list:
@@ -55,6 +114,13 @@ def load(data_root) -> list:
             continue
         if isinstance(rec, dict) and rec.get("term"):
             out.append(rec)
+    corrections = {}
+    for row in _load_corrections(data_root):
+        corrections[normalize(row["term"])] = row["value"]
+    for i, row in enumerate(out):
+        corrected = corrections.get(normalize(row["term"]))
+        if corrected:
+            out[i] = dict(row, date=corrected, date_corrected=True)
     return out
 
 
@@ -143,6 +209,9 @@ def append(data_root, records) -> int:
                 norm = normalize(term)
                 if not norm or norm in existing:
                     continue
+                if not _valid_date(rec.get("date")):
+                    raise ScreenIndexError(
+                        f"淘汰方向 {term!r} 缺合法 date；必须是实际观察日 YYYY-MM-DD")
                 existing.append(norm)
                 row = {"date": rec.get("date", ""), "term": term,
                        "gate": rec.get("gate", ""), "reason": rec.get("reason", ""),
@@ -166,6 +235,101 @@ def append(data_root, records) -> int:
         finally:
             _funlock(lock)
     return added
+
+
+def repair_dates(data_root, terms, *, value, reason, actor="user", run_id=None) -> int:
+    """以追加式修订覆盖历史空日期；不改写原始索引。"""
+    if not _valid_date(value):
+        raise ScreenIndexError("repair-date 的 --date 必须是 YYYY-MM-DD")
+    if not reason:
+        raise ScreenIndexError("repair-date 要求事实说明")
+    if actor not in {"user", "xinci-run"}:
+        raise ScreenIndexError("repair-date actor 只能是 user 或 xinci-run")
+    if actor == "xinci-run" and not run_id:
+        raise ScreenIndexError("actor=xinci-run 时必须提供 run_id")
+    requested = {normalize(x): x.strip() for x in terms if normalize(x)}
+    if not requested:
+        return 0
+    base_path = _index_path(data_root)
+    base_rows = []
+    if base_path.is_file():
+        for line in base_path.read_text(encoding="utf-8").splitlines():
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(row, dict) and normalize(row.get("term", "")) in requested:
+                base_rows.append(row)
+    found = {normalize(row.get("term", "")) for row in base_rows}
+    missing = sorted(requested[n] for n in requested.keys() - found)
+    if missing:
+        raise ScreenIndexError(f"repair-date 目标不在淘汰索引: {missing}")
+    already = {normalize(row["term"]) for row in _load_corrections(data_root, strict=True)}
+    rows = []
+    for norm in requested:
+        if norm in already:
+            raise ScreenIndexError(f"淘汰方向 {requested[norm]!r} 已有日期修订；修订不可覆盖")
+        original = next(row for row in base_rows if normalize(row.get("term", "")) == norm)
+        if _valid_date(original.get("date")):
+            raise ScreenIndexError(f"淘汰方向 {requested[norm]!r} 已有合法日期，无需修订")
+        row = {
+            "term": original["term"], "field": "date", "value": value,
+            "corrected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "reason": reason, "actor": actor,
+        }
+        if run_id:
+            row["run_id"] = run_id
+        rows.append(row)
+    if rows:
+        path = _corrections_path(data_root)
+        lock_path = Path(data_root) / f".{CORRECTIONS_NAME}.lock"
+        Path(data_root).mkdir(parents=True, exist_ok=True)
+        with open(lock_path, "w") as lock:
+            _flock(lock)
+            try:
+                with open(path, "a", encoding="utf-8") as f:
+                    for row in rows:
+                        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+            finally:
+                _funlock(lock)
+    return len(rows)
+
+
+def validate_index(data_root) -> list:
+    """严格校验索引与修订日志，供总校验器复用。"""
+    errors = []
+    corrections = {}
+    try:
+        for row in _load_corrections(data_root, strict=True):
+            norm = normalize(row["term"])
+            if norm in corrections:
+                errors.append(f"{CORRECTIONS_NAME} 对 {row['term']!r} 有重复修订")
+            corrections[norm] = row
+    except ScreenIndexError as e:
+        errors.append(str(e))
+    path = _index_path(data_root)
+    if not path.is_file():
+        return errors
+    known = set()
+    for i, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError as e:
+            errors.append(f"{INDEX_NAME} 第 {i} 行不是合法 JSON: {e}")
+            continue
+        norm = normalize(row.get("term", "")) if isinstance(row, dict) else ""
+        if not norm:
+            errors.append(f"{INDEX_NAME} 第 {i} 行缺 term")
+            continue
+        known.add(norm)
+        if not _valid_date(row.get("date")) and norm not in corrections:
+            errors.append(f"{INDEX_NAME} 第 {i} 行 {row['term']!r} 缺合法 date 且无追加式修订")
+    for norm, row in corrections.items():
+        if norm not in known:
+            errors.append(f"{CORRECTIONS_NAME} 的目标不在淘汰索引: {row['term']!r}")
+    return errors
 
 
 def stats(data_root) -> dict:
@@ -205,7 +369,13 @@ def main(argv=None):
     p.add_argument("--json", action="store_true")
 
     p = sub.add_parser("append", help='从 stdin 逐行读 JSON 或 "词|门|理由[|模式]"')
-    p.add_argument("--date", default="", help="统一日期 YYYY-MM-DD(行内未给时使用)")
+    p.add_argument("--date", help="统一观察日 YYYY-MM-DD(行内未给时使用)")
+
+    p = sub.add_parser("repair-date", help="追加式修订历史空日期；从 stdin 逐行读精确 term")
+    p.add_argument("--date", required=True, help="经证据重建的实际观察日 YYYY-MM-DD")
+    p.add_argument("--reason", required=True)
+    p.add_argument("--by", choices=["user", "xinci-run"], default="user")
+    p.add_argument("--run-id")
 
     sub.add_parser("stats", help="总量、闸门分布、累计 ≥3 次仍未归并的模式(兜底提醒)")
     p = sub.add_parser("resolve", help="登记疑似重复裁决")
@@ -258,8 +428,23 @@ def main(argv=None):
             if rec:
                 rec.setdefault("date", a.date)
                 recs.append(rec)
-        n = append(a.data_root, recs)
+        try:
+            n = append(a.data_root, recs)
+        except ScreenIndexError as e:
+            print(f"追加拒绝:{e}", file=sys.stderr)
+            return 2
         print(f"追加 {n} 条(输入 {len(recs)} 条,重复已跳过)")
+        return 0
+
+    if a.cmd == "repair-date":
+        terms = [line.strip() for line in sys.stdin.read().splitlines() if line.strip()]
+        try:
+            n = repair_dates(a.data_root, terms, value=a.date, reason=a.reason,
+                             actor=a.by, run_id=a.run_id)
+        except ScreenIndexError as e:
+            print(f"修订拒绝:{e}", file=sys.stderr)
+            return 2
+        print(f"追加日期修订 {n} 条")
         return 0
 
     if a.cmd == "resolve":

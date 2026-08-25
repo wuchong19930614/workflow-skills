@@ -96,6 +96,16 @@
       "type": "string",
       "description": "搜索者想完成的具体任务"
     },
+    "origin": {
+      "type": "string",
+      "enum": ["signal", "trigger"],
+      "description": "连续运行正式候选的入口来源"
+    },
+    "trigger_ref": {
+      "type": "string",
+      "pattern": "^trigger-[a-f0-9]{16}$",
+      "description": "origin=trigger 时指向 approved 触发事件"
+    },
     "window_estimate": {
       "type": [
         "string",

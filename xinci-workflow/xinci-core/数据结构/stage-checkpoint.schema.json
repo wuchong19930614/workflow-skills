@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Xinci stage checkpoint",
+  "type": "object",
+  "required": ["schema_version", "run_id", "round", "stage", "status", "created_at", "updated_at", "items"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "run_id": {"type": "string"},
+    "round": {"type": "integer", "minimum": 1},
+    "stage": {"type": "string", "minLength": 1},
+    "status": {"enum": ["active", "completed"]},
+    "created_at": {"type": "string", "format": "date-time"},
+    "updated_at": {"type": "string", "format": "date-time"},
+    "completed_at": {"type": "string", "format": "date-time"},
+    "items": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["outcome", "note", "updated_at"],
+        "properties": {
+          "outcome": {"type": ["string", "null"], "enum": [null, "dedup", "zero_cost", "g1_rejected", "deep_audited", "queued", "alias"]},
+          "note": {"type": ["string", "null"]},
+          "updated_at": {"type": ["string", "null"], "format": "date-time"}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

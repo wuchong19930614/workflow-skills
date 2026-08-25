@@ -48,6 +48,9 @@ from run_manifest import validate_runs
 from transaction_journal import TransactionError, list_pending
 from dedup_decisions import DedupDecisionError, load as load_dedup_decisions
 from term_normalize import match_kind
+from screen_index import validate_index
+from trigger_pool import TriggerPoolError, load as load_trigger_pool
+from stage_checkpoint import StageCheckpointError, list_open as list_open_checkpoints
 
 GO_STATES = {"build_ready", "pilot_ready", "fast_grab_ready"}
 NO_GO_STATES = {"hold", "no_site"}
@@ -295,9 +298,22 @@ def validate(data_root):
             if row.get("actor") == "xinci-run":
                 try:
                     load_session(data_root, row.get("run_id"))
-                except RunControllerError as e:
+                except RunStateError as e:
                     errors.append(f"去重裁决[{i}] run_id 无效: {e}")
     except DedupDecisionError as e:
+        errors.append(str(e))
+
+    errors.extend(validate_index(data_root))
+    try:
+        load_trigger_pool(data_root)
+    except TriggerPoolError as e:
+        errors.append(str(e))
+    try:
+        open_checkpoints = list_open_checkpoints(data_root)
+        if open_checkpoints:
+            errors.append("存在未完成阶段检查点: " + ", ".join(
+                f"{x['run_id']}/round-{x['round']}/{x['stage']}" for x in open_checkpoints))
+    except StageCheckpointError as e:
         errors.append(str(e))
 
     evidence_dir = data_root / "证据"
