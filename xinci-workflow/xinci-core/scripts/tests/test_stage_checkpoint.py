@@ -32,6 +32,14 @@ class StageCheckpointTest(unittest.TestCase):
         self.assertEqual(done["status"], "completed")
         self.assertEqual(SC.list_open(self.root, self.run_id, 1), [])
 
+    def test_pooled_is_a_valid_outcome(self):
+        """方向停在触发层(写进触发池、未注册为候选)也是一种归宿,必须能标记,
+        否则批量扫描收尾时它无处安放,只能借用语义不符的 queued。"""
+        SC.start(self.root, self.run_id, 1, ["gamma"])
+        SC.mark(self.root, self.run_id, 1, "gamma", "pooled", "已写入触发池 pending")
+        done = SC.finish(self.root, self.run_id, 1)
+        self.assertEqual(done["items"]["gamma"]["outcome"], "pooled")
+
     def test_outcome_cannot_be_overwritten(self):
         SC.start(self.root, self.run_id, 1, ["alpha"])
         SC.mark(self.root, self.run_id, 1, "alpha", "dedup")

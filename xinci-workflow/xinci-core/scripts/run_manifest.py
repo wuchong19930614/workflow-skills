@@ -15,13 +15,17 @@ RUN_FIELDS = {"date", "skill", "run_id", "sources_opened", "sources_blocked",
 RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
                     "billable_calls", "notes", "funnel"}
 RUN_STR_ARRAYS = ("sources_opened", "sources_blocked", "candidates_touched", "notes")
-RUN_SKILLS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run"}
+RUN_SKILLS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run",
+              "xinci-mature"}
 RUN_NAME_RE = re.compile(
     r"(\d{4}-\d{2}-\d{2})(?:-(\d{4}|\d{6})(?:-([a-f0-9]{8}))?)?-(xinci-[a-z]+)")
 FUNNEL_SINKS = ("rejected_zero_cost", "rejected_g1", "deep_audited", "queued")
+# pooled=方向停在触发层(已写入触发池,未注册为候选)。它是去向之一、参与加总,
+# 但不进必填集:既有清单写在它之前,缺这一项按 0 处理。
+FUNNEL_OPTIONAL_SINKS = ("pooled",)
 FUNNEL_FIELDS = ("extracted",) + FUNNEL_SINKS
 FUNNEL_CARRYOVER = "carryover_audited"
-FUNNEL_ALL_FIELDS = FUNNEL_FIELDS + (FUNNEL_CARRYOVER,)
+FUNNEL_ALL_FIELDS = FUNNEL_FIELDS + FUNNEL_OPTIONAL_SINKS + (FUNNEL_CARRYOVER,)
 FUNNEL_REQUIRED_FROM = "2026-08-19"
 
 
@@ -72,10 +76,11 @@ def _check_funnel(obj, where, errors):
     if bad:
         errors.append(f"{where} funnel 各项必须是非负整数,不合格: {bad}")
         return
-    total = sum(funnel[key] for key in FUNNEL_SINKS)
+    total = (sum(funnel[key] for key in FUNNEL_SINKS)
+             + sum(funnel.get(key, 0) for key in FUNNEL_OPTIONAL_SINKS))
     if total != funnel["extracted"]:
         errors.append(f"{where} funnel 去向加总 {total} ≠ extracted {funnel['extracted']}"
-                      "(每个被提取的方向都要有归宿:秒弃/G1否决/深审/排队,不许无声丢弃)")
+                      "(每个被提取的方向都要有归宿:秒弃/G1否决/深审/排队/入触发池,不许无声丢弃)")
 
 
 def _load_ledger(data_root):

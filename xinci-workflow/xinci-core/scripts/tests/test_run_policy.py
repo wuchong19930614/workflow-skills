@@ -2,6 +2,7 @@ import json
 import sys
 import tempfile
 import unittest
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -29,6 +30,50 @@ class RunPolicyTest(unittest.TestCase):
     def ready(self):
         BP.record(self.root, self.run["run_id"], channel="chrome", controllable=True,
                   desktop=True, region="us", logged_out=True)
+
+    def seed_ledger(self, rows):
+        d = self.root / "账本"; d.mkdir(parents=True, exist_ok=True)
+        (d / "候选账本.json").write_text(json.dumps({"candidates": rows}), encoding="utf-8")
+
+    def seed_track_obs(self, slug, day):
+        ref = f"证据/{slug}/{day}-track.json"
+        path = self.root / ref; path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps({"slug": slug, "observed_at": f"{day}T00:00:00+00:00",
+                                    "stage": "track", "points": ["x"]}), encoding="utf-8")
+        return ref
+
+    def test_ceiling_is_trigger_only_without_g1_environment(self):
+        policy = RP.evaluate(self.root, self.run["run_id"])
+        self.assertEqual(policy["reachable_ceiling"]["state"], "trigger_only")
+
+    def test_ceiling_is_tracking_when_no_candidate_can_reach_formation(self):
+        """存量里只有刚进追踪的候选时,存量侧本次最远只能到 tracking。"""
+        self.ready()
+        ref = self.seed_track_obs("fresh", date.today().isoformat())
+        self.seed_ledger({"fresh": {"slug": "fresh", "lane": "new", "state": "tracking",
+                                    "evidence_refs": [ref], "history": []}})
+        ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
+        self.assertEqual(ceiling["state"], "tracking")
+        self.assertIn("快道", ceiling["why"])  # 不得被读成"本轮不必扫描"
+
+    def test_ceiling_is_go_when_track_span_already_satisfied(self):
+        """最早 -track 观察已满 7 天时,本次复查即可凑齐跨度,存量能一路走到 go。"""
+        self.ready()
+        old_day = (date.today() - timedelta(days=RP.MIN_TRACK_SPAN_DAYS)).isoformat()
+        ref = self.seed_track_obs("ripe", old_day)
+        self.seed_ledger({"ripe": {"slug": "ripe", "lane": "new", "state": "tracking",
+                                   "evidence_refs": [ref], "history": []}})
+        ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
+        self.assertEqual(ceiling["state"], "go")
+        self.assertEqual(ceiling["enablers"], ["ripe"])
+
+    def test_ceiling_is_go_for_days_window_screened_candidate(self):
+        self.ready()
+        self.seed_ledger({"fast": {"slug": "fast", "lane": "new", "state": "screened",
+                                   "window_estimate": "days", "history": []}})
+        ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
+        self.assertEqual(ceiling["state"], "go")
+        self.assertEqual(ceiling["enablers"], ["fast"])
 
     def test_missing_browser_preflight_forces_trigger_only(self):
         policy = RP.evaluate(self.root, self.run["run_id"])

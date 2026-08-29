@@ -97,7 +97,8 @@ MIN_TRACK_SPAN_DAYS = 7
 # 广告线必须有真实搜索量才可能成立,而"查无"正是 new 道的定义属性——
 # 所以广告线只能在 mature 道上工作,且该道不适用 new 道的 Semrush 禁令。
 LANES = {"new", "mature"}
-VALID_ACTORS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run", "user"}
+VALID_ACTORS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run",
+                "xinci-mature", "user"}
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 GATE_NAMES = {f"G{i}" for i in range(9)}
 GATE_VALUES = {"pass", "veto", G3_WINDOW_BET}
@@ -173,12 +174,16 @@ MATURE_MANUAL_STATES = {"captured", "screened", "tracking"}
 
 
 def _check_run_lane_boundary(by: str, lane: str, state: str) -> None:
-    """mature 在 formation_confirmed 前不属于 xinci-run 的标准授权范围。"""
+    """两条 lane 边界:mature 前半程不属于 xinci-run 的标准授权范围;反向地,
+    xinci-mature 只承接 mature 道,不碰 new。"""
     _require(not (by == "xinci-run" and lane == "mature"
                   and state in MATURE_MANUAL_STATES),
              f"xinci-run 不自动推进 mature 前半程(state={state});"
-             "按数据采集指南以 --by user 手工推进到 formation_confirmed,"
+             "单步调用 xinci-mature 推进到 formation_confirmed,"
              "或显式单步调用 xinci-decide 处理已合法 screened 的快道候选")
+    _require(not (by == "xinci-mature" and lane != "mature"),
+             f"xinci-mature 只承接 lane=mature(当前 lane={lane!r});"
+             "new 道的发现与前半程用 xinci-scan")
 
 
 def _run_history_fields(data_root: Path, run_id):
@@ -888,12 +893,16 @@ def reopen(data_root, slug, by, reason, evidence, run_id=None):
         return rec
 
 
-def checked(data_root, slug, evidence, by="xinci-track", run_id=None):
+def checked(data_root, slug, evidence, by="xinci-track", run_id=None, same_day_reason=None):
     """复查登记:更新 last_checked_at、追加证据,不改状态。
 
     追加一条 from==to 的 history 条目(与 amend 同构),记录谁在何时复查、登记了哪份观察:
     连续运行模式下 by=xinci-run 是"标准授权、未经逐条确认"的印记,不写 history 就丢了,
-    复查次数也只能靠 evidence_refs 文件名反推。"""
+    复查次数也只能靠 evidence_refs 文件名反推。
+
+    同一自然日不重复复查:SERP 在几小时内不会变,当日再查一遍是空烧。边界按天划而不按
+    run 划——同一天的两次运行同样受限。确需当日重测(典型是上次复查时浏览器环境被污染)
+    时传 same_day_reason,理由会写进 history。"""
     data_root = Path(data_root)
     _require(bool(by), "checked 要求 by(执行的 skill 名)")
     _check_actor(data_root, by, run_id)
@@ -907,14 +916,29 @@ def checked(data_root, slug, evidence, by="xinci-track", run_id=None):
         rec = ledger["candidates"][slug]
         _check_run_lane_boundary(by, rec.get("lane", "new"), rec["state"])
         _require(rec["state"] not in TERMINAL, f"终态候选无需复查: {rec['state']}")
+        now = _now()
         refs = _check_evidence(data_root, evidence, slug=slug)
         _require(len(refs) >= 1, "checked 要求至少 1 个证据文件")
+        if not same_day_reason:
+            # 比的是观察实际发生的那一天(observed_at),不是登记时间:一天之内补录两份
+            # 不同日期的观察是正常的,同一天把 SERP 又跑一遍才是空烧。只比 -track 观察,
+            # 注册当天先 scan 后 track 不受影响。
+            def _track_days(items):
+                return {_obs_time(data_root, r).date() for r in items
+                        if Path(r).stem.endswith("-track")}
+            dup = sorted(_track_days(refs) & _track_days(rec["evidence_refs"]))
+            if dup:
+                raise RegistrarError(
+                    f"{slug} 已有 {dup[0]} 的 -track 观察,同日不重复复查:SERP 在几小时内"
+                    "不会变,再跑一遍是空烧(边界按天划,不按 run 划)。确需当日重测时传 "
+                    "--same-day-reason 说明理由,它会记进 history")
         rec["evidence_refs"] += [r for r in refs if r not in rec["evidence_refs"]]
-        now = _now()
         rec["last_checked_at"] = now
-        rec["history"].append({"at": now, "from": rec["state"], "to": rec["state"],
-                               "by": by, "checked": refs,
-                               **_run_history_fields(data_root, run_id)})
+        entry = {"at": now, "from": rec["state"], "to": rec["state"],
+                 "by": by, "checked": refs, **_run_history_fields(data_root, run_id)}
+        if same_day_reason:
+            entry["same_day_reason"] = same_day_reason
+        rec["history"].append(entry)
         _save(data_root, ledger)
         return rec
 
@@ -1050,6 +1074,8 @@ def main(argv=None):
     p.add_argument("--evidence", action="append", required=True)
     p.add_argument("--by", default="xinci-track")
     p.add_argument("--run-id", help="by=xinci-run 时必填的活动运行会话")
+    p.add_argument("--same-day-reason",
+                   help="当日已复查过仍要重测时的理由(如上次复查环境被污染);会记进 history")
 
     p = sub.add_parser("amend", help="观察性字段修订(不改状态):续期 expiry、"
                                      "追加 aliases/invalidation、captured 补记闸门结论")
@@ -1103,7 +1129,8 @@ def main(argv=None):
                         add_invalidation=[x for x in a.add_invalidation.split(";") if x],
                         gates=_parse_gates(a.gates), evidence=a.evidence, run_id=a.run_id)
         elif a.cmd == "checked":
-            rec = checked(a.data_root, a.slug, a.evidence, by=a.by, run_id=a.run_id)
+            rec = checked(a.data_root, a.slug, a.evidence, by=a.by, run_id=a.run_id,
+                          same_day_reason=a.same_day_reason)
         else:
             rec = reopen(a.data_root, a.slug, by=a.by, reason=a.reason,
                          evidence=a.evidence, run_id=a.run_id)

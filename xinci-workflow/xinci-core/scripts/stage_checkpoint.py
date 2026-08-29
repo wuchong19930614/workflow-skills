@@ -17,7 +17,8 @@ from run_state import RunStateError, load_session
 
 
 STAGE_DIR = "阶段"
-OUTCOMES = {"dedup", "zero_cost", "g1_rejected", "deep_audited", "queued", "alias"}
+OUTCOMES = {"dedup", "zero_cost", "g1_rejected", "deep_audited", "queued", "alias",
+            "pooled"}
 
 
 class StageCheckpointError(Exception):

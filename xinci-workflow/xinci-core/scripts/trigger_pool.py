@@ -115,7 +115,10 @@ def current(root):
         else:
             if tid not in states:
                 raise TriggerPoolError(f"{row['event']} 指向不存在的 trigger: {tid}")
-            if states[tid]["status"] != "pending":
+            status = states[tid]["status"]
+            # approved 保留唯一一条 discard 出边:批准只表示可进 G0,方向随后被闸门否决
+            # (典型是 G1 实测 veto)时要能作废,否则死方向永远挂在 approved 上被反复提取。
+            if status == "discarded" or (status == "approved" and row["event"] != "discard"):
                 raise TriggerPoolError(f"trigger 已终结，不可追加 {row['event']}: {tid}")
             states[tid].update(row)
             states[tid]["status"] = "approved" if row["event"] == "approve" else "discarded"
@@ -175,10 +178,12 @@ def approve(root, trigger_id, *, query, search_evidence_urls, payer, repeat_unit
 
 
 def discard(root, trigger_id, *, reason, actor="user", run_id=None):
+    """废弃一个 trigger。pending 与 approved 都可以走这条边:后者用于批准之后
+    方向才被闸门否决的情形,reason 应写明失败的闸门与现场结论。"""
     _check_actor(root, actor, run_id)
     state = current(root).get(trigger_id)
-    if not state or state["status"] != "pending":
-        raise TriggerPoolError("discard 要求存在且 pending 的 trigger_id")
+    if not state or state["status"] not in {"pending", "approved"}:
+        raise TriggerPoolError("discard 要求存在且未废弃的 trigger_id")
     row = {"trigger_id": trigger_id, "event": "discard", "at": _now(), "actor": actor,
            "reason": reason}
     if run_id:

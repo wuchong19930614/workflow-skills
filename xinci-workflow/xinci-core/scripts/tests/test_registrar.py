@@ -605,6 +605,51 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaises(R.RegistrarError):
             R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
 
+    def test_xinci_mature_only_touches_mature_lane(self):
+        """两条 lane 边界是对称的:xinci-run 不碰 mature 前半程,xinci-mature 不碰 new。"""
+        with self.assertRaisesRegex(R.RegistrarError, "只承接 lane=mature"):
+            R.register(self.root, slug="new-one", term="some new term",
+                       source_url="https://example.com/x", task="t", lane="new",
+                       evidence=[mk_evidence(self.root, "new-one", "2026-08-20-scan.json")],
+                       by="xinci-mature")
+
+    def test_xinci_mature_can_register_mature_lane(self):
+        slug = "mature-one"
+        R.register(self.root, slug=slug, term="cost per square foot",
+                   source_url="https://example.com/x", task="逐地区查造价",
+                   lane="mature",
+                   evidence=[mk_evidence(self.root, slug, "2026-08-20-scan.json")],
+                   by="xinci-mature")
+        rec = self.load(slug)
+        self.assertEqual((rec["lane"], rec["state"]), ("mature", "captured"))
+        self.assertEqual(rec["history"][-1]["by"], "xinci-mature")
+
+    def test_checked_rejects_same_day_recheck(self):
+        """同一天对同一候选再跑一次 SERP 是空烧;边界按观察日划,不按 run 划。"""
+        slug = self.register(); self.to_screened(slug); self.to_tracking(slug)
+        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+        with self.assertRaisesRegex(R.RegistrarError, "同日不重复复查"):
+            R.checked(self.root, slug,
+                      evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+
+    def test_checked_same_day_allowed_with_reason(self):
+        """上次复查时环境被污染这类情形要有出口,理由记进 history。"""
+        slug = self.register(); self.to_screened(slug); self.to_tracking(slug)
+        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+        R.checked(self.root, slug,
+                  evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")],
+                  same_day_reason="上次复查时浏览器处于登录态,G1 结论不成立")
+        last = self.load(slug)["history"][-1]
+        self.assertEqual(last["same_day_reason"],
+                         "上次复查时浏览器处于登录态,G1 结论不成立")
+
+    def test_checked_allows_different_observation_days(self):
+        """一天之内补录两份不同观察日的 -track 观察是正常的,不受同日限制影响。"""
+        slug = self.register(); self.to_screened(slug); self.to_tracking(slug)
+        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-21-track.json")])
+        self.assertEqual(self.load(slug)["state"], "tracking")
+
     def test_checked_updates_last_checked_at_without_state_change(self):
         slug = self.register()
         self.to_screened(slug)

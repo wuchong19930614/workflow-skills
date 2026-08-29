@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+from datetime import date, datetime
 from pathlib import Path
 
 import data_root
@@ -15,6 +16,7 @@ from trigger_pool import TriggerPoolError, load as load_triggers, stats as trigg
 BACKLOG_HARD_LIMIT = 20
 TRIGGER_PENDING_LIMIT = 200
 STALL_ROUNDS = 3
+MIN_TRACK_SPAN_DAYS = 7  # 与 registrar 的形成跨度闸保持一致
 
 
 def _ledger(root):
@@ -34,6 +36,60 @@ def decision_transitions_by_round(root, run_id):
                     and row.get("from") is not None and row.get("to") != row.get("from")):
                 counts[rnd] = counts.get(rnd, 0) + 1
     return counts
+
+
+def _track_days(root, rec):
+    """该候选已登记的 -track 观察日期;读不出的证据跳过,策略计算不因证据损坏而崩。"""
+    days = []
+    for ref in rec.get("evidence_refs", []) or []:
+        if not str(ref).endswith("-track.json"):
+            continue
+        try:
+            obs = json.loads((Path(root) / ref).read_text(encoding="utf-8"))
+            days.append(datetime.fromisoformat(obs["observed_at"]).date())
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+            continue
+    return days
+
+
+def reachable_ceiling(root, mode, today=None):
+    """本次运行在当前账本下最远能推进到哪一步。
+
+    这是预算提示,不是许可或禁止:天花板为 tracking 不表示不该扫描——本轮新扫出的、
+    窗口以天计的候选照样可以走快道直达 go。它要回答的只是"存量能不能出结论",
+    好让执行者一开始就知道该把轮次花在推存量还是补触发池,而不是跑几轮才发现。
+    """
+    today = today or date.today()
+    if mode in {"trigger_only", "paused"}:
+        return {"state": "trigger_only", "enablers": [],
+                "why": "浏览器不满足 G1 前置或触发池已满,本轮不能注册正式候选,"
+                       "只能维护触发池"}
+    candidates = (_ledger(root).get("candidates") or {})
+    go_ready, formation_ready = [], []
+    for slug, rec in candidates.items():
+        if not isinstance(rec, dict) or rec.get("lane", "new") != "new":
+            continue
+        state = rec.get("state")
+        if state in {"qualified", "hold", "formation_confirmed"}:
+            go_ready.append(slug)
+        elif state == "screened" and rec.get("window_estimate") == "days":
+            go_ready.append(slug)
+        elif state == "tracking":
+            days = _track_days(root, rec)
+            # 本次复查会新增一份观察,故只要最早那份已满 7 天就够跨度
+            if days and (today - min(days)).days >= MIN_TRACK_SPAN_DAYS:
+                formation_ready.append(slug)
+    if go_ready:
+        return {"state": "go", "enablers": sorted(go_ready),
+                "why": "存在可在本次运行内走到 go 决策的候选(qualified/hold/"
+                       "formation_confirmed,或窗口以天计的 screened)"}
+    if formation_ready:
+        return {"state": "go", "enablers": sorted(formation_ready),
+                "why": f"追踪中候选的最早 -track 观察已满 {MIN_TRACK_SPAN_DAYS} 天,"
+                       "本次复查即可凑齐形成跨度,之后可一路走到 go"}
+    return {"state": "tracking", "enablers": [],
+            "why": f"存量里没有能满足 {MIN_TRACK_SPAN_DAYS} 天形成跨度的候选,"
+                   "存量侧本次最远只能推进到 tracking;新扫出窗口以天计的候选仍可走快道到 go"}
 
 
 def evaluate(root, run_id):
@@ -94,7 +150,8 @@ def evaluate(root, run_id):
         "carryover_quota": min(10, backlog) if mode == "debt_only" else min(5, backlog),
         "pending_triggers": tstats["pending"], "decision_transitions_by_round": transitions,
         "source_family_counts": family_counts, "source_rotation_due": source_rotation_due,
-        "consecutive_decision_stall_rounds": stall, "reasons": reasons,
+        "consecutive_decision_stall_rounds": stall,
+        "reachable_ceiling": reachable_ceiling(root, mode), "reasons": reasons,
     }
 
 

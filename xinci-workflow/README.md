@@ -17,7 +17,7 @@
 
 两道共用一条限制:**KD、Authority Score、外链数等域名强度代理不得决定 G2/G3 的放行、否决或竞争强弱**;门结论只由 G2 完整结构阅读与 G3 条件化占位审计(经营信号、真工具、持续可见度,再按盈利线映射)判定。确认期可以实测竞品 footprint(流量、覆盖词量、增速)来回答“实际占了多少市场”,它只进入竞争评分与风险说明,不反向改写 G2/G3。
 
-> `mature` 道目前**尚无发现、追踪或形成确认前的连续运行 skill 承接**:xinci-scan / xinci-track / xinci-run 在 `formation_confirmed` 之前只处理 `new` 道；mature 的选源、量级前筛、注册、窗口期复核与形成确认按[数据采集指南](xinci-core/数据采集指南.md)「广告线的选源方法」手工单步执行(`--lane mature`、`--by user`)。候选一旦合法进入 `formation_confirmed`,现有 xinci-qualify / xinci-decide 才开始承接 mature；xinci-run 也只从这个状态起自动推进 mature 存量。**唯一的前半程 skill 例外**:手工流程已把 mature 候选合法送到 `screened` 且窗口为 days 时,可显式调用 xinci-decide 做快道决策或到期处置；xinci-run 不会替用户自动接这条 mature 快道。方法未经更多前瞻验证前不把 mature 接入自动发现循环——方法未验证就先改 skill 是本末倒置(出处见[闸门校准.md](xinci-core/闸门校准.md) 第 8.1 节;该节另记的「skill 全文未出现 lane」是当时状况,现各入口已显式写明 lane 边界,不再作为理由)。
+> `mature` 道的发现与前半程由 **[xinci-mature](xinci-mature/SKILL.md) 单步承接**(2026-08-29 新建):xinci-scan / xinci-track / xinci-run 在 `formation_confirmed` 之前仍只处理 `new` 道,mature 的选源、量级前筛、注册、窗口期复核与形成确认改由 xinci-mature 执行(`--lane mature`、`--by xinci-mature`),判据仍以[数据采集指南](xinci-core/数据采集指南.md)「广告线的选源方法」为准。**建这个 skill 是为了让方法能被验证,不是宣布方法已成立**——本道累计 0/4,此前两个月只跑出 4 个种子的直接原因就是没有执行载体,每次都要手工照着指南从头走。候选一旦合法进入 `formation_confirmed`,现有 xinci-qualify / xinci-decide 才开始承接 mature；xinci-run 也只从这个状态起自动推进 mature 存量。**唯一的前半程 skill 例外**:手工流程已把 mature 候选合法送到 `screened` 且窗口为 days 时,可显式调用 xinci-decide 做快道决策或到期处置；xinci-run 不会替用户自动接这条 mature 快道。**方法未经更多前瞻验证前,仍不把 mature 接入 xinci-run 的自动发现循环**:xinci-mature 是单步形态,每一次转移都要用户逐条确认,registrar 也硬校验它只碰 `lane=mature`。原来那条理由在这一点上不变——未验证的方法不该自动跑(出处见[闸门校准.md](xinci-core/闸门校准.md) 第 8.1 节;该节另记的「skill 全文未出现 lane」是当时状况,现各入口已显式写明 lane 边界,不再作为理由)。
 
 ## 两条盈利线(G6,任一条过即放行)
 

@@ -1,11 +1,11 @@
 ---
 name: xinci-track
-description: '复查 new 道中处于追踪状态的候选:重跑 G1、看 SERP 变化、命名定型与需求形成信号,向用户提议继续追踪/续期修订/形成确认/过期/否决。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 何时查由用户决定;可指定候选,未指定时该次调用默认授权遍历全部 lane=new 的 tracking 候选。mature 在 formation_confirmed 前按数据采集指南手工单步推进,不由本 skill 承接。本 skill 不自我调度。'
+description: '复查 new 道中处于追踪状态的候选:重跑 G1、看 SERP 变化、命名定型与需求形成信号,向用户提议继续追踪/续期修订/形成确认/过期/否决。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 何时查由用户决定;可指定候选,未指定时该次调用默认授权遍历全部 lane=new 的 tracking 候选。mature 在 formation_confirmed 前由 xinci-mature 单步承接,不由本 skill 处理。本 skill 不自我调度。'
 ---
 
 # xinci-track 追踪复查
 
-对本次调用覆盖的 `lane=new` tracking 候选逐个复查:用户可明确指定;未指定时按下段规则遍历全部 new 道候选。mature 在 `formation_confirmed` 前仍按数据采集指南手工单步执行(`--by user`),本 skill 发现 mature tracking 候选时只报告已跳过,不调用 registrar。新词的观察会腐烂:第 3 天判断"竞争空场"的候选,第 17 天可能已经死了——所以每次复查必须重跑 G1,并把结论落成带日期的新观察。
+对本次调用覆盖的 `lane=new` tracking 候选逐个复查:用户可明确指定;未指定时按下段规则遍历全部 new 道候选。mature 在 `formation_confirmed` 前由 xinci-mature 单步承接,本 skill 发现 mature tracking 候选时只报告已跳过并指向 xinci-mature,不调用 registrar。新词的观察会腐烂:第 3 天判断"竞争空场"的候选,第 17 天可能已经死了——所以每次复查必须重跑 G1,并把结论落成带日期的新观察。
 
 何时复查由用户决定;本 skill 被调用才动,不设节奏、不催促。用户可指定候选;若只调用本 skill 而未给候选,该次调用默认授权遍历全部 `lane=new` 且状态为 `tracking` 的候选。
 

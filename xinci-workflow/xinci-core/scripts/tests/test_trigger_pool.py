@@ -35,8 +35,32 @@ class TriggerPoolTest(unittest.TestCase):
 
     def test_terminal_trigger_cannot_be_reopened(self):
         row = self.add(); TP.discard(self.root, row["trigger_id"], reason="no owned task")
-        with self.assertRaisesRegex(TP.TriggerPoolError, "pending"):
+        with self.assertRaisesRegex(TP.TriggerPoolError, "未废弃"):
             TP.discard(self.root, row["trigger_id"], reason="again")
+
+    def _approve(self, tid, query="filing rule checker"):
+        TP.approve(self.root, tid, query=query,
+                   search_evidence_urls=["https://forum.example/questions/filing-checker"],
+                   payer="small firm", repeat_unit="each filing",
+                   self_serve_path="upload and check",
+                   base_case_source="https://agency.example/impact",
+                   reason="repeated compliance task")
+
+    def test_approved_trigger_can_be_discarded_after_gate_veto(self):
+        """批准只表示可进 G0。方向随后被闸门否决(典型是 G1 实测 veto)时要能作废,
+        否则死方向会永远挂在 approved 上被下一次运行反复提取。"""
+        row = self.add(); tid = row["trigger_id"]
+        self._approve(tid)
+        TP.discard(self.root, tid, reason="G1 实测 veto:首屏 AI Overview 已列全逐国矩阵")
+        state = TP.current(self.root)[tid]
+        self.assertEqual(state["status"], "discarded")
+        self.assertEqual(state["query"], "filing rule checker")  # 批准时的字段仍可追溯
+
+    def test_approved_trigger_cannot_be_approved_twice(self):
+        row = self.add(); tid = row["trigger_id"]
+        self._approve(tid)
+        with self.assertRaisesRegex(TP.TriggerPoolError, "pending"):
+            self._approve(tid, query="second attempt")
 
 
 if __name__ == "__main__": unittest.main()

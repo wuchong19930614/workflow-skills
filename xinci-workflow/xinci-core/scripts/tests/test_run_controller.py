@@ -58,6 +58,22 @@ class RunControllerTest(unittest.TestCase):
         schema_statuses = set(schema["properties"]["status"]["enum"])
         self.assertEqual(schema_statuses, RS.STATUSES)
 
+    def test_funnel_counts_pooled_as_a_sink(self):
+        """进了触发池但未注册为候选的方向也是一种归宿,参与加总。"""
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        RC.record_round(self.root, run["run_id"],
+                        funnel=dict(self.ZEROS, extracted=3, rejected_zero_cost=1, pooled=2))
+        self.assertEqual(RC.load_session(self.root, run["run_id"])["rounds_completed"], 1)
+
+    def test_funnel_pooled_is_optional_for_legacy_manifests(self):
+        """pooled 是后加的字段,既有清单不写它,按 0 处理不得报错。"""
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        RC.record_round(self.root, run["run_id"],
+                        funnel=dict(self.ZEROS, extracted=1, rejected_zero_cost=1))
+        self.assertEqual(RC.load_session(self.root, run["run_id"])["rounds_completed"], 1)
+
     def test_only_one_active_session(self):
         run = RC.start(self.root)
         self.assertEqual(RC.list_sessions(self.root)["active"], [run["run_id"]])

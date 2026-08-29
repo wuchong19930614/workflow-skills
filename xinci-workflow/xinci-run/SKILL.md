@@ -71,9 +71,12 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
    python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id>
    ```
 
+   `run_policy.py` 同时返回 `reachable_ceiling`——**本次运行在当前账本下最远能推进到哪一步**,开局就要读它。它有三档:`go`(存量里有 qualified/hold/formation_confirmed,或窗口以天计的 screened,或最早 `-track` 观察已满 7 天的 tracking——本次复查即可凑齐形成跨度)、`tracking`(存量都不满足,存量侧最远只到 tracking)、`trigger_only`(浏览器不满足 G1 前置)。
+   **它是预算提示,不是许可或禁止**:天花板为 `tracking` 不表示不该扫描——本轮新扫出的、窗口以天计的候选照样可以走快道直达 go。它只回答"存量能不能出结论",好让轮次一开始就花在对的地方(推存量还是补触发池),而不是跑几轮才发现存量根本走不动。
+
    `mode=full` 才准通过正式 CLI 注册 new 候选；`trigger_only` 只收集/整理触发池，不写 G1、不注册候选；`debt_only` 只推进存量与到期项，不新增正式候选；`paused` 只允许恢复/校验/收尾。registrar 的 CLI 会再次核对 `formal_admission`，因此这不是建议。然后 `begin-round`，结束只调用 `record-round`。所有 `--by xinci-run` 命令必须带真实 run_id。运行 report_status 读账本；去重疑似项必须 resolve，不留口头裁决。
 1. **推进存量(优先;离 go 决策最近的先做)**:
-   - **先按 lane 划清边界**:`lane=new` 按下列全部状态推进；`lane=mature` 在 `formation_confirmed` 前(`captured` / `screened` / `tracking`)不由本循环操作,只在本轮 notes 记明“mature 前半程待用户按数据采集指南手工单步推进”,不把它算 blocker、排队债或扫描积压。mature 到 `formation_confirmed` / `qualified` / `hold` 后才进入下面对应的 qualify / decide 分支；
+   - **先按 lane 划清边界**:`lane=new` 按下列全部状态推进；`lane=mature` 在 `formation_confirmed` 前(`captured` / `screened` / `tracking`)不由本循环操作,只在本轮 notes 记明“mature 前半程待用户单步调用 xinci-mature 推进”,不把它算 blocker、排队债或扫描积压。mature 到 `formation_confirmed` / `qualified` / `hold` 后才进入下面对应的 qualify / decide 分支；
    - hold 候选 → 先读 hold 的决定性理由:若理由质疑 G6–G8 或认定仍否成立,按 xinci-qualify 做定向重审(推翻即 `hold→disqualified`);否则按 xinci-decide 重出决策(`hold→build_ready / pilot_ready / no_site`)。不得把 hold 挡在循环外,也不得转回 formation_confirmed;
    - qualified 候选 → 按 xinci-decide 完整模式出决策(流程文件见上表;可能直接命中终止 A,且主要整理既有证据,成本最低);
    - screened 候选 → expiry 已过先以 `--expiry-trigger date` 按下面到期规则转 expired;未过期且 window_estimate=days 的立即按 xinci-decide 快道模式出决策;未过期且 window_estimate=weeks/months 的按 xinci-scan 分流要求转 tracking(带 expiry、失效条件与证据)。若它带 `G3=veto_window_bet`,说明此前已由用户单步确认完成出闸,只准走快道,不得进 tracking;
@@ -86,14 +89,14 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
    - **积压硬闸**:`lane=new,state=captured` >20 时策略必须为 `debt_only`，本轮正式提取目标为 0；不再以“最低档”继续制造新债。浏览器不满足 G1 时为 `trigger_only`，同样不得把官方标题或缺 G1 项注册进账本。
 2. **扫描触发与新候选**:先把有日期的法规/平台/技术变化作为原始 trigger 写入 `trigger_pool.py add`，不得把官方公告标题直接当搜索词。只有补齐 task query、至少一个独立搜索语言证据 URL，以及 payer/repeat_unit/self_serve_path/base_case_source 后，才能 `approve`。批准只表示可进入 G0。正式注册时，信号面候选传 `--origin signal`；变化面候选传 `--origin trigger --trigger-id <approved id>`，registrar 会核对 term 与批准 query 一致。`mode=full` 才执行；`trigger_only` 只维护触发池；`debt_only` 跳过本步。单一 source_family 不得连续主导超过 2 轮或占本 run 新 trigger 的 40%，超过就轮换来源。
 3. **分流**(步骤 1 还债深审出的候选与步骤 2 扫描出的候选**一并分流**,别只分流新扫的):**先出闸 `captured → screened`**(带 G2/G3 结论与 `--window-estimate`,这一步不能跳——tracking 与快道都只从 screened 出发,直接 `--to tracking` 会被 registrar 判非法转移;命令见 xinci-scan 第 5 层),再按窗口分流:窗口天级 → 立即走 xinci-decide 快道模式;窗口周/月级 → 转 tracking 入库。当前 new 扫描在订阅线暂定可行时不会新造 `G3=veto_window_bet`;账本中已合法存在的历史兼容候选仍按原出口留在 captured 挂起,用户确认后记录候选级一次性授权,再由同一 run_id 出闸(见硬规则)。然后继续循环。
-4. **每轮收尾**:批量扫描开始时先把去重后的 term 写入 `stage_checkpoint.py start`；每条必须 `mark` 为 dedup/zero_cost/g1_rejected/deep_audited/queued/alias，全部有归宿后 `finish`。`record-round` 会拒绝仍打开的阶段检查点。随后提交来源、计费调用、notes 与 funnel；不要手写 manifest。`queued` 只表示新债，**不算决策推进**；真实推进由账本 history 中 `from` 非空且 `to != from` 的迁移计数。
+4. **每轮收尾**:批量扫描开始时先把去重后的 term 写入 `stage_checkpoint.py start`；每条必须 `mark` 为 dedup/zero_cost/g1_rejected/deep_audited/queued/alias/pooled，全部有归宿后 `finish`。`pooled` 用于停在触发层的方向(已写进触发池、未注册为候选),它在 funnel 里同名成格并参与加总。`record-round` 会拒绝仍打开的阶段检查点。随后提交来源、计费调用、notes 与 funnel；不要手写 manifest。`queued` 只表示新债，**不算决策推进**；真实推进由账本 history 中 `from` 非空且 `to != from` 的迁移计数。
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
   --run-id <run_id> \
   [--source-opened <URL>] [--source-blocked '<URL>(拦截现象)'] \
   [--billable-calls <N>] [--note '<事实>'] \
-  --funnel '{"extracted":0,"rejected_zero_cost":0,"rejected_g1":0,"deep_audited":0,"queued":0,"carryover_audited":0}'
+  --funnel '{"extracted":0,"rejected_zero_cost":0,"rejected_g1":0,"deep_audited":0,"queued":0,"pooled":0,"carryover_audited":0}'
 ```
 
 拒绝原因收敛时把 screen_unsatisfiable 假设放进 `--note`——**然后继续运行**。

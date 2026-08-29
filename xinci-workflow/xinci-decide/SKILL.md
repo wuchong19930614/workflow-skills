@@ -1,6 +1,6 @@
 ---
 name: xinci-decide
-description: '对已认定(qualified)或搁置待议(hold)的 new 或 mature 候选出建站 go/no-go 决策:页面地图、收入三情景、风险清单、红队复核;go 结论产出 md+html 双格式决策书,no-go 只在账本登记决定性理由。也可对窗口以天计的 screened 候选走快道出速建决策,并受理 screened / fast_grab_ready 到期候选的 expired 提议。当用户说给 X 出建站决策、X 能不能建站、出决策书时使用。English triggers: build decision, site go no-go, decision document. mature 的发现、追踪与形成确认前推进不由本 skill 承接；但手工流程已合法送到 screened 的 mature 候选可显式调用本 skill 做快道决策。认定评分用 xinci-qualify。'
+description: '对已认定(qualified)或搁置待议(hold)的 new 或 mature 候选出建站 go/no-go 决策:页面地图、收入三情景、风险清单、红队复核;go 结论产出 md+html 双格式决策书,no-go 只在账本登记决定性理由。也可对窗口以天计的 screened 候选走快道出速建决策,并受理 screened / fast_grab_ready 到期候选的 expired 提议。当用户说给 X 出建站决策、X 能不能建站、出决策书时使用。English triggers: build decision, site go no-go, decision document. mature 的发现、追踪与形成确认前推进由 xinci-mature 承接,不由本 skill 处理；但已被合法送到 screened 的 mature 候选可显式调用本 skill 做快道决策。认定评分用 xinci-qualify。'
 ---
 
 # xinci-decide 建站决策
@@ -8,7 +8,7 @@ description: '对已认定(qualified)或搁置待议(hold)的 new 或 mature 候
 回答最后一个问题:该不该为这个词建一个站?两种模式:
 
 - **完整模式**:输入 `qualified` 候选(或用户送回重出决策的 `hold` 候选),lane 可为 new 或 mature,产出 build_ready / pilot_ready / hold / no_site;
-- **快道模式**:输入窗口评估为 days 的 `screened` 候选,产出 fast_grab_ready——new 可由常规扫描送入；mature 必须已由手工单步流程合法送到该状态并显式调用本 skill,xinci-run 不自动承接它的前半程。两道都执行同一套减配披露,跳过的闸门明码标价。
+- **快道模式**:输入窗口评估为 days 的 `screened` 候选,产出 fast_grab_ready——new 可由常规扫描送入；mature 必须已由 xinci-mature 合法送到该状态并显式调用本 skill,xinci-run 不自动承接它的前半程。两道都执行同一套减配披露,跳过的闸门明码标价。
 
 决策登记即停:go 交付双格式决策书,no-go 只登记决定性理由;注册域名、建站、发布,全部是用户的人工动作。
 
