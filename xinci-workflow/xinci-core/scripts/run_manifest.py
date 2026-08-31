@@ -8,12 +8,14 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 from run_state import RunStateError, load_session
+from chinese_labels import session_status_label
 
 
 RUN_FIELDS = {"date", "skill", "run_id", "sources_opened", "sources_blocked",
-              "candidates_touched", "billable_calls", "notes", "rounds", "funnel"}
+              "candidates_touched", "candidates_reviewed", "billable_calls", "notes",
+              "rounds", "funnel", "trigger_funnel", "termination"}
 RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
-                    "billable_calls", "notes", "funnel"}
+                    "candidates_reviewed", "billable_calls", "notes", "funnel", "trigger_funnel"}
 RUN_STR_ARRAYS = ("sources_opened", "sources_blocked", "candidates_touched", "notes")
 RUN_SKILLS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run",
               "xinci-mature"}
@@ -27,6 +29,10 @@ FUNNEL_FIELDS = ("extracted",) + FUNNEL_SINKS
 FUNNEL_CARRYOVER = "carryover_audited"
 FUNNEL_ALL_FIELDS = FUNNEL_FIELDS + FUNNEL_OPTIONAL_SINKS + (FUNNEL_CARRYOVER,)
 FUNNEL_REQUIRED_FROM = "2026-08-19"
+TRIGGER_FUNNEL_FIELDS = ("harvested", "discarded_preapproval", "discarded_postapproval",
+                         "pending", "approved")
+REVIEW_OUTCOMES = {"reviewed_no_transition", "same_day_skipped", "not_due",
+                   "awaiting_external_evidence", "deferred_existing_evidence"}
 
 
 class RunManifestError(Exception):
@@ -81,6 +87,43 @@ def _check_funnel(obj, where, errors):
     if total != funnel["extracted"]:
         errors.append(f"{where} funnel 去向加总 {total} ≠ extracted {funnel['extracted']}"
                       "(每个被提取的方向都要有归宿:秒弃/G1否决/深审/排队/入触发池,不许无声丢弃)")
+
+
+def _check_trigger_funnel(obj, where, errors):
+    funnel = obj.get("trigger_funnel")
+    if funnel is None:
+        return
+    if not isinstance(funnel, dict) or set(funnel) != set(TRIGGER_FUNNEL_FIELDS):
+        errors.append(f"{where} trigger_funnel 必须完整包含 {list(TRIGGER_FUNNEL_FIELDS)}")
+        return
+    if any(not isinstance(v, int) or isinstance(v, bool) or v < 0 for v in funnel.values()):
+        errors.append(f"{where} trigger_funnel 各项必须是非负整数")
+        return
+    sinks = sum(funnel[k] for k in TRIGGER_FUNNEL_FIELDS if k != "harvested")
+    if sinks != funnel["harvested"]:
+        errors.append(f"{where} trigger_funnel 去向加总 {sinks} ≠ harvested {funnel['harvested']}")
+
+
+def _check_reviews(obj, where, errors):
+    rows = obj.get("candidates_reviewed")
+    if rows is None:
+        return
+    if not isinstance(rows, list):
+        errors.append(f"{where} candidates_reviewed 必须是数组")
+        return
+    seen = set()
+    for i, row in enumerate(rows):
+        if (not isinstance(row, dict) or set(row) - {"slug", "outcome", "reason", "evidence_refs"}
+                or not isinstance(row.get("slug"), str) or not row["slug"]
+                or row.get("outcome") not in REVIEW_OUTCOMES
+                or not isinstance(row.get("reason"), str) or not row["reason"].strip()
+                or row["slug"] in seen):
+            errors.append(f"{where} candidates_reviewed[{i}] 字段、outcome、reason 或 slug 唯一性非法")
+            continue
+        refs = row.get("evidence_refs", [])
+        if not isinstance(refs, list) or not all(isinstance(x, str) and x for x in refs):
+            errors.append(f"{where} candidates_reviewed[{i}].evidence_refs 必须是字符串数组")
+        seen.add(row["slug"])
 
 
 def _load_ledger(data_root):
@@ -205,6 +248,8 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
         _check_str_array(obj, key, where, errors)
     _check_int(obj, "billable_calls", where, errors)
     _check_funnel(obj, where, errors)
+    _check_trigger_funnel(obj, where, errors)
+    _check_reviews(obj, where, errors)
     enforce_funnel = bool(run_date) and run_date >= FUNNEL_REQUIRED_FROM
     if enforce_funnel and skill == "xinci-scan" and obj.get("funnel") is None:
         errors.append(f"{where} xinci-scan 清单必须带 funnel(自 {FUNNEL_REQUIRED_FROM} 起强制)")
@@ -233,6 +278,8 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
             _check_str_array(rnd, key, rw, errors)
         _check_int(rnd, "billable_calls", rw, errors)
         _check_funnel(rnd, rw, errors)
+        _check_trigger_funnel(rnd, rw, errors)
+        _check_reviews(rnd, rw, errors)
         if enforce_funnel and rnd.get("funnel") is None:
             errors.append(f"{rw} 必须带 funnel(自 {FUNNEL_REQUIRED_FROM} 起强制)")
     numbers = [rnd.get("round") for rnd in rounds if isinstance(rnd, dict)]
@@ -250,6 +297,29 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
     if session and session.get("status") != "active" and len(rounds) != session.get("rounds_completed"):
         errors.append(f"{where} rounds 数量 {len(rounds)} 与已结束 session.rounds_completed "
                       f"{session.get('rounds_completed')} 不一致")
+    termination = obj.get("termination")
+    if termination is not None:
+        required = {"status", "status_label", "reason", "finished_at", "rounds_completed",
+                    "max_rounds", "go_candidates"}
+        if not isinstance(termination, dict) or set(termination) != required:
+            errors.append(f"{where} termination 字段必须严格匹配 {sorted(required)}")
+        elif (not all(termination.get(k) for k in ("status", "status_label", "reason", "finished_at"))
+              or not isinstance(termination.get("rounds_completed"), int)
+              or not isinstance(termination.get("max_rounds"), int)
+              or not isinstance(termination.get("go_candidates"), list)):
+            errors.append(f"{where} termination 值非法")
+        elif session and session.get("status") != "active":
+            expected = {
+                "status": session.get("status"),
+                "status_label": session_status_label(session.get("status")),
+                "reason": session.get("finish_reason"),
+                "finished_at": session.get("finished_at"),
+                "rounds_completed": session.get("rounds_completed"),
+                "max_rounds": session.get("max_rounds"),
+                "go_candidates": list(session.get("go_candidates") or []),
+            }
+            if termination != expected:
+                errors.append(f"{where} termination 与已结束 session 不一致")
     return errors
 
 
@@ -325,7 +395,8 @@ def create_run_manifest(data_root, session):
         raise RunManifestError(f"manifest 文件名冲突: {path.name}")
     obj = {"date": started.date().isoformat(), "skill": "xinci-run",
            "run_id": session["run_id"], "sources_opened": [], "sources_blocked": [],
-           "candidates_touched": [], "billable_calls": 0, "notes": [], "rounds": []}
+           "candidates_touched": [], "candidates_reviewed": [], "billable_calls": 0,
+           "notes": [], "rounds": []}
     errors = validate_manifest(obj, path, session, set())
     if errors:
         raise RunManifestError("; ".join(errors))
@@ -340,6 +411,17 @@ def _merge_unique(existing, values):
         if value not in seen:
             out.append(value)
             seen.add(value)
+    return out
+
+
+def _merge_reviews(existing, values):
+    out = list(existing or [])
+    positions = {row.get("slug"): i for i, row in enumerate(out) if isinstance(row, dict)}
+    for row in values:
+        if row["slug"] in positions:
+            out[positions[row["slug"]]] = row
+        else:
+            positions[row["slug"]] = len(out); out.append(row)
     return out
 
 
@@ -359,9 +441,40 @@ def append_round(data_root, session, round_record):
     manifest["rounds"] = rounds
     for key in ("sources_opened", "sources_blocked", "candidates_touched", "notes"):
         manifest[key] = _merge_unique(manifest.get(key), round_record.get(key) or [])
+    manifest["candidates_reviewed"] = _merge_reviews(
+        manifest.get("candidates_reviewed"), round_record.get("candidates_reviewed") or [])
+    manifest["trigger_funnel"] = {
+        key: sum((r.get("trigger_funnel") or {}).get(key, 0) for r in rounds)
+        for key in TRIGGER_FUNNEL_FIELDS
+    }
     manifest["billable_calls"] = sum(r.get("billable_calls", 0) for r in rounds)
     errors = validate_manifest(manifest, path, session, candidates_by_run(data_root).get(session["run_id"], set()))
     errors += validate_round_ledger_contract(data_root, session["run_id"], round_record)
+    if errors:
+        raise RunManifestError("; ".join(errors))
+    _atomic_save(path, manifest)
+    return path, manifest
+
+
+def finalize_manifest(data_root, session, reason):
+    path, manifest = find_run_manifest(data_root, session["run_id"])
+    if path is None:
+        path, manifest = create_run_manifest(data_root, session)
+    termination = {
+        "status": session["status"],
+        "status_label": session_status_label(session["status"]),
+        "reason": reason,
+        "finished_at": session["finished_at"],
+        "rounds_completed": session["rounds_completed"],
+        "max_rounds": session["max_rounds"],
+        "go_candidates": list(session.get("go_candidates") or []),
+    }
+    existing = manifest.get("termination")
+    if existing is not None and existing != termination:
+        raise RunManifestError("manifest 已有不同 termination，拒绝覆盖")
+    manifest["termination"] = termination
+    errors = validate_manifest(manifest, path, session,
+                               candidates_by_run(data_root).get(session["run_id"], set()))
     if errors:
         raise RunManifestError("; ".join(errors))
     _atomic_save(path, manifest)

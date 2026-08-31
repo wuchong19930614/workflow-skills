@@ -80,6 +80,23 @@ class RunPolicyTest(unittest.TestCase):
         self.assertEqual(policy["mode"], "trigger_only")
         self.assertFalse(policy["formal_admission"])
 
+    def test_preflight_cannot_be_borrowed_by_another_executor(self):
+        BP.record(self.root, self.run["run_id"], channel="chrome", controllable=True,
+                  desktop=True, region="us", logged_out=True, executor_id="parent")
+        policy = RP.evaluate(self.root, self.run["run_id"], executor_id="round-worker")
+        self.assertEqual(policy["mode"], "trigger_only")
+        self.assertFalse(policy["g1_ready"])
+
+    def test_preflight_is_bound_to_target_round(self):
+        BP.record(self.root, self.run["run_id"], channel="chrome", controllable=True,
+                  desktop=True, region="us", logged_out=True, executor_id="worker")
+        RC.begin_round(self.root, self.run["run_id"], executor_id="worker")
+        RC.record_round(self.root, self.run["run_id"], funnel={
+            "extracted": 0, "rejected_zero_cost": 0, "rejected_g1": 0,
+            "deep_audited": 0, "queued": 0})
+        self.assertEqual(RP.evaluate(self.root, self.run["run_id"], "worker")["mode"],
+                         "trigger_only")
+
     def test_hard_backlog_gate_forces_debt_only(self):
         self.ready(); self.seed_backlog(21)
         policy = RP.evaluate(self.root, self.run["run_id"])

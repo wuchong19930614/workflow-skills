@@ -32,7 +32,8 @@ def _save(path, obj):
     os.replace(tmp, path)
 
 
-def record(root, run_id, *, channel, controllable, desktop, region, logged_out, note=None):
+def record(root, run_id, *, channel, controllable, desktop, region, logged_out, note=None,
+           executor_id="orchestrator"):
     try:
         session = load_session(root, run_id)
     except RunStateError as e:
@@ -43,15 +44,19 @@ def record(root, run_id, *, channel, controllable, desktop, region, logged_out, 
         raise BrowserPreflightError("channel/region 非法")
     if not all(isinstance(x, bool) for x in (controllable, desktop, logged_out)):
         raise BrowserPreflightError("controllable/desktop/logged_out 必须是布尔值")
+    if not isinstance(executor_id, str) or not executor_id.strip():
+        raise BrowserPreflightError("executor_id 必须是非空字符串")
+    target_round = session["current_round"] or session["rounds_completed"] + 1
     path = path_for(root, run_id)
     history = []
     if path.is_file():
         previous = show(root, run_id)
         history = list(previous.get("history") or [])
         history.append({k: previous.get(k) for k in
-                        ("checked_at", "channel", "controllable", "desktop", "region",
-                         "logged_out", "g1_ready", "note")})
-    obj = {"schema_version": 1, "run_id": run_id, "checked_at": _now(),
+                        ("checked_at", "executor_id", "target_round", "channel", "controllable",
+                         "desktop", "region", "logged_out", "g1_ready", "note")})
+    obj = {"schema_version": 2, "run_id": run_id, "checked_at": _now(),
+           "executor_id": executor_id, "target_round": target_round,
            "channel": channel, "controllable": controllable, "desktop": desktop,
            "region": region, "logged_out": logged_out,
            "g1_ready": controllable and desktop and region == "us" and logged_out,
@@ -59,7 +64,7 @@ def record(root, run_id, *, channel, controllable, desktop, region, logged_out, 
     _save(path, obj); return obj
 
 
-def show(root, run_id):
+def show(root, run_id, executor_id=None, target_round=None):
     path = path_for(root, run_id)
     try:
         obj = json.loads(path.read_text(encoding="utf-8"))
@@ -71,6 +76,12 @@ def show(root, run_id):
                 and obj.get("region") == "us" and obj.get("logged_out") is True)
     if obj.get("run_id") != run_id or obj.get("g1_ready") is not expected:
         raise BrowserPreflightError("浏览器预检字段或 g1_ready 不一致")
+    if executor_id is not None and obj.get("executor_id") != executor_id:
+        raise BrowserPreflightError(
+            f"浏览器预检执行者不匹配: expected={executor_id}, actual={obj.get('executor_id')}")
+    if target_round is not None and obj.get("target_round") != target_round:
+        raise BrowserPreflightError(
+            f"浏览器预检轮次不匹配: expected={target_round}, actual={obj.get('target_round')}")
     return obj
 
 
@@ -88,12 +99,15 @@ def main(argv=None):
     p.add_argument("--controllable", type=_bool, required=True); p.add_argument("--desktop", type=_bool, required=True)
     p.add_argument("--region", choices=["us", "other", "unknown"], required=True)
     p.add_argument("--logged-out", type=_bool, required=True); p.add_argument("--note")
+    p.add_argument("--executor-id", required=True)
     p = sub.add_parser("show"); p.add_argument("--run-id", required=True)
+    p.add_argument("--executor-id"); p.add_argument("--target-round", type=int)
     a = ap.parse_args(argv); root = data_root.resolve_or_exit(a.data_root)
     try:
         obj = (record(root, a.run_id, channel=a.channel, controllable=a.controllable,
-                      desktop=a.desktop, region=a.region, logged_out=a.logged_out, note=a.note)
-               if a.cmd == "record" else show(root, a.run_id))
+                      desktop=a.desktop, region=a.region, logged_out=a.logged_out, note=a.note,
+                      executor_id=a.executor_id)
+               if a.cmd == "record" else show(root, a.run_id, a.executor_id, a.target_round))
     except BrowserPreflightError as e:
         print(f"browser_preflight 拒绝: {e}", file=sys.stderr); return 2
     print(json.dumps(obj, ensure_ascii=False, indent=2)); return 0

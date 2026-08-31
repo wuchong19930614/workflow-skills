@@ -28,6 +28,7 @@ from dedup_decisions import DedupDecisionError, find as find_dedup_decision
 from transaction_journal import (TransactionError, prepare_window_bet,
                                  mark_committed, require_clean)
 from run_policy import evaluate as evaluate_run_policy
+from browser_preflight import BrowserPreflightError, show as show_browser_preflight
 from trigger_pool import TriggerPoolError, current as current_triggers
 
 # 文件锁跨平台:POSIX 用 fcntl.flock,Windows(如 Codex 多环境)降级 msvcrt.locking
@@ -205,6 +206,25 @@ def _check_gate_payload(gates) -> None:
     _require(not bad, f"闸门结论只能是 {sorted(GATE_VALUES)},不合格: {bad}")
 
 
+def _check_run_g1_preflight(data_root: Path, by: str, run_id, gates) -> None:
+    """连续模式提交任何 G1 结论时，重验当前轮实际执行者的浏览器证据。"""
+    if by != "xinci-run" or "G1" not in (gates or {}):
+        return
+    try:
+        session = require_active_round(data_root, run_id)
+        executor_id = session.get("round_executor_id")
+        # round_executor_id 缺失只可能来自升级前已打开的轮次或库级兼容调用；
+        # 新 CLI 的 begin-round 已强制 executor-id。兼容旧轮，不替它创造新授权。
+        if executor_id is None:
+            return
+        preflight = show_browser_preflight(data_root, run_id, executor_id,
+                                           session["current_round"])
+    except (RunControllerError, BrowserPreflightError) as e:
+        raise RegistrarError(f"xinci-run 提交 G1 要求当前执行者、当前轮次的浏览器预检: {e}")
+    _require(preflight.get("g1_ready") is True,
+             "xinci-run 提交 G1 要求浏览器预检满足可控/桌面/美区/未登录")
+
+
 def _check_url(value: str, field: str) -> None:
     parsed = urlparse(value or "")
     _require(parsed.scheme in {"http", "https"} and bool(parsed.netloc),
@@ -227,7 +247,7 @@ def _check_evidence(data_root: Path, refs, slug=None) -> list:
 
 
 OBS_FIELDS = {"slug", "observed_at", "stage", "source_urls", "points", "gates",
-              "g6_lines", "g6_tentative_lines", "income_score", "window_bet"}
+              "g6_lines", "g6_tentative_lines", "g6_entry_veto", "income_score", "window_bet"}
 WINDOW_BET_FIELDS = {"implementation_urls", "lag_sample_url", "lag_days", "rationale"}
 
 
@@ -288,6 +308,19 @@ def _check_observation(path: Path, ref: str, slug) -> None:
     if obs["stage"] in {"scan", "track"} and "G3" in gates:
         _require(g6_tentative_lines is not None,
                  f"scan/track 观察提交 G3 时必须同时写 g6_tentative_lines: {ref}")
+    entry_veto = obs.get("g6_entry_veto")
+    if entry_veto is not None:
+        allowed = {"repeat_paid_task", "official_count_class", "self_serve_legal_effect"}
+        _require(obs["stage"] in {"scan", "track"}
+                 and isinstance(entry_veto, dict)
+                 and set(entry_veto) == {"criterion", "reason"}
+                 and entry_veto.get("criterion") in allowed
+                 and isinstance(entry_veto.get("reason"), str)
+                 and entry_veto["reason"].strip(),
+                 f"观察文件 g6_entry_veto 必须是 scan/track 的结构性入口否决: {ref}")
+        _require(g6_lines is None and g6_tentative_lines is None and "G6" not in gates,
+                 f"g6_entry_veto 不得伪装成正式或暂定 G6: {ref}")
+        _require(bool(urls), f"g6_entry_veto 必须包含实际打开的 source_urls: {ref}")
     obs_income_score = obs.get("income_score")
     if obs_income_score is not None:
         _require(isinstance(obs_income_score, int) and not isinstance(obs_income_score, bool)
@@ -342,6 +375,17 @@ def _has_no_applicable_tentative_g6(data_root: Path, refs, lane: str) -> bool:
         if no_line:
             _require(bool(obs.get("source_urls")),
                      "暂定 G6 无适用盈利线的支撑观察必须包含实际打开的 source_urls")
+            return True
+    return False
+
+
+def _has_structural_g6_entry_veto(data_root: Path, refs) -> bool:
+    for ref in refs:
+        if not (Path(ref).parts and Path(ref).parts[0] == "证据" and Path(ref).suffix == ".json"):
+            continue
+        obs = _load_observation(data_root, ref)
+        if obs.get("stage") in {"scan", "track"} and isinstance(obs.get("g6_entry_veto"), dict):
+            _require(bool(obs.get("source_urls")), "G6 结构性入口否决必须包含实际打开的 source_urls")
             return True
     return False
 
@@ -461,6 +505,7 @@ def register(data_root, slug, term, source_url, task, evidence,
     _check_gate_payload(gates)
     _check_url(source_url, "source_url")
     _check_actor(data_root, by, run_id)
+    _check_run_g1_preflight(data_root, by, run_id, gates)
     _check_run_lane_boundary(by, lane, "captured")
     with _locked(data_root):
         return _register_locked(data_root, slug, term, source_url, task, evidence,
@@ -590,6 +635,7 @@ def transition(data_root, slug, to, by, gates=None, window_estimate=None, expiry
     data_root = Path(data_root)
     _check_gate_payload(gates)
     _check_actor(data_root, by, run_id)
+    _check_run_g1_preflight(data_root, by, run_id, gates)
     with _locked(data_root):
         return _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                                   invalidation, score, income_score, g6_passed_lines,
@@ -671,9 +717,12 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
             merged_gates = dict(rec.get("gates") or {}, **(gates or {}))
             no_tentative_line = _has_no_applicable_tentative_g6(
                 data_root, refs, rec.get("lane", "new"))
-            _require(any(v == "veto" for v in merged_gates.values()) or no_tentative_line,
+            structural_g6_veto = _has_structural_g6_entry_veto(data_root, refs)
+            _require(any(v == "veto" for v in merged_gates.values()) or no_tentative_line
+                     or structural_g6_veto,
                      f"{frm}→rejected 要求至少一道实际检查的闸门=veto,"
                      "或本次 scan/track 证据的 g6_tentative_lines 证明没有适用盈利线;"
+                     "或 g6_entry_veto 证明 G6 深算前结构性不成立;"
                      "没有失败闸门且未过期的候选应保留,到期候选走 expired")
     elif to == "tracking":
         if frm == "built":  # 升级通路
@@ -875,6 +924,7 @@ def reopen(data_root, slug, by, reason, evidence, run_id=None):
                      f"reopen 证据必须晚于最近拒绝时间 {rejection['at']}: {ref}")
             obs = json.loads((Path(data_root) / ref).read_text(encoding="utf-8"))
             new_gates.update(obs.get("gates") or {})
+        _check_run_g1_preflight(data_root, by, run_id, new_gates)
         not_flipped = sorted(g for g in vetoes if new_gates.get(g) != "pass")
         _require(not not_flipped,
                  f"reopen 新证据必须把原 veto 闸门明确翻转为 pass,尚未翻转: {not_flipped}")
@@ -957,6 +1007,7 @@ def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invali
     data_root = Path(data_root)
     _check_gate_payload(gates)
     _check_actor(data_root, by, run_id)
+    _check_run_g1_preflight(data_root, by, run_id, gates)
     _require(bool(reason), "amend 要求 reason(如:用户确认续期的理由)")
     add_aliases = list(add_aliases or [])
     add_invalidation = list(add_invalidation or [])

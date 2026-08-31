@@ -40,6 +40,16 @@
       "additionalProperties": false,
       "description": "窗口期 scan/track 观察的逐线暂定结论，仅供当期 G3 判断占位否决是否生效。它不是正式 G6，不得与 g6_lines 并存；lane=new 的 advertising 应为 N/A。依据写入 points/source_urls"
     },
+    "g6_entry_veto": {
+      "type": "object",
+      "required": ["criterion", "reason"],
+      "properties": {
+        "criterion": { "type": "string", "enum": ["repeat_paid_task", "official_count_class", "self_serve_legal_effect"] },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false,
+      "description": "G6 深算前的结构性入口否决。它只证明无需进入盈利线测算，不是正式 gates.G6，也不是 g6_tentative_lines。"
+    },
     "income_score": {
       "type": "integer",
       "minimum": 1,

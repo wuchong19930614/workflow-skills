@@ -9,12 +9,27 @@
     "run_id": { "type": "string", "description": "xinci-run 清单关联的可恢复运行会话 ID" },
     "skill": {
       "type": "string",
-      "enum": ["xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run"],
+      "enum": ["xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run", "xinci-mature"],
       "description": "产生本清单的 skill"
     },
     "sources_opened": { "type": "array", "items": { "type": "string" }, "description": "本次实际打开过的来源 URL;未打开的不得列入" },
     "sources_blocked": { "type": "array", "items": { "type": "string" }, "description": "尝试打开但被拦截的来源(浏览器策略/登录墙/CAPTCHA),附拦截现象;记录事实以便换源与复盘覆盖面" },
     "candidates_touched": { "type": "array", "items": { "type": "string" }, "description": "本次触及的候选 slug" },
+    "candidates_reviewed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slug", "outcome", "reason"],
+        "properties": {
+          "slug": { "type": "string" },
+          "outcome": { "enum": ["reviewed_no_transition", "same_day_skipped", "not_due", "awaiting_external_evidence", "deferred_existing_evidence"] },
+          "reason": { "type": "string", "minLength": 1 },
+          "evidence_refs": { "type": "array", "items": { "type": "string" } }
+        },
+        "additionalProperties": false
+      },
+      "description": "只读复核；与实际账本写入 candidates_touched 分离"
+    },
     "billable_calls": { "type": "integer", "description": "计费查询次数(Semrush 等);扫描阶段应为 0" },
     "funnel": {
       "type": "object",
@@ -26,7 +41,32 @@
         "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已批量追加进淘汰方向索引(gate=G1,reason 带首屏证据要点)。只统计索引这一侧:已注册进账本的候选补跑 G1 被否时走账本的 captured→rejected,不记本格——funnel 归格按这个方向属于本轮还是存量定,本轮的记 deep_audited、上轮存量的记 carryover_audited" },
         "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5);含本轮第 2 层陷阱验证存活、注册后补跑 G1/G2 的那一类——它做过 G3 深审、留痕在账本,与深审判否的候选同构,不记 rejected_g1。上轮存量 captured 的深审不记本格,记 carryover_audited" },
         "queued": { "type": "integer", "description": "本轮没走完的存活方向(超深审配额的,以及超 G1 上限本轮没搜的),注册为 captured 待下轮消化" },
+        "pooled": { "type": "integer", "description": "兼容字段；正式候选漏斗不应用它承载 raw trigger，新运行请改用 trigger_funnel" },
         "carryover_audited": { "type": "integer", "description": "可选,不参与加总等式:本轮消化存量 captured 所做的深审数;正常至多 5,debt_only 至多 10" }
+      },
+      "additionalProperties": false
+    },
+    "trigger_funnel": {
+      "type": "object",
+      "required": ["harvested", "discarded_preapproval", "discarded_postapproval", "pending", "approved"],
+      "properties": {
+        "harvested": { "type": "integer", "minimum": 0 },
+        "discarded_preapproval": { "type": "integer", "minimum": 0 },
+        "discarded_postapproval": { "type": "integer", "minimum": 0 },
+        "pending": { "type": "integer", "minimum": 0 },
+        "approved": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false,
+      "description": "原始变化触发的独立漏斗；record-round 由触发池事件自动计算"
+    },
+    "termination": {
+      "type": "object",
+      "required": ["status", "status_label", "reason", "finished_at", "rounds_completed", "max_rounds", "go_candidates"],
+      "properties": {
+        "status": { "type": "string" }, "status_label": { "type": "string" },
+        "reason": { "type": "string", "minLength": 1 }, "finished_at": { "type": "string" },
+        "rounds_completed": { "type": "integer" }, "max_rounds": { "type": "integer" },
+        "go_candidates": { "type": "array", "items": { "type": "string" } }
       },
       "additionalProperties": false
     },
@@ -42,7 +82,9 @@
           "sources_opened": { "type": "array", "items": { "type": "string" }, "description": "本轮打开的来源 URL" },
           "sources_blocked": { "type": "array", "items": { "type": "string" }, "description": "本轮被拦截的来源" },
           "candidates_touched": { "type": "array", "items": { "type": "string" }, "description": "本轮触及的候选 slug" },
+          "candidates_reviewed": { "$ref": "#/properties/candidates_reviewed" },
           "billable_calls": { "type": "integer", "description": "本轮计费查询次数" },
+          "trigger_funnel": { "$ref": "#/properties/trigger_funnel" },
         "funnel": {
           "type": "object",
           "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。两条不参与等式的口径:①第 0 层去重命中的方向不计入 extracted(它们上一次已有归宿,再计一次等式必然算不平);②消化存量 captured 的深审记 carryover_audited,不记 deep_audited。自 2026-08-19 起 funnel 本身也强制存在:xinci-scan 清单必须带顶层 funnel,xinci-run 清单每一轮必须带 rounds[].funnel(该轮没扫描就把 extracted 与四个去向五项全写 0——这五项都是 required,只写四个去向会被判缺 extracted;还了债的轮次记得补上可选的 carryover_audited,否则看不出那一轮花了什么);阈值之前的历史清单豁免。",
@@ -53,6 +95,7 @@
             "rejected_g1": { "type": "integer", "description": "第 3 层 G1 快筛否决,已批量追加进淘汰方向索引(gate=G1,reason 带首屏证据要点)。只统计索引这一侧:已注册进账本的候选补跑 G1 被否时走账本的 captured→rejected,不记本格——funnel 归格按这个方向属于本轮还是存量定,本轮的记 deep_audited、上轮存量的记 carryover_audited" },
             "deep_audited": { "type": "integer", "description": "第 4 层实际做完 G2/G3 深审的数量(配额 ≤5);含本轮第 2 层陷阱验证存活、注册后补跑 G1/G2 的那一类——它做过 G3 深审、留痕在账本,与深审判否的候选同构,不记 rejected_g1。上轮存量 captured 的深审不记本格,记 carryover_audited" },
             "queued": { "type": "integer", "description": "本轮没走完的存活方向(超深审配额的,以及超 G1 上限本轮没搜的),注册为 captured 待下轮消化" },
+            "pooled": { "type": "integer", "description": "兼容字段；新运行 raw trigger 改记 trigger_funnel" },
             "carryover_audited": { "type": "integer", "description": "可选,不参与加总等式:本轮消化存量 captured 所做的深审数;正常至多 5,debt_only 至多 10" }
           },
           "additionalProperties": false

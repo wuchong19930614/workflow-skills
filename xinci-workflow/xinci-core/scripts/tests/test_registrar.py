@@ -15,6 +15,7 @@ import build_decision_html as BDH
 import run_controller as RC
 import transaction_journal as TJ
 import dedup_decisions as DD
+import browser_preflight as BP
 
 
 def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
@@ -218,6 +219,31 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaisesRegex(R.RegistrarError, "没有适用盈利线"):
             R.transition(self.root, slug, to="rejected", by="xinci-scan",
                          evidence=[ev], reason="不能把可行线说成全灭")
+
+    def test_captured_can_exit_on_structural_g6_entry_veto_without_fake_g6(self):
+        slug = self.register("structural-g6-veto")
+        ev = mk_evidence(
+            self.root, slug, "2026-08-22-scan.json",
+            source_urls=["https://agency.example/official-count"],
+            g6_entry_veto={"criterion": "official_count_class",
+                           "reason": "the official dataset does not count this object class"})
+        R.transition(self.root, slug, to="rejected", by="xinci-scan",
+                     evidence=[ev], reason="G6 入口结构性否决：官方统计不计该对象")
+        rec = self.load(slug)
+        self.assertEqual(rec["state"], "rejected")
+        self.assertNotIn("G6", rec["gates"])
+
+    def test_xinci_run_g1_write_requires_assigned_executor_preflight(self):
+        slug = self.register("executor-bound-g1")
+        session = RC.start(self.root)
+        BP.record(self.root, session["run_id"], channel="chrome", controllable=True,
+                  desktop=True, region="us", logged_out=True, executor_id="parent")
+        RC.begin_round(self.root, session["run_id"], executor_id="round-worker")
+        ev = mk_evidence(self.root, slug, "2026-08-31-scan.json", gates={"G1": "veto"})
+        with self.assertRaisesRegex(R.RegistrarError, "当前执行者"):
+            R.transition(self.root, slug, to="rejected", by="xinci-run",
+                         gates={"G1": "veto"}, evidence=[ev], reason="G1 veto",
+                         run_id=session["run_id"])
 
     def test_register_creates_captured(self):
         slug = self.register()

@@ -141,16 +141,17 @@ def _check_actor(root, actor, run_id):
         if not run_id:
             raise TriggerPoolError("actor=xinci-run 要求 run_id")
         try:
-            require_active_round(root, run_id)
+            return require_active_round(root, run_id)["current_round"]
         except RunControllerError as e:
             raise TriggerPoolError(str(e))
     elif run_id:
         raise TriggerPoolError("非 xinci-run 事件不得携带 run_id")
+    return None
 
 
 def add(root, *, observed_date, title, source_url, source_family, task_hypothesis,
         actor="user", run_id=None):
-    _check_actor(root, actor, run_id)
+    round_number = _check_actor(root, actor, run_id)
     tid = _id(title, source_url)
     if tid in current(root):
         raise TriggerPoolError(f"触发已存在: {tid}")
@@ -158,13 +159,13 @@ def add(root, *, observed_date, title, source_url, source_family, task_hypothesi
            "observed_date": observed_date, "title": title, "source_url": source_url,
            "source_family": source_family, "task_hypothesis": task_hypothesis}
     if run_id:
-        row["run_id"] = run_id
+        row["run_id"] = run_id; row["round"] = round_number
     return _append(root, row)
 
 
 def approve(root, trigger_id, *, query, search_evidence_urls, payer, repeat_unit,
             self_serve_path, base_case_source, reason, actor="user", run_id=None):
-    _check_actor(root, actor, run_id)
+    round_number = _check_actor(root, actor, run_id)
     state = current(root).get(trigger_id)
     if not state or state["status"] != "pending":
         raise TriggerPoolError("approve 要求存在且 pending 的 trigger_id")
@@ -173,22 +174,53 @@ def approve(root, trigger_id, *, query, search_evidence_urls, payer, repeat_unit
            "repeat_unit": repeat_unit, "self_serve_path": self_serve_path,
            "base_case_source": base_case_source, "reason": reason}
     if run_id:
-        row["run_id"] = run_id
+        row["run_id"] = run_id; row["round"] = round_number
     return _append(root, row)
 
 
 def discard(root, trigger_id, *, reason, actor="user", run_id=None):
     """废弃一个 trigger。pending 与 approved 都可以走这条边:后者用于批准之后
     方向才被闸门否决的情形,reason 应写明失败的闸门与现场结论。"""
-    _check_actor(root, actor, run_id)
+    round_number = _check_actor(root, actor, run_id)
     state = current(root).get(trigger_id)
     if not state or state["status"] not in {"pending", "approved"}:
         raise TriggerPoolError("discard 要求存在且未废弃的 trigger_id")
     row = {"trigger_id": trigger_id, "event": "discard", "at": _now(), "actor": actor,
            "reason": reason}
     if run_id:
-        row["run_id"] = run_id
+        row["run_id"] = run_id; row["round"] = round_number
     return _append(root, row)
+
+
+def round_funnel(root, run_id, round_number):
+    """按本轮 add 的 trigger 计算互斥终点；存量维护不冒充本轮 harvest。"""
+    events = load(root)
+    added = [row["trigger_id"] for row in events
+             if row.get("run_id") == run_id and row.get("round") == round_number
+             and row.get("event") == "add"]
+    result = {"harvested": len(added), "discarded_preapproval": 0,
+              "discarded_postapproval": 0, "pending": 0, "approved": 0}
+    for trigger_id in added:
+        rows = [row for row in events if row["trigger_id"] == trigger_id]
+        approved = any(row["event"] == "approve" for row in rows)
+        discarded = any(row["event"] == "discard" for row in rows)
+        if discarded:
+            result["discarded_postapproval" if approved else "discarded_preapproval"] += 1
+        elif approved:
+            result["approved"] += 1
+        else:
+            result["pending"] += 1
+    return result
+
+
+def round_states(root, run_id, round_number):
+    """返回本轮 harvest 的 trigger 及其轮末真实状态，供检查点交叉核验。"""
+    events = load(root)
+    added = {row["trigger_id"] for row in events
+             if row.get("run_id") == run_id and row.get("round") == round_number
+             and row.get("event") == "add"}
+    states = current(root)
+    return {trigger_id: states[trigger_id]["status"] for trigger_id in added}
 
 
 def stats(root):

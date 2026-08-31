@@ -63,18 +63,20 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
 
 ## 运行循环
 
-0. **创建或恢复运行会话**:先执行 `run_controller.py recover`,再用 `list` 查活动 run；有 active 就恢复,没有才 `start`。不得重启未结束的 run。随后记录浏览器预检并计算本轮策略；每轮 `begin-round` 前和浏览器状态改变后都重算一次：
+0. **创建或恢复运行会话**:先执行 `run_controller.py recover`,再用 `list` 查活动 run；有 active 就恢复,没有才 `start`。不得重启未结束的 run。先确定本轮实际执行者并给它稳定的 `executor_id`；由该执行者亲自记录浏览器预检，再用同一 ID 计算策略。父任务、上一轮执行者或另一个子代理的浏览器状态不得借用。预检绑定目标轮次，每轮 `begin-round` 前和执行者/浏览器状态改变后都重做：
 
    ```bash
    python3 xinci-workflow/xinci-core/scripts/browser_preflight.py record --run-id <run_id> \
-     --channel chrome --controllable yes --desktop yes --region us --logged-out yes
-   python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id>
+     --executor-id <executor_id> --channel chrome --controllable yes --desktop yes --region us --logged-out yes
+   python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id> --executor-id <executor_id>
+   python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round \
+     --run-id <run_id> --executor-id <executor_id>
    ```
 
    `run_policy.py` 同时返回 `reachable_ceiling`——**本次运行在当前账本下最远能推进到哪一步**,开局就要读它。它有三档:`go`(存量里有 qualified/hold/formation_confirmed,或窗口以天计的 screened,或最早 `-track` 观察已满 7 天的 tracking——本次复查即可凑齐形成跨度)、`tracking`(存量都不满足,存量侧最远只到 tracking)、`trigger_only`(浏览器不满足 G1 前置)。
    **它是预算提示,不是许可或禁止**:天花板为 `tracking` 不表示不该扫描——本轮新扫出的、窗口以天计的候选照样可以走快道直达 go。它只回答"存量能不能出结论",好让轮次一开始就花在对的地方(推存量还是补触发池),而不是跑几轮才发现存量根本走不动。
 
-   `mode=full` 才准通过正式 CLI 注册 new 候选；`trigger_only` 只收集/整理触发池，不写 G1、不注册候选；`debt_only` 只推进存量与到期项，不新增正式候选；`paused` 只允许恢复/校验/收尾。registrar 的 CLI 会再次核对 `formal_admission`，因此这不是建议。然后 `begin-round`，结束只调用 `record-round`。所有 `--by xinci-run` 命令必须带真实 run_id。运行 report_status 读账本；去重疑似项必须 resolve，不留口头裁决。
+   `mode=full` 才准通过正式 CLI 注册 new 候选；`trigger_only` 只收集/整理触发池，不写 G1、不注册候选；`debt_only` 只推进存量与到期项，不新增正式候选；`paused` 只允许恢复/校验/收尾。registrar 会按 session 内的 `round_executor_id` 重验同一份预检，因此这不是建议。结束只调用 `record-round`。所有 `--by xinci-run` 命令必须带真实 run_id。运行 report_status 读账本；去重疑似项必须 resolve，不留口头裁决。
 1. **推进存量(优先;离 go 决策最近的先做)**:
    - **先按 lane 划清边界**:`lane=new` 按下列全部状态推进；`lane=mature` 在 `formation_confirmed` 前(`captured` / `screened` / `tracking`)不由本循环操作,只在本轮 notes 记明“mature 前半程待用户单步调用 xinci-mature 推进”,不把它算 blocker、排队债或扫描积压。mature 到 `formation_confirmed` / `qualified` / `hold` 后才进入下面对应的 qualify / decide 分支；
    - hold 候选 → 先读 hold 的决定性理由:若理由质疑 G6–G8 或认定仍否成立,按 xinci-qualify 做定向重审(推翻即 `hold→disqualified`);否则按 xinci-decide 重出决策(`hold→build_ready / pilot_ready / no_site`)。不得把 hold 挡在循环外,也不得转回 formation_confirmed;
@@ -87,20 +89,21 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
      **存量 captured 的消化归本步骤**:派子代理执行步骤 2 的扫描时,子代理从 xinci-scan 第 1 层开始,不再重跑它的第 0 层接队——两处都做会重复深审、双花配额。
    - **到期清理(`screened` / `fast_grab_ready`)**:`screened` 候选 expiry 已过(既没排上快道、也没转进追踪,窗口自己过了)→ 以 `--expiry-trigger date` **即转** `screened→expired`;`fast_grab_ready` 候选 expiry 已过时用 `date`、窗口已关闭(通用工具已收录该对象、赌注前提消失)时用 `window_closed` → **即转** `fast_grab_ready→expired`。两条都由标准授权直接转,不必回头问用户,也不占深审配额;它们没有失败的闸门,**不许塞进 `rejected`**。单步模式下这两条归 xinci-decide 提议(前者是它快道模式的输入、后者是它的产出),四条 expired 边的提议人见生命周期契约。
    - **积压硬闸**:`lane=new,state=captured` >20 时策略必须为 `debt_only`，本轮正式提取目标为 0；不再以“最低档”继续制造新债。浏览器不满足 G1 时为 `trigger_only`，同样不得把官方标题或缺 G1 项注册进账本。
-2. **扫描触发与新候选**:先把有日期的法规/平台/技术变化作为原始 trigger 写入 `trigger_pool.py add`，不得把官方公告标题直接当搜索词。只有补齐 task query、至少一个独立搜索语言证据 URL，以及 payer/repeat_unit/self_serve_path/base_case_source 后，才能 `approve`。批准只表示可进入 G0。正式注册时，信号面候选传 `--origin signal`；变化面候选传 `--origin trigger --trigger-id <approved id>`，registrar 会核对 term 与批准 query 一致。`mode=full` 才执行；`trigger_only` 只维护触发池；`debt_only` 跳过本步。单一 source_family 不得连续主导超过 2 轮或占本 run 新 trigger 的 40%，超过就轮换来源。
+2. **扫描触发与新候选**:先把有日期的法规/平台/技术变化作为原始 trigger 写入 `trigger_pool.py add`，不得把官方公告标题直接当搜索词。每批新 trigger 另建 `--stage trigger` 检查点，逐条标成 `trigger_discarded / trigger_pending / trigger_approved` 后 finish。只有补齐 task query、至少一个独立搜索语言证据 URL，以及 payer/repeat_unit/self_serve_path/base_case_source 后，才能 `approve`。批准只表示可进入 G0。正式注册时，信号面候选传 `--origin signal`；变化面候选传 `--origin trigger --trigger-id <approved id>`，registrar 会核对 term 与批准 query 一致。`mode=full` 才执行；`trigger_only` 只维护触发池；`debt_only` 跳过本步。单一 source_family 不得连续主导超过 2 轮或占本 run 新 trigger 的 40%，超过就轮换来源。
 3. **分流**(步骤 1 还债深审出的候选与步骤 2 扫描出的候选**一并分流**,别只分流新扫的):**先出闸 `captured → screened`**(带 G2/G3 结论与 `--window-estimate`,这一步不能跳——tracking 与快道都只从 screened 出发,直接 `--to tracking` 会被 registrar 判非法转移;命令见 xinci-scan 第 5 层),再按窗口分流:窗口天级 → 立即走 xinci-decide 快道模式;窗口周/月级 → 转 tracking 入库。当前 new 扫描在订阅线暂定可行时不会新造 `G3=veto_window_bet`;账本中已合法存在的历史兼容候选仍按原出口留在 captured 挂起,用户确认后记录候选级一次性授权,再由同一 run_id 出闸(见硬规则)。然后继续循环。
-4. **每轮收尾**:批量扫描开始时先把去重后的 term 写入 `stage_checkpoint.py start`；每条必须 `mark` 为 dedup/zero_cost/g1_rejected/deep_audited/queued/alias/pooled，全部有归宿后 `finish`。`pooled` 用于停在触发层的方向(已写进触发池、未注册为候选),它在 funnel 里同名成格并参与加总。`record-round` 会拒绝仍打开的阶段检查点。随后提交来源、计费调用、notes 与 funnel；不要手写 manifest。`queued` 只表示新债，**不算决策推进**；真实推进由账本 history 中 `from` 非空且 `to != from` 的迁移计数。
+4. **每轮收尾**:正式候选批量扫描用 `--stage scan` 检查点；raw trigger 另用 `--stage trigger` 检查点，逐条标成 `trigger_discarded / trigger_pending / trigger_approved`，不能再用 `pooled` 混入正式候选漏斗。`record-round` 会拒绝任何仍打开的检查点，并从触发池事件自动生成 `trigger_funnel`，调用者不得自报。正式 `funnel.extracted` 只算进入候选筛选的 query。存量候选若本轮只读既有证据、没有账本 history 写入，用 `--candidate-reviewed` 记录，不得冒充 `candidates_touched`。随后提交来源、计费调用、notes 与正式 funnel；不要手写 manifest。`queued` 只表示新债，**不算决策推进**。
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
   --run-id <run_id> \
   [--source-opened <URL>] [--source-blocked '<URL>(拦截现象)'] \
   [--billable-calls <N>] [--note '<事实>'] \
-  --funnel '{"extracted":0,"rejected_zero_cost":0,"rejected_g1":0,"deep_audited":0,"queued":0,"pooled":0,"carryover_audited":0}'
+  [--candidate-reviewed '{"slug":"<slug>","outcome":"not_due","reason":"<事实>","evidence_refs":[]}'] \
+  --funnel '{"extracted":0,"rejected_zero_cost":0,"rejected_g1":0,"deep_audited":0,"queued":0,"carryover_audited":0}'
 ```
 
 拒绝原因收敛时把 screen_unsatisfiable 假设放进 `--note`——**然后继续运行**。
-5. 回到步骤 1。命中终止/收尾条件后,先写完且只保留一份本次 manifest,再执行 `run_controller.py finish --run-id <run_id> --status <状态> --reason <事实>` 关闭会话。`finish` 会先跑完整清单校验,拒绝字段漂移、清单缺失/重复、funnel 缺失、轮次不连续或漏记候选,失败时 session 保持 active;`--status go` 还要求账本中存在**当前仍处于 GO 状态、且由本次 run_id 转入**的候选,不能用文字理由冒充产出。活动会话存在时 registrar 拒绝所有单步写入。
+5. 回到步骤 1。命中终止/收尾条件后,执行 `run_controller.py finish --run-id <run_id> --status <状态> --reason <事实>`。`finish` 会先跑完整清单校验，再把机器状态、中文状态、事实理由、结束时间、轮次预算与 GO 候选写入 manifest 的 `termination` 快照，最后关闭 session；失败时 session 保持 active。`--status go` 还要求账本中存在**当前仍处于 GO 状态、且由本次 run_id 转入**的候选,不能用文字理由冒充产出。活动会话存在时 registrar 拒绝所有单步写入。
 
 ## 终止契约(全文见生命周期契约,此处为执行摘要)
 

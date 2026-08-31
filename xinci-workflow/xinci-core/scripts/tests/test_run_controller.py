@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import run_controller as RC
 import run_state as RS
 import stage_checkpoint as SC
+import trigger_pool as TP
 
 
 class RunControllerTest(unittest.TestCase):
@@ -51,6 +52,42 @@ class RunControllerTest(unittest.TestCase):
         RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         done = RC.finish(self.root, run["run_id"], "budget_reached", "测试预算命中")
         self.assertEqual(done["status"], "budget_reached")
+        _, manifest = RC.find_run_manifest(self.root, run["run_id"])
+        self.assertEqual(manifest["termination"]["status"], "budget_reached")
+        self.assertEqual(manifest["termination"]["rounds_completed"], 1)
+
+    def test_record_round_separates_trigger_funnel_and_read_only_reviews(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        self.seed_candidate()
+        trigger = TP.add(self.root, observed_date="2026-08-31", title="New official rule",
+                         source_url="https://agency.example/new-rule", source_family="agency",
+                         task_hypothesis="firms may need a task", actor="xinci-run",
+                         run_id=run["run_id"])
+        TP.discard(self.root, trigger["trigger_id"], reason="no repeat paid task",
+                   actor="xinci-run", run_id=run["run_id"])
+        SC.start(self.root, run["run_id"], 1, [trigger["trigger_id"]], stage="trigger")
+        SC.mark(self.root, run["run_id"], 1, trigger["trigger_id"],
+                "trigger_discarded", stage="trigger")
+        SC.finish(self.root, run["run_id"], 1, stage="trigger")
+        reviewed = [{"slug": "demo", "outcome": "reviewed_no_transition",
+                     "reason": "existing evidence still current", "evidence_refs": []}]
+        result = RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS),
+                                 candidates_reviewed=reviewed)
+        manifest = json.loads(Path(result["manifest"]).read_text(encoding="utf-8"))
+        self.assertEqual(manifest["rounds"][0]["candidates_touched"], [])
+        self.assertEqual(manifest["rounds"][0]["candidates_reviewed"], reviewed)
+        self.assertEqual(manifest["rounds"][0]["trigger_funnel"]["harvested"], 1)
+        self.assertEqual(manifest["rounds"][0]["trigger_funnel"]["discarded_preapproval"], 1)
+
+    def test_record_round_rejects_harvest_without_trigger_checkpoint(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        TP.add(self.root, observed_date="2026-08-31", title="Unchecked trigger",
+               source_url="https://agency.example/unchecked", source_family="agency",
+               task_hypothesis="possible task", actor="xinci-run", run_id=run["run_id"])
+        with self.assertRaisesRegex(RC.RunControllerError, "trigger 检查点"):
+            RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
 
     def test_run_session_schema_statuses_match_runtime_contract(self):
         schema_path = Path(__file__).resolve().parents[2] / "数据结构" / "run-session.schema.json"
@@ -224,6 +261,15 @@ class RunControllerTest(unittest.TestCase):
         result = RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         manifest = json.loads(Path(result["manifest"]).read_text(encoding="utf-8"))
         self.assertEqual(len(manifest["rounds"]), 1)
+
+    def test_finish_retries_after_session_write_failure(self):
+        run = RC.start(self.root)
+        with patch.object(RC, "_save", side_effect=OSError("模拟 session 写入中断")):
+            with self.assertRaises(OSError):
+                RC.finish(self.root, run["run_id"], "cancelled", "测试重试")
+        self.assertEqual(RC.load_session(self.root, run["run_id"])["status"], "active")
+        done = RC.finish(self.root, run["run_id"], "cancelled", "测试重试")
+        self.assertEqual(done["status"], "cancelled")
 
     def test_end_round_is_fail_closed(self):
         run = RC.start(self.root)

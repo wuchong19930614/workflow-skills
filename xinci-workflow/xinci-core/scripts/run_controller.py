@@ -23,10 +23,11 @@ from run_state import (SESSION_DIR, RUN_ID_RE, FINAL_STATUSES, RunStateError,
                        load_session, session_path, validate_session)
 from run_manifest import (RunManifestError, append_round, candidates_by_run,
                           candidates_by_round, create_run_manifest, find_run_manifest,
-                          validate_runs)
+                          finalize_manifest, validate_runs)
 from chinese_labels import (humanize_text, normalize_session_status,
                             session_status_label)
-from stage_checkpoint import StageCheckpointError, require_no_open
+from stage_checkpoint import (StageCheckpointError, require_no_open,
+                              require_trigger_checkpoint)
 
 try:
     import fcntl
@@ -139,6 +140,7 @@ def start(data_root, max_rounds=6, max_hours=None):
             "max_hours": max_hours,
             "rounds_completed": 0,
             "current_round": None,
+            "round_executor_id": None,
             "confirmations": {},
             "finish_reason": None,
         }
@@ -147,7 +149,7 @@ def start(data_root, max_rounds=6, max_hours=None):
         return obj
 
 
-def begin_round(data_root, run_id):
+def begin_round(data_root, run_id, executor_id=None):
     with _locked(data_root):
         try:
             require_clean(data_root)
@@ -166,6 +168,7 @@ def begin_round(data_root, run_id):
             if elapsed_hours >= obj["max_hours"]:
                 raise RunControllerError("时长预算已用完；请结束会话并将状态设为“运行预算已用完”")
         obj["current_round"] = obj["rounds_completed"] + 1
+        obj["round_executor_id"] = executor_id
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
@@ -178,7 +181,7 @@ def end_round(data_root, run_id):
 
 
 def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None,
-                 billable_calls=0, notes=None, funnel=None):
+                 billable_calls=0, notes=None, funnel=None, candidates_reviewed=None):
     with _locked(data_root):
         try:
             require_clean(data_root)
@@ -196,7 +199,31 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
             raise RunControllerError("billable_calls 必须是非负整数")
         if not isinstance(funnel, dict):
             raise RunControllerError("record-round 必须提交 funnel 对象;未扫描时五项都写 0")
+        reviewed = list(candidates_reviewed or [])
+        ledger_path = Path(data_root) / "账本" / "候选账本.json"
+        try:
+            ledger_candidates = json.loads(ledger_path.read_text(encoding="utf-8")).get("candidates", {})
+        except FileNotFoundError:
+            ledger_candidates = {}
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            raise RunControllerError("候选账本损坏,不能记录只读复核")
+        review_outcomes = {"reviewed_no_transition", "same_day_skipped", "not_due",
+                           "awaiting_external_evidence", "deferred_existing_evidence"}
+        seen_reviewed = set()
+        for row in reviewed:
+            if (not isinstance(row, dict) or set(row) - {"slug", "outcome", "reason", "evidence_refs"}
+                    or row.get("slug") not in ledger_candidates
+                    or row.get("outcome") not in review_outcomes
+                    or not isinstance(row.get("reason"), str) or not row["reason"].strip()
+                    or row.get("slug") in seen_reviewed):
+                raise RunControllerError("candidates_reviewed 必须是账本内唯一 slug、合法 outcome、非空 reason 的对象数组")
+            refs = row.get("evidence_refs", [])
+            if not isinstance(refs, list) or not all(isinstance(x, str) and x for x in refs):
+                raise RunControllerError("candidates_reviewed[].evidence_refs 必须是字符串数组")
+            seen_reviewed.add(row["slug"])
         current = obj["current_round"]
+        # 局部导入避免 trigger_pool -> run_controller 的授权依赖形成模块环。
+        from trigger_pool import round_funnel
         try:
             require_no_open(data_root, run_id, current)
         except StageCheckpointError as e:
@@ -216,13 +243,24 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
                 for rnd in existing_rounds:
                     prior_touched.update(rnd.get("candidates_touched") or [])
                 touched = sorted(all_touched - prior_touched)
+        try:
+            trigger_funnel = round_funnel(data_root, run_id, current)
+        except Exception as e:
+            raise RunControllerError(f"触发池无法生成本轮 trigger_funnel: {e}")
+        try:
+            require_trigger_checkpoint(data_root, run_id, current,
+                                       trigger_funnel["harvested"])
+        except StageCheckpointError as e:
+            raise RunControllerError(str(e))
         round_record = {
             "round": current,
             "sources_opened": list(sources_opened or []),
             "sources_blocked": list(sources_blocked or []),
             "candidates_touched": touched,
+            "candidates_reviewed": reviewed,
             "billable_calls": billable_calls,
             "funnel": dict(funnel),
+            "trigger_funnel": trigger_funnel,
             "notes": list(notes or []),
         }
         try:
@@ -231,6 +269,7 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
             raise RunControllerError(str(e))
         obj["rounds_completed"] = obj["current_round"]
         obj["current_round"] = None
+        obj["round_executor_id"] = None
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
@@ -401,11 +440,26 @@ def finish(data_root, run_id, status, reason):
                     "go 结束要求至少一个当前仍处于 fast_grab_ready/pilot_ready/build_ready、"
                     "且由本次 run_id 转入该状态的候选")
             obj["go_candidates"] = produced
+        existing_termination = manifest.get("termination")
+        if existing_termination is not None:
+            if (existing_termination.get("status") != status
+                    or existing_termination.get("reason") != reason
+                    or existing_termination.get("rounds_completed") != obj["rounds_completed"]
+                    or existing_termination.get("max_rounds") != obj["max_rounds"]):
+                raise RunControllerError("manifest 已有不同的结束快照；拒绝用新参数覆盖")
+            finished_at = existing_termination.get("finished_at")
+        else:
+            finished_at = _now()
         obj["status"] = status
         obj["finish_reason"] = reason
-        obj["finished_at"] = _now()
+        obj["finished_at"] = finished_at
         obj["updated_at"] = obj["finished_at"]
+        obj["round_executor_id"] = None
         validate_session(obj, run_id)
+        try:
+            finalize_manifest(data_root, obj, reason)
+        except RunManifestError as e:
+            raise RunControllerError(str(e))
         _save(_path(data_root, run_id), obj)
         return obj
 
@@ -473,6 +527,8 @@ def main(argv=None):
     for name in ("begin-round", "show"):
         p = sub.add_parser(name)
         p.add_argument("--run-id", required=True)
+        if name == "begin-round":
+            p.add_argument("--executor-id", required=True)
     p = sub.add_parser("record-round", help="原子追加运行清单并结束当前轮")
     p.add_argument("--run-id", required=True)
     p.add_argument("--source-opened", action="append", default=[])
@@ -480,6 +536,8 @@ def main(argv=None):
     p.add_argument("--billable-calls", type=int, default=0)
     p.add_argument("--note", action="append", default=[])
     p.add_argument("--funnel", required=True, help="漏斗 JSON 对象;未扫描时五项全 0")
+    p.add_argument("--candidate-reviewed", action="append", default=[],
+                   help="只读复核 JSON 对象，可重复；不冒充 candidates_touched")
     p = sub.add_parser("confirm-window-bet")
     p.add_argument("--run-id", required=True)
     p.add_argument("--slug", required=True)
@@ -507,17 +565,22 @@ def main(argv=None):
         elif a.cmd == "list":
             obj = list_sessions(a.data_root)
         elif a.cmd == "begin-round":
-            obj = begin_round(a.data_root, a.run_id)
+            obj = begin_round(a.data_root, a.run_id, a.executor_id)
         elif a.cmd == "record-round":
             try:
                 funnel = json.loads(a.funnel)
             except json.JSONDecodeError as e:
                 raise RunControllerError(f"--funnel 不是合法 JSON: {e}")
+            try:
+                reviewed = [json.loads(x) for x in a.candidate_reviewed]
+            except json.JSONDecodeError as e:
+                raise RunControllerError(f"--candidate-reviewed 不是合法 JSON: {e}")
             obj = record_round(a.data_root, a.run_id,
                                sources_opened=a.source_opened,
                                sources_blocked=a.source_blocked,
                                billable_calls=a.billable_calls,
-                               notes=a.note, funnel=funnel)
+                               notes=a.note, funnel=funnel,
+                               candidates_reviewed=reviewed)
         elif a.cmd == "confirm-window-bet":
             obj = confirm_window_bet(a.data_root, a.run_id, a.slug)
         elif a.cmd == "finish":

@@ -92,13 +92,16 @@ def reachable_ceiling(root, mode, today=None):
                    "存量侧本次最远只能推进到 tracking;新扫出窗口以天计的候选仍可走快道到 go"}
 
 
-def evaluate(root, run_id):
+def evaluate(root, run_id, executor_id=None):
     session = load_session(root, run_id)
+    expected_executor = executor_id or session.get("round_executor_id")
+    target_round = session.get("current_round") or session["rounds_completed"] + 1
     candidates = (_ledger(root).get("candidates") or {}).values()
     backlog = sum(1 for rec in candidates if isinstance(rec, dict)
                   and rec.get("lane", "new") == "new" and rec.get("state") == "captured")
     try:
-        preflight = show_preflight(root, run_id); g1_ready = preflight["g1_ready"]
+        preflight = show_preflight(root, run_id, expected_executor, target_round)
+        g1_ready = preflight["g1_ready"]
         browser_reason = None if g1_ready else "浏览器预检未满足 US/desktop/logged-out/controllable"
     except BrowserPreflightError:
         preflight = None; g1_ready = False; browser_reason = "缺浏览器预检"
@@ -158,8 +161,9 @@ def evaluate(root, run_id):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="计算 xinci 当前轮运行策略")
     ap.add_argument("--data-root", default=None); ap.add_argument("--run-id", required=True)
+    ap.add_argument("--executor-id", help="将 G1 预检绑定到本轮实际执行者")
     a = ap.parse_args(argv); root = data_root.resolve_or_exit(a.data_root)
-    try: obj = evaluate(root, a.run_id)
+    try: obj = evaluate(root, a.run_id, a.executor_id)
     except Exception as e:
         print(f"run_policy 拒绝: {e}", file=sys.stderr); return 2
     print(json.dumps(obj, ensure_ascii=False, indent=2)); return 0

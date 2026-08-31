@@ -14,7 +14,7 @@ FINAL_STATUSES = {"go", "quota_exhausted", "budget_reached", "resource_exhausted
 STATUSES = {"active"} | FINAL_STATUSES
 FIELDS = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
           "finished_at", "max_rounds", "max_hours", "rounds_completed", "current_round",
-          "confirmations", "finish_reason", "go_candidates"}
+          "round_executor_id", "confirmations", "finish_reason", "go_candidates"}
 REQUIRED = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
             "max_rounds", "max_hours", "rounds_completed", "current_round",
             "confirmations", "finish_reason"}
@@ -88,6 +88,9 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     max_rounds = obj.get("max_rounds")
     completed = obj.get("rounds_completed")
     current = obj.get("current_round")
+    executor_id = obj.get("round_executor_id")
+    if executor_id is not None and (not isinstance(executor_id, str) or not executor_id.strip()):
+        raise RunStateError(f"{where}.round_executor_id 必须为 null 或非空字符串")
     if (not isinstance(max_rounds, int) or isinstance(max_rounds, bool) or max_rounds < 1
             or not isinstance(completed, int) or isinstance(completed, bool)
             or not 0 <= completed <= max_rounds):
@@ -101,11 +104,15 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
             raise RunStateError(f"{where}.current_round 必须为 null 或 rounds_completed+1")
         if current is not None and current > max_rounds:
             raise RunStateError(f"{where}.current_round 超出 max_rounds")
+        if current is None and executor_id is not None:
+            raise RunStateError(f"{where} 未开始轮次时 round_executor_id 必须为 null")
         if obj.get("finished_at") is not None or obj.get("finish_reason") is not None:
             raise RunStateError(f"{where} active 状态不得有 finished_at/finish_reason")
         if obj.get("go_candidates") is not None:
             raise RunStateError(f"{where} active 状态不得有 go_candidates")
     else:
+        if executor_id is not None:
+            raise RunStateError(f"{where} 结束状态 round_executor_id 必须为 null")
         if current is not None or not obj.get("finish_reason") or not obj.get("finished_at"):
             raise RunStateError(f"{where} 结束状态要求 current_round=null、finish_reason、finished_at")
         finished = _timestamp(obj["finished_at"], f"{where}.finished_at")

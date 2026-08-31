@@ -84,7 +84,7 @@ same 后续归入 `[见过]`;distinct 后续归入 `[新]`。历史索引条目�
 
 变化面先执行 `trigger_pool.py add`。只有出现独立的搜索语言证据，并补齐 payer、重复对象单元、自助交付路径、基础情景来源后，才可 `approve` 并把批准的 `query` 带入候选漏斗。trigger 的 task hypothesis 与 candidate 不是同一层；批准也不产生 G0–G8 结论。
 
-连续模式批量去重后立即建立轮内检查点：把每个正式 term 逐行传给 `stage_checkpoint.py start --run-id ... --round ...`。处理一条就 `mark` 一条；崩溃恢复时只继续 pending 项。全部完成后 `finish`，否则 `record-round` 会拒绝收尾。
+连续模式分两类检查点：raw trigger 在 add 后逐行传给 `stage_checkpoint.py start --stage trigger`，结果只能标为 `trigger_discarded / trigger_pending / trigger_approved`；批准后真正进入候选筛选的正式 term 才进入 `--stage scan`。处理一条就 `mark` 一条；崩溃恢复时只继续 pending 项。全部完成后 `finish`，否则 `record-round` 会拒绝收尾。raw trigger 不计正式 `funnel.extracted`，其漏斗由 record-round 自动生成。
 
 **这个量级靠逐页人工读达不到**:变化面允许用源自带的列表页、RSS、导出接口批量采集(边界见数据采集指南"社区面必须浏览器,变化面可结构化采集");社区面仍须真浏览器直读。提取结果在上下文里以**紧凑清单**形式存在(一行一条,约 20–30 token),不逐条展开成散文。
 
@@ -99,7 +99,7 @@ same 后续归入 `[见过]`;distinct 后续归入 `[新]`。历史索引条目�
 - **G6 深审入口预检(强制,仅 `lane=new`,两问)**:**第一问**——这个任务是否要求**有预算的付费者逐个对象重复完成**(每个 SKU / 场址 / 批次 / 市场各做一次)?答否即订阅线结构 veto；广告线在 new 道为 `N/A`,所以候选即弃——典型是“查一次某厂商新功能怎么配”,读完即走、没有可卖之物(**未注册秒弃项只在淘汰索引的 gate 栏记 G6,不是账本正式 `gates.G6`**;全文见闸门契约 G6「深审入口预检」。回测显示 75% 的 G3 否决本该死在这一问,它是最省钱的一道)。**第二问(零成本,同批执行)**——这项义务的受约束主体,是不是一个有名称、且官方会去计数的类别?按主体类别界定且有通行名称或法定范围的(digital labour platforms、附件 II 品类制造商)答是;按行为界定的("做自愿绿色声明的企业")或范围过广无统计口径的("把产品投放市场的经营者")答否。答否即弃,理由是 G6 第④项要求付费者数有来源、又禁止拿行业规模顶替,两条合起来使这类方向的第④项**结构性不可得**——不是这次没查到,是官方根本不做这个计数;不弃的话会走完 G1/G2 最贵的两道再卡死(判据与四例实测见闸门契约 G6「深审入口预检」)。
 
   两问都答是才取得继续建立盈利线证据的资格,**仍不等于订阅线暂定通过**;随后按订阅线四项结构硬门形成 `g6_tentative_lines`(对 new 道是 `subscription=tentative_pass|tentative_veto`,`advertising=N/A`) 并在 points/source_urls 写依据,仅供本轮 G3 使用。它不是正式 G6 结论,不得在账本 gates 写 G6=pass,也不得写进正式 `g6_lines`;若暂定结论仍无法建立,候选留在 `captured` 补证据,不得下最终 G3;
-- **已注册候选的暂定盈利线全灭出口**:上条中的首次未注册方向仍按秒弃进索引；若候选已经在 `captured`(排队后补证据),本次 observation 写完整 `g6_tentative_lines` 与来源,再提议 `captured→rejected`。这条边不提交 `gates.G6=veto`——暂定线不是正式 G6；registrar 直接核对本次 evidence 中是否确为 new 道 subscription=`tentative_veto` + advertising=`N/A`。
+- **已注册候选的 G6 出口分两类**:盈利线做到逐线暂定后全灭，仍写完整 `g6_tentative_lines` 再走 `captured→rejected`；若在深算入口已经确认“付费者不逐对象重复 / 官方根本不计该主体类别 / 无自助法律效果”，则 observation 改写 `g6_entry_veto` 并当轮走 `captured→rejected`。后二者都不得提交 `gates.G6=veto`，也不得伪造暂定盈利线；registrar 直接核对结构化入口否决与实际来源。
 - **无任务**:提不出任何页面能完成的任务的,同批弃。
 
 **留痕(硬性)**:本层秒弃的每一条都要进淘汰索引,**批量追加,不逐条写**:

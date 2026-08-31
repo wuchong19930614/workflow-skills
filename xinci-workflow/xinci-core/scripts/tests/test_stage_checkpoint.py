@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import stage_checkpoint as SC
 import run_controller as RC
+import trigger_pool as TP
 
 
 class StageCheckpointTest(unittest.TestCase):
@@ -45,6 +46,21 @@ class StageCheckpointTest(unittest.TestCase):
         SC.mark(self.root, self.run_id, 1, "alpha", "dedup")
         with self.assertRaisesRegex(SC.StageCheckpointError, "不可覆盖"):
             SC.mark(self.root, self.run_id, 1, "alpha", "queued")
+
+    def test_trigger_checkpoint_must_match_real_trigger_state(self):
+        trigger = TP.add(self.root, observed_date="2026-08-31", title="Official trigger",
+                         source_url="https://agency.example/trigger", source_family="agency",
+                         task_hypothesis="possible filing", actor="xinci-run", run_id=self.run_id)
+        SC.start(self.root, self.run_id, 1, [trigger["trigger_id"]], stage="trigger")
+        SC.mark(self.root, self.run_id, 1, trigger["trigger_id"],
+                "trigger_approved", stage="trigger")
+        with self.assertRaisesRegex(SC.StageCheckpointError, "状态不一致"):
+            SC.finish(self.root, self.run_id, 1, stage="trigger")
+
+    def test_trigger_outcome_cannot_be_used_in_scan_checkpoint(self):
+        SC.start(self.root, self.run_id, 1, ["alpha"])
+        with self.assertRaisesRegex(SC.StageCheckpointError, "只允许"):
+            SC.mark(self.root, self.run_id, 1, "alpha", "trigger_pending")
 
 
 if __name__ == "__main__":

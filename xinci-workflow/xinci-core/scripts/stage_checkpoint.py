@@ -18,7 +18,10 @@ from run_state import RunStateError, load_session
 
 STAGE_DIR = "阶段"
 OUTCOMES = {"dedup", "zero_cost", "g1_rejected", "deep_audited", "queued", "alias",
-            "pooled"}
+            "pooled", "trigger_discarded", "trigger_pending", "trigger_approved"}
+TRIGGER_OUTCOMES = {"trigger_discarded", "trigger_pending", "trigger_approved"}
+TRIGGER_STATUS_OUTCOME = {"discarded": "trigger_discarded", "pending": "trigger_pending",
+                          "approved": "trigger_approved"}
 
 
 class StageCheckpointError(Exception):
@@ -65,6 +68,8 @@ def _load(path):
 def start(root, run_id, round_number, items, stage="scan"):
     if not run_id or not isinstance(round_number, int) or round_number < 1:
         raise StageCheckpointError("start 要求合法 run_id 与正整数 round")
+    if stage not in {"scan", "trigger"}:
+        raise StageCheckpointError("stage 只能是 scan 或 trigger")
     clean = []
     for item in items:
         item = item.strip() if isinstance(item, str) else ""
@@ -97,6 +102,10 @@ def start(root, run_id, round_number, items, stage="scan"):
 def mark(root, run_id, round_number, item, outcome, note=None, stage="scan"):
     if outcome not in OUTCOMES:
         raise StageCheckpointError(f"outcome 必须属于 {sorted(OUTCOMES)}")
+    if stage == "trigger" and outcome not in TRIGGER_OUTCOMES:
+        raise StageCheckpointError(f"trigger 检查点 outcome 必须属于 {sorted(TRIGGER_OUTCOMES)}")
+    if stage != "trigger" and outcome in TRIGGER_OUTCOMES:
+        raise StageCheckpointError("trigger_* outcome 只允许用于 stage=trigger")
     path = checkpoint_path(root, run_id, round_number, stage)
     obj = _load(path)
     if obj["status"] != "active":
@@ -118,6 +127,20 @@ def finish(root, run_id, round_number, stage="scan"):
     pending = [item for item, row in obj["items"].items() if row.get("outcome") is None]
     if pending:
         raise StageCheckpointError(f"阶段检查点仍有 {len(pending)} 个 pending item")
+    if stage == "trigger":
+        from trigger_pool import TriggerPoolError, round_states
+        try:
+            actual = round_states(root, run_id, round_number)
+        except TriggerPoolError as e:
+            raise StageCheckpointError(f"触发池无法核对 trigger 检查点: {e}")
+        if set(obj["items"]) != set(actual):
+            raise StageCheckpointError(
+                f"trigger 检查点 items 与本轮 harvest 不一致: "
+                f"checkpoint={sorted(obj['items'])}, actual={sorted(actual)}")
+        mismatched = [item for item, row in obj["items"].items()
+                      if row["outcome"] != TRIGGER_STATUS_OUTCOME[actual[item]]]
+        if mismatched:
+            raise StageCheckpointError(f"trigger 检查点结果与触发池状态不一致: {mismatched}")
     if obj["status"] == "active":
         obj["status"] = "completed"
         obj["updated_at"] = _now()
@@ -146,6 +169,19 @@ def require_no_open(root, run_id, round_number):
                       if row.get("outcome") is None)
         raise StageCheckpointError(
             f"当前轮次有未完成阶段检查点({pending} 个 pending item)；先 mark 并 finish")
+
+
+def require_trigger_checkpoint(root, run_id, round_number, harvested):
+    """本轮产生 raw trigger 时，必须存在已完成且已交叉核验的 trigger 检查点。"""
+    if harvested == 0:
+        return
+    try:
+        # finish 对 completed 检查点也是只读幂等校验，会再次交叉核对触发池状态。
+        obj = finish(root, run_id, round_number, "trigger")
+    except StageCheckpointError as e:
+        raise StageCheckpointError(f"本轮 raw trigger 缺 trigger 检查点: {e}")
+    if obj.get("status") != "completed" or len(obj.get("items") or {}) != harvested:
+        raise StageCheckpointError("本轮 raw trigger 缺已完成且数量一致的 trigger 检查点")
 
 
 def main(argv=None):

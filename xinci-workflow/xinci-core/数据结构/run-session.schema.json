@@ -15,6 +15,7 @@
     "max_hours": { "type": ["number", "null"], "exclusiveMinimum": 0 },
     "rounds_completed": { "type": "integer", "minimum": 0 },
     "current_round": { "type": ["integer", "null"], "minimum": 1 },
+    "round_executor_id": { "type": ["string", "null"], "minLength": 1, "description": "当前轮实际执行者；用于绑定浏览器预检" },
     "confirmations": {
       "type": "object",
       "additionalProperties": {
