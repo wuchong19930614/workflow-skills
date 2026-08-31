@@ -73,7 +73,7 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     missing = sorted(REQUIRED - set(obj))
     if unknown or missing:
         raise RunStateError(f"{where} 字段非法: unknown={unknown}, missing={missing}")
-    if obj.get("schema_version") != 1 or obj.get("mode") != "continuous":
+    if obj.get("schema_version") not in {1, 2} or obj.get("mode") != "continuous":
         raise RunStateError(f"{where} schema_version/mode 非法")
     run_id = obj.get("run_id")
     if not RUN_ID_RE.fullmatch(run_id or "") or (expected_run_id and run_id != expected_run_id):

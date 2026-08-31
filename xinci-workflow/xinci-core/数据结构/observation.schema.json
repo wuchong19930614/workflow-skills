@@ -50,6 +50,17 @@
       "additionalProperties": false,
       "description": "G6 深算前的结构性入口否决。它只证明无需进入盈利线测算，不是正式 gates.G6，也不是 g6_tentative_lines。"
     },
+    "naming_status": {
+      "type": "string",
+      "enum": ["unstable", "stabilized"],
+      "description": "仅用于 track：当前搜索叫法是否已经定型"
+    },
+    "formation_signals": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "enum": ["autocomplete", "semrush_rows", "sustained_discussion", "repeated_independent_queries"] },
+      "description": "仅用于 track：本次实际观察到的需求形成信号；空数组表示尚未形成"
+    },
     "income_score": {
       "type": "integer",
       "minimum": 1,
@@ -100,6 +111,14 @@
       "then": {
         "required": ["g6_tentative_lines"]
       }
+    },
+    {
+      "if": { "required": ["naming_status"] },
+      "then": { "properties": { "stage": { "const": "track" } } }
+    },
+    {
+      "if": { "required": ["formation_signals"] },
+      "then": { "properties": { "stage": { "const": "track" } } }
     }
   ],
   "additionalProperties": false

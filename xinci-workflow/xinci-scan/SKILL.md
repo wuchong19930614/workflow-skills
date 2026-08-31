@@ -252,6 +252,14 @@ registrar 按**合并结果**(账本已有 gates + 本次提交)校验:G0/G1/G2/
 
 `运行/<日期>-xinci-scan.json`:打开过的来源、被拦的来源、触及的候选、计费调用数(本阶段应为 0),以及 **`funnel` 漏斗数据**:
 
+```bash
+python3 xinci-workflow/xinci-core/scripts/run_manifest.py record-single \
+  --date <YYYY-MM-DD> --skill xinci-scan [--suffix <HHMM>] \
+  --funnel '{"extracted":0,"rejected_zero_cost":0,"rejected_g1":0,"deep_audited":0,"queued":0}'
+```
+
+按实际来源、候选和 notes 追加对应参数；控制器拒绝覆盖，不得手写 JSON。连续运行模式不调用本命令，统一由 `record-round` 写入。
+
 ```json
 "funnel": {
   "extracted": 240,           // 第 1 层提取、经第 0 层去重后进入筛选的正式方向数(trigger 不计入)

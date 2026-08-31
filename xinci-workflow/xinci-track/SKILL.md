@@ -45,6 +45,8 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
    **复查范围就是 G0/G1 + G2/G3,不复查 G4/G5**——那两道是方向的固有属性,扫描期定了就不随时间变化(理由见闸门契约时间光谱表下「形成期为什么不是 G1–G5 全复查」)。**唯一的例外不由本 skill 触发**:扫描侧新归并出一个陷阱类别、而某个在追踪的候选正好命中它时,那是重新认识,由做归并的一方当场提议 `tracking→rejected`(生命周期契约 rejected 边第⑥种情形);本 skill 不为此例行重跑 G5。
 3. **看命名定型。** 回访来源社区:叫法统一了还是分裂了?aliases 有没有胜出者?
 4. **看需求形成信号。** 自动补全出现?首批 Semrush 行出现?讨论持续增长?(形成期允许轻量 Semrush 探针,仅限能改变决策的查询。)
+   - 本次观察必须结构化写 `naming_status=unstable|stabilized` 与 `formation_signals`。合法信号为 `autocomplete / semrush_rows / sustained_discussion / repeated_independent_queries`；没有信号时写空数组，不得用叙述性乐观判断替代。
+   - 若本次来源新暴露“付费者不逐对象重复 / 官方不计该主体类别 / 不存在自助法律效果”，写结构化 `g6_entry_veto` 并提议 `tracking→rejected`。这是新证据触发的结构出口，不是例行重跑正式 G6。
 5. **对照 expiry 与失效条件。** 失效条件命中或 expiry 已过 → 如实报告。
 6. **写观察文件并登记复查:** observation 的 `gates` 只列本次实际重跑且证据条件合规的门;合规重跑 G1 时必须写本次 G1 结论,环境污染时则不写 G1。`g6_tentative_lines` 写本次复核后的逐线暂定结论,`source_urls` 列实际打开的页面。仅登记复查而不转移时用 checked;随后若 transition 提交 gates,复用这份观察作为 `--evidence`,registrar 会逐门核对。
 
@@ -65,7 +67,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
 
    - 提议 `formation_confirmed`(要求:累计 ≥2 次 -track 观察且最早与最新相隔 ≥7 天、命名定型、≥1 项形成信号、本次 G1=pass);
    - 提议 `expired`(expiry 已过时提交 `--expiry-trigger date`;失效条件命中时提交 `--expiry-trigger invalidation`)或 `rejected`(G0/G1 翻转,或占位否决按盈利线生效时竞品到达 G3 否决线)。(「命中新归并的陷阱类别」那一条 rejected 由扫描侧提议,不在本清单里,见上第 2 步。)
-8. **用户确认后**才执行对应 transition;写运行清单 `运行/<日期>-xinci-track.json`(同日再次运行加 HHMM 后缀)。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
+8. **用户确认后**才执行对应 transition；用 `run_manifest.py record-single --date <YYYY-MM-DD> --skill xinci-track [--suffix <HHMM>] ...` 原子写运行清单，控制器拒绝覆盖，不得手写 JSON。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
 
 ## 硬规则
 

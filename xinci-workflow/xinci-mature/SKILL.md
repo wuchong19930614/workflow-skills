@@ -171,15 +171,20 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
 
 随后按缺口出闸:`captured→screened` 要 G0/G1/G2/G4/G5=`pass` 与有效 G3,并带 `--window-estimate` 与 `--expiry`。成熟词的窗口通常以**月**计(需求是历史积累的,不会几天蒸发),据实填,不要照抄新词道的 days/weeks。
 
-之后 `screened→tracking→formation_confirmed` 与 new 道同规则(≥2 个 `-track` 观察、跨度 ≥7 天)。**到 `formation_confirmed` 为止是本 skill 的边界**:确认期评分交 xinci-qualify,建站决策交 xinci-decide。
+之后 `screened→tracking→formation_confirmed` 与 new 道同规则：累计 ≥2 个 `-track` 观察、跨度 ≥7 天，本次 G1=pass，并在本次 track 观察明确 `naming_status=stabilized` 与至少一项 `formation_signals`。**到 `formation_confirmed` 为止是本 skill 的边界**:确认期评分交 xinci-qualify,建站决策交 xinci-decide。
 
 深审判否的候选同样先 register 再走 `captured→rejected`,reason 写清失败闸门与现场证据要点。
 
 ### 第 9 层:写运行清单(含命中率)
 
 ```bash
-python3 xinci-workflow/xinci-core/scripts/run_manifest.py ...   # 或按现有单步流程写 运行/<日期>-xinci-mature.json
+python3 xinci-workflow/xinci-core/scripts/run_manifest.py record-single \
+  --date <YYYY-MM-DD> --skill xinci-mature \
+  [--suffix <HHMM>] [--source-opened <URL>] [--candidate-touched <slug>] \
+  [--billable-calls <N>] --note '<命中率与实测阈值事实>'
 ```
+
+控制器原子创建清单并拒绝覆盖；同日重跑显式传 `--suffix`。不得手写 JSON。
 
 **本道额外要求两项,不可省:**
 

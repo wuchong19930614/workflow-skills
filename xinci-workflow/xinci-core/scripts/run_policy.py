@@ -38,6 +38,28 @@ def decision_transitions_by_round(root, run_id):
     return counts
 
 
+def captured_backlog_delta_by_round(root, run_id):
+    """按 history 重放本次 run 对 new/captured 积压造成的净变化。
+
+    register(无来源态→captured)记 +1；从 captured 真正离开记 -1。amend/checked
+    不改变积压。这样“队列增长”描述的是净积压增长，而不是本轮碰巧 queued>0。
+    """
+    deltas = {}
+    for rec in (_ledger(root).get("candidates") or {}).values():
+        if not isinstance(rec, dict) or rec.get("lane", "new") != "new":
+            continue
+        for row in rec.get("history", []):
+            rnd = row.get("round")
+            if row.get("run_id") != run_id or not isinstance(rnd, int):
+                continue
+            frm, to = row.get("from"), row.get("to")
+            delta = (1 if to == "captured" and frm != "captured" else 0)
+            delta -= (1 if frm == "captured" and to != "captured" else 0)
+            if delta:
+                deltas[rnd] = deltas.get(rnd, 0) + delta
+    return deltas
+
+
 def _track_days(root, rec):
     """该候选已登记的 -track 观察日期;读不出的证据跳过,策略计算不因证据损坏而崩。"""
     days = []
@@ -115,10 +137,11 @@ def evaluate(root, run_id, executor_id=None):
     _, manifest = find_run_manifest(root, run_id)
     rounds = manifest.get("rounds", []) if manifest else []
     transitions = decision_transitions_by_round(root, run_id)
+    backlog_deltas = captured_backlog_delta_by_round(root, run_id)
     stall = 0
     for rnd in reversed(rounds):
         n = rnd.get("round")
-        if transitions.get(n, 0) == 0 and (rnd.get("funnel") or {}).get("queued", 0) > 0:
+        if transitions.get(n, 0) == 0 and backlog_deltas.get(n, 0) > 0:
             stall += 1
         else:
             break
@@ -152,6 +175,7 @@ def evaluate(root, run_id, executor_id=None):
         "g1_ready": g1_ready, "new_captured_backlog": backlog,
         "carryover_quota": min(10, backlog) if mode == "debt_only" else min(5, backlog),
         "pending_triggers": tstats["pending"], "decision_transitions_by_round": transitions,
+        "captured_backlog_delta_by_round": backlog_deltas,
         "source_family_counts": family_counts, "source_rotation_due": source_rotation_due,
         "consecutive_decision_stall_rounds": stall,
         "reachable_ceiling": reachable_ceiling(root, mode), "reasons": reasons,

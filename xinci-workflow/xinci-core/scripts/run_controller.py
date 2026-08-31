@@ -27,7 +27,7 @@ from run_manifest import (RunManifestError, append_round, candidates_by_run,
 from chinese_labels import (humanize_text, normalize_session_status,
                             session_status_label)
 from stage_checkpoint import (StageCheckpointError, require_no_open,
-                              require_trigger_checkpoint)
+                              require_scan_funnel, require_trigger_checkpoint)
 
 try:
     import fcntl
@@ -130,7 +130,7 @@ def start(data_root, max_rounds=6, max_hours=None):
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         run_id = f"run-{stamp}-{secrets.token_hex(4)}"
         obj = {
-            "schema_version": 1,
+            "schema_version": 2,
             "run_id": run_id,
             "mode": "continuous",
             "status": "active",
@@ -199,6 +199,9 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
             raise RunControllerError("billable_calls 必须是非负整数")
         if not isinstance(funnel, dict):
             raise RunControllerError("record-round 必须提交 funnel 对象;未扫描时五项都写 0")
+        if "pooled" in funnel:
+            raise RunControllerError(
+                "新轮次不得写 funnel.pooled；raw trigger 必须使用 stage=trigger 与 trigger_funnel")
         reviewed = list(candidates_reviewed or [])
         ledger_path = Path(data_root) / "账本" / "候选账本.json"
         try:
@@ -220,12 +223,18 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
             refs = row.get("evidence_refs", [])
             if not isinstance(refs, list) or not all(isinstance(x, str) and x for x in refs):
                 raise RunControllerError("candidates_reviewed[].evidence_refs 必须是字符串数组")
+            for ref in refs:
+                rel = Path(ref)
+                if rel.is_absolute() or ".." in rel.parts or not (Path(data_root) / rel).is_file():
+                    raise RunControllerError(
+                        f"candidates_reviewed[].evidence_refs 不存在或越界: {ref}")
             seen_reviewed.add(row["slug"])
         current = obj["current_round"]
         # 局部导入避免 trigger_pool -> run_controller 的授权依赖形成模块环。
         from trigger_pool import round_funnel
         try:
             require_no_open(data_root, run_id, current)
+            require_scan_funnel(data_root, run_id, current, funnel)
         except StageCheckpointError as e:
             raise RunControllerError(str(e))
         manifest_path, manifest = find_run_manifest(data_root, run_id)
@@ -365,13 +374,19 @@ def reconcile(data_root, tx_id, decision, reason, actor, confirmation_ref):
             raise RunControllerError(str(e))
 
 
-def finish(data_root, run_id, status, reason):
+def finish(data_root, run_id, status, reason, evidence_refs=None):
     status = normalize_session_status(status)
     if status not in FINAL_STATUSES:
         allowed = "、".join(session_status_label(x) for x in sorted(FINAL_STATUSES))
         raise RunControllerError(f"结束状态必须是：{allowed}")
     if not reason:
         raise RunControllerError("结束会话时必须填写事实说明")
+    evidence_refs = list(evidence_refs or [])
+    for ref in evidence_refs:
+        rel = Path(ref)
+        if (not isinstance(ref, str) or not ref or rel.is_absolute() or ".." in rel.parts
+                or not (Path(data_root) / rel).is_file()):
+            raise RunControllerError(f"结束证据必须是数据区内已存在的相对文件: {ref!r}")
     with _locked(data_root):
         try:
             require_clean(data_root)
@@ -440,6 +455,23 @@ def finish(data_root, run_id, status, reason):
                     "go 结束要求至少一个当前仍处于 fast_grab_ready/pilot_ready/build_ready、"
                     "且由本次 run_id 转入该状态的候选")
             obj["go_candidates"] = produced
+        elif status == "quota_exhausted":
+            if not evidence_refs:
+                raise RunControllerError(
+                    "查询额度已用完必须提供网页界面实际提示的证据文件 --evidence-ref")
+        elif status == "budget_reached":
+            started = datetime.fromisoformat(obj["started_at"])
+            elapsed_hours = (datetime.now(timezone.utc) - started).total_seconds() / 3600
+            rounds_hit = obj["rounds_completed"] >= obj["max_rounds"]
+            hours_hit = obj.get("max_hours") is not None and elapsed_hours >= obj["max_hours"]
+            if not (rounds_hit or hours_hit):
+                raise RunControllerError("运行预算尚未命中，不能以“运行预算已用完”结束")
+        elif status == "calibration_triggered":
+            from run_policy import evaluate
+            policy = evaluate(data_root, run_id)
+            if policy.get("consecutive_decision_stall_rounds", 0) < 3:
+                raise RunControllerError(
+                    "尚未连续三轮无真实决策迁移且 captured 积压净增长，不能触发校准")
         existing_termination = manifest.get("termination")
         if existing_termination is not None:
             if (existing_termination.get("status") != status
@@ -457,7 +489,7 @@ def finish(data_root, run_id, status, reason):
         obj["round_executor_id"] = None
         validate_session(obj, run_id)
         try:
-            finalize_manifest(data_root, obj, reason)
+            finalize_manifest(data_root, obj, reason, evidence_refs)
         except RunManifestError as e:
             raise RunControllerError(str(e))
         _save(_path(data_root, run_id), obj)
@@ -546,6 +578,8 @@ def main(argv=None):
     p.add_argument("--status", required=True,
                    help="结束状态；推荐使用中文，如“运行预算已用完”")
     p.add_argument("--reason", required=True)
+    p.add_argument("--evidence-ref", action="append", default=[],
+                   help="结束状态的事实证据文件，可重复；额度耗尽时必填")
     p = sub.add_parser("recover", help="前滚恢复未完成的跨文件事务")
     p.add_argument("--run-id")
     p = sub.add_parser("reconcile", help="人工解决无法自动前滚的分歧事务")
@@ -584,7 +618,7 @@ def main(argv=None):
         elif a.cmd == "confirm-window-bet":
             obj = confirm_window_bet(a.data_root, a.run_id, a.slug)
         elif a.cmd == "finish":
-            obj = finish(a.data_root, a.run_id, a.status, a.reason)
+            obj = finish(a.data_root, a.run_id, a.status, a.reason, a.evidence_ref)
         elif a.cmd == "recover":
             obj = {"recovered": recover(a.data_root, a.run_id)}
         elif a.cmd == "reconcile":

@@ -4,7 +4,7 @@
   "type": "object",
   "required": ["schema_version", "run_id", "mode", "status", "started_at", "updated_at", "max_rounds", "max_hours", "rounds_completed", "current_round", "confirmations", "finish_reason"],
   "properties": {
-    "schema_version": { "type": "integer", "const": 1 },
+    "schema_version": { "type": "integer", "enum": [1, 2], "description": "v1 历史只读兼容；新会话写 v2 并强制结束快照" },
     "run_id": { "type": "string", "pattern": "^run-[0-9]{8}T[0-9]{6}Z-[a-f0-9]{8}$" },
     "mode": { "type": "string", "const": "continuous" },
     "status": { "type": "string", "enum": ["active", "go", "quota_exhausted", "budget_reached", "resource_exhausted", "calibration_triggered", "blocked", "cancelled"] },

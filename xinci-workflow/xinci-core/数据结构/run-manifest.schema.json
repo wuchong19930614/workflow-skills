@@ -61,12 +61,13 @@
     },
     "termination": {
       "type": "object",
-      "required": ["status", "status_label", "reason", "finished_at", "rounds_completed", "max_rounds", "go_candidates"],
+      "required": ["status", "status_label", "reason", "finished_at", "rounds_completed", "max_rounds", "go_candidates", "evidence_refs"],
       "properties": {
         "status": { "type": "string" }, "status_label": { "type": "string" },
         "reason": { "type": "string", "minLength": 1 }, "finished_at": { "type": "string" },
         "rounds_completed": { "type": "integer" }, "max_rounds": { "type": "integer" },
-        "go_candidates": { "type": "array", "items": { "type": "string" } }
+        "go_candidates": { "type": "array", "items": { "type": "string" } },
+        "evidence_refs": { "type": "array", "items": { "type": "string" }, "description": "结束状态的事实证据；额度耗尽时必须含网页界面提示证据" }
       },
       "additionalProperties": false
     },

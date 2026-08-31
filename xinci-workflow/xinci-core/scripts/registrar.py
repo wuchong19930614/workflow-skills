@@ -247,7 +247,8 @@ def _check_evidence(data_root: Path, refs, slug=None) -> list:
 
 
 OBS_FIELDS = {"slug", "observed_at", "stage", "source_urls", "points", "gates",
-              "g6_lines", "g6_tentative_lines", "g6_entry_veto", "income_score", "window_bet"}
+              "g6_lines", "g6_tentative_lines", "g6_entry_veto", "income_score", "window_bet",
+              "naming_status", "formation_signals"}
 WINDOW_BET_FIELDS = {"implementation_urls", "lag_sample_url", "lag_days", "rationale"}
 
 
@@ -321,6 +322,18 @@ def _check_observation(path: Path, ref: str, slug) -> None:
         _require(g6_lines is None and g6_tentative_lines is None and "G6" not in gates,
                  f"g6_entry_veto 不得伪装成正式或暂定 G6: {ref}")
         _require(bool(urls), f"g6_entry_veto 必须包含实际打开的 source_urls: {ref}")
+    naming_status = obs.get("naming_status")
+    if naming_status is not None:
+        _require(obs["stage"] == "track" and naming_status in {"unstable", "stabilized"},
+                 f"观察文件 naming_status 只适用于 track 且必须为 unstable/stabilized: {ref}")
+    formation_signals = obs.get("formation_signals")
+    if formation_signals is not None:
+        allowed_signals = {"autocomplete", "semrush_rows", "sustained_discussion",
+                           "repeated_independent_queries"}
+        _require(obs["stage"] == "track" and isinstance(formation_signals, list)
+                 and len(formation_signals) == len(set(formation_signals))
+                 and all(x in allowed_signals for x in formation_signals),
+                 f"观察文件 formation_signals 只适用于 track，且必须是合法且不重复的形成信号数组: {ref}")
     obs_income_score = obs.get("income_score")
     if obs_income_score is not None:
         _require(isinstance(obs_income_score, int) and not isinstance(obs_income_score, bool)
@@ -759,6 +772,12 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                  f"(形成期以周计,单次运行无法压缩),当前 {span} 天")
         _check_gates(gates, ("G1",), "tracking→formation_confirmed")
         _require(len(refs) >= 1, "tracking→formation_confirmed 要求本次至少 1 个证据")
+        current_track = [_load_observation(data_root, r) for r in refs
+                         if Path(r).stem.endswith("-track")]
+        _require(any(obs.get("naming_status") == "stabilized" for obs in current_track),
+                 "tracking→formation_confirmed 要求本次 track 观察明确 naming_status=stabilized")
+        _require(any(bool(obs.get("formation_signals")) for obs in current_track),
+                 "tracking→formation_confirmed 要求本次 track 观察至少记录 1 项 formation_signals")
     elif to == "expired":
         _require(bool(reason),
                  "expired 要求 reason(失效日已到 / 失效条件命中 / 快道窗口关闭)")
@@ -817,6 +836,10 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                  "qualify 观察 income_score 必须与 transition 参数一致")
     elif to == "disqualified":
         _require(bool(reason), "disqualified 要求 reason(决定性缺口:哪一项、差多少)")
+        _require(len(refs) >= 1, "disqualified 要求本次至少 1 个 qualify 证据")
+        qualify_obs = [_load_observation(data_root, ref) for ref in refs
+                       if Path(ref).stem.endswith("-qualify")]
+        _require(bool(qualify_obs), "disqualified 要求本次提交 qualify observation")
     elif to in {"build_ready", "pilot_ready"}:
         _check_decision_files(data_root, decision_ref)
         _require(play in BUILD_PLAYS, f"play 必须属于 {sorted(BUILD_PLAYS)},当前 {play!r}")

@@ -9,6 +9,7 @@
     "at": {"type": "string", "format": "date-time"},
     "actor": {"type": "string"},
     "run_id": {"type": "string"},
+    "round": {"type": "integer", "minimum": 1},
     "observed_date": {"type": "string", "format": "date"},
     "title": {"type": "string", "minLength": 1},
     "source_url": {"type": "string", "format": "uri"},
@@ -22,5 +23,6 @@
     "base_case_source": {"type": "string", "format": "uri"},
     "reason": {"type": "string", "minLength": 1}
   },
+  "dependentRequired": {"run_id": ["round"], "round": ["run_id"]},
   "additionalProperties": false
 }

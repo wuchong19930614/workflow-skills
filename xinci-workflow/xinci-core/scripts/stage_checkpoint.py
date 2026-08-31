@@ -17,9 +17,10 @@ from run_state import RunStateError, load_session
 
 
 STAGE_DIR = "阶段"
-OUTCOMES = {"dedup", "zero_cost", "g1_rejected", "deep_audited", "queued", "alias",
-            "pooled", "trigger_discarded", "trigger_pending", "trigger_approved"}
+SCAN_OUTCOMES = {"dedup", "zero_cost", "g1_rejected", "deep_audited", "queued", "alias"}
 TRIGGER_OUTCOMES = {"trigger_discarded", "trigger_pending", "trigger_approved"}
+OUTCOMES = SCAN_OUTCOMES | TRIGGER_OUTCOMES
+LEGACY_OUTCOMES = OUTCOMES | {"pooled"}
 TRIGGER_STATUS_OUTCOME = {"discarded": "trigger_discarded", "pending": "trigger_pending",
                           "approved": "trigger_approved"}
 
@@ -55,13 +56,21 @@ def _load(path):
     required = {"schema_version", "run_id", "round", "stage", "status", "created_at",
                 "updated_at", "items"}
     if (not isinstance(obj, dict) or not required <= set(obj)
-            or obj.get("schema_version") != 1 or obj.get("status") not in {"active", "completed"}
+            or obj.get("schema_version") not in {1, 2}
+            or obj.get("status") not in {"active", "completed"}
+            or obj.get("stage") not in {"scan", "trigger"}
             or not isinstance(obj.get("items"), dict)):
         raise StageCheckpointError(f"阶段检查点字段非法: {Path(path).name}")
     for item, row in obj["items"].items():
         if (not isinstance(item, str) or not item or not isinstance(row, dict)
-                or row.get("outcome") not in OUTCOMES | {None}):
+                or row.get("outcome") not in (
+                    (LEGACY_OUTCOMES if obj["schema_version"] == 1 else OUTCOMES) | {None})):
             raise StageCheckpointError(f"阶段检查点 item 字段非法: {Path(path).name}")
+        if obj["schema_version"] >= 2 and row.get("outcome") is not None:
+            allowed = TRIGGER_OUTCOMES if obj["stage"] == "trigger" else SCAN_OUTCOMES
+            if row["outcome"] not in allowed:
+                raise StageCheckpointError(
+                    f"阶段检查点 stage/outcome 语义冲突: {Path(path).name}")
     return obj
 
 
@@ -91,7 +100,7 @@ def start(root, run_id, round_number, items, stage="scan"):
         raise StageCheckpointError("已完成的阶段检查点不可覆盖")
     now = _now()
     obj = {
-        "schema_version": 1, "run_id": run_id, "round": round_number, "stage": stage,
+        "schema_version": 2, "run_id": run_id, "round": round_number, "stage": stage,
         "status": "active", "created_at": now, "updated_at": now,
         "items": {item: {"outcome": None, "note": None, "updated_at": None} for item in clean},
     }
@@ -101,7 +110,7 @@ def start(root, run_id, round_number, items, stage="scan"):
 
 def mark(root, run_id, round_number, item, outcome, note=None, stage="scan"):
     if outcome not in OUTCOMES:
-        raise StageCheckpointError(f"outcome 必须属于 {sorted(OUTCOMES)}")
+        raise StageCheckpointError(f"新检查点 outcome 必须属于 {sorted(OUTCOMES)}；pooled 仅可读取历史记录")
     if stage == "trigger" and outcome not in TRIGGER_OUTCOMES:
         raise StageCheckpointError(f"trigger 检查点 outcome 必须属于 {sorted(TRIGGER_OUTCOMES)}")
     if stage != "trigger" and outcome in TRIGGER_OUTCOMES:
@@ -182,6 +191,37 @@ def require_trigger_checkpoint(root, run_id, round_number, harvested):
         raise StageCheckpointError(f"本轮 raw trigger 缺 trigger 检查点: {e}")
     if obj.get("status") != "completed" or len(obj.get("items") or {}) != harvested:
         raise StageCheckpointError("本轮 raw trigger 缺已完成且数量一致的 trigger 检查点")
+
+
+def require_scan_funnel(root, run_id, round_number, funnel):
+    """以已完成 scan 检查点反证正式漏斗四个归宿。"""
+    fields = {"zero_cost": "rejected_zero_cost", "g1_rejected": "rejected_g1",
+              "deep_audited": "deep_audited", "queued": "queued"}
+    declared = {outcome: funnel.get(field, 0) for outcome, field in fields.items()}
+    if (any(not isinstance(value, int) or isinstance(value, bool) or value < 0
+            for value in declared.values())
+            or not isinstance(funnel.get("extracted"), int)
+            or isinstance(funnel.get("extracted"), bool)
+            or funnel["extracted"] < 0):
+        raise StageCheckpointError("正式漏斗各项必须是非负整数")
+    expected_total = sum(declared.values())
+    path = checkpoint_path(root, run_id, round_number, "scan")
+    if not path.is_file():
+        if expected_total:
+            raise StageCheckpointError("正式漏斗非零但缺已完成的 scan 检查点")
+        return
+    obj = _load(path)
+    if obj.get("status") != "completed":
+        raise StageCheckpointError("scan 检查点尚未完成")
+    actual = {key: 0 for key in fields}
+    for row in obj["items"].values():
+        if row.get("outcome") in actual:
+            actual[row["outcome"]] += 1
+    if actual != declared:
+        raise StageCheckpointError(
+            f"正式漏斗与 scan 检查点不一致: declared={declared}, actual={actual}")
+    if funnel.get("extracted") != expected_total:
+        raise StageCheckpointError("funnel.extracted 必须等于 scan 检查点四个正式归宿之和")
 
 
 def main(argv=None):

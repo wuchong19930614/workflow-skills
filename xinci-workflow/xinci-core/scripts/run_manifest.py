@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""运行清单的唯一校验与原子写入实现。"""
+"""运行清单的唯一校验、单步记录与原子写入实现。"""
+import argparse
 import json
 import os
 import re
 import tempfile
+import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+import data_root
 from run_state import RunStateError, load_session
 from chinese_labels import session_status_label
 
@@ -104,7 +107,7 @@ def _check_trigger_funnel(obj, where, errors):
         errors.append(f"{where} trigger_funnel 去向加总 {sinks} ≠ harvested {funnel['harvested']}")
 
 
-def _check_reviews(obj, where, errors):
+def _check_reviews(obj, where, errors, root=None):
     rows = obj.get("candidates_reviewed")
     if rows is None:
         return
@@ -123,6 +126,11 @@ def _check_reviews(obj, where, errors):
         refs = row.get("evidence_refs", [])
         if not isinstance(refs, list) or not all(isinstance(x, str) and x for x in refs):
             errors.append(f"{where} candidates_reviewed[{i}].evidence_refs 必须是字符串数组")
+        elif root is not None:
+            for ref in refs:
+                rel = Path(ref)
+                if rel.is_absolute() or ".." in rel.parts or not (root / rel).is_file():
+                    errors.append(f"{where} candidates_reviewed[{i}] 证据不存在或越界: {ref}")
         seen.add(row["slug"])
 
 
@@ -249,7 +257,8 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
     _check_int(obj, "billable_calls", where, errors)
     _check_funnel(obj, where, errors)
     _check_trigger_funnel(obj, where, errors)
-    _check_reviews(obj, where, errors)
+    root = Path(path).parent.parent if path else None
+    _check_reviews(obj, where, errors, root)
     enforce_funnel = bool(run_date) and run_date >= FUNNEL_REQUIRED_FROM
     if enforce_funnel and skill == "xinci-scan" and obj.get("funnel") is None:
         errors.append(f"{where} xinci-scan 清单必须带 funnel(自 {FUNNEL_REQUIRED_FROM} 起强制)")
@@ -279,7 +288,7 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
         _check_int(rnd, "billable_calls", rw, errors)
         _check_funnel(rnd, rw, errors)
         _check_trigger_funnel(rnd, rw, errors)
-        _check_reviews(rnd, rw, errors)
+        _check_reviews(rnd, rw, errors, root)
         if enforce_funnel and rnd.get("funnel") is None:
             errors.append(f"{rw} 必须带 funnel(自 {FUNNEL_REQUIRED_FROM} 起强制)")
     numbers = [rnd.get("round") for rnd in rounds if isinstance(rnd, dict)]
@@ -299,14 +308,18 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
                       f"{session.get('rounds_completed')} 不一致")
     termination = obj.get("termination")
     if termination is not None:
-        required = {"status", "status_label", "reason", "finished_at", "rounds_completed",
-                    "max_rounds", "go_candidates"}
-        if not isinstance(termination, dict) or set(termination) != required:
-            errors.append(f"{where} termination 字段必须严格匹配 {sorted(required)}")
+        legacy_required = {"status", "status_label", "reason", "finished_at", "rounds_completed",
+                           "max_rounds", "go_candidates"}
+        current_required = legacy_required | {"evidence_refs"}
+        if not isinstance(termination, dict) or frozenset(termination) not in {
+                frozenset(legacy_required), frozenset(current_required)}:
+            errors.append(f"{where} termination 字段必须匹配当前或历史契约")
         elif (not all(termination.get(k) for k in ("status", "status_label", "reason", "finished_at"))
               or not isinstance(termination.get("rounds_completed"), int)
               or not isinstance(termination.get("max_rounds"), int)
-              or not isinstance(termination.get("go_candidates"), list)):
+              or not isinstance(termination.get("go_candidates"), list)
+              or not isinstance(termination.get("evidence_refs", []), list)
+              or not all(isinstance(x, str) and x for x in termination.get("evidence_refs", []))):
             errors.append(f"{where} termination 值非法")
         elif session and session.get("status") != "active":
             expected = {
@@ -318,8 +331,18 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
                 "max_rounds": session.get("max_rounds"),
                 "go_candidates": list(session.get("go_candidates") or []),
             }
-            if termination != expected:
+            actual_core = {key: termination.get(key) for key in expected}
+            if actual_core != expected:
                 errors.append(f"{where} termination 与已结束 session 不一致")
+            for ref in termination.get("evidence_refs", []):
+                rel = Path(ref)
+                root = Path(path).parent.parent if path else None
+                if (rel.is_absolute() or ".." in rel.parts
+                        or (root is not None and not (root / rel).is_file())):
+                    errors.append(f"{where} termination 证据不存在或越界: {ref}")
+    elif (session and session.get("status") != "active"
+          and session.get("schema_version", 1) >= 2):
+        errors.append(f"{where} 已结束 session 必须固化 termination 快照")
     return errors
 
 
@@ -404,6 +427,41 @@ def create_run_manifest(data_root, session):
     return path, obj
 
 
+def record_single(data_root, *, run_date, skill, suffix=None, sources_opened=None,
+                  sources_blocked=None, candidates_touched=None, billable_calls=0,
+                  notes=None, funnel=None):
+    """原子创建单步 skill 清单；拒绝覆盖，重跑时由调用者显式给 HHMM/HHMMSS 后缀。"""
+    if skill == "xinci-run" or skill not in RUN_SKILLS:
+        raise RunManifestError("record-single 只接受非 xinci-run 的已知 skill")
+    try:
+        date.fromisoformat(run_date)
+    except (TypeError, ValueError):
+        raise RunManifestError("record-single --date 必须是 YYYY-MM-DD")
+    if suffix is not None and not re.fullmatch(r"\d{4}|\d{6}", suffix):
+        raise RunManifestError("record-single --suffix 必须是 HHMM 或 HHMMSS")
+    name = f"{run_date}{'-' + suffix if suffix else ''}-{skill}.json"
+    path = Path(data_root) / "运行" / name
+    if path.exists():
+        raise RunManifestError(f"运行清单已存在，拒绝覆盖；同日重跑请传 --suffix: {name}")
+    obj = {
+        "date": run_date, "skill": skill,
+        "sources_opened": list(sources_opened or []),
+        "sources_blocked": list(sources_blocked or []),
+        "candidates_touched": list(candidates_touched or []),
+        "billable_calls": billable_calls,
+        "notes": list(notes or []),
+    }
+    if funnel is not None:
+        if "pooled" in funnel:
+            raise RunManifestError("新单步清单不得写 funnel.pooled；该字段仅供历史读取")
+        obj["funnel"] = funnel
+    errors = validate_manifest(obj, path)
+    if errors:
+        raise RunManifestError("; ".join(errors))
+    _atomic_save(path, obj)
+    return path, obj
+
+
 def _merge_unique(existing, values):
     out = list(existing or [])
     seen = set(out)
@@ -456,7 +514,7 @@ def append_round(data_root, session, round_record):
     return path, manifest
 
 
-def finalize_manifest(data_root, session, reason):
+def finalize_manifest(data_root, session, reason, evidence_refs=None):
     path, manifest = find_run_manifest(data_root, session["run_id"])
     if path is None:
         path, manifest = create_run_manifest(data_root, session)
@@ -468,6 +526,7 @@ def finalize_manifest(data_root, session, reason):
         "rounds_completed": session["rounds_completed"],
         "max_rounds": session["max_rounds"],
         "go_candidates": list(session.get("go_candidates") or []),
+        "evidence_refs": list(evidence_refs or []),
     }
     existing = manifest.get("termination")
     if existing is not None and existing != termination:
@@ -479,3 +538,37 @@ def finalize_manifest(data_root, session, reason):
         raise RunManifestError("; ".join(errors))
     _atomic_save(path, manifest)
     return path, manifest
+
+
+def main(argv=None):
+    ap = argparse.ArgumentParser(description="xinci 运行清单校验与单步原子写入")
+    ap.add_argument("--data-root", default=None)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("record-single")
+    p.add_argument("--date", required=True)
+    p.add_argument("--skill", choices=sorted(RUN_SKILLS - {"xinci-run"}), required=True)
+    p.add_argument("--suffix")
+    p.add_argument("--source-opened", action="append", default=[])
+    p.add_argument("--source-blocked", action="append", default=[])
+    p.add_argument("--candidate-touched", action="append", default=[])
+    p.add_argument("--billable-calls", type=int, default=0)
+    p.add_argument("--note", action="append", default=[])
+    p.add_argument("--funnel", help="xinci-scan 必填的漏斗 JSON")
+    a = ap.parse_args(argv)
+    root = data_root.resolve_or_exit(a.data_root)
+    try:
+        funnel = json.loads(a.funnel) if a.funnel is not None else None
+        path, _ = record_single(
+            root, run_date=a.date, skill=a.skill, suffix=a.suffix,
+            sources_opened=a.source_opened, sources_blocked=a.source_blocked,
+            candidates_touched=a.candidate_touched, billable_calls=a.billable_calls,
+            notes=a.note, funnel=funnel)
+    except (json.JSONDecodeError, RunManifestError) as e:
+        print(f"run_manifest 拒绝: {e}", file=sys.stderr)
+        return 2
+    print(f"已写运行清单: {path}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

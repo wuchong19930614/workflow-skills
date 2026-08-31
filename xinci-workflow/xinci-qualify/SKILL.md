@@ -48,7 +48,7 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
 4. **G8 簇广度(硬门)。** 枚举意图簇:≥3 个任务型查询 × ≥2 个独立 family;合并表述性变体,不许同义改写凑数。达不到即 disqualified——pilot 由决策阶段的页面地图线触发,不是 G8 的降级出口。
 5. **完整竞争审计。** 真浏览器读核心任务查询的完整 top-10(到第二页或质量断层),每个结果按"做什么"分类,并按闸门契约 G3 的现行判定执行:这里必须使用本阶段第 2 步刚形成的**正式 G6 结论**,不得继承扫描期的暂定盈利线;订阅线能过的,占位否决不生效,降为决策阶段的竞争强度输入。数工具之前先判经营信号(内容后面有没有付费产品、有没有按国/按任务的簇、有没有维护痕迹);数工具用两族措辞各检索一次(问句式 + 产品向,缺一不可);对判定"把任务做完了"的结果再判持续可见度(结构上进不来 SERP 的实现不计入否决,见闸门契约 G3 三分)。**实测至少一个竞品的 footprint**(authority、流量、词量、增速):authority 只作背景记录,流量/覆盖词量/增速衡量实际占据并只进入评分与风险说明;这些指标都不得反向改写 G2/G3——存在不等于占据。
 6. **评分。** 按评分契约六维打分,做红队反驳并扣分。硬否决之后不产生最终分数；收入可行性维度必须是 1–20,不得用其他五维把 0 收入补到 80。
-7. **写观察文件**(`证据/<slug>/<日期>-qualify.json`:逐维得分、逐线 G6 判定、红队记录、竞争分类清单、footprint 实测),qualified 观察必须在 `gates` 明确写 G6/G7/G8 的 pass,用 `g6_lines` 完整写 subscription/advertising 的 `pass|veto|N/A`,用 `income_score` 写收入维度分,并把支撑来源列入非空 `source_urls`;registrar 会核对三门、逐线结论、收入分与 transition 参数。然后**向用户提议** qualified(附总分、`income_score`、通过线)或 disqualified(附决定性缺口:哪一项、差多少)。
+7. **写观察文件**(`证据/<slug>/<日期>-qualify.json`:逐维得分、逐线 G6 判定、红队记录、竞争分类清单、footprint 实测),qualified 观察必须在 `gates` 明确写 G6/G7/G8 的 pass,用 `g6_lines` 完整写 subscription/advertising 的 `pass|veto|N/A`,用 `income_score` 写收入维度分,并把支撑来源列入非空 `source_urls`;registrar 会核对三门、逐线结论、收入分与 transition 参数。然后**向用户提议** qualified(附总分、`income_score`、通过线)或 disqualified(附决定性缺口:哪一项、差多少)。两种 disqualified 来源态都必须把本次 `-qualify` observation 随 transition 提交，不能只写 reason。
 8. **用户确认后**执行:
 
 ```bash
@@ -58,7 +58,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --gates G6=pass,G7=pass,G8=pass --evidence "证据/<slug>/<日期>-qualify.json"
 ```
 
-写运行清单 `运行/<日期>-xinci-qualify.json`(含计费调用数;同日再次运行加 HHMM 后缀,不覆盖已有清单)。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
+用 `run_manifest.py record-single --date <YYYY-MM-DD> --skill xinci-qualify [--suffix <HHMM>] --billable-calls <N> ...` 原子写运行清单；控制器拒绝覆盖，不得手写 JSON。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
 
 ## 硬规则
 

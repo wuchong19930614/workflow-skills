@@ -35,6 +35,9 @@ def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
         "points": ["测试观察要点"],
     }
     obs.update(overrides)
+    if stage == "track":
+        obs.setdefault("naming_status", "stabilized")
+        obs.setdefault("formation_signals", ["sustained_discussion"])
     if ("g6_tentative_lines" not in overrides and stage in {"scan", "track"}
             and "G3" in obs.get("gates", {})):
         if obs["gates"]["G3"] == "pass":
@@ -329,6 +332,25 @@ class RegistrarTest(unittest.TestCase):
                      gates={"G1": "pass"}, evidence=[ok])
         self.assertEqual(self.load(slug)["state"], "formation_confirmed")
 
+    def test_formation_requires_stable_name_and_signal(self):
+        slug = self.register("formation-meaning")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        R.checked(self.root, slug, evidence=[mk_evidence(
+            self.root, slug, "2026-08-20-track.json")])
+        unstable = mk_evidence(
+            self.root, slug, "2026-08-27-track.json", gates={"G1": "pass"},
+            naming_status="unstable", formation_signals=[])
+        with self.assertRaisesRegex(R.RegistrarError, "naming_status"):
+            R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
+                         gates={"G1": "pass"}, evidence=[unstable])
+        no_signal = mk_evidence(
+            self.root, slug, "2026-08-28-track.json", gates={"G1": "pass"},
+            naming_status="stabilized", formation_signals=[])
+        with self.assertRaisesRegex(R.RegistrarError, "formation_signals"):
+            R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
+                         gates={"G1": "pass"}, evidence=[no_signal])
+
     def test_qualified_requires_score_80(self):
         slug = self.register()
         self.to_screened(slug)
@@ -573,8 +595,9 @@ class RegistrarTest(unittest.TestCase):
         self.to_screened(slug)
         self.to_tracking(slug)
         self.to_formation(slug)
+        disq_ev = mk_evidence(self.root, slug, "2026-09-11-qualify.json")
         R.transition(self.root, slug, to="disqualified", by="xinci-qualify",
-                     reason="竞争维度差 12 分")
+                     reason="竞争维度差 12 分", evidence=[disq_ev])
         other = "better-wording"
         ev = mk_evidence(self.root, other, "2026-08-17-scan.json")
         R.register(self.root, slug=other, term="better wording", source_url="https://e.com",
@@ -615,8 +638,9 @@ class RegistrarTest(unittest.TestCase):
         R.transition(self.root, slug, to="hold", by="xinci-decide", reason="窗口判断存疑,搁置重审")
         with self.assertRaises(R.RegistrarError):  # 缺 reason
             R.transition(self.root, slug, to="disqualified", by="xinci-qualify")
+        ev = mk_evidence(self.root, slug, "2026-09-12-qualify.json")
         R.transition(self.root, slug, to="disqualified", by="xinci-qualify",
-                     reason="重审后耐久性缺口:官方答案已上线")
+                     reason="重审后耐久性缺口:官方答案已上线", evidence=[ev])
         self.assertEqual(self.load(slug)["state"], "disqualified")
 
     def test_checked_allowed_on_any_nonterminal_state(self):

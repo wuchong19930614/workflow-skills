@@ -1,6 +1,7 @@
 import sys
 import tempfile
 import unittest
+import json
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -33,13 +34,10 @@ class StageCheckpointTest(unittest.TestCase):
         self.assertEqual(done["status"], "completed")
         self.assertEqual(SC.list_open(self.root, self.run_id, 1), [])
 
-    def test_pooled_is_a_valid_outcome(self):
-        """方向停在触发层(写进触发池、未注册为候选)也是一种归宿,必须能标记,
-        否则批量扫描收尾时它无处安放,只能借用语义不符的 queued。"""
+    def test_pooled_is_rejected_for_new_checkpoint(self):
         SC.start(self.root, self.run_id, 1, ["gamma"])
-        SC.mark(self.root, self.run_id, 1, "gamma", "pooled", "已写入触发池 pending")
-        done = SC.finish(self.root, self.run_id, 1)
-        self.assertEqual(done["items"]["gamma"]["outcome"], "pooled")
+        with self.assertRaisesRegex(SC.StageCheckpointError, "pooled 仅可读取历史"):
+            SC.mark(self.root, self.run_id, 1, "gamma", "pooled", "错误混入正式漏斗")
 
     def test_outcome_cannot_be_overwritten(self):
         SC.start(self.root, self.run_id, 1, ["alpha"])
@@ -61,6 +59,15 @@ class StageCheckpointTest(unittest.TestCase):
         SC.start(self.root, self.run_id, 1, ["alpha"])
         with self.assertRaisesRegex(SC.StageCheckpointError, "只允许"):
             SC.mark(self.root, self.run_id, 1, "alpha", "trigger_pending")
+
+    def test_loader_rejects_manually_forged_stage_outcome_pair(self):
+        SC.start(self.root, self.run_id, 1, ["alpha"])
+        path = SC.checkpoint_path(self.root, self.run_id, 1, "scan")
+        obj = json.loads(path.read_text(encoding="utf-8"))
+        obj["items"]["alpha"]["outcome"] = "trigger_pending"
+        path.write_text(json.dumps(obj), encoding="utf-8")
+        with self.assertRaisesRegex(SC.StageCheckpointError, "语义冲突"):
+            SC.list_open(self.root)
 
 
 if __name__ == "__main__":

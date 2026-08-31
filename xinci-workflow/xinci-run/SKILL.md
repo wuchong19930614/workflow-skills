@@ -91,7 +91,7 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
    - **积压硬闸**:`lane=new,state=captured` >20 时策略必须为 `debt_only`，本轮正式提取目标为 0；不再以“最低档”继续制造新债。浏览器不满足 G1 时为 `trigger_only`，同样不得把官方标题或缺 G1 项注册进账本。
 2. **扫描触发与新候选**:先把有日期的法规/平台/技术变化作为原始 trigger 写入 `trigger_pool.py add`，不得把官方公告标题直接当搜索词。每批新 trigger 另建 `--stage trigger` 检查点，逐条标成 `trigger_discarded / trigger_pending / trigger_approved` 后 finish。只有补齐 task query、至少一个独立搜索语言证据 URL，以及 payer/repeat_unit/self_serve_path/base_case_source 后，才能 `approve`。批准只表示可进入 G0。正式注册时，信号面候选传 `--origin signal`；变化面候选传 `--origin trigger --trigger-id <approved id>`，registrar 会核对 term 与批准 query 一致。`mode=full` 才执行；`trigger_only` 只维护触发池；`debt_only` 跳过本步。单一 source_family 不得连续主导超过 2 轮或占本 run 新 trigger 的 40%，超过就轮换来源。
 3. **分流**(步骤 1 还债深审出的候选与步骤 2 扫描出的候选**一并分流**,别只分流新扫的):**先出闸 `captured → screened`**(带 G2/G3 结论与 `--window-estimate`,这一步不能跳——tracking 与快道都只从 screened 出发,直接 `--to tracking` 会被 registrar 判非法转移;命令见 xinci-scan 第 5 层),再按窗口分流:窗口天级 → 立即走 xinci-decide 快道模式;窗口周/月级 → 转 tracking 入库。当前 new 扫描在订阅线暂定可行时不会新造 `G3=veto_window_bet`;账本中已合法存在的历史兼容候选仍按原出口留在 captured 挂起,用户确认后记录候选级一次性授权,再由同一 run_id 出闸(见硬规则)。然后继续循环。
-4. **每轮收尾**:正式候选批量扫描用 `--stage scan` 检查点；raw trigger 另用 `--stage trigger` 检查点，逐条标成 `trigger_discarded / trigger_pending / trigger_approved`，不能再用 `pooled` 混入正式候选漏斗。`record-round` 会拒绝任何仍打开的检查点，并从触发池事件自动生成 `trigger_funnel`，调用者不得自报。正式 `funnel.extracted` 只算进入候选筛选的 query。存量候选若本轮只读既有证据、没有账本 history 写入，用 `--candidate-reviewed` 记录，不得冒充 `candidates_touched`。随后提交来源、计费调用、notes 与正式 funnel；不要手写 manifest。`queued` 只表示新债，**不算决策推进**。
+4. **每轮收尾**:正式候选批量扫描用 `--stage scan` 检查点；raw trigger 另用 `--stage trigger` 检查点，逐条标成 `trigger_discarded / trigger_pending / trigger_approved`，不能再用 `pooled` 混入正式候选漏斗。`record-round` 会拒绝任何仍打开的检查点，从触发池事件自动生成 `trigger_funnel`，并把调用者提交的正式 funnel 与已完成 scan 检查点逐格核对。正式 `funnel.extracted` 只算进入候选筛选的 query。存量候选若本轮只读既有证据、没有账本 history 写入，用 `--candidate-reviewed` 记录，不得冒充 `candidates_touched`。随后提交来源、计费调用、notes 与正式 funnel；不要手写 manifest。`queued` 只表示新债，**不算决策推进**。
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
@@ -108,7 +108,7 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
 ## 终止契约(全文见生命周期契约,此处为执行摘要)
 
 - **正常终止 A——拿到可交付结论**:registrar 记录任一 go 决策(fast_grab_ready / pilot_ready / build_ready)。停,交付决策书(md+html)与账本状态。**两类 go 分量不同,报告时不许混说**:build_ready / pilot_ready 过了 G6–G8 与 80 分线,是"值得建站";fast_grab_ready 是"一份标好价的窗口赌注",不等于被验证的生意。
-- **正常终止 B——额度耗尽**:Semrush 网页版界面**实际出现**额度耗尽提示;把提示要点记入运行清单后停,报告推进到了哪。假设或报错猜测不算。
+- **正常终止 B——额度耗尽**:Semrush 网页版界面**实际出现**额度耗尽提示；保存截图或其他可复核文件，并在 `finish` 使用 `--evidence-ref <数据区相对路径>`。只写提示要点、假设或报错猜测都不算。
 - **正常收尾 C——会话资源耗尽**:上下文/会话资源接近极限时,完成当前动作、写运行清单、如实报告"会话资源耗尽,任务未完成、额度未耗尽"后停。这是操作边界不是任务终点,不得伪装成 A 或 B;已完成的转移保持有效,下次启动从账本现状继续。
 - **正常收尾 D——预算命中**:任一预算先用完——始终存在的 `max_rounds`(未显式指定时为 6),或可选的 `max_hours`。两项同时存在时不是二选一,谁先命中就收尾。处理同 C:完成当前动作、写运行清单、如实报告推进到哪与预算命中,下次启动从账本现状继续。
 - **正常收尾 E——连续三轮无真实决策迁移且队列增长**:`run_policy.py` 返回 `consecutive_decision_stall_rounds >= 3` 时停止新增候选并转入闸门/来源/容量校准。初次 register 的 `from=null→captured` 与 `funnel.queued` 都不算决策推进；只有既有候选发生真实状态迁移才算。完成本轮 record-round 后以“已触发闸门校准”收尾，如实报告。

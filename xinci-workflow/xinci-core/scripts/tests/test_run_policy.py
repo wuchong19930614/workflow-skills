@@ -118,6 +118,42 @@ class RunPolicyTest(unittest.TestCase):
         (d / "候选账本.json").write_text(json.dumps({"candidates": {"demo": candidate}}), encoding="utf-8")
         self.assertEqual(RP.decision_transitions_by_round(self.root, self.run["run_id"]), {2: 1})
 
+    def test_stall_requires_net_backlog_growth(self):
+        self.ready()
+        rounds = []
+        for number in range(1, 4):
+            rounds.append({"round": number, "funnel": {
+                "extracted": 1, "rejected_zero_cost": 0, "rejected_g1": 0,
+                "deep_audited": 0, "queued": 1, "carryover_audited": 1}})
+        d = self.root / "运行"; d.mkdir(parents=True, exist_ok=True)
+        (d / "2026-08-31-xinci-run.json").write_text(json.dumps({
+            "date": "2026-08-31", "skill": "xinci-run", "run_id": self.run["run_id"],
+            "rounds": rounds}), encoding="utf-8")
+        self.seed_ledger({})
+        policy = RP.evaluate(self.root, self.run["run_id"])
+        self.assertEqual(policy["captured_backlog_delta_by_round"], {})
+        self.assertEqual(policy["consecutive_decision_stall_rounds"], 0)
+
+    def test_three_rounds_of_real_net_backlog_growth_trigger_stall(self):
+        self.ready()
+        rounds = [{"round": number, "funnel": {
+            "extracted": 1, "rejected_zero_cost": 0, "rejected_g1": 0,
+            "deep_audited": 0, "queued": 1}} for number in range(1, 4)]
+        d = self.root / "运行"; d.mkdir(parents=True, exist_ok=True)
+        (d / "2026-08-31-xinci-run.json").write_text(json.dumps({
+            "date": "2026-08-31", "skill": "xinci-run", "run_id": self.run["run_id"],
+            "rounds": rounds}), encoding="utf-8")
+        rows = {f"new-{number}": {
+            "slug": f"new-{number}", "lane": "new", "state": "captured",
+            "history": [{"run_id": self.run["run_id"], "round": number,
+                         "from": None, "to": "captured"}]}
+            for number in range(1, 4)}
+        self.seed_ledger(rows)
+        policy = RP.evaluate(self.root, self.run["run_id"])
+        self.assertEqual(policy["captured_backlog_delta_by_round"], {1: 1, 2: 1, 3: 1})
+        self.assertEqual(policy["consecutive_decision_stall_rounds"], 3)
+        self.assertEqual(policy["mode"], "debt_only")
+
     def test_source_family_over_40_percent_stops_that_harvest(self):
         self.ready()
         RC.begin_round(self.root, self.run["run_id"])

@@ -115,4 +115,4 @@ python3 xinci-workflow/xinci-core/scripts/build_decision_html.py "$(python3 xinc
 - 快道只收 window_estimate=days 的 screened 候选;别的候选想快,答案是不行。
 - 快道**决策**只有两类出口:go 是 fast_grab_ready,no-go 是 rejected(判据不成立)或 withdrawn(用户撤回);hold 与 no_site 只属于完整模式。到期不是决策,单列在上面「到期处置」节:那里出的是 expired,不是 rejected。
 - 提议与执行分离:单步模式下,转移经用户确认后才调 registrar,快道要求用户先读“跳过闸门清单”。xinci-run 连续运行模式下,启动命令即标准授权,普通 G3=`pass` 快道无需逐条确认；交付决策书承担风险披露,**不表述为用户事前已确认**。`G3=veto_window_bet` 仍须候选级一次性确认。任何 go 都不等于用户已经决定建站。
-- 写运行清单 `运行/<日期>-xinci-decide.json`(同日再次运行加 HHMM 后缀,不覆盖已有清单)。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
+- 用 `run_manifest.py record-single --date <YYYY-MM-DD> --skill xinci-decide [--suffix <HHMM>] ...` 原子写运行清单；控制器拒绝覆盖，不得手写 JSON。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。

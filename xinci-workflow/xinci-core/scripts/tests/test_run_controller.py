@@ -9,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import run_controller as RC
 import run_state as RS
+import run_manifest as RM
 import stage_checkpoint as SC
 import trigger_pool as TP
 
@@ -43,8 +44,13 @@ class RunControllerTest(unittest.TestCase):
             "candidates_touched": list(candidates_touched or []),
         }), encoding="utf-8")
 
+    def finish_scan_checkpoint(self, run_id, outcome, item="demo query", round_number=1):
+        SC.start(self.root, run_id, round_number, [item], stage="scan")
+        SC.mark(self.root, run_id, round_number, item, outcome, stage="scan")
+        SC.finish(self.root, run_id, round_number, stage="scan")
+
     def test_start_round_resume_finish(self):
-        run = RC.start(self.root, max_rounds=2)
+        run = RC.start(self.root, max_rounds=1)
         self.assertEqual(run["status"], "active")
         RC.begin_round(self.root, run["run_id"])
         resumed = RC.load_session(self.root, run["run_id"])
@@ -55,6 +61,27 @@ class RunControllerTest(unittest.TestCase):
         _, manifest = RC.find_run_manifest(self.root, run["run_id"])
         self.assertEqual(manifest["termination"]["status"], "budget_reached")
         self.assertEqual(manifest["termination"]["rounds_completed"], 1)
+
+    def test_finish_rejects_unproven_terminal_statuses(self):
+        run = RC.start(self.root, max_rounds=2)
+        with self.assertRaisesRegex(RC.RunControllerError, "预算尚未命中"):
+            RC.finish(self.root, run["run_id"], "budget_reached", "提前收尾")
+        with self.assertRaisesRegex(RC.RunControllerError, "证据文件"):
+            RC.finish(self.root, run["run_id"], "quota_exhausted", "声称额度耗尽")
+        with self.assertRaisesRegex(RC.RunControllerError, "尚未连续三轮"):
+            RC.finish(self.root, run["run_id"], "calibration_triggered", "声称校准")
+
+    def test_quota_finish_persists_evidence(self):
+        run = RC.start(self.root)
+        ref = "证据/运行/semrush-quota.txt"
+        path = self.root / ref
+        path.parent.mkdir(parents=True)
+        path.write_text("Semrush UI quota exhausted", encoding="utf-8")
+        done = RC.finish(self.root, run["run_id"], "quota_exhausted",
+                         "网页版实际显示额度耗尽", [ref])
+        self.assertEqual(done["status"], "quota_exhausted")
+        _, manifest = RC.find_run_manifest(self.root, run["run_id"])
+        self.assertEqual(manifest["termination"]["evidence_refs"], [ref])
 
     def test_record_round_separates_trigger_funnel_and_read_only_reviews(self):
         run = RC.start(self.root, max_rounds=1)
@@ -80,6 +107,33 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(manifest["rounds"][0]["trigger_funnel"]["harvested"], 1)
         self.assertEqual(manifest["rounds"][0]["trigger_funnel"]["discarded_preapproval"], 1)
 
+    def test_record_round_rejects_missing_review_evidence(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        self.seed_candidate()
+        reviewed = [{"slug": "demo", "outcome": "awaiting_external_evidence",
+                     "reason": "等待复核", "evidence_refs": ["证据/demo/missing.json"]}]
+        with self.assertRaisesRegex(RC.RunControllerError, "不存在或越界"):
+            RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS),
+                            candidates_reviewed=reviewed)
+
+    def test_record_round_cross_checks_scan_checkpoint(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        self.finish_scan_checkpoint(run["run_id"], "g1_rejected")
+        with self.assertRaisesRegex(RC.RunControllerError, "scan 检查点不一致"):
+            RC.record_round(self.root, run["run_id"],
+                            funnel=dict(self.ZEROS, extracted=1, rejected_zero_cost=1))
+
+    def test_record_single_manifest_is_atomic_and_non_overwriting(self):
+        path, obj = RM.record_single(
+            self.root, run_date="2026-08-31", skill="xinci-track",
+            notes=["完成一次复查"])
+        self.assertTrue(path.is_file())
+        self.assertEqual(obj["skill"], "xinci-track")
+        with self.assertRaisesRegex(RM.RunManifestError, "拒绝覆盖"):
+            RM.record_single(self.root, run_date="2026-08-31", skill="xinci-track")
+
     def test_record_round_rejects_harvest_without_trigger_checkpoint(self):
         run = RC.start(self.root, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
@@ -95,20 +149,18 @@ class RunControllerTest(unittest.TestCase):
         schema_statuses = set(schema["properties"]["status"]["enum"])
         self.assertEqual(schema_statuses, RS.STATUSES)
 
-    def test_funnel_counts_pooled_as_a_sink(self):
-        """进了触发池但未注册为候选的方向也是一种归宿,参与加总。"""
+    def test_new_round_rejects_legacy_pooled_sink(self):
         run = RC.start(self.root, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
-        RC.record_round(self.root, run["run_id"],
-                        funnel=dict(self.ZEROS, extracted=3, rejected_zero_cost=1, pooled=2))
-        self.assertEqual(RC.load_session(self.root, run["run_id"])["rounds_completed"], 1)
+        with self.assertRaisesRegex(RC.RunControllerError, "不得写 funnel.pooled"):
+            RC.record_round(self.root, run["run_id"],
+                            funnel=dict(self.ZEROS, extracted=2, pooled=2))
 
     def test_funnel_pooled_is_optional_for_legacy_manifests(self):
-        """pooled 是后加的字段,既有清单不写它,按 0 处理不得报错。"""
+        """新轮次不需要 pooled 字段。"""
         run = RC.start(self.root, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
-        RC.record_round(self.root, run["run_id"],
-                        funnel=dict(self.ZEROS, extracted=1, rejected_zero_cost=1))
+        RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         self.assertEqual(RC.load_session(self.root, run["run_id"])["rounds_completed"], 1)
 
     def test_only_one_active_session(self):
@@ -159,7 +211,8 @@ class RunControllerTest(unittest.TestCase):
             RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         SC.mark(self.root, run["run_id"], 1, "alpha", "zero_cost")
         SC.finish(self.root, run["run_id"], 1)
-        RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+        RC.record_round(self.root, run["run_id"],
+                        funnel=dict(self.ZEROS, extracted=1, rejected_zero_cost=1))
 
     def test_confirmation_is_single_use(self):
         run = RC.start(self.root)
@@ -241,6 +294,7 @@ class RunControllerTest(unittest.TestCase):
             "gates": {"G0": "pass", "G4": "pass", "G5": "pass"},
             "expiry": "2026-08-27",
         }])
+        self.finish_scan_checkpoint(run["run_id"], "queued")
         result = RC.record_round(
             self.root, run["run_id"], sources_opened=["https://e.com/source"],
             sources_blocked=["https://e.com/blocked(CAPTCHA)"], billable_calls=2,
@@ -294,6 +348,7 @@ class RunControllerTest(unittest.TestCase):
             "by": "xinci-run", "run_id": run["run_id"], "round": 1,
         }])
         funnel = dict(self.ZEROS, queued=1, extracted=1)
+        self.finish_scan_checkpoint(run["run_id"], "queued")
         with self.assertRaisesRegex(RC.RunControllerError, "缺 gates 或 expiry"):
             RC.record_round(self.root, run["run_id"], funnel=funnel)
 
@@ -305,6 +360,7 @@ class RunControllerTest(unittest.TestCase):
             "by": "xinci-run", "run_id": run["run_id"], "round": 1,
             "gates": {"G0": "pass"}, "expiry": "2026-08-27",
         }])
+        self.finish_scan_checkpoint(run["run_id"], "queued")
         RC.record_round(self.root, run["run_id"],
                         funnel=dict(self.ZEROS, queued=1, extracted=1))
         RC.begin_round(self.root, run["run_id"])
