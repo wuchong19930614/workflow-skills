@@ -81,6 +81,50 @@ class DocumentationContractsTest(unittest.TestCase):
         self.assertIn("两条赛道与六条盈利线", root_readme)
         self.assertNotIn("清单全靠手写", root_readme + workflow_readme)
 
+    def test_scan_repeat_task_only_vetoes_subscription(self):
+        gate = (ROOT / "xinci-core" / "闸门契约.md").read_text(encoding="utf-8")
+        scan = (ROOT / "xinci-scan" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("只把 subscription 写成 `tentative_veto`", gate)
+        self.assertIn("只先否决 subscription", scan)
+        self.assertNotIn("没有被迫/重复任务(只值一周好奇)、或", scan)
+
+    def test_global_self_serve_veto_requires_all_delivery_lines_to_fail(self):
+        gate = (ROOT / "xinci-core" / "闸门契约.md").read_text(encoding="utf-8")
+        schema = json.loads((ROOT / "xinci-core" / "数据结构" /
+                             "observation.schema.json").read_text(encoding="utf-8"))
+        self.assertIn("六条适用盈利线全部无法成立", gate)
+        self.assertIn("不得使用全局入口否决", gate)
+        self.assertNotIn("要,第③项就不成立,G6 出局", gate)
+        description = schema["properties"]["g6_entry_veto"]["description"]
+        self.assertIn("所有声称交付", description)
+        self.assertIn("只影响部分盈利线时不得填写", description)
+
+    def test_source_share_minimum_sample_is_documented(self):
+        lifecycle = (ROOT / "xinci-core" / "生命周期契约.md").read_text(encoding="utf-8")
+        run = (ROOT / "xinci-run" / "SKILL.md").read_text(encoding="utf-8")
+        for text in (lifecycle, run):
+            self.assertIn("达到 5 条", text)
+            self.assertIn("5 条以前", text)
+
+    def test_mature_tool_pattern_is_checked_at_g2_not_zero_cost(self):
+        mature = (ROOT / "xinci-mature" / "SKILL.md").read_text(encoding="utf-8")
+        zero_cost, g2 = mature.split("### 第 3 层", 1)[0], mature.split("### 第 6 层", 1)[1]
+        self.assertNotIn("首页出现专做这件事的站", zero_cost)
+        self.assertIn("需要 G2 现场证据", g2)
+
+    def test_lifecycle_names_mature_and_all_nontraffic_g3_lines(self):
+        lifecycle = (ROOT / "xinci-core" / "生命周期契约.md").read_text(encoding="utf-8")
+        self.assertIn("五个有写入能力的阶段 skill", lifecycle)
+        self.assertIn("xinci-scan / track / mature / qualify / decide", lifecycle)
+        self.assertGreaterEqual(
+            lifecycle.count("subscription / lead_generation / transaction / paid_report"), 2)
+
+    def test_mature_guide_declares_existing_three_step_flow(self):
+        guide = (ROOT / "xinci-core" / "数据采集指南.md").read_text(encoding="utf-8")
+        self.assertIn("现行执行流程固定为三步", guide)
+        self.assertIn("xinci-mature 已承接这第三步", guide)
+        self.assertNotIn("现行的两步流程", guide)
+
 
 if __name__ == "__main__":
     unittest.main()

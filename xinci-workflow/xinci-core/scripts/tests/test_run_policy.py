@@ -185,6 +185,25 @@ class RunPolicyTest(unittest.TestCase):
                task_hypothesis="repeated filing", actor="xinci-run",
                run_id=self.run["run_id"])
 
+    def test_source_share_rule_waits_for_five_adds(self):
+        self.ready()
+        RC.begin_round(self.root, self.run["run_id"])
+        for i in range(4):
+            TP.add(self.root, observed_date="2026-08-25", title=f"Agency early rule {i}",
+                   source_url=f"https://agency.example/early-{i}", source_family="agency",
+                   task_hypothesis="repeated filing", actor="xinci-run",
+                   run_id=self.run["run_id"])
+        rotation = TP.source_rotation_status(self.root, self.run["run_id"], current_round=1)
+        self.assertEqual(rotation["dominant_share"], 1.0)
+        self.assertEqual(rotation["blocked_source_families"], [])
+        TP.add(self.root, observed_date="2026-08-25", title="Agency fifth rule",
+               source_url="https://agency.example/early-4", source_family="agency",
+               task_hypothesis="repeated filing", actor="xinci-run",
+               run_id=self.run["run_id"])
+        self.assertEqual(
+            TP.source_rotation_status(self.root, self.run["run_id"], current_round=1)
+            ["blocked_source_families"], ["agency"])
+
     def test_two_consecutive_dominant_rounds_block_only_that_family(self):
         for round_number in (1, 2):
             TP._append(self.root, {

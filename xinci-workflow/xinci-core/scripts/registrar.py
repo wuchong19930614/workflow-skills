@@ -334,7 +334,8 @@ def _check_observation(path: Path, ref: str, slug) -> None:
                  f"g6_entry_veto 不得伪装成正式 G6: {ref}")
         if entry_veto.get("criterion") == "self_serve_legal_effect":
             _require(g6_tentative_lines is None,
-                     f"self_serve_legal_effect 是全局交付效力否决，不得同时写暂定盈利线: {ref}")
+                     f"self_serve_legal_effect 仅表示所有声称交付均依法无效的全局否决，"
+                     f"不得同时写暂定盈利线；只影响部分线时改为逐线判定: {ref}")
         _require(bool(urls), f"g6_entry_veto 必须包含实际打开的 source_urls: {ref}")
     naming_status = obs.get("naming_status")
     if naming_status is not None:
@@ -423,7 +424,7 @@ def _has_no_applicable_tentative_g6(data_root: Path, refs, lane: str) -> bool:
 
 
 def _has_structural_g6_entry_veto(data_root: Path, refs) -> bool:
-    """只有自助交付在法律上无效，才是整候选的结构性否决。
+    """只有所有声称的自助交付在法律上均无效，才是整候选的结构性否决。
 
     repeat_paid_task 只约束 subscription；official_count_class 只约束依赖该统计
     口径的算式。二者可作为逐线判断的依据，但不得单独授权整候选 rejected。

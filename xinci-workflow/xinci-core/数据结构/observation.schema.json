@@ -57,7 +57,7 @@
         "reason": { "type": "string", "minLength": 1 }
       },
       "additionalProperties": false,
-      "description": "G6 深算前的结构事实，不是正式 gates.G6。repeat_paid_task 只约束 subscription；official_count_class 只约束依赖该口径的算式，二者不能单独否决整候选并可与逐线暂定结论并存；self_serve_legal_effect 才可在自助交付法律无效时形成全局否决。"
+      "description": "G6 深算前的结构事实，不是正式 gates.G6。repeat_paid_task 只约束 subscription；official_count_class 只约束依赖该口径的算式，二者不能单独否决整候选并可与逐线暂定结论并存。self_serve_legal_effect 仅在所有声称交付均依赖法律签字且全部依法无效时使用，表示整候选全局否决；只影响部分盈利线时不得填写该 criterion，应在 g6_tentative_lines 逐线判定。"
     },
     "naming_status": {
       "type": "string",
