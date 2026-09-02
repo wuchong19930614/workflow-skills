@@ -49,6 +49,17 @@ def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
                 "subscription": "tentative_veto", "advertising": "tentative_pass"}
     if obs.get("gates"):
         obs.setdefault("source_urls", ["https://e.com/source"])
+        if obs["gates"].get("G1") == "veto" and "cluster_counterfactual" not in overrides:
+            obs["cluster_counterfactual"] = {
+                "atomic_task_completed": True,
+                "batch_processing": False,
+                "monitoring": False,
+                "audit_trail": False,
+                "export_integration": False,
+                "multi_jurisdiction": False,
+                "decision": "atomic_only",
+                "reason": "五种站点级扩展均不形成独立重复任务",
+            }
         if obs["gates"].get("G3") == R.G3_WINDOW_BET:
             if "window_bet" not in obs:
                 obs["window_bet"] = {
@@ -120,6 +131,34 @@ class RegistrarTest(unittest.TestCase):
         R.transition(self.root, slug, to="qualified", by="xinci-qualify",
                      score=80, income_score=1, g6_passed_lines=["subscription"],
                      gates=dict(GATES_678), evidence=[ev])
+
+    def test_lead_generation_can_be_the_passing_g6_line(self):
+        slug = self.register("lead-gen-line")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        six = {"subscription": "veto", "lead_generation": "pass", "affiliate": "N/A",
+               "transaction": "veto", "paid_report": "veto", "advertising": "N/A"}
+        ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json",
+                         gates=dict(GATES_678), g6_lines=six, income_score=8)
+        R.transition(self.root, slug, to="qualified", by="xinci-qualify", score=82,
+                     income_score=8, g6_passed_lines=["lead_generation"],
+                     gates=dict(GATES_678), evidence=[ev])
+        self.assertEqual(self.load(slug)["g6_passed_lines"], ["lead_generation"])
+
+    def test_observation_v2_requires_all_six_g6_lines(self):
+        slug = self.register("six-lines-required")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", schema_version=2,
+                         gates=dict(GATES_678),
+                         g6_lines={"subscription": "pass", "advertising": "N/A"},
+                         income_score=8)
+        with self.assertRaisesRegex(R.RegistrarError, "完整包含六条盈利线"):
+            R.transition(self.root, slug, to="qualified", by="xinci-qualify", score=82,
+                         income_score=8, g6_passed_lines=["subscription"],
+                         gates=dict(GATES_678), evidence=[ev])
 
     def load(self, slug):
         ledger = json.loads((self.root / "账本" / "候选账本.json").read_text(encoding="utf-8"))
@@ -223,18 +262,35 @@ class RegistrarTest(unittest.TestCase):
             R.transition(self.root, slug, to="rejected", by="xinci-scan",
                          evidence=[ev], reason="不能把可行线说成全灭")
 
-    def test_captured_can_exit_on_structural_g6_entry_veto_without_fake_g6(self):
+    def test_official_count_entry_fact_cannot_reject_all_monetization_lines(self):
         slug = self.register("structural-g6-veto")
         ev = mk_evidence(
             self.root, slug, "2026-08-22-scan.json",
             source_urls=["https://agency.example/official-count"],
             g6_entry_veto={"criterion": "official_count_class",
                            "reason": "the official dataset does not count this object class"})
+        with self.assertRaisesRegex(R.RegistrarError, "没有适用盈利线"):
+            R.transition(self.root, slug, to="rejected", by="xinci-scan",
+                         evidence=[ev], reason="官方统计不计该对象")
+
+    def test_self_serve_legal_effect_can_be_global_structural_veto(self):
+        slug = self.register("legal-effect-veto")
+        ev = mk_evidence(
+            self.root, slug, "2026-08-22-scan.json",
+            source_urls=["https://agency.example/signature-rule"],
+            g6_entry_veto={"criterion": "self_serve_legal_effect",
+                           "reason": "所有声称的自助交付都必须由认可机构签字才有效"})
         R.transition(self.root, slug, to="rejected", by="xinci-scan",
-                     evidence=[ev], reason="G6 入口结构性否决：官方统计不计该对象")
-        rec = self.load(slug)
-        self.assertEqual(rec["state"], "rejected")
-        self.assertNotIn("G6", rec["gates"])
+                     evidence=[ev], reason="自助交付在法律上无效")
+        self.assertEqual(self.load(slug)["state"], "rejected")
+
+    def test_g1_veto_requires_atomic_only_cluster_counterfactual(self):
+        slug = self.register("g1-needs-counterfactual")
+        ev = mk_evidence(self.root, slug, "2026-08-22-scan.json",
+                         gates={"G1": "veto"}, cluster_counterfactual=None)
+        with self.assertRaisesRegex(R.RegistrarError, "cluster_counterfactual=atomic_only"):
+            R.transition(self.root, slug, to="rejected", by="xinci-scan",
+                         gates={"G1": "veto"}, evidence=[ev], reason="原子答案已出现")
 
     def test_xinci_run_g1_write_requires_assigned_executor_preflight(self):
         slug = self.register("executor-bound-g1")

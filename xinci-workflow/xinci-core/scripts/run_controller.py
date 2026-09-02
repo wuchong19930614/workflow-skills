@@ -19,7 +19,7 @@ import data_root
 
 from transaction_journal import (TransactionError, recover as recover_transactions,
                                  reconcile as reconcile_transaction, require_clean)
-from run_state import (SESSION_DIR, RUN_ID_RE, FINAL_STATUSES, RunStateError,
+from run_state import (SESSION_DIR, RUN_ID_RE, FINAL_STATUSES, ROUND_TYPES, RunStateError,
                        load_session, session_path, validate_session)
 from run_manifest import (RunManifestError, append_round, candidates_by_run,
                           candidates_by_round, create_run_manifest, find_run_manifest,
@@ -130,7 +130,7 @@ def start(data_root, max_rounds=6, max_hours=None):
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         run_id = f"run-{stamp}-{secrets.token_hex(4)}"
         obj = {
-            "schema_version": 2,
+            "schema_version": 3,
             "run_id": run_id,
             "mode": "continuous",
             "status": "active",
@@ -141,6 +141,7 @@ def start(data_root, max_rounds=6, max_hours=None):
             "rounds_completed": 0,
             "current_round": None,
             "round_executor_id": None,
+            "current_round_type": None,
             "confirmations": {},
             "finish_reason": None,
         }
@@ -149,7 +150,24 @@ def start(data_root, max_rounds=6, max_hours=None):
         return obj
 
 
-def begin_round(data_root, run_id, executor_id=None):
+def _discovery_rounds_since_calibration(data_root):
+    count = 0
+    run_dir = Path(data_root) / "运行"
+    for path in sorted(run_dir.glob("*-xinci-run.json")) if run_dir.is_dir() else []:
+        try:
+            manifest = json.loads(path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        for rnd in manifest.get("rounds") or []:
+            if (rnd.get("round_type") == "calibration"
+                    and (rnd.get("false_negative_audit") or {}).get("status") == "completed"):
+                count = 0
+            elif rnd.get("round_type") == "discovery":
+                count += 1
+    return count
+
+
+def begin_round(data_root, run_id, executor_id=None, round_type="discovery"):
     with _locked(data_root):
         try:
             require_clean(data_root)
@@ -160,6 +178,11 @@ def begin_round(data_root, run_id, executor_id=None):
             raise RunControllerError(f"运行会话当前不是运行中，而是：{session_status_label(obj.get('status'))}")
         if obj.get("current_round") is not None:
             raise RunControllerError(f"第 {obj['current_round']} 轮尚未结束")
+        if round_type not in ROUND_TYPES:
+            raise RunControllerError(f"round_type 必须属于 {sorted(ROUND_TYPES)}")
+        if (obj.get("schema_version", 1) >= 3 and round_type == "discovery"
+                and _discovery_rounds_since_calibration(data_root) >= 10):
+            raise RunControllerError("已累计 10 个发现轮；下一轮必须先执行校准轮并提交假阴性审计")
         if obj["rounds_completed"] >= obj["max_rounds"]:
             raise RunControllerError("轮次预算已用完；请结束会话并将状态设为“运行预算已用完”")
         if obj.get("max_hours") is not None:
@@ -169,6 +192,7 @@ def begin_round(data_root, run_id, executor_id=None):
                 raise RunControllerError("时长预算已用完；请结束会话并将状态设为“运行预算已用完”")
         obj["current_round"] = obj["rounds_completed"] + 1
         obj["round_executor_id"] = executor_id
+        obj["current_round_type"] = round_type
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
@@ -180,8 +204,35 @@ def end_round(data_root, run_id):
     raise RunControllerError("end-round 已停用;使用 record-round 写清单并结束轮次")
 
 
+def _round_transition_metrics(data_root, run_id, round_number):
+    counts = {"tracking_added": 0, "formation_confirmed": 0,
+              "qualified": 0, "go_decisions": 0}
+    ledger_path = Path(data_root) / "账本" / "候选账本.json"
+    try:
+        candidates = json.loads(ledger_path.read_text(encoding="utf-8")).get("candidates", {})
+    except FileNotFoundError:
+        return counts
+    for candidate in candidates.values():
+        for event in candidate.get("history", []):
+            if event.get("run_id") != run_id or event.get("round") != round_number:
+                continue
+            target = event.get("to")
+            if target == "tracking" and event.get("from") != "tracking":
+                counts["tracking_added"] += 1
+            elif target == "formation_confirmed":
+                counts["formation_confirmed"] += 1
+            elif target == "qualified":
+                counts["qualified"] += 1
+            elif target in GO_STATES:
+                counts["go_decisions"] += 1
+    return counts
+
+
 def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None,
-                 billable_calls=0, notes=None, funnel=None, candidates_reviewed=None):
+                 billable_calls=0, notes=None, funnel=None, candidates_reviewed=None,
+                 task_families=None, source_family_counts=None, g1_checks=0,
+                 deep_audit_families=None, false_negative_audit=None,
+                 source_family_outcomes=None):
     with _locked(data_root):
         try:
             require_clean(data_root)
@@ -202,6 +253,25 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
         if "pooled" in funnel:
             raise RunControllerError(
                 "新轮次不得写 funnel.pooled；raw trigger 必须使用 stage=trigger 与 trigger_funnel")
+        if (not isinstance(g1_checks, int) or isinstance(g1_checks, bool) or g1_checks < 0):
+            raise RunControllerError("g1_checks 必须是非负整数")
+        task_families = list(dict.fromkeys(task_families or []))
+        deep_audit_families = list(dict.fromkeys(deep_audit_families or []))
+        if not all(isinstance(x, str) and x.strip() for x in task_families + deep_audit_families):
+            raise RunControllerError("task/deep-audit families 必须是非空字符串")
+        source_family_counts = dict(source_family_counts or {})
+        if (not all(isinstance(k, str) and k.strip()
+                    and isinstance(v, int) and not isinstance(v, bool) and v >= 0
+                    for k, v in source_family_counts.items())):
+            raise RunControllerError("source_family_counts 必须是来源家族到非负整数的对象")
+        source_family_outcomes = dict(source_family_outcomes or {})
+        outcome_fields = {"formal", "g1_pass", "deep", "tracking"}
+        if any(not isinstance(family, str) or not family.strip()
+               or not isinstance(values, dict) or set(values) != outcome_fields
+               or any(not isinstance(v, int) or isinstance(v, bool) or v < 0
+                      for v in values.values())
+               for family, values in source_family_outcomes.items()):
+            raise RunControllerError("source_family_outcomes 必须逐来源完整包含 formal/g1_pass/deep/tracking")
         reviewed = list(candidates_reviewed or [])
         ledger_path = Path(data_root) / "账本" / "候选账本.json"
         try:
@@ -263,6 +333,7 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
             raise RunControllerError(str(e))
         round_record = {
             "round": current,
+            "round_type": obj.get("current_round_type") or "discovery",
             "sources_opened": list(sources_opened or []),
             "sources_blocked": list(sources_blocked or []),
             "candidates_touched": touched,
@@ -270,8 +341,19 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
             "billable_calls": billable_calls,
             "funnel": dict(funnel),
             "trigger_funnel": trigger_funnel,
+            "metrics": {
+                "formal_extracted": funnel.get("extracted", 0),
+                "g1_checks": g1_checks,
+                "task_families": task_families,
+                "source_family_counts": source_family_counts,
+                "source_family_outcomes": source_family_outcomes,
+                "deep_audit_families": deep_audit_families,
+                "state_transitions": _round_transition_metrics(data_root, run_id, current),
+            },
             "notes": list(notes or []),
         }
+        if false_negative_audit is not None:
+            round_record["false_negative_audit"] = false_negative_audit
         try:
             manifest_path, _ = append_round(data_root, obj, round_record)
         except RunManifestError as e:
@@ -279,6 +361,7 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
         obj["rounds_completed"] = obj["current_round"]
         obj["current_round"] = None
         obj["round_executor_id"] = None
+        obj["current_round_type"] = None
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
@@ -487,6 +570,7 @@ def finish(data_root, run_id, status, reason, evidence_refs=None):
         obj["finished_at"] = finished_at
         obj["updated_at"] = obj["finished_at"]
         obj["round_executor_id"] = None
+        obj["current_round_type"] = None
         validate_session(obj, run_id)
         try:
             finalize_manifest(data_root, obj, reason, evidence_refs)
@@ -561,6 +645,8 @@ def main(argv=None):
         p.add_argument("--run-id", required=True)
         if name == "begin-round":
             p.add_argument("--executor-id", required=True)
+            p.add_argument("--round-type", choices=sorted(ROUND_TYPES), default="discovery",
+                           help="本轮类型：发现/推进/跟踪/校准")
     p = sub.add_parser("record-round", help="原子追加运行清单并结束当前轮")
     p.add_argument("--run-id", required=True)
     p.add_argument("--source-opened", action="append", default=[])
@@ -570,6 +656,18 @@ def main(argv=None):
     p.add_argument("--funnel", required=True, help="漏斗 JSON 对象;未扫描时五项全 0")
     p.add_argument("--candidate-reviewed", action="append", default=[],
                    help="只读复核 JSON 对象，可重复；不冒充 candidates_touched")
+    p.add_argument("--task-family", action="append", default=[],
+                   help="本轮正式方向覆盖的独立任务家族，可重复")
+    p.add_argument("--source-family-counts", default="{}",
+                   help="本轮来源家族计数 JSON 对象")
+    p.add_argument("--source-family-outcomes", default="{}",
+                   help="逐来源 formal/g1_pass/deep/tracking 产出 JSON 对象")
+    p.add_argument("--g1-checks", type=int, default=0,
+                   help="本轮实际完成的 G1 首屏检查次数")
+    p.add_argument("--deep-audit-family", action="append", default=[],
+                   help="本轮完成深审的独立任务家族，可重复")
+    p.add_argument("--false-negative-audit",
+                   help="校准轮必填的结构化假阴性审计 JSON")
     p = sub.add_parser("confirm-window-bet")
     p.add_argument("--run-id", required=True)
     p.add_argument("--slug", required=True)
@@ -599,7 +697,7 @@ def main(argv=None):
         elif a.cmd == "list":
             obj = list_sessions(a.data_root)
         elif a.cmd == "begin-round":
-            obj = begin_round(a.data_root, a.run_id, a.executor_id)
+            obj = begin_round(a.data_root, a.run_id, a.executor_id, a.round_type)
         elif a.cmd == "record-round":
             try:
                 funnel = json.loads(a.funnel)
@@ -609,12 +707,25 @@ def main(argv=None):
                 reviewed = [json.loads(x) for x in a.candidate_reviewed]
             except json.JSONDecodeError as e:
                 raise RunControllerError(f"--candidate-reviewed 不是合法 JSON: {e}")
+            try:
+                source_family_counts = json.loads(a.source_family_counts)
+                source_family_outcomes = json.loads(a.source_family_outcomes)
+                false_negative_audit = (json.loads(a.false_negative_audit)
+                                        if a.false_negative_audit else None)
+            except json.JSONDecodeError as e:
+                raise RunControllerError(f"轮次指标或假阴性审计不是合法 JSON: {e}")
             obj = record_round(a.data_root, a.run_id,
                                sources_opened=a.source_opened,
                                sources_blocked=a.source_blocked,
                                billable_calls=a.billable_calls,
                                notes=a.note, funnel=funnel,
-                               candidates_reviewed=reviewed)
+                               candidates_reviewed=reviewed,
+                               task_families=a.task_family,
+                               source_family_counts=source_family_counts,
+                               source_family_outcomes=source_family_outcomes,
+                               g1_checks=a.g1_checks,
+                               deep_audit_families=a.deep_audit_family,
+                               false_negative_audit=false_negative_audit)
         elif a.cmd == "confirm-window-bet":
             obj = confirm_window_bet(a.data_root, a.run_id, a.slug)
         elif a.cmd == "finish":

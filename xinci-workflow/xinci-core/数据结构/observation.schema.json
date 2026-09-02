@@ -5,6 +5,7 @@
   "type": "object",
   "required": ["slug", "observed_at", "stage", "points"],
   "properties": {
+    "schema_version": { "type": "integer", "enum": [1, 2], "description": "v2 表示六条盈利线与站点簇反事实契约；历史缺省按 v1 只读" },
     "slug": { "type": "string", "description": "所属候选" },
     "observed_at": { "type": "string", "description": "观察时间 ISO 8601" },
     "stage": { "type": "string", "enum": ["scan", "track", "qualify", "decide"], "description": "产生本观察的阶段" },
@@ -25,20 +26,28 @@
       "required": ["subscription", "advertising"],
       "properties": {
         "subscription": { "type": "string", "enum": ["pass", "veto", "N/A"] },
-        "advertising": { "type": "string", "enum": ["pass", "veto", "N/A"] }
+        "advertising": { "type": "string", "enum": ["pass", "veto", "N/A"] },
+        "lead_generation": { "type": "string", "enum": ["pass", "veto", "N/A"] },
+        "affiliate": { "type": "string", "enum": ["pass", "veto", "N/A"] },
+        "transaction": { "type": "string", "enum": ["pass", "veto", "N/A"] },
+        "paid_report": { "type": "string", "enum": ["pass", "veto", "N/A"] }
       },
       "additionalProperties": false,
-      "description": "正式 G6 的逐线结论。qualified 观察必填两项；lane=new 的 advertising 应为 N/A,mature 两项只能 pass/veto。算式、假设与出处写入 points/source_urls"
+      "description": "正式 G6 的逐线结论。schema v2 必须完整填写六条；历史 v1 至少含 subscription/advertising。lane=new 的 advertising 应为 N/A。算式、假设与出处写入 points/source_urls"
     },
     "g6_tentative_lines": {
       "type": "object",
       "required": ["subscription", "advertising"],
       "properties": {
         "subscription": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
-        "advertising": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] }
+        "advertising": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
+        "lead_generation": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
+        "affiliate": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
+        "transaction": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
+        "paid_report": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] }
       },
       "additionalProperties": false,
-      "description": "窗口期 scan/track 观察的逐线暂定结论，仅供当期 G3 判断占位否决是否生效。它不是正式 G6，不得与 g6_lines 并存；lane=new 的 advertising 应为 N/A。依据写入 points/source_urls"
+      "description": "窗口期 scan/track 观察的逐线暂定结论，仅供当期 G3 判断占位否决是否生效。schema v2 必须完整填写六条；历史 v1 至少含 subscription/advertising。它不是正式 G6；lane=new 的 advertising 应为 N/A。依据写入 points/source_urls"
     },
     "g6_entry_veto": {
       "type": "object",
@@ -48,7 +57,7 @@
         "reason": { "type": "string", "minLength": 1 }
       },
       "additionalProperties": false,
-      "description": "G6 深算前的结构性入口否决。它只证明无需进入盈利线测算，不是正式 gates.G6，也不是 g6_tentative_lines。"
+      "description": "G6 深算前的结构事实，不是正式 gates.G6。repeat_paid_task 只约束 subscription；official_count_class 只约束依赖该口径的算式，二者不能单独否决整候选并可与逐线暂定结论并存；self_serve_legal_effect 才可在自助交付法律无效时形成全局否决。"
     },
     "naming_status": {
       "type": "string",
@@ -60,6 +69,22 @@
       "uniqueItems": true,
       "items": { "enum": ["autocomplete", "semrush_rows", "sustained_discussion", "repeated_independent_queries"] },
       "description": "仅用于 track：本次实际观察到的需求形成信号；空数组表示尚未形成"
+    },
+    "cluster_counterfactual": {
+      "type": "object",
+      "required": ["atomic_task_completed", "batch_processing", "monitoring", "audit_trail", "export_integration", "multi_jurisdiction", "decision", "reason"],
+      "properties": {
+        "atomic_task_completed": { "type": "boolean" },
+        "batch_processing": { "type": "boolean" },
+        "monitoring": { "type": "boolean" },
+        "audit_trail": { "type": "boolean" },
+        "export_integration": { "type": "boolean" },
+        "multi_jurisdiction": { "type": "boolean" },
+        "decision": { "enum": ["viable_cluster", "atomic_only"] },
+        "reason": { "type": "string", "minLength": 1 }
+      },
+      "additionalProperties": false,
+      "description": "G1 看似完成原子任务时的站点簇反事实，防止把可扩展任务簇误杀。"
     },
     "income_score": {
       "type": "integer",
@@ -85,6 +110,22 @@
     }
   },
   "allOf": [
+    {
+      "if": {
+        "properties": { "schema_version": { "const": 2 } },
+        "required": ["schema_version"]
+      },
+      "then": {
+        "properties": {
+          "g6_lines": {
+            "required": ["subscription", "lead_generation", "affiliate", "transaction", "paid_report", "advertising"]
+          },
+          "g6_tentative_lines": {
+            "required": ["subscription", "lead_generation", "affiliate", "transaction", "paid_report", "advertising"]
+          }
+        }
+      }
+    },
     {
       "not": {
         "required": ["g6_lines", "g6_tentative_lines"]
@@ -119,6 +160,28 @@
     {
       "if": { "required": ["formation_signals"] },
       "then": { "properties": { "stage": { "const": "track" } } }
+    },
+    {
+      "if": {
+        "properties": { "gates": { "properties": { "G1": { "const": "veto" } }, "required": ["G1"] } },
+        "required": ["gates"]
+      },
+      "then": {
+        "required": ["cluster_counterfactual"],
+        "properties": {
+          "cluster_counterfactual": {
+            "properties": {
+              "atomic_task_completed": { "const": true },
+              "batch_processing": { "const": false },
+              "monitoring": { "const": false },
+              "audit_trail": { "const": false },
+              "export_integration": { "const": false },
+              "multi_jurisdiction": { "const": false },
+              "decision": { "const": "atomic_only" }
+            }
+          }
+        }
+      }
     }
   ],
   "additionalProperties": false

@@ -84,6 +84,18 @@ class ScreenIndexTest(unittest.TestCase):
         self.assertEqual(r["seen"], [])
         self.assertEqual(r["review"][0]["gate"], "G5")
 
+    def test_pattern_aliases_share_stable_id(self):
+        self.seed_index(
+            {"date": "2026-08-17", "term": "alpha", "gate": "G5",
+             "reason": "x", "pattern": "厂商 release note 衍生任务"},
+            {"date": "2026-08-18", "term": "beta", "gate": "G5",
+             "reason": "x", "pattern": "厂商 changelog 衍生任务"},
+        )
+        rows = S.load(self.root)
+        self.assertEqual(rows[0]["pattern_id"], rows[1]["pattern_id"])
+        report = S.stats(self.root)
+        self.assertEqual(list(report["patterns"].values()), [2])
+
     def test_probable_resolution_closes_review_loop(self):
         known = "Qwen 3.8 27B vram quantization"
         term = "qwen 3.8 27b vram requirements"
@@ -196,6 +208,29 @@ class ScreenIndexTest(unittest.TestCase):
         self.assertEqual(r["fresh"], ["anything at all"])
 
     # ---- append ----
+
+    def test_g1_append_requires_atomic_only_cluster_counterfactual(self):
+        with self.assertRaisesRegex(S.ScreenIndexError, "atomic_only"):
+            self.seed_index({"date": "2026-09-02", "term": "answered atomic task",
+                             "gate": "G1", "reason": "首屏回答了原子问题"})
+        cluster = {
+            "atomic_task_completed": True, "batch_processing": False,
+            "monitoring": False, "audit_trail": False,
+            "export_integration": False, "multi_jurisdiction": False,
+            "decision": "atomic_only", "reason": "没有独立扩展任务",
+        }
+        self.assertEqual(S.append(self.root, [{"date": "2026-09-02",
+                                               "term": "answered atomic task",
+                                               "gate": "G1", "reason": "完整反事实后否决",
+                                               "cluster_counterfactual": cluster}]), 1)
+
+    def test_validate_index_catches_manual_current_g1_bypass(self):
+        (self.root / S.INDEX_NAME).write_text(json.dumps({
+            "date": "2026-09-02", "term": "manual bypass", "gate": "G1",
+            "reason": "只看原子任务", "gate_version": S.GATE_VERSION,
+        }) + "\n", encoding="utf-8")
+        errors = S.validate_index(self.root)
+        self.assertTrue(any("atomic_only cluster_counterfactual" in e for e in errors), errors)
 
     def test_append_preserves_probable_but_nonexact_direction(self):
         self.seed_index({"date": "2026-08-17", "term": "Qwen 3.8 27B(vram 等衍生任务)",

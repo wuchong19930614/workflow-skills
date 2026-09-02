@@ -59,7 +59,7 @@
         "new",
         "mature"
       ],
-      "description": "赛道。new=新词道(措辞太新以致查无,Semrush 在窗口期禁用);mature=成熟错价词道(有真实搜索量、SERP 被守得弱,广告线只能在此道成立,不适用 new 道的 Semrush 禁令)。两条盈利线见闸门契约 G6"
+      "description": "赛道。new=新词道(措辞太新以致查无,Semrush 在窗口期禁用，advertising 线为 N/A);mature=成熟错价词道(有真实搜索量、SERP 被守得弱,不适用 new 道的 Semrush 禁令)。六条盈利线及各赛道适用性见闸门契约 G6"
     },
     "first_observed_at": {
       "type": "string",
@@ -95,6 +95,18 @@
     "task": {
       "type": "string",
       "description": "搜索者想完成的具体任务"
+    },
+    "site_thesis": {
+      "type": "string",
+      "minLength": 1,
+      "description": "为何该方向能形成独立站的一句话假设；新注册候选应尽早填写"
+    },
+    "task_families": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 },
+      "description": "站点可拥有的独立任务家族，避免把单个关键词当成站点"
     },
     "origin": {
       "type": "string",
@@ -162,6 +174,10 @@
         "type": "string",
         "enum": [
           "subscription",
+          "lead_generation",
+          "affiliate",
+          "transaction",
+          "paid_report",
           "advertising"
         ]
       },

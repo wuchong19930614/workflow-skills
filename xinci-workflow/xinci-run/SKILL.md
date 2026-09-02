@@ -70,7 +70,8 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
      --executor-id <executor_id> --channel chrome --controllable yes --desktop yes --region us --logged-out yes
    python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id> --executor-id <executor_id>
    python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round \
-     --run-id <run_id> --executor-id <executor_id>
+     --run-id <run_id> --executor-id <executor_id> \
+     --round-type <discovery|progression|tracking|calibration>
    ```
 
    `run_policy.py` 同时返回 `reachable_ceiling`——**本次运行在当前账本下最远能推进到哪一步**,开局就要读它。它有三档:`go`(存量里有 qualified/hold/formation_confirmed,或窗口以天计的 screened,或最早 `-track` 观察已满 7 天的 tracking——本次复查即可凑齐形成跨度)、`tracking`(存量都不满足,存量侧最远只到 tracking)、`trigger_only`(浏览器不满足 G1 前置)。
@@ -99,8 +100,11 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
   [--source-opened <URL>] [--source-blocked '<URL>(拦截现象)'] \
   [--billable-calls <N>] [--note '<事实>'] \
   [--candidate-reviewed '{"slug":"<slug>","outcome":"not_due","reason":"<事实>","evidence_refs":[]}'] \
+  --g1-checks 0 --source-family-counts '{}' --source-family-outcomes '{}' \
   --funnel '{"extracted":0,"rejected_zero_cost":0,"rejected_g1":0,"deep_audited":0,"queued":0,"carryover_audited":0}'
 ```
+
+上例是无正式提取、无深审的 progression/tracking 空漏斗写法；本轮实际出现正式方向时追加一个或多个 `--task-family`，出现深审时追加 `--deep-audit-family`，并把来源与 G1 数字改成实际值。不得把默认 0 当作“未统计”。
 
 拒绝原因收敛时把 screen_unsatisfiable 假设放进 `--note`——**然后继续运行**。
 5. 回到步骤 1。命中终止/收尾条件后,执行 `run_controller.py finish --run-id <run_id> --status <状态> --reason <事实>`。`finish` 会先跑完整清单校验，再把机器状态、中文状态、事实理由、结束时间、轮次预算与 GO 候选写入 manifest 的 `termination` 快照，最后关闭 session；失败时 session 保持 active。`--status go` 还要求账本中存在**当前仍处于 GO 状态、且由本次 run_id 转入**的候选,不能用文字理由冒充产出。活动会话存在时 registrar 拒绝所有单步写入。
@@ -130,3 +134,25 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
 - Semrush 纪律仍为 decision-changing only;为触发终止条件而空烧额度是禁止的。
 - 快道决策书照常必含"跳过的闸门清单 + 风险披露与授权状态"章节。连续模式下普通 `G3=pass` 快道由启动命令的标准授权执行；运行停止后用户阅读决策书是在决定是否建站,**不得倒写成转移前已经逐条确认风险**。history 的 `by=xinci-run` 只表示该转移处于本次标准授权内。`G3=veto_window_bet` 不在标准授权内,仍须候选级一次性明确确认。
 - 整个连续运行只由控制器维护一份清单 `运行/<日期>-<HHMMSS>-<run-token>-xinci-run.json`;run token 消除同秒启动的文件名冲突。期间执行的各阶段流程不另写各阶段清单。中途被用户打断时,已完成的转移与清单保持有效,下次启动从 session 与账本现状继续。
+
+## 2026-09-02 运行质量契约（冲突时以本节为准）
+
+- 每轮在 `begin-round` 显式传 `--round-type discovery|progression|tracking|calibration`。发现新方向用 discovery；清理/推进存量用 progression；专门复查追踪池用 tracking；误杀回测用 calibration。不得把只推进存量的轮伪装成发现轮。
+- 每累计 10 个 discovery 轮，控制器强制下一次发现前先完成 calibration。校准被 blocker 卡住可记 `status=blocked`，但不重置计数；只有带证据样本的 `status=completed` 才重置。
+- calibration 先运行 `false_negative_sample.py`，按 G6=10、G7=10、G5=5、G1=5、G3=5 的默认分层清单复核；`status=completed` 必须实际提交完整 35 条且每条有证据。库存不足或某层无法复核时写 `status=blocked`，`untested_gates` 必须与样本中零覆盖的门一致，不能用一条样本重置校准计数。暂定与不确定结果不得改写为正式闸门结论。
+- 每轮 `record-round` 还必须提交实际的 `--g1-checks`、`--task-family`、`--source-family-counts`、`--source-family-outcomes` 与 `--deep-audit-family`。逐来源 outcomes 固定写 formal/g1_pass/deep/tracking；控制器交叉核对 formal 与 extracted、deep 与 deep_audited、G1 pass/否决与 g1_checks、tracking 与实际状态迁移，再生成每轮和全运行指标。口头统计不得替代机器汇总。
+- 来源组合以最近校准结果为输入，起始配额为 50% 已验证高产家族、30% 相邻任务家族、20% 探索家族；它是分配基线，不是闸门。连续两次校准无深审/状态迁移的来源家族下调，产生误杀或新 tracking 的家族上调，变化写入 notes。
+- 新注册候选必须同时提交 `--site-thesis` 与至少两个 `--task-family`。若 G1 只显示原子任务已被完成，必须在 observation 写 `cluster_counterfactual`；只要批处理、监控、审计轨迹、导出集成或多辖区之一仍构成独立任务簇，就改写候选任务后继续过门，不能以原子查询直接判死。
+- tracking 的第 3/7/14 天由 `tracking_schedule.py` 派生为只读提示。它不自动执行、不自动转移、不绕过用户调用边界；实际复查仍需调用 xinci-track，并以新观察和 registrar 落账。
+
+新版收尾示例：
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round \
+  --run-id <run_id> --executor-id <executor_id> --round-type discovery
+python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
+  --run-id <run_id> --task-family '<family>' --source-family-counts '{"official-change":20}' \
+  --source-family-outcomes '{"official-change":{"formal":20,"g1_pass":4,"deep":4,"tracking":1}}' \
+  --g1-checks 9 --deep-audit-family '<family>' \
+  --funnel '{"extracted":20,"rejected_zero_cost":10,"rejected_g1":5,"deep_audited":4,"queued":1,"carryover_audited":0}'
+```

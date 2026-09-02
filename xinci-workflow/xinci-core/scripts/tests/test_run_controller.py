@@ -38,10 +38,12 @@ class RunControllerTest(unittest.TestCase):
     def seed_manifest(self, run_id, rounds=None, candidates_touched=None, name="2026-08-20-xinci-run.json"):
         d = self.root / "运行"
         d.mkdir(parents=True, exist_ok=True)
+        seeded_rounds = list(rounds or [])
         (d / name).write_text(json.dumps({
             "date": "2026-08-20", "skill": "xinci-run", "run_id": run_id,
-            "rounds": list(rounds or []),
+            "rounds": seeded_rounds,
             "candidates_touched": list(candidates_touched or []),
+            "metrics_summary": RM.aggregate_metrics(seeded_rounds),
         }), encoding="utf-8")
 
     def finish_scan_checkpoint(self, run_id, outcome, item="demo query", round_number=1):
@@ -125,6 +127,20 @@ class RunControllerTest(unittest.TestCase):
             RC.record_round(self.root, run["run_id"],
                             funnel=dict(self.ZEROS, extracted=1, rejected_zero_cost=1))
 
+    def test_record_round_cross_checks_source_outcomes_against_funnel(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"])
+        self.finish_scan_checkpoint(run["run_id"], "deep_audited")
+        with self.assertRaisesRegex(RC.RunControllerError, "source_family_outcomes.deep"):
+            RC.record_round(
+                self.root, run["run_id"],
+                funnel=dict(self.ZEROS, extracted=1, deep_audited=1),
+                task_families=["demo-family"], deep_audit_families=["demo-family"],
+                source_family_counts={"demo-source": 1},
+                source_family_outcomes={"demo-source": {
+                    "formal": 1, "g1_pass": 1, "deep": 0, "tracking": 0}},
+                g1_checks=1)
+
     def test_record_single_manifest_is_atomic_and_non_overwriting(self):
         path, obj = RM.record_single(
             self.root, run_date="2026-08-31", skill="xinci-track",
@@ -203,6 +219,56 @@ class RunControllerTest(unittest.TestCase):
         with self.assertRaises(RC.RunControllerError):
             RC.begin_round(self.root, run["run_id"])
 
+    def test_ten_discovery_rounds_force_completed_calibration(self):
+        run = RC.start(self.root, max_rounds=2)
+        original = RC._discovery_rounds_since_calibration
+        try:
+            RC._discovery_rounds_since_calibration = lambda _: 10
+            with self.assertRaisesRegex(RC.RunControllerError, "必须先执行校准轮"):
+                RC.begin_round(self.root, run["run_id"], round_type="discovery")
+            RC.begin_round(self.root, run["run_id"], round_type="calibration")
+        finally:
+            RC._discovery_rounds_since_calibration = original
+
+    def test_calibration_round_requires_evidenced_audit(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"], round_type="calibration")
+        with self.assertRaisesRegex(RC.RunControllerError, "false_negative_audit"):
+            RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+
+    def test_calibration_round_records_evidenced_audit_and_metrics(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"], round_type="calibration")
+        evidence = self.root / "证据" / "calibration.json"
+        evidence.parent.mkdir(parents=True)
+        evidence.write_text("{}", encoding="utf-8")
+        samples = []
+        for gate, target in RM.CALIBRATION_TARGETS.items():
+            for index in range(target):
+                samples.append({"term": f"old term {gate} {index}", "gate": gate,
+                                "outcome": "valid_reject", "reason": "复核后原否决仍成立",
+                                "evidence_refs": ["证据/calibration.json"]})
+        audit = {"status": "completed", "reason": "完成默认分层复核", "untested_gates": [],
+                 "samples": samples}
+        result = RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS),
+                                 false_negative_audit=audit)
+        manifest = json.loads(Path(result["manifest"]).read_text(encoding="utf-8"))
+        self.assertEqual(manifest["metrics_summary"]["false_negative_samples"], 35)
+        self.assertEqual(manifest["rounds"][0]["round_type"], "calibration")
+
+    def test_completed_calibration_rejects_short_sample_and_wrong_untested_gates(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"], round_type="calibration")
+        evidence = self.root / "证据" / "calibration.json"
+        evidence.parent.mkdir(parents=True)
+        evidence.write_text("{}", encoding="utf-8")
+        audit = {"status": "completed", "reason": "错误地声称完成", "untested_gates": [],
+                 "samples": [{"term": "one", "gate": "G1", "outcome": "valid_reject",
+                              "reason": "仍成立", "evidence_refs": ["证据/calibration.json"]}]}
+        with self.assertRaisesRegex(RC.RunControllerError, "默认 35 条|untested_gates"):
+            RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS),
+                            false_negative_audit=audit)
+
     def test_record_round_refuses_open_stage_checkpoint(self):
         run = RC.start(self.root, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
@@ -212,7 +278,11 @@ class RunControllerTest(unittest.TestCase):
         SC.mark(self.root, run["run_id"], 1, "alpha", "zero_cost")
         SC.finish(self.root, run["run_id"], 1)
         RC.record_round(self.root, run["run_id"],
-                        funnel=dict(self.ZEROS, extracted=1, rejected_zero_cost=1))
+                        funnel=dict(self.ZEROS, extracted=1, rejected_zero_cost=1),
+                        task_families=["demo-family"],
+                        source_family_counts={"demo-source": 1},
+                        source_family_outcomes={"demo-source": {"formal": 1, "g1_pass": 0,
+                                                                 "deep": 0, "tracking": 0}})
 
     def test_confirmation_is_single_use(self):
         run = RC.start(self.root)
@@ -298,7 +368,11 @@ class RunControllerTest(unittest.TestCase):
         result = RC.record_round(
             self.root, run["run_id"], sources_opened=["https://e.com/source"],
             sources_blocked=["https://e.com/blocked(CAPTCHA)"], billable_calls=2,
-            notes=["本轮事实"], funnel=dict(self.ZEROS, queued=1, extracted=1))
+            notes=["本轮事实"], funnel=dict(self.ZEROS, queued=1, extracted=1),
+            task_families=["demo-family"],
+            source_family_counts={"demo-source": 1},
+            source_family_outcomes={"demo-source": {"formal": 1, "g1_pass": 0,
+                                                     "deep": 0, "tracking": 0}})
         manifest = json.loads(Path(result["manifest"]).read_text(encoding="utf-8"))
         self.assertEqual(manifest["rounds"][0]["candidates_touched"], ["demo"])
         self.assertEqual(manifest["candidates_touched"], ["demo"])
@@ -350,7 +424,8 @@ class RunControllerTest(unittest.TestCase):
         funnel = dict(self.ZEROS, queued=1, extracted=1)
         self.finish_scan_checkpoint(run["run_id"], "queued")
         with self.assertRaisesRegex(RC.RunControllerError, "缺 gates 或 expiry"):
-            RC.record_round(self.root, run["run_id"], funnel=funnel)
+            RC.record_round(self.root, run["run_id"], funnel=funnel,
+                            task_families=["demo-family"])
 
     def test_candidate_touched_again_is_recorded_in_later_round(self):
         run = RC.start(self.root, max_rounds=2)
@@ -362,7 +437,11 @@ class RunControllerTest(unittest.TestCase):
         }])
         self.finish_scan_checkpoint(run["run_id"], "queued")
         RC.record_round(self.root, run["run_id"],
-                        funnel=dict(self.ZEROS, queued=1, extracted=1))
+                        funnel=dict(self.ZEROS, queued=1, extracted=1),
+                        task_families=["demo-family"],
+                        source_family_counts={"demo-source": 1},
+                        source_family_outcomes={"demo-source": {"formal": 1, "g1_pass": 0,
+                                                                 "deep": 0, "tracking": 0}})
         RC.begin_round(self.root, run["run_id"])
         ledger_path = self.root / "账本" / "候选账本.json"
         ledger = json.loads(ledger_path.read_text(encoding="utf-8"))

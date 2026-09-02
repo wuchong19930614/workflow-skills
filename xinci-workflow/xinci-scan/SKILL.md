@@ -5,6 +5,8 @@ description: '扫描发现新兴/全新的英文 Google 搜索词候选:真浏�
 
 # xinci-scan 扫描发现
 
+> **2026-09-02 覆盖说明**：下文仍保留的“两问/订阅+广告”段落是历史回测依据；新 observation 一律写 `schema_version: 2`，并按闸门契约逐项执行六条盈利线与 G1 站点簇反事实。不得再用“重复任务=否”一票否决所有盈利线。
+
 捕获太新以致没有数据的搜索词,当场初筛,注册进账本。速度是这条赛道的全部意义:晚三天发现的候选通常已经没价值。空扫描是合法产出——如实报告远好于凑数。
 
 > **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-scan/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
@@ -96,10 +98,9 @@ same 后续归入 `[见过]`;distinct 后续归入 `[新]`。历史索引条目�
 - **G4**(任务可完全在线完成):需要实地、物理、持照到场的任务直接弃——放在开浏览器之前,一次 SERP 都不浪费;
 - **G5**(陷阱类别):**按命中类别节自带的处置档执行**——标「直接筛除型」的零成本判定即弃,一次 SERP 都不跑(死因已结构性确定,第四次验证不会有不同结论);标「验证型」的先记为“待 G3 验证”,继续完成下面的 G6/G7 预筛与 G6 深审入口预检。本 skill 只扫 `lane=new`:订阅线为 `tentative_veto` 时已无可用盈利线,按 G6 预筛出局,不再打开浏览器;为 `tentative_pass` 时才跑 G3,占位事实只记作竞争输入,G3 有效门结论写 `pass`。**当前 new 扫描不会新造 `veto` 或 `veto_window_bet`**。验证完成后 G5 记 pass 并回正常序列补 G1、G2(闸门缺一不可);
 - **G6/G7 零成本预筛**:没有被迫/重复任务(只值一周好奇)、或官方答案明显在途/任务本身一次性的,同批弃(判据见闸门契约「G6/G7 的扫描期用法」;这是预筛,不产生认定阶段的 G6/G7 结论);
-- **G6 深审入口预检(强制,仅 `lane=new`,两问)**:**第一问**——这个任务是否要求**有预算的付费者逐个对象重复完成**(每个 SKU / 场址 / 批次 / 市场各做一次)?答否即订阅线结构 veto；广告线在 new 道为 `N/A`,所以候选即弃——典型是“查一次某厂商新功能怎么配”,读完即走、没有可卖之物(**未注册秒弃项只在淘汰索引的 gate 栏记 G6,不是账本正式 `gates.G6`**;全文见闸门契约 G6「深审入口预检」。回测显示 75% 的 G3 否决本该死在这一问,它是最省钱的一道)。**第二问(零成本,同批执行)**——这项义务的受约束主体,是不是一个有名称、且官方会去计数的类别?按主体类别界定且有通行名称或法定范围的(digital labour platforms、附件 II 品类制造商)答是;按行为界定的("做自愿绿色声明的企业")或范围过广无统计口径的("把产品投放市场的经营者")答否。答否即弃,理由是 G6 第④项要求付费者数有来源、又禁止拿行业规模顶替,两条合起来使这类方向的第④项**结构性不可得**——不是这次没查到,是官方根本不做这个计数;不弃的话会走完 G1/G2 最贵的两道再卡死(判据与四例实测见闸门契约 G6「深审入口预检」)。
+- **G6 深审入口预检(强制,仅 `lane=new`)**：先记三类结构事实并映射到六线。无逐对象重复只否决 subscription；缺官方主体计数只否决依赖该口径的算式；自助结论依法必须由第三方签字才有效，才可能否决所有声称替代签字的交付。不得因前两项单独秒弃整候选；继续检查 lead_generation、affiliate、transaction、paid_report。
 
-  两问都答是才取得继续建立盈利线证据的资格,**仍不等于订阅线暂定通过**;随后按订阅线四项结构硬门形成 `g6_tentative_lines`(对 new 道是 `subscription=tentative_pass|tentative_veto`,`advertising=N/A`) 并在 points/source_urls 写依据,仅供本轮 G3 使用。它不是正式 G6 结论,不得在账本 gates 写 G6=pass,也不得写进正式 `g6_lines`;若暂定结论仍无法建立,候选留在 `captured` 补证据,不得下最终 G3;
-- **已注册候选的 G6 出口分两类**:盈利线做到逐线暂定后全灭，仍写完整 `g6_tentative_lines` 再走 `captured→rejected`；若在深算入口已经确认“付费者不逐对象重复 / 官方根本不计该主体类别 / 无自助法律效果”，则 observation 改写 `g6_entry_veto` 并当轮走 `captured→rejected`。后二者都不得提交 `gates.G6=veto`，也不得伪造暂定盈利线；registrar 直接核对结构化入口否决与实际来源。
+  随后在 schema v2 observation 完整写六条 `g6_tentative_lines` 与依据；new 道 advertising 固定 `N/A`。只有所有适用线全灭才走 `captured→rejected`。`g6_entry_veto` 可记录结构事实，但 repeat_paid_task / official_count_class 不能单独授权整候选出局；self_serve_legal_effect 只有在所有声称交付都依法无效时才是全局否决。上述都不得伪造正式 `gates.G6=veto`。
 - **无任务**:提不出任何页面能完成的任务的,同批弃。
 
 **留痕(硬性)**:本层秒弃的每一条都要进淘汰索引,**批量追加,不逐条写**:
@@ -131,10 +132,10 @@ https://www.google.com/search?q=<精确词>&gl=us&hl=en&pws=0
 
 **只有美区、桌面、未登录且可控的浏览器环境才能下 G1 结论。**连续模式由 preflight 把不满足条件的轮次降为 `trigger_only`，不得为新方向留缺 G1 的 captured 排队位；否则浏览器长期不可用会把 trigger 无限灌入候选账本。单步模式可记录受污染观察，但不写 G1=`pass|veto`、不进淘汰索引。污染事实不得包装成门结论。
 
-被 G1 否决的:**批量追加一行进淘汰方向索引,不注册进账本**——`gate` 记 G1,`reason` 写清是什么把任务做完了(featured snippet / 原生组件 / knowledge panel / AI Overview):
+首屏完成原子任务时，先写完整 `cluster_counterfactual`。批处理、监控、审计轨迹、导出集成、多辖区任一形成独立重复任务 family，就把 decision 写 `viable_cluster`、改写候选任务后继续；五项全否才写 `atomic_only` 并判 G1 veto。被 G1 否决的批量追加一行进淘汰方向索引，必须使用 JSON 行携带反事实：
 
 ```bash
-printf '%s\n' "词|G1|原生单位转换器组件直接作答" "词|G1|AI Overview 把步骤全列了" ... \
+printf '%s\n' '{"term":"<词>","gate":"G1","reason":"原生组件完成原子任务且无站点级扩展","cluster_counterfactual":{"atomic_task_completed":true,"batch_processing":false,"monitoring":false,"audit_trail":false,"export_integration":false,"multi_jurisdiction":false,"decision":"atomic_only","reason":"五种扩展均不形成独立重复任务"}}' \
   | python3 xinci-workflow/xinci-core/scripts/screen_index.py append --date <YYYY-MM-DD>
 ```
 
@@ -170,7 +171,9 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
 # 的方向没有排队期可言);闸门结论随下面这条 transition 一起提交
 python3 xinci-workflow/xinci-core/scripts/registrar.py register \
   --slug <slug> --term "<精确措辞>" --source-url <URL> --source-note "<现场摘要>" \
-  --task "<任务>" --evidence "证据/<slug>/<日期>-scan.json" --by xinci-scan
+  --task "<任务>" --site-thesis "<为何能形成独立站>" \
+  --task-family "<任务家族1>" --task-family "<任务家族2>" \
+  --evidence "证据/<slug>/<日期>-scan.json" --by xinci-scan
 # 带 --gates 就必须同时交 --evidence(复用上面 register 那份 scan 观察即可,
 # observation.gates 须与此处逐门一致——registrar 逐门核对,缺证据直接拒收)
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
@@ -195,7 +198,9 @@ expiry 是排队位的过期出口:排队每轮进多出少,没有 expiry 的方
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py register \
   --slug <slug> --term "<精确措辞>" --source-url <URL> --source-note "<现场摘要>" \
-  --task "<搜索者要完成的任务>" --gates G0=pass,G4=pass,G5=pass,G1=pass \
+  --task "<搜索者要完成的任务>" --site-thesis "<为何能形成独立站>" \
+  --task-family "<任务家族1>" --task-family "<任务家族2>" \
+  --gates G0=pass,G4=pass,G5=pass,G1=pass \
   --expiry <YYYY-MM-DD> --evidence "证据/<slug>/<日期>-scan.json" --by xinci-scan
 ```
 
@@ -209,7 +214,9 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py register \
   --slug <slug> --term "<精确措辞>" --source-url <URL> --source-note "<现场摘要>" \
-  --task "<搜索者要完成的任务>" --evidence "证据/<slug>/<日期>-scan.json" --by xinci-scan
+  --task "<搜索者要完成的任务>" --site-thesis "<为何能形成独立站>" \
+  --task-family "<任务家族1>" --task-family "<任务家族2>" \
+  --evidence "证据/<slug>/<日期>-scan.json" --by xinci-scan
 ```
 
 理由与第 4 层同一条:**`register` 带 `--gates` 就会被 registrar 强制要 `--expiry`**,而 `--expiry` 在 `captured` 上的语义是**排队过期出口**(「这个方向大约还值得几天深审」,见 candidate.schema),一个下一步就出闸的候选没有排队期可言。**排队候选带的那个 expiry 不是问题,前提是出闸时用 `--expiry` 覆盖它**(见下面出闸命令的注释:语义从「还值得几天深审」切换为「窗口失效日」);漏了这一步,旧值就会残留到 `screened` 被按窗口失效日误读。同理,`register` **没有** `--window-estimate` 参数——窗口评估也在出闸那一步写入。
@@ -295,4 +302,7 @@ python3 xinci-workflow/xinci-core/scripts/run_manifest.py record-single \
 - **深审配额每轮 ≤5 个**:G2/G3 是全流程最贵的动作,超配额的候选注册成 `captured` 排队,下轮开局优先消化,不得因为"这轮做不完"而丢掉。连续运行模式下**新扫描深审与还债深审配额彼此独立**——本层的 ≤5 只管新扫描的,还债另有自己的配额(积压严重时会临时提高,表见 xinci-run 运行循环步骤 1),还债不吃掉本轮扫描的深审名额。
 - **排队位的三条纪律**:①注册必须带候选自身证据支持的 `expiry`，不得给整批套同一天；②`gates` 只写真跑过的门；③new captured >20 时进入硬积压闸，连续运行禁止新增正式候选，只还债与清理到期项。
 - **索引日期是硬字段**:`screen_index.py append` 的每个新 term 必须有实际观察日 `YYYY-MM-DD`。历史空日期只能用 `repair-date` 依据运行清单/证据追加修订，不得手改原 JSONL，也不得用当前日期猜补。
+- **六线盈利预筛**：逐项写 subscription、lead_generation、affiliate、transaction、paid_report、advertising。重复任务为否只否决 subscription，官方主体计数缺失也不得连带杀死能靠账户清单、客单价或交易频次证明的线；只有所有适用线均暂定否决才按 G6 预筛出局。
+- **G1 前先做站点簇反事实**：首屏完成原子任务时，在 observation 写完整 `cluster_counterfactual`。批处理、监控、审计轨迹、导出集成、多辖区任一仍能形成独立任务 family，就重写任务继续过门；全部为否则才写 `atomic_only` 并 G1 否决。
+- **连续运行注册站点假设**：`registrar.py register --by xinci-run` 必须带 `--site-thesis` 和至少两个 `--task-family`；不能只拿一个 exact query 充当站点。
 - 秒弃的方向与 **G1 否决**都必须留痕进淘汰方向索引(批量追加,不逐条写),防止后续扫描重复评估;**这条限本轮首次见到、尚未注册的方向**——已注册的排队候选补跑 G1 被否走 `captured→rejected`,不进索引;账本收的是「现场证据值得单独留档」的候选:深审存活的、排队的,以及**深审判否的**(第 4 层 register + `→rejected`,别漏这一类)。**认出新的结构性模式即按陷阱类别.md 的追加规则归并成正式类别**(发现即建类,不必凑满三次;"≥3 次观察、跨日期、跨来源家族"只是 SERP 陷阱型改标直接筛除型的门槛。改档计数时索引一侧的秒弃 + 账本一侧的深审否决合并计数,后者靠运行清单 notes 累计——`stats` 只统计索引一侧,它的 ≥3 提示是漏归并的兜底提醒)(索引补一行归并记录:**term 写模式名本身**、gate 记 G5、reason 以 `[已归并]` 开头指向类别号——term 写成某个具体方向会被 append 的去重静默跳过;写法见生命周期契约「归并纪律」),此后同模式由 G5 **按该类别的处置档**处理——「直接筛除型」零成本弃、「验证型」仍跑 G3 验证;**留痕不变**,秒弃照常追加一行索引(gate 记 G5),否则下轮 check 认不出它。索引不会因此膨胀:`append` 按归一化 term 跳重复,每行始终是一个独立方向。

@@ -14,12 +14,14 @@ FINAL_STATUSES = {"go", "quota_exhausted", "budget_reached", "resource_exhausted
 STATUSES = {"active"} | FINAL_STATUSES
 FIELDS = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
           "finished_at", "max_rounds", "max_hours", "rounds_completed", "current_round",
-          "round_executor_id", "confirmations", "finish_reason", "go_candidates"}
+          "round_executor_id", "current_round_type", "confirmations", "finish_reason",
+          "go_candidates"}
 REQUIRED = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
             "max_rounds", "max_hours", "rounds_completed", "current_round",
             "confirmations", "finish_reason"}
 CONFIRM_FIELDS = {"risk", "confirmed_at", "consumed_at", "voided_at", "history"}
 CONFIRM_HISTORY_FIELDS = {"risk", "confirmed_at", "consumed_at", "voided_at"}
+ROUND_TYPES = {"discovery", "progression", "tracking", "calibration"}
 
 
 class RunStateError(Exception):
@@ -73,8 +75,11 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     missing = sorted(REQUIRED - set(obj))
     if unknown or missing:
         raise RunStateError(f"{where} 字段非法: unknown={unknown}, missing={missing}")
-    if obj.get("schema_version") not in {1, 2} or obj.get("mode") != "continuous":
+    version = obj.get("schema_version")
+    if version not in {1, 2, 3} or obj.get("mode") != "continuous":
         raise RunStateError(f"{where} schema_version/mode 非法")
+    if version >= 3 and "current_round_type" not in obj:
+        raise RunStateError(f"{where} schema v3 缺 current_round_type")
     run_id = obj.get("run_id")
     if not RUN_ID_RE.fullmatch(run_id or "") or (expected_run_id and run_id != expected_run_id):
         raise RunStateError(f"{where} run_id 与文件名不一致或格式非法")
@@ -89,8 +94,11 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     completed = obj.get("rounds_completed")
     current = obj.get("current_round")
     executor_id = obj.get("round_executor_id")
+    round_type = obj.get("current_round_type")
     if executor_id is not None and (not isinstance(executor_id, str) or not executor_id.strip()):
         raise RunStateError(f"{where}.round_executor_id 必须为 null 或非空字符串")
+    if round_type is not None and round_type not in ROUND_TYPES:
+        raise RunStateError(f"{where}.current_round_type 必须属于 {sorted(ROUND_TYPES)} 或为 null")
     if (not isinstance(max_rounds, int) or isinstance(max_rounds, bool) or max_rounds < 1
             or not isinstance(completed, int) or isinstance(completed, bool)
             or not 0 <= completed <= max_rounds):
@@ -106,6 +114,8 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
             raise RunStateError(f"{where}.current_round 超出 max_rounds")
         if current is None and executor_id is not None:
             raise RunStateError(f"{where} 未开始轮次时 round_executor_id 必须为 null")
+        if version >= 3 and ((current is None) != (round_type is None)):
+            raise RunStateError(f"{where} current_round 与 current_round_type 必须同时存在或同时为空")
         if obj.get("finished_at") is not None or obj.get("finish_reason") is not None:
             raise RunStateError(f"{where} active 状态不得有 finished_at/finish_reason")
         if obj.get("go_candidates") is not None:
@@ -113,6 +123,8 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     else:
         if executor_id is not None:
             raise RunStateError(f"{where} 结束状态 round_executor_id 必须为 null")
+        if round_type is not None:
+            raise RunStateError(f"{where} 结束状态 current_round_type 必须为 null")
         if current is not None or not obj.get("finish_reason") or not obj.get("finished_at"):
             raise RunStateError(f"{where} 结束状态要求 current_round=null、finish_reason、finished_at")
         finished = _timestamp(obj["finished_at"], f"{where}.finished_at")

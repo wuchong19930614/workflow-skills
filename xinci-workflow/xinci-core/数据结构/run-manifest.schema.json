@@ -59,6 +59,23 @@
       "additionalProperties": false,
       "description": "原始变化触发的独立漏斗；record-round 由触发池事件自动计算"
     },
+    "metrics_summary": {
+      "type": "object",
+      "description": "由 rounds 自动汇总的运行指标；禁止手写",
+      "properties": {
+        "rounds_by_type": { "type": "object" },
+        "formal_extracted": { "type": "integer", "minimum": 0 },
+        "g1_checks": { "type": "integer", "minimum": 0, "description": "本轮实际 G1 检查数；运行时与逐来源 G1 pass 及 funnel.rejected_g1 交叉核对" },
+        "deep_audited": { "type": "integer", "minimum": 0 },
+        "task_families": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "source_family_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+        "source_family_outcomes": { "type": "object" },
+        "state_transitions": { "type": "object" },
+        "false_negative_samples": { "type": "integer", "minimum": 0 },
+        "false_negatives": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
     "termination": {
       "type": "object",
       "required": ["status", "status_label", "reason", "finished_at", "rounds_completed", "max_rounds", "go_candidates", "evidence_refs"],
@@ -67,7 +84,8 @@
         "reason": { "type": "string", "minLength": 1 }, "finished_at": { "type": "string" },
         "rounds_completed": { "type": "integer" }, "max_rounds": { "type": "integer" },
         "go_candidates": { "type": "array", "items": { "type": "string" } },
-        "evidence_refs": { "type": "array", "items": { "type": "string" }, "description": "结束状态的事实证据；额度耗尽时必须含网页界面提示证据" }
+        "evidence_refs": { "type": "array", "items": { "type": "string" }, "description": "结束状态的事实证据；额度耗尽时必须含网页界面提示证据" },
+        "metrics_summary": { "$ref": "#/properties/metrics_summary" }
       },
       "additionalProperties": false
     },
@@ -80,12 +98,75 @@
         "required": ["round"],
         "properties": {
           "round": { "type": "integer", "description": "轮次序号,从 1 起" },
+          "round_type": { "type": "string", "enum": ["discovery", "progression", "tracking", "calibration"], "description": "发现、推进、跟踪或校准；schema v3 新轮次必填" },
           "sources_opened": { "type": "array", "items": { "type": "string" }, "description": "本轮打开的来源 URL" },
           "sources_blocked": { "type": "array", "items": { "type": "string" }, "description": "本轮被拦截的来源" },
           "candidates_touched": { "type": "array", "items": { "type": "string" }, "description": "本轮触及的候选 slug" },
           "candidates_reviewed": { "$ref": "#/properties/candidates_reviewed" },
           "billable_calls": { "type": "integer", "description": "本轮计费查询次数" },
           "trigger_funnel": { "$ref": "#/properties/trigger_funnel" },
+          "metrics": {
+            "type": "object",
+            "required": ["formal_extracted", "g1_checks", "task_families", "source_family_counts", "source_family_outcomes", "deep_audit_families", "state_transitions"],
+            "properties": {
+              "formal_extracted": { "type": "integer", "minimum": 0 },
+              "g1_checks": { "type": "integer", "minimum": 0 },
+              "task_families": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+              "source_family_counts": { "type": "object", "additionalProperties": { "type": "integer", "minimum": 0 } },
+              "source_family_outcomes": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "object",
+                  "required": ["formal", "g1_pass", "deep", "tracking"],
+                  "properties": {
+                    "formal": { "type": "integer", "minimum": 0 },
+                    "g1_pass": { "type": "integer", "minimum": 0 },
+                    "deep": { "type": "integer", "minimum": 0 },
+                    "tracking": { "type": "integer", "minimum": 0 }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "deep_audit_families": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+              "state_transitions": {
+                "type": "object",
+                "required": ["tracking_added", "formation_confirmed", "qualified", "go_decisions"],
+                "properties": {
+                  "tracking_added": { "type": "integer", "minimum": 0 },
+                  "formation_confirmed": { "type": "integer", "minimum": 0 },
+                  "qualified": { "type": "integer", "minimum": 0 },
+                  "go_decisions": { "type": "integer", "minimum": 0 }
+                },
+                "additionalProperties": false
+              }
+            },
+            "additionalProperties": false
+          },
+          "false_negative_audit": {
+            "type": "object",
+            "required": ["status", "reason", "samples", "untested_gates"],
+            "properties": {
+              "status": { "enum": ["completed", "blocked"] },
+              "reason": { "type": "string", "minLength": 1 },
+              "untested_gates": { "type": "array", "uniqueItems": true, "items": { "enum": ["G1", "G3", "G5", "G6", "G7"] } },
+              "samples": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["term", "gate", "outcome", "reason", "evidence_refs"],
+                  "properties": {
+                    "term": { "type": "string", "minLength": 1 },
+                    "gate": { "enum": ["G1", "G3", "G5", "G6", "G7"] },
+                    "outcome": { "enum": ["valid_reject", "false_negative", "inconclusive"] },
+                    "reason": { "type": "string", "minLength": 1 },
+                    "evidence_refs": { "type": "array", "minItems": 1, "items": { "type": "string" } }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            },
+            "additionalProperties": false
+          },
         "funnel": {
           "type": "object",
           "description": "扫描漏斗数据(xinci-scan 四层)。四个去向加总须等于 extracted——每个被提取的方向都要有归宿,不许无声丢弃;validate_ledger.py 强制此等式。两条不参与等式的口径:①第 0 层去重命中的方向不计入 extracted(它们上一次已有归宿,再计一次等式必然算不平);②消化存量 captured 的深审记 carryover_audited,不记 deep_audited。自 2026-08-19 起 funnel 本身也强制存在:xinci-scan 清单必须带顶层 funnel,xinci-run 清单每一轮必须带 rounds[].funnel(该轮没扫描就把 extracted 与四个去向五项全写 0——这五项都是 required,只写四个去向会被判缺 extracted;还了债的轮次记得补上可选的 carryover_audited,否则看不出那一轮花了什么);阈值之前的历史清单豁免。",

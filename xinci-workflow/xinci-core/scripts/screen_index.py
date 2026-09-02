@@ -17,9 +17,11 @@
   stats   总量、按闸门分布、累计 ≥3 次仍未归并的模式(兜底提醒;建类本身发现即做)
 """
 import argparse
+import hashlib
 import json
 import sys
 from datetime import date, datetime, timezone
+from functools import lru_cache
 from pathlib import Path
 
 import data_root
@@ -36,11 +38,34 @@ MERGE_THRESHOLD = 3  # stats 的兜底提醒线:累计 ≥3 次仍未归并的�
 # (闸门校准.md)改了 G3 的否决线并给深审加了 G6 入口预检,此前按旧闸门写下的
 # 1400 余条永久否决因此可能包含误杀。记下版本号,check 才能把"旧闸门下的否决"
 # 单独标出来,让闸门修订可以触发选择性重开,而不是把错误永久固化。
-GATE_VERSION = "2026-08-23b"  # b: G6 两条盈利线 + G3 占位否决条件化 + 赛道推论(同日第二次实质修订)
+GATE_VERSION = "2026-09-02.2"  # 六线入口边界 + G1 反事实强制 + 35 条校准闭环
+PATTERN_ALIASES_PATH = Path(__file__).resolve().parents[1] / "数据结构" / "pattern-aliases.json"
 
 
 class ScreenIndexError(Exception):
     pass
+
+
+@lru_cache(maxsize=1)
+def _pattern_aliases():
+    """模式别名只影响聚合，不改写历史索引。"""
+    if not PATTERN_ALIASES_PATH.is_file():
+        return {}
+    body = json.loads(PATTERN_ALIASES_PATH.read_text(encoding="utf-8"))
+    aliases = body.get("aliases", {}) if isinstance(body, dict) else {}
+    return {normalize(k): str(v).strip() for k, v in aliases.items() if normalize(k) and str(v).strip()}
+
+
+def canonical_pattern(value):
+    label = str(value or "").strip()
+    return _pattern_aliases().get(normalize(label), label)
+
+
+def pattern_id(value):
+    canonical = canonical_pattern(value)
+    if not canonical:
+        return ""
+    return "pat-" + hashlib.sha256(normalize(canonical).encode("utf-8")).hexdigest()[:12]
 
 
 def _index_path(data_root) -> Path:
@@ -58,6 +83,19 @@ def _valid_date(value) -> bool:
         return date.fromisoformat(value).isoformat() == value
     except ValueError:
         return False
+
+
+def _valid_atomic_counterfactual(cluster) -> bool:
+    required = {"atomic_task_completed", "batch_processing", "monitoring",
+                "audit_trail", "export_integration", "multi_jurisdiction",
+                "decision", "reason"}
+    extensions = ("batch_processing", "monitoring", "audit_trail",
+                  "export_integration", "multi_jurisdiction")
+    return (isinstance(cluster, dict) and set(cluster) == required
+            and cluster.get("decision") == "atomic_only"
+            and cluster.get("atomic_task_completed") is True
+            and all(cluster.get(k) is False for k in extensions)
+            and isinstance(cluster.get("reason"), str) and cluster["reason"].strip())
 
 
 def _load_corrections(data_root, strict=False) -> list:
@@ -121,6 +159,9 @@ def load(data_root) -> list:
         corrected = corrections.get(normalize(row["term"]))
         if corrected:
             out[i] = dict(row, date=corrected, date_corrected=True)
+        if row.get("pattern"):
+            out[i] = dict(out[i], pattern=canonical_pattern(row["pattern"]),
+                          pattern_id=pattern_id(row["pattern"]))
     return out
 
 
@@ -212,6 +253,12 @@ def append(data_root, records) -> int:
                 if not _valid_date(rec.get("date")):
                     raise ScreenIndexError(
                         f"淘汰方向 {term!r} 缺合法 date；必须是实际观察日 YYYY-MM-DD")
+                if (rec.get("gate") == "G1"
+                        and (rec.get("gate_version") or GATE_VERSION) == GATE_VERSION):
+                    cluster = rec.get("cluster_counterfactual")
+                    if not _valid_atomic_counterfactual(cluster):
+                        raise ScreenIndexError(
+                            f"G1 淘汰方向 {term!r} 必须带完整 atomic_only cluster_counterfactual")
                 existing.append(norm)
                 row = {"date": rec.get("date", ""), "term": term,
                        "gate": rec.get("gate", ""), "reason": rec.get("reason", ""),
@@ -222,11 +269,14 @@ def append(data_root, records) -> int:
                        # 历史 1502 行全部产自新词道,缺字段即视为 new,语义不变。
                        "lane": rec.get("lane") or "new"}
                 if rec.get("pattern"):
-                    row["pattern"] = rec["pattern"]
+                    row["pattern"] = canonical_pattern(rec["pattern"])
+                    row["pattern_id"] = pattern_id(rec["pattern"])
                 if rec.get("task"):
                     row["task"] = rec["task"]
                 if rec.get("source_urls"):
                     row["source_urls"] = rec["source_urls"]
+                if rec.get("cluster_counterfactual"):
+                    row["cluster_counterfactual"] = rec["cluster_counterfactual"]
                 lines.append(json.dumps(row, ensure_ascii=False))
                 added += 1
             if lines:
@@ -326,6 +376,11 @@ def validate_index(data_root) -> list:
         known.add(norm)
         if not _valid_date(row.get("date")) and norm not in corrections:
             errors.append(f"{INDEX_NAME} 第 {i} 行 {row['term']!r} 缺合法 date 且无追加式修订")
+        if row.get("pattern_id") and row["pattern_id"] != pattern_id(row.get("pattern")):
+            errors.append(f"{INDEX_NAME} 第 {i} 行 pattern_id 与规范模式不一致")
+        if (row.get("gate") == "G1" and row.get("gate_version") == GATE_VERSION
+                and not _valid_atomic_counterfactual(row.get("cluster_counterfactual"))):
+            errors.append(f"{INDEX_NAME} 第 {i} 行当前 G1 否决缺 atomic_only cluster_counterfactual")
     for norm, row in corrections.items():
         if norm not in known:
             errors.append(f"{CORRECTIONS_NAME} 的目标不在淘汰索引: {row['term']!r}")
@@ -334,15 +389,19 @@ def validate_index(data_root) -> list:
 
 def stats(data_root) -> dict:
     index = load(data_root)
-    gates, patterns = {}, {}
+    gates, patterns, pattern_labels = {}, {}, {}
     for r in index:
         g = r.get("gate") or "(未标注)"
         gates[g] = gates.get(g, 0) + 1
         if r.get("pattern"):
-            patterns[r["pattern"]] = patterns.get(r["pattern"], 0) + 1
+            pid = r.get("pattern_id") or pattern_id(r["pattern"])
+            patterns[pid] = patterns.get(pid, 0) + 1
+            pattern_labels[pid] = canonical_pattern(r["pattern"])
     return {"total": len(index), "by_gate": gates,
-            "patterns": patterns,
-            "merge_due": sorted(k for k, v in patterns.items() if v >= MERGE_THRESHOLD)}
+            "patterns": patterns, "pattern_labels": pattern_labels,
+            "merge_due_ids": sorted(k for k, v in patterns.items() if v >= MERGE_THRESHOLD),
+            "merge_due": sorted(pattern_labels[k] for k, v in patterns.items()
+                                if v >= MERGE_THRESHOLD)}
 
 
 def _parse_append_line(line: str) -> dict:
@@ -478,7 +537,8 @@ def main(argv=None):
     print(f"索引总量: {s['total']}")
     print("按闸门:", json.dumps(s["by_gate"], ensure_ascii=False))
     if s["patterns"]:
-        print("模式计数:", json.dumps(s["patterns"], ensure_ascii=False))
+        readable = {s["pattern_labels"][pid]: count for pid, count in s["patterns"].items()}
+        print("模式计数:", json.dumps(readable, ensure_ascii=False))
     if s["merge_due"]:
         print(f"累计 ≥{MERGE_THRESHOLD} 次仍未归并的模式(兜底提醒,建类应发现即做),该归并进陷阱类别.md: {s['merge_due']}")
     return 0

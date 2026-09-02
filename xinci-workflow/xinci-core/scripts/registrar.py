@@ -103,6 +103,9 @@ VALID_ACTORS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "x
 SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 GATE_NAMES = {f"G{i}" for i in range(9)}
 GATE_VALUES = {"pass", "veto", G3_WINDOW_BET}
+MONETIZATION_LINES = {"subscription", "lead_generation", "affiliate", "transaction",
+                      "paid_report", "advertising"}
+LEGACY_G6_LINES = {"subscription", "advertising"}
 
 
 class RegistrarError(Exception):
@@ -246,9 +249,9 @@ def _check_evidence(data_root: Path, refs, slug=None) -> list:
     return refs
 
 
-OBS_FIELDS = {"slug", "observed_at", "stage", "source_urls", "points", "gates",
+OBS_FIELDS = {"schema_version", "slug", "observed_at", "stage", "source_urls", "points", "gates",
               "g6_lines", "g6_tentative_lines", "g6_entry_veto", "income_score", "window_bet",
-              "naming_status", "formation_signals"}
+              "naming_status", "formation_signals", "cluster_counterfactual"}
 WINDOW_BET_FIELDS = {"implementation_urls", "lag_sample_url", "lag_days", "rationale"}
 
 
@@ -260,6 +263,8 @@ def _check_observation(path: Path, ref: str, slug) -> None:
     except (json.JSONDecodeError, UnicodeDecodeError):
         raise RegistrarError(f"观察文件不是合法 JSON: {ref}")
     _require(isinstance(obs, dict), f"观察文件必须是 JSON 对象: {ref}")
+    _require(obs.get("schema_version", 1) in {1, 2},
+             f"观察文件 schema_version 只能是 1/2: {ref}")
     for k in ("slug", "observed_at", "stage", "points"):
         _require(bool(obs.get(k)), f"观察文件缺必填字段 {k}: {ref}")
     unknown = sorted(set(obs) - OBS_FIELDS)
@@ -289,10 +294,13 @@ def _check_observation(path: Path, ref: str, slug) -> None:
     g6_lines = obs.get("g6_lines")
     if g6_lines is not None:
         _require(isinstance(g6_lines, dict)
-                 and set(g6_lines) == {"subscription", "advertising"},
-                 f"观察文件 g6_lines 必须完整包含 subscription/advertising: {ref}")
+                 and LEGACY_G6_LINES <= set(g6_lines) <= MONETIZATION_LINES,
+                 f"观察文件 g6_lines 至少包含 subscription/advertising 且不得含未知盈利线: {ref}")
         _require(all(v in {"pass", "veto", "N/A"} for v in g6_lines.values()),
                  f"观察文件 g6_lines 结论只能是 pass/veto/N/A: {ref}")
+        if obs.get("schema_version", 1) >= 2:
+            _require(set(g6_lines) == MONETIZATION_LINES,
+                     f"schema v2 的 g6_lines 必须完整包含六条盈利线: {ref}")
     g6_tentative_lines = obs.get("g6_tentative_lines")
     if g6_tentative_lines is not None:
         _require(obs["stage"] in {"scan", "track"},
@@ -300,12 +308,15 @@ def _check_observation(path: Path, ref: str, slug) -> None:
         _require(g6_lines is None,
                  f"观察文件不得同时写 g6_tentative_lines 与正式 g6_lines: {ref}")
         _require(isinstance(g6_tentative_lines, dict)
-                 and set(g6_tentative_lines) == {"subscription", "advertising"},
-                 f"观察文件 g6_tentative_lines 必须完整包含 subscription/advertising: {ref}")
+                 and LEGACY_G6_LINES <= set(g6_tentative_lines) <= MONETIZATION_LINES,
+                 f"观察文件 g6_tentative_lines 至少包含 subscription/advertising 且不得含未知盈利线: {ref}")
         _require(all(v in {"tentative_pass", "tentative_veto", "N/A"}
                      for v in g6_tentative_lines.values()),
                  f"观察文件 g6_tentative_lines 结论只能是 "
                  f"tentative_pass/tentative_veto/N/A: {ref}")
+        if obs.get("schema_version", 1) >= 2:
+            _require(set(g6_tentative_lines) == MONETIZATION_LINES,
+                     f"schema v2 的 g6_tentative_lines 必须完整包含六条盈利线: {ref}")
     if obs["stage"] in {"scan", "track"} and "G3" in gates:
         _require(g6_tentative_lines is not None,
                  f"scan/track 观察提交 G3 时必须同时写 g6_tentative_lines: {ref}")
@@ -319,8 +330,11 @@ def _check_observation(path: Path, ref: str, slug) -> None:
                  and isinstance(entry_veto.get("reason"), str)
                  and entry_veto["reason"].strip(),
                  f"观察文件 g6_entry_veto 必须是 scan/track 的结构性入口否决: {ref}")
-        _require(g6_lines is None and g6_tentative_lines is None and "G6" not in gates,
-                 f"g6_entry_veto 不得伪装成正式或暂定 G6: {ref}")
+        _require(g6_lines is None and "G6" not in gates,
+                 f"g6_entry_veto 不得伪装成正式 G6: {ref}")
+        if entry_veto.get("criterion") == "self_serve_legal_effect":
+            _require(g6_tentative_lines is None,
+                     f"self_serve_legal_effect 是全局交付效力否决，不得同时写暂定盈利线: {ref}")
         _require(bool(urls), f"g6_entry_veto 必须包含实际打开的 source_urls: {ref}")
     naming_status = obs.get("naming_status")
     if naming_status is not None:
@@ -334,6 +348,26 @@ def _check_observation(path: Path, ref: str, slug) -> None:
                  and len(formation_signals) == len(set(formation_signals))
                  and all(x in allowed_signals for x in formation_signals),
                  f"观察文件 formation_signals 只适用于 track，且必须是合法且不重复的形成信号数组: {ref}")
+    cluster = obs.get("cluster_counterfactual")
+    if cluster is not None:
+        required = {"atomic_task_completed", "batch_processing", "monitoring", "audit_trail",
+                    "export_integration", "multi_jurisdiction", "decision", "reason"}
+        _require(isinstance(cluster, dict) and set(cluster) == required
+                 and all(isinstance(cluster[k], bool) for k in required - {"decision", "reason"})
+                 and cluster.get("decision") in {"viable_cluster", "atomic_only"}
+                 and isinstance(cluster.get("reason"), str) and cluster["reason"].strip(),
+                 f"观察文件 cluster_counterfactual 必须完整记录原子任务与六种扩展反事实: {ref}")
+        extensions = ("batch_processing", "monitoring", "audit_trail",
+                      "export_integration", "multi_jurisdiction")
+        if cluster["decision"] == "atomic_only":
+            _require(cluster["atomic_task_completed"] and not any(cluster[k] for k in extensions),
+                     f"cluster_counterfactual=atomic_only 要求原子任务已完成且五种扩展均不成立: {ref}")
+        else:
+            _require(cluster["atomic_task_completed"] and any(cluster[k] for k in extensions),
+                     f"cluster_counterfactual=viable_cluster 要求原子任务已完成且至少一种扩展成立: {ref}")
+    if gates.get("G1") == "veto":
+        _require(cluster is not None and cluster.get("decision") == "atomic_only",
+                 f"G1=veto 必须由 cluster_counterfactual=atomic_only 支撑，不能只凭原子任务判死: {ref}")
     obs_income_score = obs.get("income_score")
     if obs_income_score is not None:
         _require(isinstance(obs_income_score, int) and not isinstance(obs_income_score, bool)
@@ -379,12 +413,8 @@ def _has_no_applicable_tentative_g6(data_root: Path, refs, lane: str) -> bool:
         lines = obs.get("g6_tentative_lines")
         if not isinstance(lines, dict):
             continue
-        if lane == "new":
-            no_line = (lines.get("subscription") == "tentative_veto"
-                       and lines.get("advertising") == "N/A")
-        else:
-            no_line = (lines.get("subscription") == "tentative_veto"
-                       and lines.get("advertising") == "tentative_veto")
+        applicable = [value for value in lines.values() if value != "N/A"]
+        no_line = bool(applicable) and all(value == "tentative_veto" for value in applicable)
         if no_line:
             _require(bool(obs.get("source_urls")),
                      "暂定 G6 无适用盈利线的支撑观察必须包含实际打开的 source_urls")
@@ -393,11 +423,18 @@ def _has_no_applicable_tentative_g6(data_root: Path, refs, lane: str) -> bool:
 
 
 def _has_structural_g6_entry_veto(data_root: Path, refs) -> bool:
+    """只有自助交付在法律上无效，才是整候选的结构性否决。
+
+    repeat_paid_task 只约束 subscription；official_count_class 只约束依赖该统计
+    口径的算式。二者可作为逐线判断的依据，但不得单独授权整候选 rejected。
+    """
     for ref in refs:
         if not (Path(ref).parts and Path(ref).parts[0] == "证据" and Path(ref).suffix == ".json"):
             continue
         obs = _load_observation(data_root, ref)
-        if obs.get("stage") in {"scan", "track"} and isinstance(obs.get("g6_entry_veto"), dict):
+        entry = obs.get("g6_entry_veto")
+        if (obs.get("stage") in {"scan", "track"} and isinstance(entry, dict)
+                and entry.get("criterion") == "self_serve_legal_effect"):
             _require(bool(obs.get("source_urls")), "G6 结构性入口否决必须包含实际打开的 source_urls")
             return True
     return False
@@ -504,7 +541,8 @@ def _check_decision_files(data_root: Path, decision_ref: str) -> str:
 
 def register(data_root, slug, term, source_url, task, evidence,
              source_note="", aliases=None, by="xinci-scan", gates=None, expiry=None,
-             run_id=None, lane="new", origin=None, trigger_ref=None):
+             run_id=None, lane="new", origin=None, trigger_ref=None,
+             site_thesis=None, task_families=None):
     """注册新候选(→captured)。
 
     gates 可选:扫描漏斗中"本轮没走完深审"的存活候选注册成 captured 排队时,带上已得的
@@ -520,10 +558,17 @@ def register(data_root, slug, term, source_url, task, evidence,
     _check_actor(data_root, by, run_id)
     _check_run_g1_preflight(data_root, by, run_id, gates)
     _check_run_lane_boundary(by, lane, "captured")
+    task_families = list(dict.fromkeys(task_families or []))
+    if by == "xinci-run":
+        _require(isinstance(site_thesis, str) and site_thesis.strip(),
+                 "xinci-run 新候选必须记录 site_thesis")
+        _require(len(task_families) >= 2 and all(isinstance(x, str) and x.strip()
+                                                 for x in task_families),
+                 "xinci-run 新候选必须记录至少两个独立 task_family")
     with _locked(data_root):
         return _register_locked(data_root, slug, term, source_url, task, evidence,
                                 source_note, aliases, by, gates, expiry, run_id, lane,
-                                origin, trigger_ref)
+                                origin, trigger_ref, site_thesis, task_families)
 
 
 def require_formal_admission(data_root, by, run_id, term=None, origin=None, trigger_ref=None):
@@ -552,7 +597,8 @@ def require_formal_admission(data_root, by, run_id, term=None, origin=None, trig
 
 def _register_locked(data_root, slug, term, source_url, task, evidence,
                      source_note, aliases, by, gates=None, expiry=None, run_id=None,
-                     lane="new", origin=None, trigger_ref=None):
+                     lane="new", origin=None, trigger_ref=None,
+                     site_thesis=None, task_families=None):
     try:
         require_clean(data_root)
     except TransactionError as e:
@@ -617,6 +663,8 @@ def _register_locked(data_root, slug, term, source_url, task, evidence,
         "expiry": expiry,
         "source": {"url": source_url, "note": source_note},
         "task": task,
+        **({"site_thesis": site_thesis.strip()} if site_thesis else {}),
+        **({"task_families": list(task_families)} if task_families else {}),
         **({"origin": origin} if origin else {}),
         **({"trigger_ref": trigger_ref} if trigger_ref else {}),
         "window_estimate": None,
@@ -810,9 +858,9 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                  f"qualified 要求 income_score 为 1–20 的整数(收入维度不得为 0),"
                  f"当前 {income_score!r}")
         lines = list(dict.fromkeys(g6_passed_lines or []))
-        allowed_lines = {"subscription", "advertising"}
+        allowed_lines = MONETIZATION_LINES
         _require(lines and set(lines) <= allowed_lines,
-                 "qualified 要求 g6_passed_lines 至少包含 subscription / advertising 之一")
+                 "qualified 要求 g6_passed_lines 至少包含一条合法盈利线")
         _require(rec.get("lane") != "new" or "advertising" not in lines,
                  "lane=new 的广告线结构上不适用,g6_passed_lines 不得包含 advertising")
         g6_passed_lines = lines
@@ -825,13 +873,16 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                        and obs.get("gates", {}).get("G6") == "pass"]
         _require(bool(qualify_obs),
                  "formation_confirmed→qualified 要求 qualify 观察结构化记录 G6")
-        expected_line_results = {line: ("pass" if line in lines else "veto")
-                                 for line in ("subscription", "advertising")}
-        if rec.get("lane") == "new":
-            expected_line_results["advertising"] = "N/A"
-        _require(all(obs.get("g6_lines") == expected_line_results for obs in qualify_obs),
-                 f"qualify 观察 g6_lines 必须与赛道及 g6_passed_lines 一致,"
-                 f"期望 {expected_line_results}")
+        for obs in qualify_obs:
+            observed_lines = obs.get("g6_lines") or {}
+            _require(all(observed_lines.get(line) == "pass" for line in lines),
+                     "qualify 观察 g6_lines 中的每条 g6_passed_lines 必须为 pass")
+            _require(not any(value == "pass" and line not in lines
+                             for line, value in observed_lines.items()),
+                     "qualify 观察不得含未写入 g6_passed_lines 的 pass")
+            if rec.get("lane") == "new":
+                _require(observed_lines.get("advertising") == "N/A",
+                         "lane=new 的 advertising 必须为 N/A")
         _require(all(obs.get("income_score") == income_score for obs in qualify_obs),
                  "qualify 观察 income_score 必须与 transition 参数一致")
     elif to == "disqualified":
@@ -1108,6 +1159,9 @@ def main(argv=None):
     p.add_argument("--source-url", required=True)
     p.add_argument("--source-note", default="")
     p.add_argument("--task", required=True)
+    p.add_argument("--site-thesis", help="独立站为何成立的一句话假设;xinci-run 必填")
+    p.add_argument("--task-family", action="append", default=[],
+                   help="站点可拥有的独立任务家族;xinci-run 至少两项")
     p.add_argument("--lane", default="new", choices=sorted(["new", "mature"]),
                    help="new=新词道(默认);mature=成熟错价词道,广告线只能在此道工作")
     p.add_argument("--aliases", default="", help="逗号分隔")
@@ -1136,7 +1190,7 @@ def main(argv=None):
     p.add_argument("--income-score", type=int,
                    help="收入可行性维度得分;qualified 必填且须为 1–20")
     p.add_argument("--g6-passed-lines", default="",
-                   help="qualified 必填;逗号分隔 subscription,advertising")
+                   help="qualified 必填;逗号分隔通过的盈利线")
     p.add_argument("--decision-ref")
     p.add_argument("--play")
     p.add_argument("--reason")
@@ -1185,7 +1239,8 @@ def main(argv=None):
                            source_note=a.source_note,
                            aliases=[x for x in a.aliases.split(",") if x], by=a.by,
                            gates=_parse_gates(a.gates), expiry=a.expiry, run_id=a.run_id,
-                           lane=a.lane, origin=a.origin, trigger_ref=a.trigger_id)
+                           lane=a.lane, origin=a.origin, trigger_ref=a.trigger_id,
+                           site_thesis=a.site_thesis, task_families=a.task_family)
         elif a.cmd == "transition":
             rec = transition(a.data_root, a.slug, a.to, a.by,
                              gates=_parse_gates(a.gates), window_estimate=a.window_estimate,

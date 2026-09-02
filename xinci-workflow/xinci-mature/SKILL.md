@@ -1,11 +1,11 @@
 ---
 name: xinci-mature
-description: '成熟错价词道(lane=mature)的发现与前半程推进:找量级真实存在、SERP 却守得很弱的成熟英文查询,服务广告线。从第一步就取并要求量级数据(与新词道的 Semrush 禁令相反),按先算钱再看防守的顺序跑量级前置过滤、G6 两线判定、G1/G2/G3 与弱守六信号,存活的注册为 lane=mature 并推进到 formation_confirmed。当用户说跑一轮成熟词、找错价词、走广告线、mature 道时使用。English triggers: mature lane, mispriced keywords, ad-line scan. 新词道的发现用 xinci-scan;确认期评分用 xinci-qualify,建站决策用 xinci-decide。'
+description: '成熟错价词道(lane=mature)的发现与前半程推进:找量级真实存在、SERP 却守得很弱的成熟英文查询。从第一步就取并要求量级数据(与新词道的 Semrush 禁令相反),按先算钱再看防守的顺序跑量级前置过滤、G6 六线判定、G1/G2/G3 与弱守六信号,存活的注册为 lane=mature 并推进到 formation_confirmed。当用户说跑一轮成熟词、找错价词、走广告线、mature 道时使用。English triggers: mature lane, mispriced keywords, ad-line scan. 新词道的发现用 xinci-scan;确认期评分用 xinci-qualify,建站决策用 xinci-decide。'
 ---
 
 # xinci-mature 成熟错价词道
 
-找的不是新词,是**老词里被守得很弱的那一格**:量级真实存在,而占位者只有散文、老化内容或错配格式。它服务**广告线**,与 xinci-scan 的订阅线义务雷达分属两条赛道,判据不可混用。
+找的不是新词,是**老词里被守得很弱的那一格**:量级真实存在,而占位者只有散文、老化内容或错配格式。量级证据使 advertising / affiliate 更容易审计，但本道仍须检查全部六条盈利线，不能预设只靠广告。
 
 **这条线至今没有一个正例(累计 0/4)。** 本 skill 的第一目标是让它可执行、可累积样本,不是假装它已经成立。每一轮都必须记命中率并据实修订判据——这是数据采集指南给本道立的规矩,不是客套。
 
@@ -33,8 +33,8 @@ python3 xinci-workflow/xinci-core/scripts/report_status.py
 | | `lane=new`(xinci-scan) | `lane=mature`(本 skill) |
 | --- | --- | --- |
 | 量级数据 | 窗口期**禁用** Semrush/KD/CPC/Trends——查无是定义属性 | 从第一步就**允许且要求**取量级——量级是准入条件,查无即无法证明收入 |
-| 广告线 | 固定 `N/A`,只能靠订阅线过 G6 | **必须判**,且有量级硬门 **$200/月**;算式不写即 veto |
-| 执行顺序 | G0/G4/G5 → G6/G7 预筛 → G1 → G2 → G3 | G0/G4/G5 加三个反向排除 → **量级前置过滤 + G6 两线** → G1 → G2 加弱守六信号 → G3 |
+| 广告线 | 固定 `N/A`，其他五线仍逐项检查 | **必须判**,且有量级硬门 **$200/月**;算式不写即 veto |
+| 执行顺序 | G0/G4/G5 → G6/G7 预筛 → G1 → G2 → G3 | G0/G4/G5 加三个反向排除 → **量级前置过滤 + G6 六线** → G1 → G2 加弱守六信号 → G3 |
 
 **KD 在两条道上一律不作为鼓励。** 契约记录的三组背离全是同一个方向——KD 14 对实测竞争 89、KD 27 对 71、KD 44 对约 85,**指标看起来容易、实际都更难**。KD / Authority Score / 外链数**不得决定 G2/G3,也不得直接挣竞争分**。
 
@@ -94,7 +94,7 @@ printf '%s\n' "词|G5|[YMYL] 题目影响法律权利" "词|G5|[成熟工具词]
 
 **Semrush 纪律**:每一次计费查询必须能改变一个决策。本层的两个数就是决策本身,属 decision-changing;但**不要为凑流程整页导出**——按数据采集指南的预览纪律,看前 50 行预览、只记要点进观察文件,不整页转录。
 
-### 第 4 层:G6 两线判定(mature 道必须两条都判)
+### 第 4 层:G6 六线判定
 
 **广告线**必须把反推算式写出来,不许只写"可以放广告":
 
@@ -109,9 +109,9 @@ printf '%s\n' "词|G5|[YMYL] 题目影响法律权利" "词|G5|[成熟工具词]
 
 示意量级:目标 $200/月、RPM $8、点击率 5% → 需求簇内月搜索量约 50 万;RPM $30 时约 13 万。
 
-**订阅线**同样要判(mature 道不允许记 `N/A`):按 G6 四项结构硬门给出结论。
+其余五线也逐项判断：subscription、lead_generation、affiliate、transaction、paid_report。每条写付费者、付费事件/重复单位、交付物、保守单价与数量、收入算式、来源和最大反证；不适用才写 `N/A`。`repeat_paid_task` 答否只否决 subscription，不能连带杀死 lead generation / transaction / paid report。
 
-**任一条 pass 即 G6 pass,两条都 pass 最强。** 窗口期写进 observation 的 `g6_tentative_lines`(mature 两线都可为 `tentative_pass|tentative_veto`),确认期才用正式 `g6_lines`。
+**任一适用线 pass 即 G6 pass。** 窗口期在 schema v2 observation 的 `g6_tentative_lines` 完整写六条 `tentative_pass|tentative_veto|N/A`；确认期才用正式 `g6_lines`。
 
 **三项互相反相关,是一个乘性夹逼,不是三个可分别满足的条件**(实测 3 样本):
 
@@ -152,10 +152,10 @@ https://www.google.com/search?q=<精确词>&gl=us&hl=en&pws=0
 
 按"**做什么**"给每个竞品分类,永不按"是谁"。先按本轮 G6 的逐线暂定结论判断占位否决是否生效,再执行三问:
 
-- **只靠广告线过** → 占位否决**生效**(广告变现下每个访客只值几分钱,自然位是唯一入口)
-- **订阅线也能过** → 占位否决**不生效**,转为决策阶段的获客成本论证
+- **只靠 affiliate / advertising 过** → 占位否决**生效**(两线依赖自然搜索流量)
+- **subscription / lead_generation / transaction / paid_report 任一能过** → 占位事实转为竞争与获客成本输入，不自动否决整候选
 
-**这条对本道尤其要紧**:mature 道的方向多半只靠广告线,所以 G3 的 `veto` 在这里是**真的会杀死候选**的——与 new 道现状(订阅线可行时占位只记竞争)不同。三问全文与 `veto_window_bet` 的降级出口见闸门契约 G3。
+**这条对本道尤其要紧**:mature 道若仅有流量型盈利线，G3 的 `veto` 会杀死候选；若高价值低量级盈利线成立，则占位事实不能套广告逻辑一票否决。三问全文与 `veto_window_bet` 的降级出口见闸门契约 G3。
 
 ### 第 8 层:注册与分流
 

@@ -5,6 +5,8 @@ description: '复查 new 道中处于追踪状态的候选:重跑 G1、看 SERP 
 
 # xinci-track 追踪复查
 
+> **2026-09-02 覆盖说明**：新 track observation 写 `schema_version: 2` 并复核六条盈利线；下文历史性的订阅/广告示例只用于读取旧证据，不再定义“无适用盈利线”。
+
 对本次调用覆盖的 `lane=new` tracking 候选逐个复查:用户可明确指定;未指定时按下段规则遍历全部 new 道候选。mature 在 `formation_confirmed` 前由 xinci-mature 单步承接,本 skill 发现 mature tracking 候选时只报告已跳过并指向 xinci-mature,不调用 registrar。新词的观察会腐烂:第 3 天判断"竞争空场"的候选,第 17 天可能已经死了——所以每次复查必须重跑 G1,并把结论落成带日期的新观察。
 
 何时复查由用户决定;本 skill 被调用才动,不设节奏、不催促。用户可指定候选;若只调用本 skill 而未给候选,该次调用默认授权遍历全部 `lane=new` 且状态为 `tracking` 的候选。
@@ -41,12 +43,12 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
 对用户指定的每个 `lane=new` 候选执行;本次调用未指定候选时,遍历全部 `lane=new` 且状态为 `tracking` 的候选。指定项若是 mature,只报告其仍属于手工前半程,不写入:
 
 1. **重跑 G1,同批零成本重核 G0。** 真浏览器搜精确词(美区桌面未登录)。只有环境合规时才提交 G1 结论:首屏若已完成任务,G1 翻转,提议 `rejected`;环境无法达到美区、桌面、未登录,或结果明显受个性化污染时,只记带环境说明的观察,不写 G1 gates、不据此转移,候选继续留在 `tracking` 等待合规复查。G0(合法性与安全)按闸门契约先于一切执行,复查时零成本再问一次:目标平台 ToS 改了吗?这个任务的市场是否已被欺诈供血?G0 翻转同样提议 `rejected`——出口清单里的"G0 或 G1 翻转"就是指这两道。
-2. **看 SERP 变化(即 G2/G3 的变化复看)。** 对照上次观察:竞品到位了吗?官方文档/工具出现了吗?谁在占坑?读完整首页,按"做什么"分类。先沿用并复核扫描观察的 `g6_tentative_lines`,并把当次结论写入新的 track 观察:只有当前仍是“仅广告线暂定可行”时,竞品占位到 G3 否决线才提议 `rejected`;订阅线暂定可行时,占位事实只更新竞争记录,G3 有效门结论仍为 pass。若 new 道复核后 subscription=`tentative_veto`、advertising=`N/A`,说明没有适用盈利线,以本次 `g6_tentative_lines` 证据提议 `tracking→rejected`,不得伪造正式 `gates.G6=veto`。暂定线证据不足时不下最终 G3,如实留在 tracking 补证据。
+2. **看 SERP 变化(即 G2/G3 的变化复看)。** 对照上次观察:竞品到位了吗?官方文档/工具出现了吗?谁在占坑?读完整首页,按"做什么"分类。完整复核六条 `g6_tentative_lines`：只有当前通过线全部依赖自然流量（affiliate / advertising）时，竞品占位到 G3 否决线才提议 rejected；subscription / lead_generation / transaction / paid_report 任一暂定可行时，占位事实只更新竞争记录。只有六条适用线全部 `tentative_veto` 才可用本次证据提议 `tracking→rejected`，不得伪造正式 `gates.G6=veto`。
    **复查范围就是 G0/G1 + G2/G3,不复查 G4/G5**——那两道是方向的固有属性,扫描期定了就不随时间变化(理由见闸门契约时间光谱表下「形成期为什么不是 G1–G5 全复查」)。**唯一的例外不由本 skill 触发**:扫描侧新归并出一个陷阱类别、而某个在追踪的候选正好命中它时,那是重新认识,由做归并的一方当场提议 `tracking→rejected`(生命周期契约 rejected 边第⑥种情形);本 skill 不为此例行重跑 G5。
 3. **看命名定型。** 回访来源社区:叫法统一了还是分裂了?aliases 有没有胜出者?
 4. **看需求形成信号。** 自动补全出现?首批 Semrush 行出现?讨论持续增长?(形成期允许轻量 Semrush 探针,仅限能改变决策的查询。)
    - 本次观察必须结构化写 `naming_status=unstable|stabilized` 与 `formation_signals`。合法信号为 `autocomplete / semrush_rows / sustained_discussion / repeated_independent_queries`；没有信号时写空数组，不得用叙述性乐观判断替代。
-   - 若本次来源新暴露“付费者不逐对象重复 / 官方不计该主体类别 / 不存在自助法律效果”，写结构化 `g6_entry_veto` 并提议 `tracking→rejected`。这是新证据触发的结构出口，不是例行重跑正式 G6。
+   - 若本次来源新暴露 G6 结构事实，写 `g6_entry_veto`：不重复只约束 subscription，官方不计数只约束依赖该口径的算式，二者必须随完整六线暂定结论判断；只有自助结果依法对所有声称交付均无效时才可独立提议 rejected。
 5. **对照 expiry 与失效条件。** 失效条件命中或 expiry 已过 → 如实报告。
 6. **写观察文件并登记复查:** observation 的 `gates` 只列本次实际重跑且证据条件合规的门;合规重跑 G1 时必须写本次 G1 结论,环境污染时则不写 G1。`g6_tentative_lines` 写本次复核后的逐线暂定结论,`source_urls` 列实际打开的页面。仅登记复查而不转移时用 checked;随后若 transition 提交 gates,复用这份观察作为 `--evidence`,registrar 会逐门核对。
 
@@ -75,5 +77,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
 - 提议与执行分离:本 skill 永不直接改状态,一切转移经用户确认。例外:xinci-run 连续运行模式下,启动命令即标准授权,无需逐条确认。
 - expiry 已过的候选必须给出明确提议(expired,或说明为何值得用户续期并给新 expiry),不许沉默跳过;续期必须由用户确认并附理由,经 registrar amend 执行——手工编辑账本是禁止的。
 - 不自我调度:不设 next_check、不承诺"下次几天后查"、不催促用户。
+- `tracking_schedule.py` 从候选**首次进入 tracking**的 history 时间派生第 3/7/14 天只读提示（旧记录无 history 才回退首见时间）；它不自动唤起、不自动复查、不自动转移。
+- 复核 `g6_tentative_lines` 时看六条盈利线；只有所有适用线都为 `tentative_veto` 才能以“无适用盈利线”提议 rejected。历史两线观察只证明当时检查过的两线，不能冒充其余四线已否决。
 - Semrush 探针仅限形成期(即 `tracking` 状态本身,按状态判不按年龄)、仅限能改变决策的查询;查了改变不了提议的,不查。
 - 观察写要点不写转录;未打开的页面不得列入 source_urls。

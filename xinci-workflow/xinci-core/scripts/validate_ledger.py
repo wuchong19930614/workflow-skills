@@ -54,6 +54,8 @@ from stage_checkpoint import StageCheckpointError, list_open as list_open_checkp
 
 GO_STATES = {"build_ready", "pilot_ready", "fast_grab_ready"}
 NO_GO_STATES = {"hold", "no_site"}
+MONETIZATION_LINES = {"subscription", "lead_generation", "affiliate", "transaction",
+                      "paid_report", "advertising"}
 # 带分数的状态:认定产生分数,其后继一路带着它。hold 也在内——生命周期契约明确
 # "hold 本身已带着 G6–G8 全 pass 与分数",它只能从 qualified 转入,分数不会被清空。
 SCORED_STATES = {"qualified", "build_ready", "pilot_ready", "hold"}
@@ -216,7 +218,7 @@ def validate(data_root):
                 errors.append(f"{where} {state} 必有 1–20 的整数 income_score,"
                               f"当前 {income_score!r}")
             lines = rec.get("g6_passed_lines")
-            allowed_lines = {"subscription", "advertising"}
+            allowed_lines = MONETIZATION_LINES
             if not (isinstance(lines, list) and lines and len(lines) == len(set(lines))
                     and set(lines) <= allowed_lines):
                 errors.append(f"{where} {state} 必有非空且合法的 g6_passed_lines,"
@@ -243,11 +245,14 @@ def validate(data_root):
                 if not qualify_obs:
                     errors.append(f"{where} →qualified history 缺结构化 G6 qualify 观察")
                 elif isinstance(lines, list):
-                    expected = {line: ("pass" if line in lines else "veto")
-                                for line in ("subscription", "advertising")}
-                    if rec.get("lane") == "new":
-                        expected["advertising"] = "N/A"
-                    if any(obs.get("g6_lines") != expected for obs in qualify_obs):
+                    def lines_match(obs):
+                        observed = obs.get("g6_lines") or {}
+                        return (all(observed.get(line) == "pass" for line in lines)
+                                and not any(value == "pass" and line not in lines
+                                            for line, value in observed.items())
+                                and (rec.get("lane") != "new"
+                                     or observed.get("advertising") == "N/A"))
+                    if any(not lines_match(obs) for obs in qualify_obs):
                         errors.append(f"{where} qualify 观察 g6_lines 与账本不一致")
                     if any(obs.get("income_score") != income_score for obs in qualify_obs):
                         errors.append(f"{where} qualify 观察 income_score 与账本不一致")
