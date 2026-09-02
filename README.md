@@ -10,11 +10,12 @@
 | [xinci-status](xinci-workflow/xinci-status/SKILL.md) | 状态看板:只读汇报账本事实 |
 | [xinci-scan](xinci-workflow/xinci-scan/SKILL.md) | 扫描发现:真浏览器捕获候选,当场 G0–G5 初筛 |
 | [xinci-track](xinci-workflow/xinci-track/SKILL.md) | 追踪复查:用户指定候选,重跑 G1,提议转移 |
+| [xinci-mature](xinci-workflow/xinci-mature/SKILL.md) | 成熟错价词道:单步发现并推进 mature 候选到形成确认 |
 | [xinci-qualify](xinci-workflow/xinci-qualify/SKILL.md) | 深度认定:G6–G8 + 竞争审计 + 100 分制(80 分线) |
 | [xinci-decide](xinci-workflow/xinci-decide/SKILL.md) | 建站决策:页面地图 + 收入模型 + md/html 双格式决策书 |
 | [xinci-core](xinci-workflow/xinci-core/) | 共享核心:契约、闸门、schema、registrar / screen_index 等脚本(判断标准唯一来源) |
 
-工作流本身怎么运转(核心前提、两条赛道与两条盈利线、状态机、九道闸门、契约地图、当前状态与已知缺口):**[xinci-workflow/README.md](xinci-workflow/README.md)**。
+工作流本身怎么运转(核心前提、两条赛道与六条盈利线、状态机、九道闸门、契约地图、当前状态与已知缺口):**[xinci-workflow/README.md](xinci-workflow/README.md)**。
 
 ## 仓库边界(2026-08-24 起)
 
@@ -45,7 +46,7 @@ export XINCI_DATA_ROOT=/path/to/数据/新词工作流
 skill 通过 symlink 同时接入 Codex CLI 与 Claude Code,两环境读同一份正本。仓库可放在任意位置——**在仓库根执行**:
 
 ```bash
-for s in xinci-run xinci-status xinci-scan xinci-track xinci-qualify xinci-decide; do
+for s in xinci-run xinci-status xinci-scan xinci-track xinci-mature xinci-qualify xinci-decide; do
   ln -sfn "$(pwd)/xinci-workflow/$s" ~/.codex/skills/$s
   ln -sfn "$(pwd)/xinci-workflow/$s" ~/.claude/skills/$s
 done
@@ -60,4 +61,4 @@ python3 -m unittest discover xinci-workflow/xinci-core/scripts/tests
 python3 xinci-workflow/xinci-core/scripts/validate_ledger.py
 ```
 
-`validate_ledger.py` 同时校验账本不变式(捕获绕过 registrar 的手工编辑)与运行清单格式(清单全靠手写,字段漂移只能靠它发现);有错即非零退出。
+`validate_ledger.py` 同时校验账本不变式(捕获绕过 registrar 的手工编辑)与运行清单格式。运行清单必须由 `run_manifest.py record-single` 或 `run_controller.py record-round` 原子写入,不得手写；校验有错即非零退出。

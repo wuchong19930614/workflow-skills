@@ -60,7 +60,7 @@ rejected              fast_grab_ready              rejected           qualified 
 | 闸门 | 判什么 | 性质 |
 | --- | --- | --- |
 | **G0** | 合法性与安全 | 硬否决,先于一切 |
-| **G1** | Google 首屏是否已把任务做完(featured snippet / 原生计算器 / knowledge panel / AI Overview) | 硬否决;未注册方向不复活,已注册候选可受控重开 |
+| **G1** | Google 首屏是否完成原子任务；若完成,站点簇反事实是否仍存在独立重复任务 | `atomic_only` 才硬否决;未注册方向不复活,已注册候选可受控重开 |
 | **G2** | 完整首页结构阅读 | 结构判断 |
 | **G3** | exact-task completion:有没有人已经真把这件事做完了 | 三档:`pass` / `veto` / `veto_window_bet` |
 | **G4** | 任务能否完全在线完成 | 零成本 |
@@ -106,7 +106,7 @@ G6 的**深审入口预检**是最省钱的一道，但必须逐线解释：不�
 | `build_decision_html.py` | 决策书 md → html 单向生成 |
 | `term_normalize.py` / `chinese_labels.py` | 措辞归一化规则 / 中文展示词汇 |
 
-改完任何东西都跑一遍 `validate_ledger.py`:它同时捕获绕过 registrar 的手工编辑,以及全靠手写的运行清单的字段漂移。
+改完任何东西都跑一遍 `validate_ledger.py`:它同时捕获绕过 registrar 的手工编辑,以及由 `record-single` / `record-round` 生成的运行清单字段漂移。运行清单不得手写。
 
 ## 怎么开始
 
@@ -118,6 +118,7 @@ G6 的**深审入口预检**是最省钱的一道，但必须逐线解释：不�
 | 看账本现在什么情况 | [xinci-status](xinci-status/SKILL.md) |
 | 扫一轮新方向 | [xinci-scan](xinci-scan/SKILL.md) |
 | 复查追踪清单 | [xinci-track](xinci-track/SKILL.md) |
+| 扫一轮成熟错价词 | [xinci-mature](xinci-mature/SKILL.md) |
 | 给候选做认定评分 | [xinci-qualify](xinci-qualify/SKILL.md) |
 | 出建站 go/no-go 决策 | [xinci-decide](xinci-decide/SKILL.md) |
 

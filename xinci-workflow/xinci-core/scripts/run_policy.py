@@ -10,7 +10,7 @@ import data_root
 from browser_preflight import BrowserPreflightError, show as show_preflight
 from run_manifest import find_run_manifest
 from run_state import load_session
-from trigger_pool import TriggerPoolError, load as load_triggers, stats as trigger_stats
+from trigger_pool import TriggerPoolError, source_rotation_status, stats as trigger_stats
 
 
 BACKLOG_HARD_LIMIT = 20
@@ -89,9 +89,13 @@ def reachable_ceiling(root, mode, today=None):
     candidates = (_ledger(root).get("candidates") or {})
     go_ready, formation_ready = [], []
     for slug, rec in candidates.items():
-        if not isinstance(rec, dict) or rec.get("lane", "new") != "new":
+        if not isinstance(rec, dict):
             continue
         state = rec.get("state")
+        lane = rec.get("lane", "new")
+        # mature 前半程不属于连续运行；到 formation_confirmed 后与 new 共用认定/决策。
+        if lane == "mature" and state in {"captured", "screened", "tracking"}:
+            continue
         if state in {"qualified", "hold", "formation_confirmed"}:
             go_ready.append(slug)
         elif state == "screened" and rec.get("window_estimate") == "days":
@@ -129,8 +133,6 @@ def evaluate(root, run_id, executor_id=None):
         preflight = None; g1_ready = False; browser_reason = "缺浏览器预检"
     try:
         tstats = trigger_stats(root)
-        run_adds = [row for row in load_triggers(root)
-                    if row.get("event") == "add" and row.get("run_id") == run_id]
     except TriggerPoolError as e:
         return {"run_id": run_id, "mode": "paused", "formal_admission": False,
                 "g1_ready": g1_ready, "reasons": [f"触发池损坏: {e}"]}
@@ -146,18 +148,20 @@ def evaluate(root, run_id, executor_id=None):
         else:
             break
     reasons = []
-    family_counts = {}
-    for row in run_adds:
-        family = row.get("source_family", "(unknown)")
-        family_counts[family] = family_counts.get(family, 0) + 1
-    dominant_family = max(family_counts, key=family_counts.get) if family_counts else None
-    dominant_share = ((family_counts[dominant_family] / len(run_adds)) if dominant_family else 0)
-    source_rotation_due = len(run_adds) >= 5 and dominant_share > 0.40
+    rotation = source_rotation_status(root, run_id, target_round)
+    family_counts = rotation["family_counts"]
+    blocked_source_families = rotation["blocked_source_families"]
+    source_rotation_due = bool(blocked_source_families)
     if browser_reason: reasons.append(browser_reason)
     if backlog > BACKLOG_HARD_LIMIT: reasons.append(f"new captured 积压 {backlog}>{BACKLOG_HARD_LIMIT}")
     if stall >= STALL_ROUNDS: reasons.append(f"连续 {stall} 轮无真实状态迁移且队列继续增长")
-    if source_rotation_due:
-        reasons.append(f"source family {dominant_family} 占本 run trigger {dominant_share:.0%}>40%，停止该来源并轮换")
+    total_family_count = sum(family_counts.values())
+    for family in blocked_source_families:
+        share = family_counts.get(family, 0) / total_family_count if total_family_count else 0
+        if share > 0.40:
+            reasons.append(f"source family {family} 占本 run trigger {share:.0%}>40%，停止该来源并轮换")
+    if rotation["consecutive_family"]:
+        reasons.append(f"source family {rotation['consecutive_family']} 已连续主导两轮，本轮必须轮换")
     if tstats["pending"] >= TRIGGER_PENDING_LIMIT:
         reasons.append(f"pending trigger 达上限 {TRIGGER_PENDING_LIMIT}")
     if not g1_ready:
@@ -170,13 +174,13 @@ def evaluate(root, run_id, executor_id=None):
         "run_id": run_id, "rounds_completed": session["rounds_completed"], "mode": mode,
         "formal_admission": mode == "full",
         "trigger_harvest": (mode in {"full", "trigger_only"}
-                            and not source_rotation_due
                             and tstats["pending"] < TRIGGER_PENDING_LIMIT),
         "g1_ready": g1_ready, "new_captured_backlog": backlog,
         "carryover_quota": min(10, backlog) if mode == "debt_only" else min(5, backlog),
         "pending_triggers": tstats["pending"], "decision_transitions_by_round": transitions,
         "captured_backlog_delta_by_round": backlog_deltas,
         "source_family_counts": family_counts, "source_rotation_due": source_rotation_due,
+        "blocked_source_families": blocked_source_families,
         "consecutive_decision_stall_rounds": stall,
         "reachable_ceiling": reachable_ceiling(root, mode), "reasons": reasons,
     }

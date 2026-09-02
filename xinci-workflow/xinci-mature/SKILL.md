@@ -32,7 +32,7 @@ python3 xinci-workflow/xinci-core/scripts/report_status.py
 
 | | `lane=new`(xinci-scan) | `lane=mature`(本 skill) |
 | --- | --- | --- |
-| 量级数据 | 窗口期**禁用** Semrush/KD/CPC/Trends——查无是定义属性 | 从第一步就**允许且要求**取量级——量级是准入条件,查无即无法证明收入 |
+| 量级数据 | 窗口期**禁用** Semrush/KD/CPC/Trends——查无是定义属性 | 从第一步就**允许且要求**取量级以证明 mature 需求；具体门槛只约束流量线 |
 | 广告线 | 固定 `N/A`，其他五线仍逐项检查 | **必须判**,且有量级硬门 **$200/月**;算式不写即 veto |
 | 执行顺序 | G0/G4/G5 → G6/G7 预筛 → G1 → G2 → G3 | G0/G4/G5 加三个反向排除 → **量级前置过滤 + G6 六线** → G1 → G2 加弱守六信号 → G3 |
 
@@ -81,16 +81,16 @@ printf '%s\n' "词|G5|[YMYL] 题目影响法律权利" "词|G5|[成熟工具词]
   | python3 xinci-workflow/xinci-core/scripts/screen_index.py append --date <YYYY-MM-DD>
 ```
 
-### 第 3 层:量级前置过滤(计费,先算钱再看防守)
+### 第 3 层:流量线量级前置过滤(计费,先算钱再看防守)
 
 **这一层是本道与新词道分道扬镳的地方,也是"先算钱"那条顺序的落点。** 一次 Semrush 查询先读两个数:
 
-- **簇内词总数 N** < 约 1,000 → 弃
-- **前 15 行合计** < 约 50K/月 **且**无单词 > 10K → 弃
+- **簇内词总数 N** < 约 1,000 → advertising 暂定否决
+- **前 15 行合计** < 约 50K/月 **且**无单词 > 10K → advertising 暂定否决；affiliate 也须另证购买意图与可归因流量
 
-**阈值只来自 3 个样本,须按真实结果继续调**;每次用到都要在运行清单里记下本次的实测值,供后续校准。
+**阈值只来自 3 个样本,须按真实结果继续调**;每次用到都要在运行清单里记下本次的实测值,供后续校准。两条都只筛流量线,不得把 advertising 的量级门套给 subscription / lead_generation / transaction / paid_report。
 
-过了量级才继续。没过的照常追加索引(gate 记 G6),**不开浏览器**——这正是先算钱的意义:一次计费查询换掉一次昂贵的 SERP 阅读。
+量级不足后仍继续完成其余四条非流量线；只有所有适用线都暂定否决,才追加索引(gate 记 G6)并且**不开浏览器**。否则继续后续 G1/G2/G3——一次计费查询先决定流量线,但不越权决定整候选。
 
 **Semrush 纪律**:每一次计费查询必须能改变一个决策。本层的两个数就是决策本身,属 decision-changing;但**不要为凑流程整页导出**——按数据采集指南的预览纪律,看前 50 行预览、只记要点进观察文件,不整页转录。
 
@@ -127,11 +127,11 @@ printf '%s\n' "词|G5|[YMYL] 题目影响法律权利" "词|G5|[成熟工具词]
 https://www.google.com/search?q=<精确词>&gl=us&hl=en&pws=0
 ```
 
-只看首屏,只判一件事:Google 自己把任务做完了吗(完整作答的 featured snippet、原生计算器/转换器组件、承载全部答案的 knowledge panel、把任务做完的 AI Overview)?
+只看首屏,先判 Google 是否完成精确原子任务(完整作答的 featured snippet、原生计算器/转换器组件、承载全部答案的 knowledge panel、把任务做完的 AI Overview)。若已完成,必须再写完整 `cluster_counterfactual`:批处理、监控、审计轨迹、导出集成、多辖区任一形成独立重复任务 family,就记 `viable_cluster`、改写任务并重新核对前置门；五项全否才记 `atomic_only` 并判 G1 veto。
 
 **读法必须能读到 AI Overview**:用 JS 读 `document.body.innerText` 再检索 `AI Overview`;读回的文本若从 `Web results` 起始而非整页开头,该次观察作废重读(出处见数据采集指南)。**只有美区、桌面、未登录且可控的环境才能下 G1 结论。**
 
-否决的批量追加一行索引(gate 记 G1),不注册进账本。
+否决的批量追加一行索引(gate 记 G1),不注册进账本；JSON 行必须携带 `cluster_counterfactual=atomic_only`,否则 `screen_index.py` 会拒收。
 
 ### 第 6 层:G2 完整结构阅读 + 弱守六信号
 
@@ -195,7 +195,7 @@ python3 xinci-workflow/xinci-core/scripts/run_manifest.py record-single \
 
 - **只碰 `lane=mature`**。registrar 会硬校验;new 道的发现与前半程用 xinci-scan。
 - **不注册域名、不花钱建站、不发布**——找到词就停。
-- **量级数据只用来判"够不够养活广告线"**;KD / Authority Score / 外链数不得决定 G2/G3 或直接挣竞争分。
+- **量级数据用来证明 mature 需求存在并判断 advertising / affiliate 等流量线**;广告量级门不得连带否决四条非流量线,KD / Authority Score / 外链数不得决定 G2/G3 或直接挣竞争分。
 - **闸门与分数线不因本道而降低**。本道的差别在于哪条盈利线可用、以及量级是不是准入条件,不在于判得松一点。
 - **单步形态,逐条确认**。本 skill 不在 xinci-run 的标准授权范围内;每一次 registrar 转移都要用户确认后执行。
 - **0/4 要如实说**。本道至今没有正例。报告时不得把"跑通了流程"说成"这条线成立",也不得因为想要正例而放宽任何一道判据。

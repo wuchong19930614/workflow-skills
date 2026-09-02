@@ -48,6 +48,39 @@ class DocumentationContractsTest(unittest.TestCase):
             self.assertIn("--site-thesis", command)
             self.assertGreaterEqual(command.count("--task-family"), 2)
 
+    def test_current_scan_does_not_use_subscription_as_global_veto(self):
+        text = (ROOT / "xinci-scan" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertNotIn("订阅线为 `tentative_veto` 时已无可用盈利线", text)
+        self.assertNotIn("订阅线 `tentative_veto` 时没有可用盈利线", text)
+        self.assertIn("只有所有适用线均暂定否决才按 G6 预筛出局", text)
+
+    def test_g3_current_contract_names_traffic_and_nontraffic_lines(self):
+        text = (ROOT / "xinci-core" / "闸门契约.md").read_text(encoding="utf-8")
+        self.assertIn("当前通过线全部依赖自然流量", text)
+        self.assertIn("subscription / lead_generation / transaction / paid_report", text)
+        self.assertIn("affiliate / advertising", text)
+
+    def test_mature_volume_threshold_does_not_veto_whole_candidate(self):
+        text = (ROOT / "xinci-mature" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("两条都只筛流量线", text)
+        self.assertIn("不得把 advertising 的量级门套给", text)
+        self.assertNotIn("**簇内词总数 N** < 约 1,000 → 弃", text)
+
+    def test_all_g1_stage_skills_require_cluster_counterfactual(self):
+        for relative in ("xinci-scan/SKILL.md", "xinci-track/SKILL.md",
+                         "xinci-mature/SKILL.md"):
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("cluster_counterfactual", text, relative)
+            self.assertIn("atomic_only", text, relative)
+
+    def test_readmes_expose_mature_and_forbid_manual_manifests(self):
+        root_readme = (ROOT.parent / "README.md").read_text(encoding="utf-8")
+        workflow_readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("xinci-mature", root_readme)
+        self.assertIn("xinci-mature", workflow_readme)
+        self.assertIn("两条赛道与六条盈利线", root_readme)
+        self.assertNotIn("清单全靠手写", root_readme + workflow_readme)
+
 
 if __name__ == "__main__":
     unittest.main()

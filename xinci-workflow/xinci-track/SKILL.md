@@ -42,7 +42,7 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
 
 对用户指定的每个 `lane=new` 候选执行;本次调用未指定候选时,遍历全部 `lane=new` 且状态为 `tracking` 的候选。指定项若是 mature,只报告其仍属于手工前半程,不写入:
 
-1. **重跑 G1,同批零成本重核 G0。** 真浏览器搜精确词(美区桌面未登录)。只有环境合规时才提交 G1 结论:首屏若已完成任务,G1 翻转,提议 `rejected`;环境无法达到美区、桌面、未登录,或结果明显受个性化污染时,只记带环境说明的观察,不写 G1 gates、不据此转移,候选继续留在 `tracking` 等待合规复查。G0(合法性与安全)按闸门契约先于一切执行,复查时零成本再问一次:目标平台 ToS 改了吗?这个任务的市场是否已被欺诈供血?G0 翻转同样提议 `rejected`——出口清单里的"G0 或 G1 翻转"就是指这两道。
+1. **重跑 G1,同批零成本重核 G0。** 真浏览器搜精确词(美区桌面未登录)。只有环境合规时才提交 G1 结论:首屏若完成精确原子任务,先重做完整 `cluster_counterfactual`;五种站点级扩展全部不成立、结论为 `atomic_only` 时 G1 才翻转并提议 `rejected`。任一扩展形成独立重复任务时记 `viable_cluster`,改写任务并重新核对受影响的前置门,不得直接判死。环境无法达到美区、桌面、未登录,或结果明显受个性化污染时,只记带环境说明的观察,不写 G1 gates、不据此转移,候选继续留在 `tracking` 等待合规复查。G0(合法性与安全)按闸门契约先于一切执行,复查时零成本再问一次:目标平台 ToS 改了吗?这个任务的市场是否已被欺诈供血?G0 翻转同样提议 `rejected`——出口清单里的"G0 或 G1 翻转"就是指这两道。
 2. **看 SERP 变化(即 G2/G3 的变化复看)。** 对照上次观察:竞品到位了吗?官方文档/工具出现了吗?谁在占坑?读完整首页,按"做什么"分类。完整复核六条 `g6_tentative_lines`：只有当前通过线全部依赖自然流量（affiliate / advertising）时，竞品占位到 G3 否决线才提议 rejected；subscription / lead_generation / transaction / paid_report 任一暂定可行时，占位事实只更新竞争记录。只有六条适用线全部 `tentative_veto` 才可用本次证据提议 `tracking→rejected`，不得伪造正式 `gates.G6=veto`。
    **复查范围就是 G0/G1 + G2/G3,不复查 G4/G5**——那两道是方向的固有属性,扫描期定了就不随时间变化(理由见闸门契约时间光谱表下「形成期为什么不是 G1–G5 全复查」)。**唯一的例外不由本 skill 触发**:扫描侧新归并出一个陷阱类别、而某个在追踪的候选正好命中它时,那是重新认识,由做归并的一方当场提议 `tracking→rejected`(生命周期契约 rejected 边第⑥种情形);本 skill 不为此例行重跑 G5。
 3. **看命名定型。** 回访来源社区:叫法统一了还是分裂了?aliases 有没有胜出者?
@@ -50,7 +50,7 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
    - 本次观察必须结构化写 `naming_status=unstable|stabilized` 与 `formation_signals`。合法信号为 `autocomplete / semrush_rows / sustained_discussion / repeated_independent_queries`；没有信号时写空数组，不得用叙述性乐观判断替代。
    - 若本次来源新暴露 G6 结构事实，写 `g6_entry_veto`：不重复只约束 subscription，官方不计数只约束依赖该口径的算式，二者必须随完整六线暂定结论判断；只有自助结果依法对所有声称交付均无效时才可独立提议 rejected。
 5. **对照 expiry 与失效条件。** 失效条件命中或 expiry 已过 → 如实报告。
-6. **写观察文件并登记复查:** observation 的 `gates` 只列本次实际重跑且证据条件合规的门;合规重跑 G1 时必须写本次 G1 结论,环境污染时则不写 G1。`g6_tentative_lines` 写本次复核后的逐线暂定结论,`source_urls` 列实际打开的页面。仅登记复查而不转移时用 checked;随后若 transition 提交 gates,复用这份观察作为 `--evidence`,registrar 会逐门核对。
+6. **写观察文件并登记复查:** observation 的 `gates` 只列本次实际重跑且证据条件合规的门;合规重跑 G1 时必须写本次 G1 结论,G1=`veto` 时还必须写 `cluster_counterfactual=atomic_only`,环境污染时则不写 G1。`g6_tentative_lines` 写本次复核后的逐线暂定结论,`source_urls` 列实际打开的页面。仅登记复查而不转移时用 checked;随后若 transition 提交 gates,复用这份观察作为 `--evidence`,registrar 会逐门核对。
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py checked \

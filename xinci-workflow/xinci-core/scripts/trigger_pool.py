@@ -149,9 +149,66 @@ def _check_actor(root, actor, run_id):
     return None
 
 
+def source_rotation_status(root, run_id, current_round=None):
+    """返回本次运行必须暂停使用的来源家族。
+
+    两条独立约束都在这里计算，供策略提示与 add 写入口共同使用：
+    1) 一个来源家族占本 run 新 trigger 超过 40%（至少已有 5 条）；
+    2) 同一来源家族已经连续主导两个已完成轮次，下一轮必须轮换。
+    """
+    adds = [row for row in load(root)
+            if row.get("event") == "add" and row.get("run_id") == run_id]
+    family_counts = {}
+    for row in adds:
+        family = row.get("source_family", "(unknown)")
+        family_counts[family] = family_counts.get(family, 0) + 1
+
+    blocked = set()
+    dominant_family = max(family_counts, key=family_counts.get) if family_counts else None
+    dominant_share = ((family_counts[dominant_family] / len(adds)) if dominant_family else 0)
+    if len(adds) >= 5:
+        blocked.update(family for family, count in family_counts.items()
+                       if count / len(adds) > 0.40)
+
+    by_round = {}
+    for row in adds:
+        number = row.get("round")
+        if not isinstance(number, int) or (current_round is not None and number >= current_round):
+            continue
+        counts = by_round.setdefault(number, {})
+        family = row.get("source_family", "(unknown)")
+        counts[family] = counts.get(family, 0) + 1
+    round_dominants = []
+    for number in sorted(by_round):
+        counts = by_round[number]
+        highest = max(counts.values())
+        leaders = sorted(family for family, count in counts.items() if count == highest)
+        round_dominants.append((number, leaders[0] if len(leaders) == 1 else None))
+    consecutive_family = None
+    if len(round_dominants) >= 2:
+        previous, latest = round_dominants[-2:]
+        if (previous[0] + 1 == latest[0] and previous[1]
+                and previous[1] == latest[1]):
+            consecutive_family = latest[1]
+            blocked.add(consecutive_family)
+
+    return {
+        "family_counts": family_counts,
+        "dominant_family": dominant_family,
+        "dominant_share": dominant_share,
+        "consecutive_family": consecutive_family,
+        "blocked_source_families": sorted(blocked),
+    }
+
+
 def add(root, *, observed_date, title, source_url, source_family, task_hypothesis,
         actor="user", run_id=None):
     round_number = _check_actor(root, actor, run_id)
+    if actor == "xinci-run":
+        rotation = source_rotation_status(root, run_id, round_number)
+        if source_family in rotation["blocked_source_families"]:
+            raise TriggerPoolError(
+                f"source family {source_family!r} 已命中轮换约束；本轮必须改用其他来源")
     tid = _id(title, source_url)
     if tid in current(root):
         raise TriggerPoolError(f"触发已存在: {tid}")

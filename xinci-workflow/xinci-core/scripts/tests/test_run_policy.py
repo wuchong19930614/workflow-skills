@@ -75,6 +75,15 @@ class RunPolicyTest(unittest.TestCase):
         self.assertEqual(ceiling["state"], "go")
         self.assertEqual(ceiling["enablers"], ["fast"])
 
+    def test_ceiling_includes_mature_after_formation_confirmed(self):
+        self.ready()
+        self.seed_ledger({"mature-ready": {
+            "slug": "mature-ready", "lane": "mature",
+            "state": "formation_confirmed", "history": []}})
+        ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
+        self.assertEqual(ceiling["state"], "go")
+        self.assertEqual(ceiling["enablers"], ["mature-ready"])
+
     def test_missing_browser_preflight_forces_trigger_only(self):
         policy = RP.evaluate(self.root, self.run["run_id"])
         self.assertEqual(policy["mode"], "trigger_only")
@@ -164,7 +173,32 @@ class RunPolicyTest(unittest.TestCase):
                    run_id=self.run["run_id"])
         policy = RP.evaluate(self.root, self.run["run_id"])
         self.assertTrue(policy["source_rotation_due"])
-        self.assertFalse(policy["trigger_harvest"])
+        self.assertTrue(policy["trigger_harvest"])
+        self.assertEqual(policy["blocked_source_families"], ["agency"])
+        with self.assertRaisesRegex(TP.TriggerPoolError, "轮换约束"):
+            TP.add(self.root, observed_date="2026-08-25", title="Agency rule 6",
+                   source_url="https://agency.example/rule-6", source_family="agency",
+                   task_hypothesis="repeated filing", actor="xinci-run",
+                   run_id=self.run["run_id"])
+        TP.add(self.root, observed_date="2026-08-25", title="Platform rule",
+               source_url="https://platform.example/rule", source_family="platform",
+               task_hypothesis="repeated filing", actor="xinci-run",
+               run_id=self.run["run_id"])
+
+    def test_two_consecutive_dominant_rounds_block_only_that_family(self):
+        for round_number in (1, 2):
+            TP._append(self.root, {
+                "trigger_id": TP._id(f"Agency round {round_number}",
+                                      f"https://agency.example/round-{round_number}"),
+                "event": "add", "at": "2026-09-01T00:00:00+00:00",
+                "actor": "xinci-run", "run_id": self.run["run_id"],
+                "round": round_number, "observed_date": "2026-09-01",
+                "title": f"Agency round {round_number}",
+                "source_url": f"https://agency.example/round-{round_number}",
+                "source_family": "agency", "task_hypothesis": "repeated filing"})
+        rotation = TP.source_rotation_status(self.root, self.run["run_id"], current_round=3)
+        self.assertEqual(rotation["consecutive_family"], "agency")
+        self.assertEqual(rotation["blocked_source_families"], ["agency"])
 
     def test_trigger_origin_must_bind_approved_query(self):
         self.ready(); RC.begin_round(self.root, self.run["run_id"])
