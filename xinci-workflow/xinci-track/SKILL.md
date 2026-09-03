@@ -5,7 +5,7 @@ description: '复查 new 道中处于追踪状态(tracking)的候选，或复核
 
 # xinci-track 追踪复查
 
-先读 `xinci-workflow/xinci-core/通用约定.md`(第 0 步、`--by`、运行清单、lane 边界、expired 边归属)。再读生命周期契约「每转移的证据要求」、闸门契约 G0–G5、数据采集指南「Semrush 探针纪律」。
+先读 `xinci-workflow/xinci-core/通用约定.md`，再按需读取生命周期契约「受控重开」「每转移的证据要求」「时间字段」；闸门契约「时间光谱」及本次实际复核的 G0–G3；数据采集指南「G1 SERP 读取规程」「Semrush 探针纪律」。出现新结构性模式时先读 `陷阱速查.md`，疑似命中后再读完整类别。
 
 输入:`lane=new` 且状态为 `tracking` 的候选,或用户从 xinci-status 到期复核清单中指定的 `state=rejected,recheck_after≤今天` 候选。用户指定则只查指定项;未指定则只遍历 tracking,不得自动重开 rejected。指定项若是 mature,只报告"应交 xinci-mature",不写入。
 

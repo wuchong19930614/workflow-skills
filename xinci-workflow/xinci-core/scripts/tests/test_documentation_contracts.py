@@ -52,6 +52,19 @@ class DocumentationContractsTest(unittest.TestCase):
         self.assertIn("不是规范默认值", root_readme)
         self.assertIn("默认是用户逐步确认的单步模式", root_readme)
 
+    def test_progressive_disclosure_keeps_history_out_of_runtime_read_set(self):
+        run = read("xinci-run/SKILL.md")
+        scan = read("xinci-scan/SKILL.md")
+        calibration = read("xinci-core/闸门校准.md")
+        quick_traps = read("xinci-core/陷阱速查.md")
+        history = ROOT / "xinci-core/history/闸门校准历史.md"
+
+        self.assertIn("不要在开局加载全部闸门", run)
+        self.assertIn("疑似命中陷阱时才读取", scan)
+        self.assertIn("不定义现行口径", calibration)
+        self.assertIn("不能单独生成 G5 结论", quick_traps)
+        self.assertTrue(history.is_file())
+
 
 if __name__ == "__main__":
     unittest.main()

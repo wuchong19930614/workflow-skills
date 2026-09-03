@@ -5,7 +5,7 @@ description: '对已认定(qualified)或搁置待议(hold)的 new 或 mature 候
 
 # xinci-decide 建站决策
 
-先读 `xinci-workflow/xinci-core/通用约定.md`。再读生命周期契约(「每转移的证据要求」;「窗口赌注的挂起与出闸」)、闸门契约(G8 决策门;G3「`veto_window_bet`:唯一的降级出口」)、评分契约、数据采集指南。
+先读 `xinci-workflow/xinci-core/通用约定.md`。完整模式读取生命周期契约的决策转移行、闸门契约 G8 决策门和评分契约；快道读取生命周期契约「窗口赌注的挂起与出闸」及闸门契约 G3 的 `veto_window_bet` 出口。只有补做现场审计时才读取数据采集指南对应章节，不默认加载全文。
 
 - **完整模式**:输入 `qualified`,或用户送回重出决策的 `hold`(lane 为 new 或 mature);出口 build_ready / pilot_ready / hold / no_site(hold 送回时出口不含 hold)。
 - **快道模式**:只收 window_estimate=days 的 `screened`;出口 fast_grab_ready。new 由常规扫描送入;mature 须已由 xinci-mature 合法送到 screened 并显式调用本 skill。

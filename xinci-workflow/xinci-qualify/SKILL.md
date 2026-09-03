@@ -5,7 +5,7 @@ description: '对已进入形成确认(formation_confirmed)的 new 或 mature �
 
 # xinci-qualify 深度认定
 
-先读 `xinci-workflow/xinci-core/通用约定.md`。再读闸门契约(G6/G7/G8;G3「前置」;「关于 KD / KGR / allintitle 的统一立场」)、评分契约、数据采集指南「Semrush 探针纪律」、生命周期契约「每转移的证据要求」。
+先读 `xinci-workflow/xinci-core/通用约定.md`。再读闸门契约 G6/G7/G8、G3「前置」与「关于 KD / KGR / allintitle 的统一立场」，评分契约，数据采集指南「Semrush 探针纪律」，生命周期契约「每转移的证据要求」中认定相关行。不要加载与本候选无关的扫描来源、陷阱案例或历史校准。
 
 只回答"这个机会是真的吗";"该不该建站"归 xinci-decide。两种输入:
 

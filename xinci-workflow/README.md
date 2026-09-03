@@ -62,10 +62,10 @@ rejected            fast_grab_ready              rejected           qualified / 
 | [通用约定.md](xinci-core/通用约定.md) | 七个 skill 共用的开局步骤、运行模式与 `--by`、lane 边界、expired 边归属、共同硬规则 |
 | [闸门契约.md](xinci-core/闸门契约.md) | G0–G8 定义、执行顺序、六线算式、时间光谱 |
 | [生命周期契约.md](xinci-core/生命周期契约.md) | 状态机、每条边的证据要求、留痕分界、连续运行模式、registrar 用法 |
-| [陷阱类别.md](xinci-core/陷阱类别.md) | 14 类陷阱与处置档 |
+| [陷阱速查.md](xinci-core/陷阱速查.md) / [陷阱类别.md](xinci-core/陷阱类别.md) | 默认先读 14 类路由表，疑似命中后再展开完整判据与案例 |
 | [数据采集指南.md](xinci-core/数据采集指南.md) | 真浏览器原则、G1 SERP 读取规程、来源表、Semrush 纪律、选源信号、mature 道选源 |
 | [评分契约.md](xinci-core/评分契约.md) | 六维权重、红队扣分、80 分线 |
-| [闸门校准.md](xinci-core/闸门校准.md) | 实测记录、修订依据、事故复盘、待验证清单。**不是现行口径**,顶部索引表标明每节是否仍现行 |
+| [闸门校准.md](xinci-core/闸门校准.md) | 当前校准索引与待验证项；历史回测按需进入 `xinci-core/history/` 阅读，不参与运行时默认上下文 |
 
 契约是规范性来源;SKILL.md 与脚本可以摘述,但措辞冲突时以契约为准。[数据结构/](xinci-core/数据结构/) 下保留候选与观察两份 JSON Schema 作为字段文档,以及 `pattern-aliases.json`。
 
