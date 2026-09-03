@@ -1,159 +1,90 @@
 ---
 name: xinci-run
-description: '新词工作流的一体入口与连续运行驱动器:恢复现有会话后循环推进 new 道存量、触发池、扫描、初筛与决策；浏览器不满足 G1 前置条件时自动降级为 trigger-only，captured 积压超过硬线时只还债。产出任一 go 决策或实际观察到 Semrush 网页版额度耗尽时正常终止；预算、真实决策迁移停滞、会话资源或 blocker 按契约收尾且不伪装成完成。启动暗号 xinci_run。'
+description: '新词工作流的一体入口与连续运行驱动器。当消息中出现启动暗号 xinci_run、通过 /xinci-run 或 Skill 工具调用、或用户说"启动新词工作流"、"一直跑到找到为止"时使用。'
 ---
 
-# xinci-run 一体入口·连续运行驱动器
+# xinci-run 连续运行驱动器
+先读 `xinci-workflow/xinci-core/通用约定.md`。开局另读一次:生命周期契约「连续运行模式(xinci-run)」「窗口赌注的挂起与出闸」「会话与轮次收尾」「schema v3」;闸门契约;陷阱类别;数据采集指南。
+进入运行循环某步前先读该步的 SKILL.md(xinci-scan / xinci-track / xinci-qualify / xinci-decide),按其执行,其中的提议-确认由标准授权取代;状态汇报直接跑 report_status。
 
-**调用即启动整个工作流。** 以下任一方式触发本 skill,一律等同显式启动命令,读完必读文件后立即开跑,**不向用户确认"是否开始"、不要求补充参数**:
-
-- 消息中出现启动暗号 `xinci_run`;
-- 环境的 skill 调用机制(如 `/xinci-run`、Skill 工具);
-- "启动新词工作流"、"一直跑到找到为止"等自然语言。
-
-启动即标准授权:本次运行内既定路径上的 registrar 转移无需逐条确认,循环推进,直至命中终止契约;唯一例外是 `G3=veto_window_bet` 的 `captured→screened`,它要求用户单步接受窗口赌注风险。本 skill 只做编排;判断标准全部来自各阶段流程文件与 xinci-core 契约,**不因连续模式降低任何闸门或分数线**。
-
-**预算参数**:启动消息中可附 `max_rounds=N`(轮次上限)和/或 `max_hours=H`(时长上限)。控制器始终保留轮次上限:**没有显式给 `max_rounds` 时仍默认 6**,即使只给了 `max_hours`;两项同时存在时谁先命中就收尾。若用户希望主要按时长运行,必须同时给足够大的 `max_rounds`,本工作流没有“轮次无限”这一档。终止 B(额度耗尽)在单次运行内几乎不可达(扫描期禁用 Semrush、形成期只允许轻探针、7 天跨度闸使单次运行做不出**新的** formation_confirmed;账本已有 formation_confirmed/qualified 存量时 qualify/decide 确实会动用 Semrush,但那是每候选个位数的 decision-changing 查询,离烧穿额度仍差得远),没有默认轮次预算的“不限”等于跑到会话资源耗尽。命中任一预算即走"正常收尾——预算命中"(见终止契约);预算是用户主权,不属于禁止的停止理由。**不因参数缺失暂停或询问**,按默认值开跑。
-
-> **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-run/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
-
-## 第 0 步:确认数据区(强制,先于一切写操作)
-
-**第一次执行本工作流、或换了机器/checkout 时,必须先确认执行产出存到哪里。** 零成本一条命令:
-
-```bash
-python3 xinci-workflow/xinci-core/scripts/report_status.py
-```
-
-- 正常返回看板 → 数据区已配置,直接往下走,**别再问**。
-- **退出码 2、提示「数据区未配置」→ 停下来问用户数据区放哪,不要替他选。** 这不是故障,是脚本刻意不猜(理由见生命周期契约「开工第一步」)。
-
-拿到路径后固定下来(幂等,已存在的文件不动):
-
-```bash
-python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户给的路径>
-```
-
-## 行动前必读(开局一次)
-
-- xinci-workflow/xinci-core/生命周期契约.md(连续运行模式节:终止契约、标准授权、禁止的停止理由)
-- xinci-workflow/xinci-core/闸门契约.md
-- xinci-workflow/xinci-core/陷阱类别.md
-- xinci-workflow/xinci-core/数据采集指南.md
-
-## 阶段流程文件(首次进入对应步骤时读,执行以其为准)
-
-本 skill 不复制各阶段的判断步骤;进入运行循环的某一步之前,先读该步的 SKILL.md,按它执行(其中既定路径的"提议-逐条确认"由本模式的标准授权取代;`G3=veto_window_bet` 出闸例外仍须单步确认,其余原样适用):
-
-- 扫描:xinci-workflow/xinci-scan/SKILL.md
-- 复查:xinci-workflow/xinci-track/SKILL.md
-- 认定:xinci-workflow/xinci-qualify/SKILL.md
-- 决策:xinci-workflow/xinci-decide/SKILL.md
-
-(状态汇报不需要读 xinci-status/SKILL.md,开局直接跑 report_status 脚本即可。)
+## 调用即启动
+- 启动暗号 `xinci_run`、`/xinci-run` 或 Skill 工具、"启动新词工作流"等自然语言,任一触发即开跑:读开局必读、报一句"进入连续运行"进入循环;不问"是否开始"、不列计划等确认、不因参数缺失暂停。
+- 预算参数:`max_rounds=N`、`max_hours=H`。`max_rounds` 未给时默认 6(只给 `max_hours` 也如此);两项并存谁先命中就走收尾 D。没有"轮次无限"档,主要按时长跑须同时给足够大的 `max_rounds`。
+- 启动即标准授权(见通用约定「运行模式与 `--by`」)。判断标准全部来自阶段 SKILL.md 与 xinci-core 契约,不因连续模式降低任何闸门或分数线。
 
 ## 执行架构:子代理化(有 Agent 机制时必用)
-
-连续运行的天然瓶颈是主上下文:每轮的页面阅读若都留在主上下文,运行会在远未命中终止契约时撞上会话资源边界(收尾 C)。因此:
-
-- **每个阶段动作(一次扫描轮、一个候选的复查/认定/决策)派一个子代理执行**:子代理读对应阶段 SKILL.md 与契约、操作浏览器、写观察文件、在标准授权下调用 registrar,**并在第 2/3 层当场批量 `screen_index.py append`**——本轮的秒弃与 G1 否决由它自己写进淘汰方向索引,一轮两三百条不许回传主上下文(那正是 screen_index 存在的理由:索引本身多大都不进上下文);最后只返回结构化结论(触及的候选、执行的转移、来源与计费调用数、漏斗五项、以及疑似该归并的模式名)。连续模式下(无论主上下文还是子代理执行)registrar 调用一律 `--by xinci-run`——history 里 by=xinci-run 就是"标准授权、未经逐条确认"的印记,区别于单步模式的 by=阶段名。
-- **主上下文只做编排**:维护轮次、汇集子代理结论、通过 `record-round` 提交本轮事实、判断终止契约。**淘汰方向索引由执行者当场写,不经主上下文**;主上下文在这件事上只做一件——归并出新陷阱类别时补那一行归并记录(term 写模式名本身,见硬规则)。页面内容、SERP 细节留在子代理里,以观察文件为准。
-- **子代理顺序执行,不并发**:真浏览器是共享资源,并发会互相踩踏。
-- 环境无子代理机制时降级为主上下文直接执行各阶段,其余规则不变。
+- 每个阶段动作(一次扫描轮、一个候选的复查/认定/决策)派一个子代理:读阶段 SKILL.md 与契约、操作浏览器、写观察文件、以 `--by xinci-run --run-id <run_id>` 调 registrar、当场批量 `screen_index.py append`。
+- 子代理只回传结构化结论:触及候选、执行的转移、来源与计费调用数、漏斗五项、疑似归并的模式名;秒弃与 G1 否决不回传;去重疑似项当场 `screen_index.py resolve`,不留口头裁决。
+- 主上下文只编排:维护轮次、汇集结论、`record-round`、判断终止;淘汰方向索引不经主上下文,只在归并出新陷阱类别时补一行归并记录(term 写模式名)。子代理顺序执行不并发;无子代理机制时主上下文直接执行,其余规则不变。
 
 ## 运行循环
-
-0. **创建或恢复运行会话**:先执行 `run_controller.py recover`,再用 `list` 查活动 run；有 active 就恢复,没有才 `start`。不得重启未结束的 run。先确定本轮实际执行者并给它稳定的 `executor_id`；由该执行者亲自记录浏览器预检，再用同一 ID 计算策略。父任务、上一轮执行者或另一个子代理的浏览器状态不得借用。预检绑定目标轮次，每轮 `begin-round` 前和执行者/浏览器状态改变后都重做：
-
-   ```bash
-   python3 xinci-workflow/xinci-core/scripts/browser_preflight.py record --run-id <run_id> \
-     --executor-id <executor_id> --channel chrome --controllable yes --desktop yes --region us --logged-out yes
-   python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id> --executor-id <executor_id>
-   python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round \
-     --run-id <run_id> --executor-id <executor_id> \
-     --round-type <discovery|progression|tracking|calibration>
-   ```
-
-   `run_policy.py` 同时返回 `reachable_ceiling`——**本次运行在当前账本下最远能推进到哪一步**,开局就要读它。它有三档:`go`(存量里有 qualified/hold/formation_confirmed,或窗口以天计的 screened,或最早 `-track` 观察已满 7 天的 tracking——本次复查即可凑齐形成跨度)、`tracking`(存量都不满足,存量侧最远只到 tracking)、`trigger_only`(浏览器不满足 G1 前置)。
-   **它是预算提示,不是许可或禁止**:天花板为 `tracking` 不表示不该扫描——本轮新扫出的、窗口以天计的候选照样可以走快道直达 go。它只回答"存量能不能出结论",好让轮次一开始就花在对的地方(推存量还是补触发池),而不是跑几轮才发现存量根本走不动。
-
-   `mode=full` 才准通过正式 CLI 注册 new 候选；`trigger_only` 只收集/整理触发池，不写 G1、不注册候选；`debt_only` 只推进存量与到期项，不新增正式候选；`paused` 只允许恢复/校验/收尾。registrar 会按 session 内的 `round_executor_id` 重验同一份预检，因此这不是建议。结束只调用 `record-round`。所有 `--by xinci-run` 命令必须带真实 run_id。运行 report_status 读账本；去重疑似项必须 resolve，不留口头裁决。
-1. **推进存量(优先;离 go 决策最近的先做)**:
-   - **先按 lane 划清边界**:`lane=new` 按下列全部状态推进；`lane=mature` 在 `formation_confirmed` 前(`captured` / `screened` / `tracking`)不由本循环操作,只在本轮 notes 记明“mature 前半程待用户单步调用 xinci-mature 推进”,不把它算 blocker、排队债或扫描积压。mature 到 `formation_confirmed` / `qualified` / `hold` 后才进入下面对应的 qualify / decide 分支；
-   - hold 候选 → 先读 hold 的决定性理由:若理由质疑 G6–G8 或认定仍否成立,按 xinci-qualify 做定向重审(推翻即 `hold→disqualified`);否则按 xinci-decide 重出决策(`hold→build_ready / pilot_ready / no_site`)。不得把 hold 挡在循环外,也不得转回 formation_confirmed;
-   - qualified 候选 → 按 xinci-decide 完整模式出决策(流程文件见上表;可能直接命中终止 A,且主要整理既有证据,成本最低);
-   - screened 候选 → expiry 已过先以 `--expiry-trigger date` 按下面到期规则转 expired;未过期且 window_estimate=days 的立即按 xinci-decide 快道模式出决策;未过期且 window_estimate=weeks/months 的按 xinci-scan 分流要求转 tracking(带 expiry、失效条件与证据)。若它带 `G3=veto_window_bet`,说明此前已由用户单步确认完成出闸,只准走快道,不得进 tracking;
-   - formation_confirmed 候选 → 按 xinci-qualify 流程认定(G6–G8 + 竞争审计 + 评分);
-   - tracking 候选 → 按 xinci-track 流程复查(重跑 G1,看形成信号);达标即转 formation_confirmed,expiry 过时用 `--expiry-trigger date`、失效条件命中时用 `--expiry-trigger invalidation` 转 expired,G0/G1 翻转即转 rejected。**单次运行内每个 tracking 候选至多复查一次**——SERP 在几小时内不会变,重复复查是空烧;形成以真实天数计,registrar 的 7 天跨度闸也不接受当日凑数;
-   - **new 道 captured 候选(上轮扫描排队的或 register→screened 之间中断留下的)→ 严格按 `gates` 与现有证据补齐缺口**:先核对已有 observation；若它已经直接支撑某道缺失门(典型是 register 成功、紧接的出闸 transition 尚未执行),可在本次出闸提交该观察中的结论,不重复浏览器审计；否则按扫描顺序 `G0→G4→G5→G6/G7 预筛→G1→G2→G3` 只跑真正缺失的门。缺 G1 的必须在 G2/G3 前补 G1；只有美区、桌面、未登录的合规环境才能写 G1,环境污染时只记观察、不写 G1、不转移。已有的门结论不重复验证,但不得把“通常排队位已有 G0/G4/G5”写成假设——出闸时按合并结果交齐 G0/G1/G2/G4/G5=`pass` 与有效 G3。排队 expiry 已过的,以 `--expiry-trigger date` **即转** `captured→expired`(标准授权覆盖它,不必回头问用户),不占深审配额。带 `G3=veto_window_bet` 挂起等确认的**不再补门**;没有一次性确认就不出闸,取得确认后由同一 run_id 出闸,不占深审配额;但**它的 expiry 过了照常以 date 触发转 `captured→expired`**——挂起不免疫过期,收它是契约内的既定路径、不降低任何闸门,在标准授权内。
-     这是上轮欠的债,**必须在任何新候选 admission 前还**。还债配额由 `run_policy.py` 返回:正常至多 5，策略为 `debt_only` 时至多 10(积压 >20 或停滞 ≥3 轮两种触发都算)。次数记进 `funnel.carryover_audited`。
-     **存量 captured 的消化归本步骤**:派子代理执行步骤 2 的扫描时,子代理从 xinci-scan 第 1 层开始,不再重跑它的第 0 层接队——两处都做会重复深审、双花配额。
-   - **到期清理(`screened` / `fast_grab_ready`)**:`screened` 候选 expiry 已过(既没排上快道、也没转进追踪,窗口自己过了)→ 以 `--expiry-trigger date` **即转** `screened→expired`;`fast_grab_ready` 候选 expiry 已过时用 `date`、窗口已关闭(通用工具已收录该对象、赌注前提消失)时用 `window_closed` → **即转** `fast_grab_ready→expired`。两条都由标准授权直接转,不必回头问用户,也不占深审配额;它们没有失败的闸门,**不许塞进 `rejected`**。单步模式下这两条归 xinci-decide 提议(前者是它快道模式的输入、后者是它的产出),四条 expired 边的提议人见生命周期契约。
-   - **积压硬闸**:在 G1 环境合规的前提下，`lane=new,state=captured` >20 时策略必须为 `debt_only`，本轮正式提取目标为 0；不再以“最低档”继续制造新债。浏览器不满足 G1 时优先进入 `trigger_only`（trigger pending 已达 200 时为 `paused`），即使同时积压 >20 也不改成 `debt_only`；无合规 G1 环境时不得把官方标题或缺 G1 项注册进账本。
-2. **扫描触发与新候选**:先把有日期的法规/平台/技术变化作为原始 trigger 写入 `trigger_pool.py add`，不得把官方公告标题直接当搜索词。每批新 trigger 另建 `--stage trigger` 检查点，逐条标成 `trigger_discarded / trigger_pending / trigger_approved` 后 finish。只有补齐 task query、至少一个独立搜索语言证据 URL，以及 payer/repeat_unit/self_serve_path/base_case_source 后，才能 `approve`。批准只表示可进入 G0。正式注册时，信号面候选传 `--origin signal`；变化面候选传 `--origin trigger --trigger-id <approved id>`，registrar 会核对 term 与批准 query 一致。`mode=full` 才执行；`trigger_only` 只维护触发池；`debt_only` 跳过本步。单一 source_family 不得连续主导超过 2 轮；本 run 累计新增 trigger 达到 5 条后，任何 family 占比超过 40% 就轮换来源。5 条以前不启用占比规则，连续主导规则仍照常生效。
-   `run_policy.py` 的 `blocked_source_families` 是本轮禁用清单；命中 40% 占比或已经连续主导两轮的来源只暂停该 family,`trigger_harvest=true` 时仍须换用其他来源继续采集。`trigger_pool.py add` 会拒绝继续写入被禁用的 family,不能靠忽略提示绕过。
-3. **分流**(步骤 1 还债深审出的候选与步骤 2 扫描出的候选**一并分流**,别只分流新扫的):**先出闸 `captured → screened`**(带 G2/G3 结论与 `--window-estimate`,这一步不能跳——tracking 与快道都只从 screened 出发,直接 `--to tracking` 会被 registrar 判非法转移;命令见 xinci-scan 第 5 层),再按窗口分流:窗口天级 → 立即走 xinci-decide 快道模式;窗口周/月级 → 转 tracking 入库。new 扫描只在“仅 affiliate 暂定可行、占位否决生效”且三分实测判为临时空位时才判出 `G3=veto_window_bet`(唯一口径见闸门契约 G3「当前两条赛道的直接推论」),任一非流量线暂定可行时一律写 `pass`。凡带这一档的候选——不论是本轮新判出的还是账本中已合法存在的历史兼容候选——都留在 captured 挂起,用户确认后记录候选级一次性授权,再由同一 run_id 出闸(见硬规则)。然后继续循环。
-4. **每轮收尾**:正式候选批量扫描用 `--stage scan` 检查点；raw trigger 另用 `--stage trigger` 检查点，逐条标成 `trigger_discarded / trigger_pending / trigger_approved`，不能再用 `pooled` 混入正式候选漏斗。`record-round` 会拒绝任何仍打开的检查点，从触发池事件自动生成 `trigger_funnel`，并把调用者提交的正式 funnel 与已完成 scan 检查点逐格核对。正式 `funnel.extracted` 只算进入候选筛选的 query。存量候选若本轮只读既有证据、没有账本 history 写入，用 `--candidate-reviewed` 记录，不得冒充 `candidates_touched`。随后提交来源、计费调用、notes 与正式 funnel；不要手写 manifest。`queued` 只表示新债，**不算决策推进**。
-
+**0. 会话恢复与开轮**
 ```bash
-python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
-  --run-id <run_id> \
-  [--source-opened <URL>] [--source-blocked '<URL>(拦截现象)'] \
-  [--billable-calls <N>] [--note '<事实>'] \
+python3 xinci-workflow/xinci-core/scripts/run_controller.py list        # 有 active 就恢复,没有才 start;不重启未结束的 run
+python3 xinci-workflow/xinci-core/scripts/run_controller.py start [--max-rounds N] [--max-hours H]
+python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round --run-id <run_id> --executor-id <executor_id> \
+  --round-type <discovery|progression|tracking|calibration> \
+  --browser-controllable yes|no --browser-desktop yes|no --browser-region us|other|unknown --browser-logged-out yes|no
+python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id>
+python3 xinci-workflow/xinci-core/scripts/report_status.py
+```
+- `executor_id` 是本轮实际执行者的稳定 ID;四个 `--browser-*` 项由该执行者亲自核对本轮浏览器状态,不得借用父任务、上一轮或其他子代理的状态;执行者或浏览器状态改变后重开轮。
+- 轮型:发现新方向 discovery;清理/推进存量 progression;专门复查追踪池 tracking;误杀回测 calibration。只推进存量的轮不得写 discovery。
+- 每累计 10 个 discovery 轮,控制器强制下一次发现前先完成 calibration 轮:先跑 `false_negative_sample.py`,按 G6=10、G7=10、G5=5、G1=5、G3=5 分层复核,结果经 `record-round --false-negative-audit` 提交。
+  JSON 键为 `status`(completed|blocked)、`reason`、`samples`、`untested_gates`。`completed` 须 35 条样本每条有证据;库存不足或某层无法复核写 `blocked`,`untested_gates` 与样本零覆盖的门一致,`blocked` 不重置计数;暂定与不确定结果不得改写为正式闸门结论。
+- `run_policy.py` 返回的 `reachable_ceiling` 三档:`go`(存量有 qualified / hold / formation_confirmed、窗口以天计的 screened、或最早 `-track` 观察已满 7 天的 tracking)、`tracking`(存量最远只到 tracking)、`trigger_only`(浏览器不满足 G1 前置)。
+  它是预算提示,不是许可或禁止:天花板为 `tracking` 时,新扫出的天级窗口候选仍可走快道到 go。
+- 策略四档:`full` 才可注册 new 候选;`trigger_only` 只维护触发池,不写 G1、不注册;`debt_only` 只推进存量与到期项,不新增正式候选;`paused` 只允许恢复/校验/收尾。优先级见生命周期契约「连续运行模式(xinci-run)」。
+- 还债配额 `carryover_quota`:正常至多 5,`debt_only` 至多 10。`blocked_source_families` 是本轮禁用来源,`trigger_pool.py add` 会拒收;`trigger_harvest=true` 时换其他 family 继续采集。
+
+**1. 推进存量(优先;离 go 最近的先做)**
+- `lane=mature` 在 formation_confirmed 前只在 notes 记"待用户单步调用 xinci-mature",不算 blocker、排队债或积压;之后进入下面的 qualify / decide 分支。
+- qualified → xinci-decide 完整模式;formation_confirmed → xinci-qualify;hold → 读决定性理由:质疑 G6–G8 或认定的按 xinci-qualify 定向重审(推翻即 `hold→disqualified`),否则按 xinci-decide 重出决策,不得挡在循环外或转回 formation_confirmed。
+- screened → expiry 已过以 `--expiry-trigger date` 转 expired;未过且 `window_estimate=days` 走 xinci-decide 快道;weeks/months 按 xinci-scan 分流要求转 tracking。带 `G3=veto_window_bet` 的只准快道,不得进 tracking。
+- tracking → xinci-track 复查:达标转 formation_confirmed;expiry 过用 `date`、失效条件命中用 `invalidation` 转 expired;G0/G1 翻转转 rejected。单次运行内每个候选至多复查一次。`tracking_schedule.py` 的 3/7/14 天提示只读,不自动执行或转移。
+- fast_grab_ready → expiry 过用 `date`、窗口已关闭用 `window_closed` 转 expired。
+- new 道 captured(排队债;必须在任何新 admission 前还,次数记 `funnel.carryover_audited`,配额见步骤 0):先核对已有 observation,已支撑缺失门的直接在出闸时提交结论;
+  否则按 `G0→G4→G5→G6/G7 预筛→G1→G2→G3` 只跑缺失的门,缺 G1 的先补 G1,环境不合规只记观察、不写 G1、不转移;出闸交齐 G0/G1/G2/G4/G5=pass 与有效 G3。
+  排队 expiry 已过即以 `date` 转 expired,不占配额。带 `G3=veto_window_bet` 挂起的不再补门、不占配额,取得确认后由同一 run_id 出闸;其 expiry 过了照常转 expired。子代理执行步骤 2 时不重跑 xinci-scan 的开局接队。
+- 积压硬闸:G1 合规且 `lane=new,state=captured` >20 → `debt_only`,本轮正式提取为 0;浏览器不满足 G1 → `trigger_only`(trigger pending 达 200 → `paused`),同时积压 >20 也不改成 `debt_only`。
+
+**2. 扫描触发与新候选**(`full` 执行;`trigger_only` 只维护触发池;`debt_only` 跳过)
+- 有日期的法规/平台/技术变化先 `trigger_pool.py add`(不得把官方标题当搜索词),逐条 `approve` / `discard`;`approve` 须补齐 `--query`、`--search-evidence-url`、`--payer --repeat-unit --self-serve-path --base-case-source`,批准只表示可进 G0。
+- 注册:信号面 `--origin signal`;变化面 `--origin trigger --trigger-id <approved id>`,registrar 核对 term 与批准 query 一致;连续运行下 `register` 另须 `--site-thesis` 与至少两个 `--task-family`。
+- G1 只显示原子任务已被完成时,observation 必须写 `cluster_counterfactual`(见闸门契约「G1 的站点簇反事实」);任一扩展成立就改写候选任务继续过门。
+- 来源:单一 source_family 不得连续主导超过 2 轮;本 run 新增 trigger 达 5 条后任一 family 占比 >40% 就轮换。组合基线 50% 已验证高产家族、30% 相邻任务家族、20% 探索家族,按最近校准结果调整,变化写入 notes。
+
+**3. 分流**(步骤 1 还债与步骤 2 新扫一并分流)
+- 先出闸 `captured→screened`(带 G2/G3 与 `--window-estimate`,命令见 xinci-scan);天级 → xinci-decide 快道;周/月级 → 转 tracking。直接 `--to tracking` 会被 registrar 拒。
+- `G3=veto_window_bet` 的判出口径见闸门契约「`veto_window_bet`:唯一的降级出口」;判出的留在 captured 挂起,处理见硬规则。
+
+**4. 收尾本轮**
+```bash
+python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round --run-id <run_id> \
+  [--source-opened <URL>] [--source-blocked '<URL>(拦截现象)'] [--billable-calls <N>] [--note '<事实>'] \
   [--candidate-reviewed '{"slug":"<slug>","outcome":"not_due","reason":"<事实>","evidence_refs":[]}'] \
-  --g1-checks 0 --source-family-counts '{}' --source-family-outcomes '{}' \
+  [--false-negative-audit '<校准轮 JSON>'] \
   --funnel '{"extracted":0,"rejected_zero_cost":0,"rejected_g1":0,"deep_audited":0,"queued":0,"carryover_audited":0}'
 ```
+- `funnel.extracted` 只算进入候选筛选的 query;未扫描时五项全 0,0 不是"未统计";`trigger_funnel` 由控制器从触发池事件自动生成;只读既有证据、无 history 写入的存量用 `--candidate-reviewed`,不冒充 `candidates_touched`。
+- `queued` 只是新债,不算决策推进。screen_unsatisfiable 假设放 `--note`,然后继续运行。
 
-上例是无正式提取、无深审的 progression/tracking 空漏斗写法；本轮实际出现正式方向时追加一个或多个 `--task-family`，出现深审时追加 `--deep-audit-family`，并把来源与 G1 数字改成实际值。不得把默认 0 当作“未统计”。
+**5. 回到步骤 1;命中终止条件后收尾**(校验失败时 session 保持 active)
+```bash
+python3 xinci-workflow/xinci-core/scripts/run_controller.py finish --run-id <run_id> --status <中文展示名> --reason <事实> [--evidence-ref <数据区相对路径>]
+```
 
-拒绝原因收敛时把 screen_unsatisfiable 假设放进 `--note`——**然后继续运行**。
-5. 回到步骤 1。命中终止/收尾条件后,执行 `run_controller.py finish --run-id <run_id> --status <状态> --reason <事实>`。`finish` 会先跑完整清单校验，再把机器状态、中文状态、事实理由、结束时间、轮次预算与 GO 候选写入 manifest 的 `termination` 快照，最后关闭 session；失败时 session 保持 active。`--status go` 还要求账本中存在**当前仍处于 GO 状态、且由本次 run_id 转入**的候选,不能用文字理由冒充产出。活动会话存在时 registrar 拒绝所有单步写入。
-
-## 终止契约(全文见生命周期契约,此处为执行摘要)
-
-- **正常终止 A——拿到可交付结论**:registrar 记录任一 go 决策(fast_grab_ready / pilot_ready / build_ready)。停,交付决策书(md+html)与账本状态。**两类 go 分量不同,报告时不许混说**:build_ready / pilot_ready 过了 G6–G8 与 80 分线,是"值得建站";fast_grab_ready 是"一份标好价的窗口赌注",不等于被验证的生意。
-- **正常终止 B——额度耗尽**:Semrush 网页版界面**实际出现**额度耗尽提示；保存截图或其他可复核文件，并在 `finish` 使用 `--evidence-ref <数据区相对路径>`。只写提示要点、假设或报错猜测都不算。
-- **正常收尾 C——会话资源耗尽**:上下文/会话资源接近极限时,完成当前动作、写运行清单、如实报告"会话资源耗尽,任务未完成、额度未耗尽"后停。这是操作边界不是任务终点,不得伪装成 A 或 B;已完成的转移保持有效,下次启动从账本现状继续。
-- **正常收尾 D——预算命中**:任一预算先用完——始终存在的 `max_rounds`(未显式指定时为 6),或可选的 `max_hours`。两项同时存在时不是二选一,谁先命中就收尾。处理同 C:完成当前动作、写运行清单、如实报告推进到哪与预算命中,下次启动从账本现状继续。
-- **正常收尾 E——连续三轮无真实决策迁移且队列增长**:`run_policy.py` 返回 `consecutive_decision_stall_rounds >= 3` 时,本轮策略自动落为 `debt_only`(只还债、不新增候选);完成本轮 record-round 后即 `finish --status 已触发闸门校准`,**不再开下一轮**,校准由用户在下次启动前单步完成。初次 register 的 `from=null→captured` 与 `funnel.queued` 都不算决策推进；只有既有候选发生真实状态迁移才算。这与「2026-09-02 运行质量契约」里每累计 10 个 discovery 轮强制插入的 `calibration` 轮型是两套机制:那是 run 内的一轮,这里是 run 的终点。
-- **异常中止**:blocker(认证/CAPTCHA/支付/浏览器封锁)使所有可行工作停摆。如实报告 blocker,不伪装成完成。
-- **禁止停止**:扫描空轮、候选池空、"看起来找不到"、时间长、轮次多。按运行策略继续；只有命中契约化预算、校准、资源或 blocker 才收尾。
+## 终止契约(正本见生命周期契约「连续运行模式(xinci-run)」)
+- A 拿到可交付结论:任一 go 决策落账即停,交付决策书;build_ready / pilot_ready 与 fast_grab_ready 分量不同,报告不混说。`--status go` 要求账本存在当前仍处 GO 状态且由本 run_id 转入的候选。
+- B 额度耗尽:Semrush 网页版实际出现额度耗尽提示,保存截图并 `finish --evidence-ref`;提示要点、假设、报错猜测都不算。为触发 B 而空烧额度是禁止的。
+- C 会话资源耗尽 / D 预算命中:完成当前动作、record-round、如实报告后停(C 报"任务未完成、额度未耗尽",D 报推进到哪与哪项预算命中)。
+- E 连续三轮无真实决策迁移且队列增长:`consecutive_decision_stall_rounds >= 3` 时本轮 `debt_only`,record-round 后 `finish --status 已触发闸门校准`,不开下一轮。与 calibration 轮型是两套机制。
+- 异常中止:blocker(认证/CAPTCHA/支付/浏览器封锁)使所有可行工作停摆时如实报告,不伪装成完成。扫描空轮、候选池空、"看起来找不到"、时间长、轮次多都不是停止理由。
 
 ## 硬规则
-
-- **面向用户只说中文**：机器内部为兼容账本而保留英文状态码，但 commentary、最终报告、状态解释和错误转述必须使用中文展示名，不得把 `budget_reached`、`active`、`captured` 等机器码直接交给用户。必要时表述为“运行预算已用完（内部状态码已留在会话文件）”。候选英文搜索词、网址、文件名和命令参数不属于界面文案，可原样保留。
-- **结束状态中文对照**：`go`＝已产出可交付结论；`quota_exhausted`＝查询额度已用完；`budget_reached`＝运行预算已用完；`resource_exhausted`＝会话资源已用完；`calibration_triggered`＝已触发闸门校准；`blocked`＝执行受阻；`cancelled`＝已取消。调用控制器结束会话时优先给 `--status` 传中文展示名；控制器会在内部规范化为稳定机器码。
-- 控制器默认输出中文摘要。只有脚本确实需要解析字段时才使用全局 `--json`，并且不得把该机器输出原样转述给用户。
-
-- **调用即开跑**:被触发后读必读文件、报一句"进入连续运行"即进入循环;不询问"是否开始"、不列计划等确认、不因参数缺失暂停(本 skill 无必填参数,一切以账本现状为输入)。
-- 不注册域名、不花钱、不发布——找到词就停,建站是用户的动作。
-- 标准授权只覆盖 registrar 转移与既定流程内的浏览/记录;不覆盖任何契约外的新动作。
-- **任何 `G3=veto_window_bet` 候选(本轮新判出的与历史兼容的同样处理),其出闸不在默认标准授权内**。候选留在 `captured` 挂起。用户读完证据并明确接受风险时,才执行 `run_controller.py confirm-window-bet --run-id <run_id> --slug <slug>`;确认记录一次性消费,未取得时 registrar 拒收出闸。不得转 `rejected` 或伪造单步 `--by`。
-  - **gates 写法**:本轮新扫方向判出这一档的,按 xinci-scan 排队位写法在 `register` 时带上 gates + expiry;账本中已合法存在的排队候选(含历史兼容候选)若补审时才形成该结论,用 `registrar.py amend --slug <slug> --by xinci-run --run-id <run_id> --gates G3=veto_window_bet --evidence <本次观察> --reason "<降级依据>"` 补记。observation 必须有相同 gates、非空 source_urls 和结构化 window_bet。
-  - **唯一的例外动作是过期**:挂着期间 expiry 过了,照常按标准授权以 `--expiry-trigger date` 转 `captured→expired`(见步骤 1 的到期清理)。它没有失败的闸门,过期不是 rejected;不收的话,闸门契约 G3 给它列的第四个出口在连续运行下就没有提议人。
-- Semrush 纪律仍为 decision-changing only;为触发终止条件而空烧额度是禁止的。
-- 快道决策书照常必含"跳过的闸门清单 + 风险披露与授权状态"章节。连续模式下普通 `G3=pass` 快道由启动命令的标准授权执行；运行停止后用户阅读决策书是在决定是否建站,**不得倒写成转移前已经逐条确认风险**。history 的 `by=xinci-run` 只表示该转移处于本次标准授权内。`G3=veto_window_bet` 不在标准授权内,仍须候选级一次性明确确认。
-- 整个连续运行只由控制器维护一份清单 `运行/<日期>-<HHMMSS>-<run-token>-xinci-run.json`;run token 消除同秒启动的文件名冲突。期间执行的各阶段流程不另写各阶段清单。中途被用户打断时,已完成的转移与清单保持有效,下次启动从 session 与账本现状继续。
-
-## 2026-09-02 运行质量契约（冲突时以本节为准）
-
-- 每轮在 `begin-round` 显式传 `--round-type discovery|progression|tracking|calibration`。发现新方向用 discovery；清理/推进存量用 progression；专门复查追踪池用 tracking；误杀回测用 calibration。不得把只推进存量的轮伪装成发现轮。
-- 每累计 10 个 discovery 轮，控制器强制下一次发现前先完成 calibration。校准被 blocker 卡住可记 `status=blocked`，但不重置计数；只有带证据样本的 `status=completed` 才重置。
-- calibration 先运行 `false_negative_sample.py`，按 G6=10、G7=10、G5=5、G1=5、G3=5 的默认分层清单复核；`status=completed` 必须实际提交完整 35 条且每条有证据。库存不足或某层无法复核时写 `status=blocked`，`untested_gates` 必须与样本中零覆盖的门一致，不能用一条样本重置校准计数。暂定与不确定结果不得改写为正式闸门结论。
-- 每轮 `record-round` 还必须提交实际的 `--g1-checks`、`--task-family`、`--source-family-counts`、`--source-family-outcomes` 与 `--deep-audit-family`。逐来源 outcomes 固定写 formal/g1_pass/deep/tracking；控制器交叉核对 formal 与 extracted、deep 与 deep_audited、G1 pass/否决与 g1_checks、tracking 与实际状态迁移，再生成每轮和全运行指标。口头统计不得替代机器汇总。
-- 来源组合以最近校准结果为输入，起始配额为 50% 已验证高产家族、30% 相邻任务家族、20% 探索家族；它是分配基线，不是闸门。连续两次校准无深审/状态迁移的来源家族下调，产生误杀或新 tracking 的家族上调，变化写入 notes。
-- 连续运行下(`--by xinci-run`)新注册候选必须同时提交 `--site-thesis`、至少两个 `--task-family` 与 `--origin`(registrar 硬校验;单步 skill 不强制前两项,见生命周期契约 register 行)。若 G1 只显示原子任务已被完成，必须在 observation 写 `cluster_counterfactual`；只要批处理、监控、审计轨迹、导出集成或多辖区之一仍构成独立任务簇，就改写候选任务后继续过门，不能以原子查询直接判死。
-- tracking 的第 3/7/14 天由 `tracking_schedule.py` 派生为只读提示。它不自动执行、不自动转移、不绕过用户调用边界；实际复查仍需调用 xinci-track，并以新观察和 registrar 落账。
-
-新版收尾示例：
-
-```bash
-python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round \
-  --run-id <run_id> --executor-id <executor_id> --round-type discovery
-python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
-  --run-id <run_id> --task-family '<family>' --source-family-counts '{"official-change":20}' \
-  --source-family-outcomes '{"official-change":{"formal":20,"g1_pass":4,"deep":4,"tracking":1}}' \
-  --g1-checks 9 --deep-audit-family '<family>' \
-  --funnel '{"extracted":20,"rejected_zero_cost":10,"rejected_g1":5,"deep_audited":4,"queued":1,"carryover_audited":0}'
-```
+- 标准授权只覆盖 registrar 转移与既定流程内的浏览/记录,不覆盖契约外新动作。普通 `G3=pass` 快道在授权内;决策书必含"跳过的闸门清单 + 风险披露与授权状态",不得把事后阅读倒写成事前逐条确认。
+- `G3=veto_window_bet` 候选(新判出与历史兼容的同样)出闸不在标准授权内:留在 captured 挂起,不转 rejected、不伪造单步 `--by`;用户读完证据明确接受后执行
+  `run_controller.py confirm-window-bet --run-id <run_id> --slug <slug>`,确认一次性消费。新扫的按 xinci-scan 排队位写法在 `register` 时带 gates+expiry;已在账本的补审时用
+  `registrar.py amend --slug <slug> --by xinci-run --run-id <run_id> --gates G3=veto_window_bet --evidence <本次观察> --reason "<降级依据>"`,observation 须有相同 gates、非空 source_urls 与结构化 window_bet。
+- 整个运行只由控制器维护一份清单 `运行/<日期>-<HHMMSS>-<run-token>-xinci-run.json`,不另写阶段清单。被打断时已完成转移与清单有效,下次从 session 与账本现状继续。
+- 控制器默认中文摘要;只在需解析字段时用 `--json`,不把机器输出原样转述给用户。`finish --status` 传中文展示名。

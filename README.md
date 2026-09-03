@@ -6,44 +6,34 @@
 
 | 单元 | 职责 |
 | --- | --- |
-| [xinci-run](xinci-workflow/xinci-run/SKILL.md) | 连续运行驱动器:启动后循环推进,直到产出任一 go 决策(全站 go,或标好价的快道赌注)、Semrush 额度实际耗尽,或预算用完(默认 `max_rounds=6`);会话资源耗尽或撞上 blocker 时如实报告后停。启动暗号 `xinci_run`,消息中出现即一体启动整个工作流 |
-| [xinci-status](xinci-workflow/xinci-status/SKILL.md) | 状态看板:只读汇报账本事实 |
-| [xinci-scan](xinci-workflow/xinci-scan/SKILL.md) | 扫描发现:真浏览器捕获候选,当场 G0–G5 初筛 |
-| [xinci-track](xinci-workflow/xinci-track/SKILL.md) | 追踪复查:复查 new 道 tracking 候选(可指定,未指定则遍历全部),重跑 G1,提议转移 |
-| [xinci-mature](xinci-workflow/xinci-mature/SKILL.md) | 成熟错价词道:单步发现并推进 mature 候选到形成确认 |
-| [xinci-qualify](xinci-workflow/xinci-qualify/SKILL.md) | 深度认定:G6–G8 + 竞争审计 + 100 分制(80 分线) |
-| [xinci-decide](xinci-workflow/xinci-decide/SKILL.md) | 建站决策:页面地图 + 收入模型 + md/html 双格式决策书 |
-| [xinci-core](xinci-workflow/xinci-core/) | 共享核心:契约、闸门、schema、registrar / screen_index 等脚本(判断标准唯一来源) |
+| [xinci-run](xinci-workflow/xinci-run/SKILL.md) | 连续运行驱动器,暗号 `xinci_run`。跑到任一 go 决策、Semrush 额度耗尽或预算用完(默认 6 轮) |
+| [xinci-status](xinci-workflow/xinci-status/SKILL.md) | 状态看板,只读 |
+| [xinci-scan](xinci-workflow/xinci-scan/SKILL.md) | 扫描发现 new 道候选,当场初筛 |
+| [xinci-track](xinci-workflow/xinci-track/SKILL.md) | 复查 new 道 tracking 候选 |
+| [xinci-mature](xinci-workflow/xinci-mature/SKILL.md) | 成熟错价词道(mature)的发现与前半程 |
+| [xinci-qualify](xinci-workflow/xinci-qualify/SKILL.md) | 深度认定,100 分制 80 分线 |
+| [xinci-decide](xinci-workflow/xinci-decide/SKILL.md) | 建站 go/no-go 决策书 |
+| [xinci-core](xinci-workflow/xinci-core/) | 共享核心:通用约定、契约、schema、脚本 |
 
-工作流本身怎么运转(核心前提、两条赛道与六条盈利线、状态机、九道闸门、契约地图、当前状态与已知缺口):**[xinci-workflow/README.md](xinci-workflow/README.md)**。
+工作流怎么运转见 **[xinci-workflow/README.md](xinci-workflow/README.md)**。
 
-## 仓库边界(2026-08-24 起)
+## 仓库边界
 
-**本仓库只放 skill 与契约,不放执行产出。** 账本、证据、决策书、运行清单、运行状态、淘汰方向索引、去重裁决一律住在同级仓库 `keywords-macdownds` 的 `数据/新词工作流/` 下;设计与落地计划文档也迁到了那里。
-
-**契约文档里写作 `数据/新词工作流/...` 的路径,一律指数据区内部的相对位置。**
+**本仓库只放 skill 与契约,不放执行产出。** 账本、证据、决策书、运行清单、运行状态、淘汰方向索引、去重裁决一律住在数据区(同级仓库 `keywords-macdownds` 的 `数据/新词工作流/`)。契约里写作 `数据/新词工作流/...` 的路径都指数据区内部。
 
 ### 第一次使用:先定数据区
 
-脚本**不猜**数据区在哪。没配置过就一律拒绝执行(退出码 2)并提示先问用户——账本是整套流程唯一的事实来源,落错地方等于在错的地方留痕。
+脚本不猜数据区在哪,没配置过就退出码 2 并提示先问用户。
 
 ```bash
 python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <数据区路径>
 ```
 
-这条命令创建目录结构与空账本(幂等),并把路径记进 `.xinci-data-root`(不入库)。已有数据区要接入的用同一条命令。
-
-解析顺序:`--data-root` > 环境变量 `XINCI_DATA_ROOT` > 仓库配置 `.xinci-data-root` > 拒绝执行。临时切换用:
-
-```bash
-export XINCI_DATA_ROOT=/path/to/数据/新词工作流
-```
-
-数据区内容:账本 / 证据 / 决策书 / 运行 / 运行状态 / 淘汰方向索引 `淘汰方向.jsonl`(由 `screen_index.py` 读写,**勿手工编辑**)/ 去重裁决 `去重裁决.jsonl`。
+幂等:创建目录结构与空账本,并把路径记进 `.xinci-data-root`(不入库)。解析顺序:`--data-root` > 环境变量 `XINCI_DATA_ROOT` > `.xinci-data-root` > 拒绝执行。
 
 ## 双环境接入(symlink,不入库)
 
-skill 通过 symlink 同时接入 Codex CLI 与 Claude Code,两环境读同一份正本。仓库可放在任意位置——**在仓库根执行**:
+在仓库根执行,Codex CLI 与 Claude Code 读同一份正本:
 
 ```bash
 for s in xinci-run xinci-status xinci-scan xinci-track xinci-mature xinci-qualify xinci-decide; do
@@ -52,7 +42,7 @@ for s in xinci-run xinci-status xinci-scan xinci-track xinci-mature xinci-qualif
 done
 ```
 
-xinci-core 不是 skill,无需 symlink;各 SKILL.md 以仓库根相对路径引用它(路径约定见各 SKILL.md 开头)。
+xinci-core 不是 skill,无需 symlink。
 
 ## 测试
 
@@ -61,4 +51,4 @@ python3 -m unittest discover xinci-workflow/xinci-core/scripts/tests
 python3 xinci-workflow/xinci-core/scripts/validate_ledger.py
 ```
 
-`validate_ledger.py` 同时校验账本不变式(捕获绕过 registrar 的手工编辑)与运行清单格式。运行清单必须由 `run_manifest.py record-single` 或 `run_controller.py record-round` 原子写入,不得手写；校验有错即非零退出。
+`validate_ledger.py` 校验账本不变式与运行清单格式,有错非零退出。

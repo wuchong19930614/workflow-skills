@@ -1,118 +1,65 @@
 ---
 name: xinci-decide
-description: '对已认定(qualified)或搁置待议(hold)的 new 或 mature 候选出建站 go/no-go 决策:页面地图、收入三情景、风险清单、红队复核;go 结论产出 md+html 双格式决策书,no-go 只在账本登记决定性理由。也可对窗口以天计的 screened 候选走快道出速建决策,并受理 screened / fast_grab_ready 到期候选的 expired 提议。当用户说给 X 出建站决策、X 能不能建站、出决策书时使用。English triggers: build decision, site go no-go, decision document. mature 的发现、追踪与形成确认前推进由 xinci-mature 承接,不由本 skill 处理；但已被合法送到 screened 的 mature 候选可显式调用本 skill 做快道决策。认定评分用 xinci-qualify。'
+description: '对已认定(qualified)或搁置待议(hold)的 new 或 mature 候选出建站 go/no-go 决策;也可对窗口以天计的 screened 候选走快道出速建决策,并受理 screened / fast_grab_ready 到期候选的 expired 提议。当用户说给 X 出建站决策、X 能不能建站、出决策书时使用。English triggers: build decision, site go no-go, decision document. mature 的发现、追踪与形成确认前推进由 xinci-mature 承接,不由本 skill 处理;已被合法送到 screened 的 mature 候选可显式调用本 skill 做快道决策。认定评分用 xinci-qualify。'
 ---
 
 # xinci-decide 建站决策
 
-回答最后一个问题:该不该为这个词建一个站?两种模式:
+先读 `xinci-workflow/xinci-core/通用约定.md`。再读生命周期契约(「每转移的证据要求」;「窗口赌注的挂起与出闸」)、闸门契约(G8 决策门;G3「`veto_window_bet`:唯一的降级出口」)、评分契约、数据采集指南。
 
-- **完整模式**:输入 `qualified` 候选(或用户送回重出决策的 `hold` 候选),lane 可为 new 或 mature,产出 build_ready / pilot_ready / hold / no_site;
-- **快道模式**:输入窗口评估为 days 的 `screened` 候选,产出 fast_grab_ready——new 可由常规扫描送入；mature 必须已由 xinci-mature 合法送到该状态并显式调用本 skill,xinci-run 不自动承接它的前半程。两道都执行同一套减配披露,跳过的闸门明码标价。
-
-决策登记即停:go 交付双格式决策书,no-go 只登记决定性理由;注册域名、建站、发布,全部是用户的人工动作。
-
-> **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-decide/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
->
-> **`--by` 约定**:下面的 registrar 命令模板写的是**单步形态**(`--by xinci-decide`)。**在 xinci-run 连续运行下(含被它派出的子代理)一律改成 `--by xinci-run`，并同时追加 `--run-id <活动会话>`；只替换 `--by` 或照抄单步模板都是错的**。取值规则见生命周期契约「registrar 用法」的 `--by` 取值节。
-
-## 第 0 步:确认数据区(强制,先于一切写操作)
-
-**第一次执行本工作流、或换了机器/checkout 时,必须先确认执行产出存到哪里。** 零成本一条命令:
-
-```bash
-python3 xinci-workflow/xinci-core/scripts/report_status.py
-```
-
-- 正常返回看板 → 数据区已配置,直接往下走,**别再问**。
-- **退出码 2、提示「数据区未配置」→ 停下来问用户数据区放哪,不要替他选。** 这不是故障,是脚本刻意不猜(理由见生命周期契约「开工第一步」)。
-
-拿到路径后固定下来(幂等,已存在的文件不动):
-
-```bash
-python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户给的路径>
-```
-
-## 行动前必读
-
-- xinci-workflow/xinci-core/生命周期契约.md(决策转移的证据要求;双格式校验)
-- xinci-workflow/xinci-core/闸门契约.md(G8 认定门与决策门;**pilot 由决策门触发**;快道要引用的 G3 三分与 `veto_window_bet` 出口限制)
-- xinci-workflow/xinci-core/评分契约.md(六条盈利线分别计证据；广告线 $200/月只约束 advertising，且 income_score ≥1；硬否决不产生分数；`veto_window_bet` 只走快道、而快道本身不评分)
-- xinci-workflow/xinci-core/数据采集指南.md(补缺口审计时的真浏览器原则与 Semrush decision-changing 纪律)
+- **完整模式**:输入 `qualified`,或用户送回重出决策的 `hold`(lane 为 new 或 mature);出口 build_ready / pilot_ready / hold / no_site(hold 送回时出口不含 hold)。
+- **快道模式**:只收 window_estimate=days 的 `screened`;出口 fast_grab_ready。new 由常规扫描送入;mature 须已由 xinci-mature 合法送到 screened 并显式调用本 skill。
 
 ## 完整模式工作流
 
-1. **核对输入**:状态 qualified,或 `hold`(用户送回重出决策——它已带 G6–G8 全 pass 与分数,出口是 build_ready / pilot_ready / no_site;`hold → hold` 不是合法转移,重审后仍无法决断就说明缺的是证据不是决策,如实说明并停);通读认定观察,不重做已做过的审计,只补缺口。若为补缺口做了新审计,把新观察落一份 `证据/<slug>/<日期>-decide.json` 并随转移提交;没有新观察就不写——决策阶段的产出是决策书,`-decide` 观察是可选的(数据极简)。
-2. **页面地图**:≥12 个任务互异页面 × ≥3 个簇 + ≥1 个自助产品资产;合并表述性变体。不足 → pilot 或 no_site。pilot 首发从已有地图中选 5–8 个最高价值页面；完整地图即使已有 9–11 页,仍未达到 12 页全站线,其余页面列入实验后的扩展 backlog。
-3. **收入三情景**:downside / base / upside,沿用认定时实际通过的盈利线与证据,不得在决策阶段换线绕门。逐条列出实际通过的 subscription / lead_generation / affiliate / transaction / paid_report / advertising；advertising 的 base 在 G6 已达到 $200/月硬门，这里复核流量假设；affiliate 同样不得超出自有意图流量；其余高价值线复核账户/线索/交易/报告数量、单价、CAC 与交付成本。无主动销售，保守假设逐条标注来源。
-4. **风险清单**:技术可行性、合规、免费与付费替代、维护负担、数据/API 成本。
-5. **红队复核**:换立场反驳整个决策一轮,成立的反驳如实写入。
-6. **先提议决策。** 拟议结论为 go(`build_ready` / `pilot_ready`)时,才按下文“双格式约定”写 md+html 两份决策书,用户确认后执行对应转移;拟议结论为 no-go(`hold` / `no_site`)时不写决策书,只提交决定性理由,与下文 no-go 约定一致。go 的命令示例:
-
+1. **核对输入。** 通读认定观察,不重做已做过的审计,只补缺口。为补缺口做了新审计才落 `证据/<slug>/<日期>-decide.json` 并随转移提交;没有新观察不写。`hold → hold` 不是合法转移:重审后仍无法决断,如实说明缺的是证据并停。
+2. **页面地图。** ≥12 个任务互异页面 × ≥3 个簇 + ≥1 个自助产品资产,合并表述性变体。不足 → pilot 或 no_site;pilot 首发从地图中选 5–8 个最高价值页面,其余列入扩展 backlog(见闸门契约 G8 决策门)。
+3. **收入三情景。** downside / base / upside,沿用认定时实际通过的盈利线与证据,不得换线绕门;逐条复核流量假设或账户/线索/交易/报告数量、单价、CAC 与交付成本,保守假设逐条标注来源。
+4. **风险清单。** 技术可行性、合规、免费与付费替代、维护负担、数据/API 成本。
+5. **红队复核。** 换立场反驳整个决策一轮,成立的反驳如实写入。
+6. **先提议决策。** go(`build_ready` / `pilot_ready`)才按「双格式约定」写 md+html 决策书,用户确认后执行;no-go(`hold` / `no_site`)不写决策书、不带 decision-ref,只提交 `--reason`。随后按通用约定写运行清单(`--skill xinci-decide`)。
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
-  --slug <slug> --to build_ready --by xinci-decide \
-  --decision-ref "决策书/<slug>.md" --play single_domain
+  --slug <slug> --to build_ready --by xinci-decide --decision-ref "决策书/<slug>.md" --play single_domain
 ```
-
-`--play` 二选一,按页面地图的形状定,与 build_ready/pilot_ready 无关:`single_domain`(一个词簇撑一个站,pilot 默认走这个)、`cluster_expansion`(多簇分站或子目录扩张)。`--decision-ref` 是**相对数据区**的路径(`决策书/<slug>.md`),而下面生成 html 的脚本吃的是**文件系统路径**——数据区自 2026-08-24 起不在本仓库内(见生命周期契约「数据区在哪」),所以那条命令要拼出数据区的真实位置。两者基准不同,别互相套用。
-
-no-go(hold / no_site)只带 reason,不出决策书、不带 decision-ref。
+`--play` 二选一,按页面地图形状定,与 build_ready/pilot_ready 无关:`single_domain`(一个词簇撑一个站,pilot 默认)、`cluster_expansion`(多簇分站或子目录扩张)。`--decision-ref` 是相对数据区的路径;生成 html 的脚本吃的是文件系统路径,两者基准不同。
 
 ## 快道模式工作流
 
-1. **核对输入**:状态 screened 且 window_estimate=days。
-2. **轻量决策书**,必含:词与任务;G0/G1/G2/G4/G5=`pass` 的证据与 G3 的实际结论证据(G3 可为 `pass` 或兼容的 `veto_window_bet`,后者不叫“全过”);窗口期 `g6_tentative_lines` 的逐线结论、依据与“不等于正式 G6”的明示;窗口估计与 expiry(附推理);**若 G3=`veto_window_bet`:G3 降级声明**——数到的免费实现清单、为何判定它们只是还没被收录,以及明码标价一句"本次只赌收录时差,通用工具收录后位置即失";**未完成的正式闸门清单及"为何此刻无法执行"**(正式 G6–G8 需要形成/确认期的更完整证据;已有的暂定 G6 不得冒充正式结论);48 小时发布计划(最小页面集);投入上限声明(损失封顶:一个域名 + 若干页面工时);**风险披露与授权状态**(这是窗口赌注,不是被验证的生意；单步模式写“待用户确认”,连续模式的普通 G3=`pass` 快道写“由启动命令标准授权、尚未构成用户建站决定”,`veto_window_bet` 则必须引用候选级一次性确认);**失效条件**(出现什么信号即放弃)与**下一步人工动作清单**——下面「双格式约定」要求每份决策书都有这两节,快道也不例外;升级通路说明(词若耐久,built 后可转回 tracking 走完整认定;**若本次 G3=`veto_window_bet`,升级时必须重跑 G3 并取得真 pass**,快道降级结论不可继承)。
-3. **执行授权按模式分开**:单步模式由用户读完上述披露并确认后执行；xinci-run 连续模式下,普通 G3=`pass` 快道由启动命令的标准授权直接执行,不得谎称用户已事前阅读；`G3=veto_window_bet` 无论哪种模式都必须先有该候选的一次性明确确认。
-
+1. **核对输入。** 状态 screened 且 window_estimate=days。
+2. **轻量决策书**,必含:
+   - 词与任务;
+   - G0/G1/G2/G4/G5=`pass` 的证据与 G3 实际结论证据(G3 为 `pass` 或 `veto_window_bet`,后者不叫"全过");
+   - 窗口期 `g6_tentative_lines` 逐线结论、依据与"不等于正式 G6"的明示;
+   - 窗口估计与 expiry(附推理);
+   - G3=`veto_window_bet` 时的 G3 降级声明:数到的免费实现清单、为何判定它们只是未收录、"本次只赌收录时差,通用工具收录后位置即失"一句;
+   - 未完成的正式闸门清单(G6–G8)及为何此刻无法执行;已有的暂定 G6 不得冒充正式结论;
+   - 48 小时发布计划(最小页面集);
+   - 投入上限声明(损失封顶:一个域名 + 若干页面工时);
+   - 风险披露与授权状态(这是窗口赌注,不是被验证的生意);授权状态章节按模式写法见通用约定「运行模式与 `--by`」与生命周期契约「窗口赌注的挂起与出闸」;
+   - 失效条件与下一步人工动作清单;
+   - 升级通路:词若耐久,built 后可转回 tracking 走完整认定;G3=`veto_window_bet` 的升级须重跑 G3 取得真 pass,降级结论不可继承。
+3. **执行。** 单步由用户读完披露并确认后执行;`G3=veto_window_bet` 无论哪种模式都须该候选的一次性明确确认。
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
-  --slug <slug> --to fast_grab_ready --by xinci-decide \
-  --play fast_grab --expiry <日期> --decision-ref "决策书/<slug>.md"
+  --slug <slug> --to fast_grab_ready --by xinci-decide --play fast_grab --expiry <日期> --decision-ref "决策书/<slug>.md"
 ```
-
-4. **快道的 no-go**:读完证据判定这个赌注不值(收录时差太短、任务其实一次性、投入上限也兜不住),提议 `rejected`(reason 写清不成立的那条判据)或由用户 `withdrawn`。**快道不产出 hold / no_site**——那两个是完整模式的结论,快道候选只做过窗口期暂定 G6,还没完成正式 G6–G8,没有资格被"搁置待议"。快道 no-go 同样不出决策书。
-
-## 到期处置(screened / fast_grab_ready)
-
-这两个状态的到期候选归本 skill 提议——前者是快道模式的输入、后者是它的产出,没有别的 skill 经手它们
-(xinci-status 只汇报、xinci-track 只管 tracking、xinci-scan 只接队 captured)。
-用户按 xinci-status 报出的到期清单把候选送来,本 skill 提议、用户确认:
-
-- `screened` 且 expiry 已过(既没排上快道、也没转进追踪,窗口自己过了)→ 提议 `screened → expired`;
-- `fast_grab_ready` 且 expiry 已过,或窗口已关闭(通用工具已收录该对象、赌注前提消失)→ 提议 `fast_grab_ready → expired`。
-
-两条都不出决策书,reason 写清是 expiry 过了还是窗口关闭。**它们没有失败的闸门,不许塞进 `rejected`**——
-`rejected` 留给判据不成立的情形(快道读完证据判定这个赌注不值)。连续运行模式下这两条归 xinci-run 运行循环步骤 1,标准授权直接转。
-
+4. **快道 no-go。** 读完证据判定赌注不值(收录时差太短、任务其实一次性、投入上限兜不住)→ 提议 `rejected`(reason 写清不成立的判据)或由用户 `withdrawn`。不出决策书。
+5. **到期处置。** 归属见通用约定「四条 expired 边的提议人」;用户按 xinci-status 到期清单送来,本 skill 提议、用户确认,不出决策书。`screened`:expiry 已过(`date`);`fast_grab_ready`:expiry 已过(`date`)或窗口关闭(`window_closed`,通用工具已收录该对象)。
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
-  --slug <slug> --to expired --by xinci-decide \
-  --expiry-trigger <date|window_closed> \
-  --reason "<expiry 已过经用户确认 / 窗口关闭:通用工具已收录该对象>"
+  --slug <slug> --to expired --by xinci-decide --expiry-trigger <date|window_closed> --reason "<expiry 已过经用户确认 / 窗口关闭:通用工具已收录该对象>"
 ```
 
 ## 双格式约定(md 给 AI,html 给人)
 
-- `决策书/<slug>.md` —— 给之后落地网站内容的 AI 读。结构化、无修辞:主关键词与精确措辞、意图簇及每页对应查询、页面地图(每页任务定义)、自助产品资产规格、竞争缺口、变现路径、失效条件、明确的"不要做什么"。**md 是唯一事实来源。**结论先行、关键数字用粗体——html 的排版直接来自 md 结构。
-- `决策书/<slug>.html` —— 给人读;**不手写**,由脚本从 md 生成(单文件、内联样式、零外部依赖,双击即开):
-
+- `决策书/<slug>.md` 是唯一事实来源,给之后落地网站内容的 AI 读。结构化、无修辞、结论先行、关键数字粗体;含主关键词与精确措辞、意图簇及每页对应查询、页面地图(每页任务定义)、自助产品资产规格、竞争缺口、变现路径、失效条件(出现什么信号即放弃)、下一步人工动作清单、"不要做什么"。快道决策书同样必含失效条件与下一步人工动作清单。
+- `决策书/<slug>.html` 给人读,不手写,由脚本从 md 生成(单文件、内联样式、零外部依赖);md 每次修改后重跑脚本,禁止手改 html。生成器把 md 的 SHA-256 写入 html meta,registrar 校验源哈希与完整确定性渲染结果,旧 html、伪造 meta、手改 html 一律拒收。
 ```bash
 python3 xinci-workflow/xinci-core/scripts/build_decision_html.py "$(python3 xinci-workflow/xinci-core/scripts/data_root.py)/决策书/<slug>.md"
 ```
 
-  (`data_root.py` 直接运行即打印已配置的数据区路径;未配置时退出码 2 并给出指引——**没有静默回退**,与「开工第一步」同一条纪律,不许在命令里手写默认路径绕过它。)
-
-- md 每次修改后重跑脚本再生成 html,禁止手改 html。生成器把 md 的 SHA-256 写入 html meta;registrar 同时校验源哈希与**完整确定性渲染结果**,旧 html、伪造 meta 或手改 html 一律拒收。
-- 每份决策书必含**失效条件**(出现什么信号即放弃)与**下一步人工动作清单**。
-
 ## 硬规则
-
-- 不注册域名、不花钱、不发布——go 在决策书交付后停,no-go 在决定性理由登记后停。
-- **快道不评分**:它只有窗口期暂定 G6,没完成正式 G6–G8,账本上 `score` 必须保持 null(`validate_ledger` 强制),决策书里也不许出现任何分数。
-- **pilot 有分数,但那是认定分,不是全站背书**:它从 qualified 转来,账本上照常带着 ≥80 的认定分(`validate_ledger` 同样强制)。决策书要写清楚这个分数说的是"机会为真",而它降为 pilot 恰恰是因为页面地图凑不满全站规模(闸门契约 G8 决策门)——不得拿它当"全站已验证"的依据。
-- no-go 不出决策书,只在账本记决定性理由(数据极简原则)。
-- 快道只收 window_estimate=days 的 screened 候选;别的候选想快,答案是不行。
-- 快道**决策**只有两类出口:go 是 fast_grab_ready,no-go 是 rejected(判据不成立)或 withdrawn(用户撤回);hold 与 no_site 只属于完整模式。到期不是决策,单列在上面「到期处置」节:那里出的是 expired,不是 rejected。
-- 提议与执行分离:单步模式下,转移经用户确认后才调 registrar,快道要求用户先读“跳过闸门清单”。xinci-run 连续运行模式下,启动命令即标准授权,普通 G3=`pass` 快道无需逐条确认；交付决策书承担风险披露,**不表述为用户事前已确认**。`G3=veto_window_bet` 仍须候选级一次性确认。任何 go 都不等于用户已经决定建站。
-- 用 `run_manifest.py record-single --date <YYYY-MM-DD> --skill xinci-decide [--suffix <HHMM>] ...` 原子写运行清单；控制器拒绝覆盖，不得手写 JSON。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
+- 快道不评分:账本 `score` 保持 null(`validate_ledger` 强制),决策书不出现任何分数。
+- pilot 从 qualified 转来,账本照常带 ≥80 的认定分;决策书写清该分数说的是"机会为真",降为 pilot 是因为页面地图不满全站线,不得当"全站已验证"的依据。
+- 快道决策出口只有 fast_grab_ready / rejected / withdrawn;hold 与 no_site 只属完整模式;到期出的是 expired,不是 rejected。
