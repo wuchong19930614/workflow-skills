@@ -1,19 +1,31 @@
 ---
 name: xinci-track
-description: '复查 new 道中处于追踪状态(tracking)的候选。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 何时查由用户决定;可指定候选,未指定时该次调用默认授权遍历全部 lane=new 的 tracking 候选。mature 在 formation_confirmed 前由 xinci-mature 承接,不由本 skill 处理。本 skill 不自我调度。'
+description: '复查 new 道中处于追踪状态(tracking)的候选，或复核 recheck_after 已到的 new rejected 候选。当用户说复查追踪清单、看看候选 X 现在什么情况、复查 watchlist 时使用。English triggers: recheck candidates, track watchlist, re-observe keyword. 何时查由用户决定;可指定候选,未指定时该次调用默认授权遍历全部 lane=new 的 tracking 候选。mature 在 formation_confirmed 前由 xinci-mature 承接,不由本 skill 处理。本 skill 不自我调度。'
 ---
 
 # xinci-track 追踪复查
 
 先读 `xinci-workflow/xinci-core/通用约定.md`(第 0 步、`--by`、运行清单、lane 边界、expired 边归属)。再读生命周期契约「每转移的证据要求」、闸门契约 G0–G5、数据采集指南「Semrush 探针纪律」。
 
-输入:`lane=new` 且状态为 `tracking` 的候选。用户指定则只查指定项;未指定则遍历全部。指定项若是 mature,只报告"应交 xinci-mature",不写入。
+输入:`lane=new` 且状态为 `tracking` 的候选,或用户从 xinci-status 到期复核清单中指定的 `state=rejected,recheck_after≤今天` 候选。用户指定则只查指定项;未指定则只遍历 tracking,不得自动重开 rejected。指定项若是 mature,只报告"应交 xinci-mature",不写入。
+
+### rejected 的受控重开
+
+只复核最近一次拒绝中的 G1/G2/G3 veto。取得晚于拒绝时间的新 `-track.json` 现场观察,并把当时每一道 veto 明确翻转为 `pass`;缺一项就保持 rejected。先向用户提议,确认后执行:
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/registrar.py reopen \
+  --slug <slug> --by xinci-track --reason "<哪些 SERP 事实发生了变化>" \
+  --evidence "证据/<slug>/<日期>-track.json"
+```
+
+重开后状态回到 captured、旧窗口闸门清空,后续交 xinci-scan 重跑完整初筛。G0/G4/G5 结构性否决不可重开;本入口不接受 mature。
 
 ## 工作流
 
 1. **重跑 G1,同批零成本重核 G0。** 真浏览器搜精确词(美区桌面未登录)。判据与站点簇反事实见闸门契约 G1;环境不合规时只记带环境说明的观察,不写 G1 gates、不据此转移,候选留在 `tracking`。G0 或 G1 翻转 → 提议 `rejected`。
 2. **看 SERP 变化(G2/G3 复看)。** 对照上次观察读完整首页,按"做什么"分类。完整复核六条 `g6_tentative_lines`,占位否决是否生效按闸门契约 G3「前置:G3 的否决只对"靠自然位吃流量"的模式生效」;六条适用线全部 `tentative_veto` 时按生命周期契约 rejected 边第⑦种提议 `rejected`。
-   复查范围只有 G0/G1 + G2/G3,不复查 G4/G5(见闸门契约「时间光谱与适用矩阵」);命中新归并陷阱类别那条 rejected(第⑥种)由做归并的一方提议,不在本 skill。
+   常规复查范围只有 G0/G1 + G2/G3,不重跑既有 G4/G5(见闸门契约「时间光谱与适用矩阵」)。若本次证据暴露尚未成册的新结构性陷阱,本 skill 只形成“新增类别 + 当前候选归并”的提案;新增通用判据属于契约变更,须用户确认。确认后由本 skill 补入陷阱类别与索引,并按 rejected 第⑥种提议当前候选转移;连续运行只记 notes 等待确认,不得静默改契约。
 3. **看命名定型。** 回访来源社区:叫法统一了还是分裂了?aliases 有没有胜出者?
 4. **看需求形成信号。** 自动补全、首批 Semrush 行、讨论增长。Semrush 探针仅限 `tracking` 状态(按状态判不按年龄)、仅限能改变决策的查询;查了改变不了提议的,不查。
    观察必写 `naming_status=unstable|stabilized` 与 `formation_signals`,合法取值 `autocomplete / semrush_rows / sustained_discussion / repeated_independent_queries`,无信号写空数组,不得用叙述性乐观判断替代。

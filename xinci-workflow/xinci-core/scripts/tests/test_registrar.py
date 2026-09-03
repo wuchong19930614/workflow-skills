@@ -112,21 +112,26 @@ class RegistrarTest(unittest.TestCase):
         return slug
 
     def to_screened(self, slug, window="weeks"):
+        actor = "xinci-mature" if self.load(slug).get("lane") == "mature" else "xinci-scan"
         ev = mk_evidence(self.root, slug, "2026-08-17b-scan.json", gates=dict(GATES_SCREEN))
-        R.transition(self.root, slug, to="screened", by="xinci-scan",
+        R.transition(self.root, slug, to="screened", by=actor,
                      gates=dict(GATES_SCREEN), window_estimate=window, expiry="2026-10-01",
                      evidence=[ev])
 
     def to_tracking(self, slug):
+        actor = "xinci-mature" if self.load(slug).get("lane") == "mature" else "xinci-scan"
         ev = mk_evidence(self.root, slug, "2026-08-17c-scan.json")
-        R.transition(self.root, slug, to="tracking", by="xinci-scan",
+        R.transition(self.root, slug, to="tracking", by=actor,
                      expiry="2026-09-30", invalidation=["官方工具上线"], evidence=[ev])
 
     def to_formation(self, slug):
-        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
-        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-27-track.json")])
+        actor = "xinci-mature" if self.load(slug).get("lane") == "mature" else "xinci-track"
+        R.checked(self.root, slug, by=actor,
+                  evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+        R.checked(self.root, slug, by=actor,
+                  evidence=[mk_evidence(self.root, slug, "2026-08-27-track.json")])
         ev = mk_evidence(self.root, slug, "2026-09-03-track.json", gates={"G1": "pass"})
-        R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
+        R.transition(self.root, slug, to="formation_confirmed", by=actor,
                      gates={"G1": "pass"}, evidence=[ev])
 
     def to_qualified(self, slug):
@@ -205,7 +210,7 @@ class RegistrarTest(unittest.TestCase):
         self.assertEqual(self.load(a)["lane"], "new")
         ev = mk_evidence(self.root, "lane-mature", "2026-08-23-scan.json")
         R.register(self.root, slug="lane-mature", term="lane mature", source_url="https://e.com/t",
-                   task="t", evidence=[ev], lane="mature")
+                   task="t", evidence=[ev], lane="mature", by="xinci-mature")
         self.assertEqual(self.load("lane-mature")["lane"], "mature")
 
     def test_unknown_lane_refused(self):
@@ -502,7 +507,7 @@ class RegistrarTest(unittest.TestCase):
         slug = "mature-ad-line"
         ev0 = mk_evidence(self.root, slug, "2026-08-17-scan.json")
         R.register(self.root, slug=slug, term="mature ad line", source_url="https://e.com/t",
-                   task="t", evidence=[ev0], lane="mature")
+                   task="t", evidence=[ev0], lane="mature", by="xinci-mature")
         self.to_screened(slug)
         self.to_tracking(slug)
         self.to_formation(slug)
@@ -676,10 +681,10 @@ class RegistrarTest(unittest.TestCase):
                      evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json",
                                            gates={"G3": "veto"})])
         self.assertIsNotNone(self.load(slug)["recheck_after"])
-        new_ref = mk_evidence(self.root, slug, "2026-09-20-scan.json",
+        new_ref = mk_evidence(self.root, slug, "2026-09-20-track.json",
                               points=["两个竞品均已下线,SERP 重新出现任务空缺"],
                               gates={"G3": "pass"})
-        R.reopen(self.root, slug, by="xinci-scan", reason="竞品下线导致 G3 事实变化",
+        R.reopen(self.root, slug, by="xinci-track", reason="竞品下线导致 G3 事实变化",
                  evidence=[new_ref])
         rec = self.load(slug)
         self.assertEqual(rec["state"], "captured")
@@ -692,13 +697,13 @@ class RegistrarTest(unittest.TestCase):
                      gates={"G2": "veto", "G3": "veto"}, reason="SERP 与商业路径均不成立",
                      evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json",
                                            gates={"G2": "veto", "G3": "veto"})])
-        stale = mk_evidence(self.root, slug, "2020-01-01-scan.json",
+        stale = mk_evidence(self.root, slug, "2020-01-01-track.json",
                             gates={"G2": "pass", "G3": "pass"})
         with self.refused(slug):
-            R.reopen(self.root, slug, by="xinci-scan", reason="使用旧截图", evidence=[stale])
-        partial = mk_evidence(self.root, slug, "2026-09-21-scan.json", gates={"G2": "pass"})
+            R.reopen(self.root, slug, by="xinci-track", reason="使用旧截图", evidence=[stale])
+        partial = mk_evidence(self.root, slug, "2026-09-21-track.json", gates={"G2": "pass"})
         with self.refused(slug):
-            R.reopen(self.root, slug, by="xinci-scan", reason="只翻转一道门", evidence=[partial])
+            R.reopen(self.root, slug, by="xinci-track", reason="只翻转一道门", evidence=[partial])
 
     def test_structural_rejection_cannot_reopen(self):
         slug = self.register()
@@ -706,9 +711,40 @@ class RegistrarTest(unittest.TestCase):
                      gates={"G4": "veto"}, reason="任务需要持照人员到场",
                      evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json",
                                            gates={"G4": "veto"})])
-        new_ref = mk_evidence(self.root, slug, "2026-09-20-scan.json")
+        new_ref = mk_evidence(self.root, slug, "2026-09-20-track.json")
         with self.refused(slug):
-            R.reopen(self.root, slug, by="xinci-scan", reason="想重开", evidence=[new_ref])
+            R.reopen(self.root, slug, by="xinci-track", reason="想重开", evidence=[new_ref])
+
+    def test_reopen_enforces_stage_owner_and_lane_boundary(self):
+        new_slug = self.register("new-reopen-owner")
+        R.transition(self.root, new_slug, to="rejected", by="xinci-scan",
+                     gates={"G3": "veto"}, reason="原任务已被免费工具完成",
+                     evidence=[mk_evidence(self.root, new_slug, "2026-08-18-scan.json",
+                                           gates={"G3": "veto"})])
+        new_ref = mk_evidence(self.root, new_slug, "2026-09-20-track.json",
+                              gates={"G3": "pass"})
+        with self.refused(new_slug):
+            R.reopen(self.root, new_slug, by="xinci-scan", reason="阶段越权", evidence=[new_ref])
+
+        mature_slug = "mature-reopen-owner"
+        R.register(self.root, slug=mature_slug, term="mature reopen owner",
+                   source_url="https://e.com/t", task="t", evidence=[mk_evidence(
+                       self.root, mature_slug, "2026-08-17-scan.json")],
+                   lane="mature", by="xinci-mature")
+        R.transition(self.root, mature_slug, to="rejected", by="xinci-mature",
+                     gates={"G3": "veto"}, reason="已有成熟同任务工具",
+                     evidence=[mk_evidence(self.root, mature_slug, "2026-08-18-scan.json",
+                                           gates={"G3": "veto"})])
+        mature_ref = mk_evidence(self.root, mature_slug, "2026-09-20-track.json",
+                                 gates={"G3": "pass"})
+        with self.refused(mature_slug):
+            R.reopen(self.root, mature_slug, by="xinci-track", reason="跨 lane", evidence=[mature_ref])
+
+        session = RC.start(self.root)
+        RC.begin_round(self.root, session["run_id"])
+        with self.refused(mature_slug):
+            R.reopen(self.root, mature_slug, by="xinci-run", run_id=session["run_id"],
+                     reason="连续运行不得推进 mature 前半程", evidence=[mature_ref])
 
     def test_superseded_requires_existing_slug(self):
         slug = self.register()

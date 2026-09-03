@@ -95,6 +95,26 @@ class ScreenIndexTest(unittest.TestCase):
         report = S.stats(self.root)
         self.assertEqual(list(report["patterns"].values()), [2])
 
+    def test_prescreen_reason_is_not_recorded_as_a_gate(self):
+        self.seed_index({
+            "date": "2026-09-03", "term": "regulated health dosage calculator",
+            "stage": "prescreen", "reason_code": "ymyl_high_competition",
+            "reason": "题目影响健康，按 mature 前置排除", "lane": "mature",
+        })
+        row = S.load(self.root, strict=True)[0]
+        self.assertEqual(row["stage"], "prescreen")
+        self.assertEqual(row["reason_code"], "ymyl_high_competition")
+        self.assertEqual(row["gate"], "")
+
+    def test_prescreen_cannot_masquerade_as_g3(self):
+        with self.assertRaises(S.ScreenIndexError):
+            self.seed_index({
+                "date": "2026-09-03", "term": "regulated legal rights checker",
+                "stage": "prescreen", "reason_code": "ymyl_high_competition",
+                "gate": "G3", "reason": "不应伪装成 exact-task completion",
+                "lane": "mature",
+            })
+
     def test_probable_resolution_closes_review_loop(self):
         known = "Qwen 3.8 27B vram quantization"
         term = "qwen 3.8 27b vram requirements"

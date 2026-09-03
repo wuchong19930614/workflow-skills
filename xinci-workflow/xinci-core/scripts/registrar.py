@@ -138,13 +138,12 @@ def _check_actor(data_root: Path, by: str, run_id=None) -> None:
 
 
 def _open_ledger(data_root: Path, slug: str, by: str, run_id=None, *,
-                 new_lane=None, lane_boundary=True):
+                 new_lane=None):
     """五个写入口共同的开场四件套(须在 _locked 内调用):
     验执行身份 → 读账本 → 定位候选 → 验 lane 边界。返回 (ledger, rec)。
 
     new_lane 给出时是注册语义:候选必须尚不存在,lane 边界按 (by, new_lane, "captured") 验,
-    rec 返回 None。lane_boundary=False 只给 reopen 用——它原本就没有这道检查
-    (reopen 只受理 rejected,不在 xinci-run 的 mature 前半程范围内),这里不替它新增拒绝路径。"""
+    rec 返回 None。"""
     _check_actor(data_root, by, run_id)
     ledger = _load(data_root)
     if new_lane is not None:
@@ -153,8 +152,7 @@ def _open_ledger(data_root: Path, slug: str, by: str, run_id=None, *,
         return ledger, None
     _require(slug in ledger["candidates"], f"候选不存在: {slug}")
     rec = ledger["candidates"][slug]
-    if lane_boundary:
-        _check_run_lane_boundary(by, rec.get("lane", "new"), rec["state"])
+    _check_run_lane_boundary(by, rec.get("lane", "new"), rec["state"])
     return ledger, rec
 
 
@@ -172,6 +170,9 @@ def _check_run_lane_boundary(by: str, lane: str, state: str) -> None:
     _require(not (by == "xinci-mature" and lane != "mature"),
              f"xinci-mature 只承接 lane=mature(当前 lane={lane!r});"
              "new 道的发现与前半程用 xinci-scan")
+    _require(not (by in {"xinci-scan", "xinci-track"} and lane != "new"),
+             f"{by} 只承接 lane=new(当前 lane={lane!r});"
+             "mature 道在 formation_confirmed 前由 xinci-mature 承接")
 
 
 def _run_history_fields(data_root: Path, run_id):
@@ -1097,8 +1098,16 @@ def reopen(data_root, slug, by, reason, evidence, run_id=None):
     data_root = Path(data_root)
     _require(bool(reason), "reopen 要求 reason(什么事实发生了变化)")
     with _locked(data_root):
-        ledger, rec = _open_ledger(data_root, slug, by, run_id, lane_boundary=False)
+        # reopen 的来源态是 rejected，但目标态是 captured；lane 授权必须按目标态校验，
+        # 否则 xinci-run 会绕过 mature 前半程边界，阶段 skill 也能跨 lane 重开。
+        ledger, rec = _open_ledger(data_root, slug, by, run_id)
         _require(rec["state"] == "rejected", "reopen 只受理 rejected 候选")
+        lane = rec.get("lane", "new")
+        _check_run_lane_boundary(by, lane, "captured")
+        allowed = ({"xinci-track", "xinci-run", "user"} if lane == "new"
+                   else {"xinci-mature", "user"})
+        _require(by in allowed,
+                 f"lane={lane} 的受控重开只允许 {sorted(allowed)},当前 by={by!r}")
         vetoes = {g for g, v in (rec.get("gates") or {}).items() if v == "veto"}
         _require(vetoes and vetoes <= {"G1", "G2", "G3"},
                  "只有 G1/G2/G3 的可逆 SERP 型否决可重开;G0/G4/G5 结构性否决保持终态")

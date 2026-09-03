@@ -49,7 +49,7 @@ python3 xinci-workflow/xinci-core/scripts/screen_index.py resolve \
 printf '%s\n' "词|G0|违反 ToS" "词|G4|需要到场" "词|G6|六线全灭" "词|G7|官方答案在途|<pattern>" ... \
   | python3 xinci-workflow/xinci-core/scripts/screen_index.py append --date <YYYY-MM-DD>
 ```
-- 第 4 个字段标 `pattern`;认出新模式即按陷阱类别.md 归并建类(归并记录写法见生命周期契约「归并纪律」)。`screen_index.py stats` 只统计索引一侧,账本一侧的模式名靠运行清单 notes 累计。
+- 第 4 个字段标 `pattern`;认出新模式时按生命周期契约「归并纪律」形成新增类别提案,附实际观察并等待用户确认,不得把一次观察静默升级成通用判据。确认后的归并记录写法见同节。`screen_index.py stats` 只统计索引一侧,账本一侧的模式名靠运行清单 notes 累计。
 - 已在账本的排队候选补跑时才判出六线全灭,走 `captured→rejected`(生命周期契约 rejected 边第⑦种),不进索引。
 - 预期本层砍掉 85%,剩 30–50 条进 G1。`rejected_zero_cost` 的语义是"第 2 层筛除",不等于"从未打开浏览器":验证型 G3 判 `veto` 的方向计入本格(类别级死因走索引,不注册)。
 - 验证判 `pass` 的方向存活,按排队位注册(带 gates 含 G3 结论 + expiry,见第 4 层),本轮继续补 G1/G2。funnel 按本轮走到的层记:补 G1 被否 → `captured→rejected`,记 `deep_audited`;走完 G2 → `deep_audited`;没排上 → `queued`;下轮再审属存量 `carryover_audited`。

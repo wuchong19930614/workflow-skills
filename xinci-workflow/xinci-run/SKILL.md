@@ -12,10 +12,11 @@ description: '新词工作流的一体入口与连续运行驱动器。当消息
 - 预算参数:`max_rounds=N`、`max_hours=H`。`max_rounds` 未给时默认 6(只给 `max_hours` 也如此);两项并存谁先命中就走收尾 D。没有"轮次无限"档,主要按时长跑须同时给足够大的 `max_rounds`。
 - 启动即标准授权(见通用约定「运行模式与 `--by`」)。判断标准全部来自阶段 SKILL.md 与 xinci-core 契约,不因连续模式降低任何闸门或分数线。
 
-## 执行架构:子代理化(有 Agent 机制时必用)
-- 每个阶段动作(一次扫描轮、一个候选的复查/认定/决策)派一个子代理:读阶段 SKILL.md 与契约、操作浏览器、写观察文件、以 `--by xinci-run --run-id <run_id>` 调 registrar、当场批量 `screen_index.py append`。
-- 子代理只回传结构化结论:触及候选、执行的转移、来源与计费调用数、漏斗五项、疑似归并的模式名;秒弃与 G1 否决不回传;去重疑似项当场 `screen_index.py resolve`,不留口头裁决。
-- 主上下文只编排:维护轮次、汇集结论、`record-round`、判断终止;淘汰方向索引不经主上下文,只在归并出新陷阱类别时补一行归并记录(term 写模式名)。子代理顺序执行不并发;无子代理机制时主上下文直接执行,其余规则不变。
+## 执行架构:一轮一个执行者(有 Agent 机制时用轮次子代理)
+- 每一轮只派一个轮次子代理。它以稳定 `executor_id` 亲自执行 `begin-round`,并在该轮内完成与 `round_type` 相符的全部阶段动作:读所需阶段 SKILL.md 与契约、操作浏览器、写观察文件、以 `--by xinci-run --run-id <run_id>` 调 registrar、当场批量 `screen_index.py append`。
+- 同一轮不得按阶段更换子代理,也不得在尚未 `record-round` 时再次执行 `begin-round`。确需换执行者时,先依据已经完成的事实收尾当前轮,再由新执行者开始下一轮;不得借用前一执行者的浏览器预检。
+- 轮次子代理只回传结构化结论:触及候选、执行的转移、来源与计费调用数、漏斗五项、疑似归并的模式名;秒弃与 G1 否决不回传;去重疑似项当场 `screen_index.py resolve`,不留口头裁决。
+- 主上下文只编排:选择轮型、汇集结论、`record-round`、判断终止。新陷阱类别属于契约变更,不在启动 xinci-run 的标准授权内;只把提案与本轮证据写入 notes,等待用户确认后再改契约。无子代理机制时主上下文作为该轮唯一执行者,其余规则不变。
 
 ## 运行循环
 **0. 会话恢复与开轮**
@@ -28,7 +29,7 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round --run-id
 python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id>
 python3 xinci-workflow/xinci-core/scripts/report_status.py
 ```
-- `executor_id` 是本轮实际执行者的稳定 ID;四个 `--browser-*` 项由该执行者亲自核对本轮浏览器状态,不得借用父任务、上一轮或其他子代理的状态;执行者或浏览器状态改变后重开轮。派子代理执行某阶段时,由该子代理自己调 `begin-round` 提交它亲自核对的四项。
+- `executor_id` 是本轮唯一实际执行者的稳定 ID;四个 `--browser-*` 项由该执行者亲自核对本轮浏览器状态,不得借用父任务、上一轮或其他子代理的状态。执行者或浏览器状态改变时,收尾当前轮后由新执行者开下一轮;控制器不允许在未收尾的同一轮重跑 `begin-round`。
 - `begin-round` 的回显直接给出本轮预检判定(满足 G1 前置 / 不满足并点名缺哪几项 / 本轮未提交),不必跑 `run_policy` 才知道。
 - 轮型:发现新方向 discovery;清理/推进存量 progression;专门复查追踪池 tracking;误杀回测 calibration。只推进存量的轮不得写 discovery。
 - 每累计 10 个 discovery 轮,控制器强制下一次发现前先完成 calibration 轮:先跑 `false_negative_sample.py`,按 G6=10、G7=10、G5=5、G1=5、G3=5 分层复核,结果经 `record-round --false-negative-audit` 提交。
@@ -44,6 +45,7 @@ python3 xinci-workflow/xinci-core/scripts/report_status.py
 - screened → expiry 已过以 `--expiry-trigger date` 转 expired;未过且 `window_estimate=days` 走 xinci-decide 快道;weeks/months 按 xinci-scan 分流要求转 tracking。带 `G3=veto_window_bet` 的只准快道,不得进 tracking。
 - tracking → xinci-track 复查:达标转 formation_confirmed;expiry 过用 `date`、失效条件命中用 `invalidation` 转 expired;G0/G1 翻转转 rejected。单次运行内每个候选至多复查一次。`tracking_schedule.py` 的 3/7/14 天提示只读,不自动执行或转移。
 - fast_grab_ready → expiry 过用 `date`、窗口已关闭用 `window_closed` 转 expired。
+- new 道 rejected 且 `recheck_after` 已到:只复核最近拒绝中的 G1/G2/G3 veto;新现场观察逐门翻转后可由 xinci-run 执行 `reopen`,回到 captured 再走完整初筛。mature rejected 只在 notes 记“待用户单步调用 xinci-mature”,不得借 reopen 绕过 mature 前半程边界。
 - new 道 captured(排队债;必须在任何新 admission 前还,次数记 `funnel.carryover_audited`,配额见步骤 0):先核对已有 observation,已支撑缺失门的直接在出闸时提交结论;
   否则按 `G0→G4→G5→G6/G7 预筛→G1→G2→G3` 只跑缺失的门,缺 G1 的先补 G1,环境不合规只记观察、不写 G1、不转移;出闸交齐 G0/G1/G2/G4/G5=pass 与有效 G3。
   排队 expiry 已过即以 `date` 转 expired,不占配额。带 `G3=veto_window_bet` 挂起的不再补门、不占配额,取得确认后由同一 run_id 出闸;其 expiry 过了照常转 expired。子代理执行步骤 2 时不重跑 xinci-scan 的开局接队。

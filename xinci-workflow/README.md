@@ -93,8 +93,8 @@ rejected            fast_grab_ready              rejected           qualified / 
 | 一口气跑到出结果 | xinci-run(暗号 `xinci_run`) |
 | 看账本现在什么情况 | xinci-status |
 | 扫一轮新方向 | xinci-scan |
-| 复查追踪清单 | xinci-track |
-| 扫一轮成熟错价词 | xinci-mature |
+| 复查 new 追踪清单或到期 SERP 型拒绝 | xinci-track |
+| 扫成熟错价词、复查 mature 前半程或到期 SERP 型拒绝 | xinci-mature |
 | 给候选做认定评分 | xinci-qualify |
 | 出建站 go/no-go 决策 | xinci-decide |
 

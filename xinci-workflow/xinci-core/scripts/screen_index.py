@@ -9,6 +9,8 @@
 存储:<数据区>/淘汰方向.jsonl,每行一条:
   {"date": "2026-08-18", "term": "...", "gate": "G0", "reason": "...",
    "pattern": "可选,结构性模式名(归并统计用)"}
+不属于 G0–G8 的前置排除不伪装成闸门结论:省略 gate,改写
+  {"stage": "prescreen", "reason_code": "稳定机器码", ...}
 
 命令:
   check   从 stdin 逐行读待查方向,报告哪些见过(附原因)、哪些是新的
@@ -454,6 +456,16 @@ def append(data_root, records) -> int:
                        # mature 道死于"量级不够"或"防守太强",不是同一件事)。
                        # 历史 1502 行全部产自新词道,缺字段即视为 new,语义不变。
                        "lane": rec.get("lane") or "new"}
+                if rec.get("stage") == "prescreen":
+                    reason_code = str(rec.get("reason_code") or "").strip()
+                    if not reason_code:
+                        raise ScreenIndexError(
+                            f"前置排除 {term!r} 要求非空 reason_code")
+                    if row["gate"]:
+                        raise ScreenIndexError(
+                            f"前置排除 {term!r} 不得同时伪装成 G0–G8 闸门结论")
+                    row["stage"] = "prescreen"
+                    row["reason_code"] = reason_code
                 if rec.get("pattern"):
                     row["pattern"] = canonical_pattern(rec["pattern"])
                     row["pattern_id"] = pattern_id(rec["pattern"])
@@ -564,6 +576,11 @@ def validate_index(data_root) -> list:
             errors.append(f"{INDEX_NAME} 第 {i} 行 {row['term']!r} 缺合法 date 且无追加式修订")
         if row.get("pattern_id") and row["pattern_id"] != pattern_id(row.get("pattern")):
             errors.append(f"{INDEX_NAME} 第 {i} 行 pattern_id 与规范模式不一致")
+        if row.get("stage") == "prescreen":
+            if row.get("gate"):
+                errors.append(f"{INDEX_NAME} 第 {i} 行前置排除不得同时填写 gate")
+            if not row.get("reason_code"):
+                errors.append(f"{INDEX_NAME} 第 {i} 行前置排除缺 reason_code")
         if (row.get("gate") == "G1" and row.get("gate_version") == GATE_VERSION
                 and not _valid_atomic_counterfactual(row.get("cluster_counterfactual"))):
             errors.append(f"{INDEX_NAME} 第 {i} 行当前 G1 否决缺 atomic_only cluster_counterfactual")

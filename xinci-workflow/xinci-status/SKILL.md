@@ -15,7 +15,7 @@ description: '新词工作流状态看板,只读汇报候选账本的全局事�
 ```bash
 python3 xinci-workflow/xinci-core/scripts/report_status.py
 ```
-2. 如实转述输出:各状态候选数;每个候选的年龄、距上次复查天数、expiry 余量;"expiry 已过且非终态"清单;可逆 G1/G2/G3 否决已到 `recheck_after` 的清单。先总数,后明细,异常置底单列。
+2. 如实转述输出:各状态候选数;每个候选的年龄、距上次复查天数、expiry 余量;"expiry 已过且非终态"清单;可逆 G1/G2/G3 否决已到 `recheck_after` 的清单。先总数,后明细,异常置底单列。用户决定复核时,new 交 xinci-track,mature 交 xinci-mature;本 skill 不执行 reopen。
    - 只陈述事实("candidate-x 距上次复查 12 天,expiry 还剩 5 天"),不加"建议尽快复查"之类的驱动性措辞;复查与否、何时复查是用户的决定。
    - expiry 已过的候选照实列出,等用户处置,不代替用户提议 expired;到期不会自动重开。处置归属见通用约定「四条 expired 边的提议人」。
 3. 用户要求或输出异常时,补账本与运行清单完整性检查:

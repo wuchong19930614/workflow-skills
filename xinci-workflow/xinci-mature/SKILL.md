@@ -1,6 +1,6 @@
 ---
 name: xinci-mature
-description: '成熟错价词道(lane=mature)的发现与前半程推进。当用户说跑一轮成熟词、找错价词、走广告线、mature 道时使用。English triggers: mature lane, mispriced keywords, ad-line scan. 新词道用 xinci-scan;确认期评分用 xinci-qualify,建站决策用 xinci-decide。'
+description: '成熟错价词道(lane=mature)的发现与前半程推进。当用户说跑一轮成熟词、找错价词、走广告线、mature 道，或复核到期的 mature rejected 候选时使用。English triggers: mature lane, mispriced keywords, ad-line scan. 新词道用 xinci-scan;确认期评分用 xinci-qualify,建站决策用 xinci-decide。'
 ---
 
 # xinci-mature 成熟错价词道
@@ -9,6 +9,8 @@ description: '成熟错价词道(lane=mature)的发现与前半程推进。当�
 
 找的不是新词,是老词里被守得很弱的那一格:量级真实存在,而占位者只有散文、老化内容或错配格式。这条线至今 0 正例(口径见数据采集指南「本节的诚实状态」),第一目标是可执行、可累积样本;报告时不得把"跑通了流程"说成"这条线成立",也不得因想要正例放宽判据。
 本 skill 是单步形态:registrar 命令一律 `--by xinci-mature`,每次转移都要用户确认;registrar 硬校验 `lane=mature`(归属见通用约定「lane 边界」)。
+
+若输入是 `lane=mature,state=rejected` 且 `recheck_after` 已到,不进入下面的发现漏斗:按 xinci-track 的受控重开流程复查原 G1/G2/G3 veto,取得更晚的新现场观察并逐门翻转后先向用户提议;确认后执行 `registrar.py reopen --by xinci-mature`,回到 captured 再走完整初筛。结构性 G0/G4/G5 否决不可重开。
 
 ## 与新词道的三处硬差别
 | | `lane=new`(xinci-scan) | `lane=mature`(本 skill) |
@@ -31,12 +33,12 @@ description: '成熟错价词道(lane=mature)的发现与前半程推进。当�
 
 ### 第 2 层:零成本批筛 + 两个前置反向排除
 G0 / G4 / G5 同 xinci-scan 第 2 层。再跑本道可在 SERP 前判断的两个反向排除(判据见数据采集指南「反向排除」),命中即弃:
-- YMYL 高竞争垂类:按类别定义(影响健康、财务、安全或法律权利),不按例子清单。它不是陷阱类别.md 的正式类别,gate 记 `G3`,`pattern` 固定写 `YMYL 高竞争垂类`;
+- YMYL 高竞争垂类:按类别定义(影响健康、财务、安全或法律权利),不按例子清单。它不是 G0–G8 闸门结论,不得伪装成 G3;索引写 `stage=prescreen`,`reason_code=ymyl_high_competition`,`pattern` 固定写 `YMYL 高竞争垂类`;
 - 横向对比与迁移:陷阱类别七,gate 记 `G5`。
 本道写索引一律用 JSON 行并带 `"lane":"mature"`(竖线格式写不了 lane,缺省视为 new;第 5、6 层的否决行同样带):
 ```bash
 printf '%s\n' \
-  '{"term":"<词>","gate":"G3","reason":"[YMYL] 题目影响法律权利,高竞争垂类","pattern":"YMYL 高竞争垂类","lane":"mature"}' \
+  '{"term":"<词>","stage":"prescreen","reason_code":"ymyl_high_competition","reason":"[YMYL] 题目影响法律权利,高竞争垂类","pattern":"YMYL 高竞争垂类","lane":"mature"}' \
   '{"term":"<词>","gate":"G5","reason":"[横向对比与迁移] 对象全集已有维护者","lane":"mature"}' ... \
   | python3 xinci-workflow/xinci-core/scripts/screen_index.py append --date <YYYY-MM-DD>
 ```
