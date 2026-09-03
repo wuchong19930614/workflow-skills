@@ -11,7 +11,7 @@ description: '扫描发现新兴/全新的英文 Google 搜索词候选:真浏�
 
 > **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-scan/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
 >
-> **`--by` 约定**:下面所有 registrar 命令模板写的是**单步形态**(`--by xinci-scan`)。**在 xinci-run 连续运行下(含被它派出的子代理)一律改成 `--by xinci-run` 再执行,照抄模板是错的**;`register` 的 `--by` 有默认值 `xinci-scan`,连续运行下必须显式传。取值规则与它为什么要紧,见生命周期契约「registrar 用法」的 `--by` 取值节。
+> **`--by` 约定**:下面所有 registrar 命令模板写的是**单步形态**(`--by xinci-scan`)。**在 xinci-run 连续运行下(含被它派出的子代理)一律改成 `--by xinci-run`，并同时追加 `--run-id <活动会话>`；只替换 `--by` 或照抄单步模板都是错的**。`register` 的 `--by` 有默认值 `xinci-scan`,连续运行下必须显式传。取值规则与它为什么要紧,见生命周期契约「registrar 用法」的 `--by` 取值节。
 
 ## 第 0 步:确认数据区(强制,先于一切写操作)
 

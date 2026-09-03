@@ -113,6 +113,13 @@ class RunPolicyTest(unittest.TestCase):
         self.assertFalse(policy["formal_admission"])
         self.assertEqual(policy["carryover_quota"], 10)
 
+    def test_missing_g1_environment_takes_priority_over_hard_backlog(self):
+        self.seed_backlog(21)
+        policy = RP.evaluate(self.root, self.run["run_id"])
+        self.assertEqual(policy["mode"], "trigger_only")
+        self.assertFalse(policy["g1_ready"])
+        self.assertEqual(policy["new_captured_backlog"], 21)
+
     def test_queued_registration_is_not_decision_progress(self):
         self.ready()
         d = self.root / "账本"; d.mkdir(parents=True, exist_ok=True)

@@ -1,9 +1,9 @@
 {
-  "schema_version": 1,
-  "aliases": {
-    "厂商 release note 衍生任务": "厂商 release note / changelog 衍生任务",
-    "厂商 changelog 衍生任务": "厂商 release note / changelog 衍生任务",
-    "受约束主体无官方计数口径": "受约束主体范围过广无官方计数",
-    "落进既有软件类目默认功能": "既有软件类目默认功能"
-  }
+ "schema_version": 1,
+ "aliases": {
+  "厂商 release note 衍生任务": "厂商 release note / changelog 衍生任务",
+  "厂商 changelog 衍生任务": "厂商 release note / changelog 衍生任务",
+  "受约束主体无官方计数口径": "受约束主体范围过广无官方计数",
+  "落进既有软件类目默认功能": "既有软件类目默认功能"
+ }
 }

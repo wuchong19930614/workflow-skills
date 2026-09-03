@@ -13,12 +13,31 @@ def _code_blocks(path):
 
 
 class DocumentationContractsTest(unittest.TestCase):
+    def test_candidate_history_accepts_all_current_g6_lines(self):
+        schema = json.loads((ROOT / "xinci-core" / "数据结构" /
+                             "candidate.schema.json").read_text(encoding="utf-8"))
+        top = schema["properties"]["g6_passed_lines"]["items"]["enum"]
+        history = (schema["properties"]["history"]["items"]["properties"]
+                   ["g6_passed_lines"]["items"]["enum"])
+        self.assertEqual(set(history), set(top))
+
     def test_xinci_run_begin_round_examples_declare_round_type(self):
         path = ROOT / "xinci-run" / "SKILL.md"
         blocks = [b for b in _code_blocks(path) if "run_controller.py begin-round" in b]
         self.assertTrue(blocks)
         for block in blocks:
             self.assertIn("--round-type", block)
+
+    def test_continuous_stage_instructions_require_actor_and_run_id(self):
+        for relative in ("xinci-scan/SKILL.md", "xinci-track/SKILL.md",
+                         "xinci-qualify/SKILL.md", "xinci-decide/SKILL.md"):
+            text = (ROOT / relative).read_text(encoding="utf-8")
+            self.assertIn("--by xinci-run", text, relative)
+            self.assertIn("--run-id <活动会话>", text, relative)
+        run = (ROOT / "xinci-run" / "SKILL.md").read_text(encoding="utf-8")
+        amend = next(line for line in run.splitlines()
+                     if "registrar.py amend --slug" in line)
+        self.assertIn("--run-id <run_id>", amend)
 
     def test_xinci_run_record_round_example_reconciles_source_outcomes(self):
         path = ROOT / "xinci-run" / "SKILL.md"
@@ -53,6 +72,26 @@ class DocumentationContractsTest(unittest.TestCase):
         self.assertNotIn("订阅线为 `tentative_veto` 时已无可用盈利线", text)
         self.assertNotIn("订阅线 `tentative_veto` 时没有可用盈利线", text)
         self.assertIn("只有所有适用线均暂定否决才按 G6 预筛出局", text)
+
+    def test_tracking_separates_g3_veto_from_g6_all_lines_veto(self):
+        text = (ROOT / "xinci-track" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("G3 占位否决", text)
+        self.assertIn("G6 无适用盈利线", text)
+        self.assertIn("决定性失败是 G3", text)
+
+    def test_official_count_never_vetoes_the_whole_candidate_by_itself(self):
+        gate = (ROOT / "xinci-core" / "闸门契约.md").read_text(encoding="utf-8")
+        guide = (ROOT / "xinci-core" / "数据采集指南.md").read_text(encoding="utf-8")
+        self.assertNotIn("答否即弃", gate)
+        self.assertNotIn("按原规定零成本秒弃", gate)
+        self.assertIn("不单独弃掉整候选", gate)
+        self.assertIn("不越权否决整候选", guide)
+
+    def test_admission_mode_priority_is_explicit(self):
+        lifecycle = (ROOT / "xinci-core" / "生命周期契约.md").read_text(encoding="utf-8")
+        run = (ROOT / "xinci-run" / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("无 G1 环境”与“积压 >20”同时发生时以 `trigger_only` 为准", lifecycle)
+        self.assertIn("即使同时积压 >20 也不改成 `debt_only`", run)
 
     def test_g3_current_contract_names_traffic_and_nontraffic_lines(self):
         text = (ROOT / "xinci-core" / "闸门契约.md").read_text(encoding="utf-8")

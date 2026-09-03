@@ -62,6 +62,10 @@ class ValidateLedgerTest(unittest.TestCase):
                      evidence=[mk_evidence(self.root, slug, "2026-09-10-qualify.json",
                                            gates=dict(GATES_678),
                                            g6_lines={"subscription": "pass",
+                                                     "lead_generation": "N/A",
+                                                     "affiliate": "N/A",
+                                                     "transaction": "N/A",
+                                                     "paid_report": "N/A",
                                                      "advertising": "N/A"},
                                            income_score=12)])
         if until == "qualified":

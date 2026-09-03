@@ -323,6 +323,10 @@
               "type": "string",
               "enum": [
                 "subscription",
+                "lead_generation",
+                "affiliate",
+                "transaction",
+                "paid_report",
                 "advertising"
               ]
             },

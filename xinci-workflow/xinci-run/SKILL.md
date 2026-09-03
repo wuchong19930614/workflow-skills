@@ -89,7 +89,7 @@ python3 xinci-workflow/xinci-core/scripts/init_workspace.py --data-root <用户�
      这是上轮欠的债,**必须在任何新候选 admission 前还**。还债配额由 `run_policy.py` 返回:正常至多 5，硬积压模式至多 10。次数记进 `funnel.carryover_audited`。
      **存量 captured 的消化归本步骤**:派子代理执行步骤 2 的扫描时,子代理从 xinci-scan 第 1 层开始,不再重跑它的第 0 层接队——两处都做会重复深审、双花配额。
    - **到期清理(`screened` / `fast_grab_ready`)**:`screened` 候选 expiry 已过(既没排上快道、也没转进追踪,窗口自己过了)→ 以 `--expiry-trigger date` **即转** `screened→expired`;`fast_grab_ready` 候选 expiry 已过时用 `date`、窗口已关闭(通用工具已收录该对象、赌注前提消失)时用 `window_closed` → **即转** `fast_grab_ready→expired`。两条都由标准授权直接转,不必回头问用户,也不占深审配额;它们没有失败的闸门,**不许塞进 `rejected`**。单步模式下这两条归 xinci-decide 提议(前者是它快道模式的输入、后者是它的产出),四条 expired 边的提议人见生命周期契约。
-   - **积压硬闸**:`lane=new,state=captured` >20 时策略必须为 `debt_only`，本轮正式提取目标为 0；不再以“最低档”继续制造新债。浏览器不满足 G1 时为 `trigger_only`，同样不得把官方标题或缺 G1 项注册进账本。
+   - **积压硬闸**:在 G1 环境合规的前提下，`lane=new,state=captured` >20 时策略必须为 `debt_only`，本轮正式提取目标为 0；不再以“最低档”继续制造新债。浏览器不满足 G1 时优先进入 `trigger_only`（trigger pending 已达 200 时为 `paused`），即使同时积压 >20 也不改成 `debt_only`；无合规 G1 环境时不得把官方标题或缺 G1 项注册进账本。
 2. **扫描触发与新候选**:先把有日期的法规/平台/技术变化作为原始 trigger 写入 `trigger_pool.py add`，不得把官方公告标题直接当搜索词。每批新 trigger 另建 `--stage trigger` 检查点，逐条标成 `trigger_discarded / trigger_pending / trigger_approved` 后 finish。只有补齐 task query、至少一个独立搜索语言证据 URL，以及 payer/repeat_unit/self_serve_path/base_case_source 后，才能 `approve`。批准只表示可进入 G0。正式注册时，信号面候选传 `--origin signal`；变化面候选传 `--origin trigger --trigger-id <approved id>`，registrar 会核对 term 与批准 query 一致。`mode=full` 才执行；`trigger_only` 只维护触发池；`debt_only` 跳过本步。单一 source_family 不得连续主导超过 2 轮；本 run 累计新增 trigger 达到 5 条后，任何 family 占比超过 40% 就轮换来源。5 条以前不启用占比规则，连续主导规则仍照常生效。
    `run_policy.py` 的 `blocked_source_families` 是本轮禁用清单；命中 40% 占比或已经连续主导两轮的来源只暂停该 family,`trigger_harvest=true` 时仍须换用其他来源继续采集。`trigger_pool.py add` 会拒绝继续写入被禁用的 family,不能靠忽略提示绕过。
 3. **分流**(步骤 1 还债深审出的候选与步骤 2 扫描出的候选**一并分流**,别只分流新扫的):**先出闸 `captured → screened`**(带 G2/G3 结论与 `--window-estimate`,这一步不能跳——tracking 与快道都只从 screened 出发,直接 `--to tracking` 会被 registrar 判非法转移;命令见 xinci-scan 第 5 层),再按窗口分流:窗口天级 → 立即走 xinci-decide 快道模式;窗口周/月级 → 转 tracking 入库。当前 new 扫描在任一非流量线暂定可行时不会新造 `G3=veto_window_bet`;账本中已合法存在的历史兼容候选仍按原出口留在 captured 挂起,用户确认后记录候选级一次性授权,再由同一 run_id 出闸(见硬规则)。然后继续循环。
@@ -130,7 +130,7 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round \
 - 不注册域名、不花钱、不发布——找到词就停,建站是用户的动作。
 - 标准授权只覆盖 registrar 转移与既定流程内的浏览/记录;不覆盖任何契约外的新动作。
 - **账本中历史兼容的 `G3=veto_window_bet` 候选,其出闸不在默认标准授权内**。候选留在 `captured` 挂起。用户读完证据并明确接受风险时,才执行 `run_controller.py confirm-window-bet --run-id <run_id> --slug <slug>`;确认记录一次性消费,未取得时 registrar 拒收出闸。不得转 `rejected` 或伪造单步 `--by`。
-  - **历史兼容候选的 gates 写法**:连续模式不从本轮 new 扫描新造这一档。账本中已合法存在的历史兼容排队候选,若补审时才形成该结论,用 `registrar.py amend --slug <slug> --by xinci-run --gates G3=veto_window_bet --evidence <本次观察> --reason "<降级依据>"` 补记。observation 必须有相同 gates、非空 source_urls 和结构化 window_bet。
+  - **历史兼容候选的 gates 写法**:连续模式不从本轮 new 扫描新造这一档。账本中已合法存在的历史兼容排队候选,若补审时才形成该结论,用 `registrar.py amend --slug <slug> --by xinci-run --run-id <run_id> --gates G3=veto_window_bet --evidence <本次观察> --reason "<降级依据>"` 补记。observation 必须有相同 gates、非空 source_urls 和结构化 window_bet。
   - **唯一的例外动作是过期**:挂着期间 expiry 过了,照常按标准授权以 `--expiry-trigger date` 转 `captured→expired`(见步骤 1 的到期清理)。它没有失败的闸门,过期不是 rejected;不收的话,闸门契约 G3 给它列的第四个出口在连续运行下就没有提议人。
 - Semrush 纪律仍为 decision-changing only;为触发终止条件而空烧额度是禁止的。
 - 快道决策书照常必含"跳过的闸门清单 + 风险披露与授权状态"章节。连续模式下普通 `G3=pass` 快道由启动命令的标准授权执行；运行停止后用户阅读决策书是在决定是否建站,**不得倒写成转移前已经逐条确认风险**。history 的 `by=xinci-run` 只表示该转移处于本次标准授权内。`G3=veto_window_bet` 不在标准授权内,仍须候选级一次性明确确认。

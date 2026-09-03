@@ -93,6 +93,8 @@ BUILD_PLAYS = {"single_domain", "cluster_expansion"}
 EXPIRY_TRIGGERS = {"date", "invalidation", "window_closed"}
 # 形成期以周计(生命周期契约):-track 观察最早与最新须相隔 ≥7 天,单次连续运行凑不出形成确认
 MIN_TRACK_SPAN_DAYS = 7
+# 自该日起新观察必须明示使用 schema v2；更早的 v1 历史证据继续只读兼容。
+OBS_V2_REQUIRED_FROM = date(2026, 9, 2)
 # 两条赛道(lane)。原 schema 已把 lane 预留为"本套固定为 new;为未来成熟词道预留"。
 # 2026-08-23 开放 mature:两条盈利线(订阅 / 广告)对量级的要求方向相反,
 # 广告线必须有真实搜索量才可能成立,而"查无"正是 new 道的定义属性——
@@ -276,6 +278,9 @@ def _check_observation(path: Path, ref: str, slug) -> None:
     except (TypeError, ValueError):
         raise RegistrarError(f"观察文件 observed_at 必须是 ISO 8601 时间: {ref}")
     _require(observed.tzinfo is not None, f"观察文件 observed_at 必须带时区: {ref}")
+    if observed.date() >= OBS_V2_REQUIRED_FROM:
+        _require(obs.get("schema_version") == 2,
+                 f"自 {OBS_V2_REQUIRED_FROM.isoformat()} 起的新观察必须明示写 schema_version=2: {ref}")
     _require(obs["stage"] in OBS_STAGES, f"观察文件 stage 必须属于 {sorted(OBS_STAGES)}: {ref}")
     _require(Path(ref).stem.endswith(f"-{obs['stage']}"),
              f"观察文件 stage={obs['stage']!r} 与文件名不一致(约定 <日期>-<阶段>.json): {ref}")

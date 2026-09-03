@@ -34,6 +34,8 @@ def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
         "stage": stage,
         "points": ["测试观察要点"],
     }
+    if "schema_version" not in overrides and date.fromisoformat(observed_at[:10]) >= R.OBS_V2_REQUIRED_FROM:
+        obs["schema_version"] = 2
     obs.update(overrides)
     if stage == "track":
         obs.setdefault("naming_status", "stabilized")
@@ -42,11 +44,15 @@ def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
             and "G3" in obs.get("gates", {})):
         if obs["gates"]["G3"] == "pass":
             obs["g6_tentative_lines"] = {
-                "subscription": "tentative_pass", "advertising": "N/A"}
+                "subscription": "tentative_pass", "lead_generation": "N/A",
+                "affiliate": "N/A", "transaction": "N/A", "paid_report": "N/A",
+                "advertising": "N/A"}
         else:
             # 状态机兼容 mature / 历史窗口赌注证据;不代表 new 扫描可新造该结论。
             obs["g6_tentative_lines"] = {
-                "subscription": "tentative_veto", "advertising": "tentative_pass"}
+                "subscription": "tentative_veto", "lead_generation": "N/A",
+                "affiliate": "N/A", "transaction": "N/A", "paid_report": "N/A",
+                "advertising": "tentative_pass"}
     if obs.get("gates"):
         obs.setdefault("source_urls", ["https://e.com/source"])
         if obs["gates"].get("G1") == "veto" and "cluster_counterfactual" not in overrides:
@@ -125,8 +131,10 @@ class RegistrarTest(unittest.TestCase):
                      gates={"G1": "pass"}, evidence=[ev])
 
     def to_qualified(self, slug):
+        six = {"subscription": "pass", "lead_generation": "N/A", "affiliate": "N/A",
+               "transaction": "N/A", "paid_report": "N/A", "advertising": "N/A"}
         ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678),
-                         g6_lines={"subscription": "pass", "advertising": "N/A"},
+                         g6_lines=six,
                          income_score=1)
         R.transition(self.root, slug, to="qualified", by="xinci-qualify",
                      score=80, income_score=1, g6_passed_lines=["subscription"],
@@ -159,6 +167,13 @@ class RegistrarTest(unittest.TestCase):
             R.transition(self.root, slug, to="qualified", by="xinci-qualify", score=82,
                          income_score=8, g6_passed_lines=["subscription"],
                          gates=dict(GATES_678), evidence=[ev])
+
+    def test_current_observation_cannot_claim_legacy_v1(self):
+        slug = "current-v1-refused"
+        ev = mk_evidence(self.root, slug, "2026-09-03-scan.json", schema_version=1)
+        with self.assertRaisesRegex(R.RegistrarError, "schema_version=2"):
+            R.register(self.root, slug=slug, term="current v1 refused",
+                       source_url="https://e.com/t", task="t", evidence=[ev])
 
     def load(self, slug):
         ledger = json.loads((self.root / "账本" / "候选账本.json").read_text(encoding="utf-8"))
@@ -454,8 +469,10 @@ class RegistrarTest(unittest.TestCase):
         self.to_screened(slug)
         self.to_tracking(slug)
         self.to_formation(slug)
+        six = {"subscription": "veto", "lead_generation": "N/A", "affiliate": "N/A",
+               "transaction": "N/A", "paid_report": "N/A", "advertising": "pass"}
         ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678),
-                         g6_lines={"subscription": "veto", "advertising": "pass"},
+                         g6_lines=six,
                          income_score=8)
         R.transition(self.root, slug, to="qualified", by="xinci-qualify",
                      score=82, income_score=8, g6_passed_lines=["advertising"],
@@ -479,8 +496,10 @@ class RegistrarTest(unittest.TestCase):
         self.to_screened(slug)
         self.to_tracking(slug)
         self.to_formation(slug)
+        six = {"subscription": "veto", "lead_generation": "N/A", "affiliate": "N/A",
+               "transaction": "N/A", "paid_report": "N/A", "advertising": "N/A"}
         ev = mk_evidence(self.root, slug, "2026-09-10-qualify.json", gates=dict(GATES_678),
-                         g6_lines={"subscription": "veto", "advertising": "N/A"},
+                         g6_lines=six,
                          income_score=2)
         with self.assertRaisesRegex(R.RegistrarError, "g6_lines"):
             R.transition(self.root, slug, to="qualified", by="xinci-qualify",
