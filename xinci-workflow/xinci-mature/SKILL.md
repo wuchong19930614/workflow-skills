@@ -7,7 +7,7 @@ description: '成熟错价词道(lane=mature)的发现与前半程推进:找量�
 
 找的不是新词,是**老词里被守得很弱的那一格**:量级真实存在,而占位者只有散文、老化内容或错配格式。量级证据使 advertising / affiliate 更容易审计，但本道仍须检查全部六条盈利线，不能预设只靠广告。
 
-**这条线至今没有一个正例(累计 0/4)。** 本 skill 的第一目标是让它可执行、可累积样本,不是假装它已经成立。每一轮都必须记命中率并据实修订判据——这是数据采集指南给本道立的规矩,不是客套。
+**这条线至今没有一个正例(种子口径 0/4;含探针的口径为 1/6 进入账本、那 1 个随后否决,见数据采集指南「本节的诚实状态」)。** 本 skill 的第一目标是让它可执行、可累积样本,不是假装它已经成立。每一轮都必须记命中率并据实修订判据——这是数据采集指南给本道立的规矩,不是客套。
 
 > **路径约定**:相对路径以仓库根为基准(正本在 `xinci-workflow/xinci-mature/SKILL.md`,symlink 加载时 `readlink` 后上溯两级即仓库根);bash 在仓库根执行,或展开为绝对路径。
 >
@@ -25,7 +25,7 @@ python3 xinci-workflow/xinci-core/scripts/report_status.py
 
 - xinci-workflow/xinci-core/数据采集指南.md 的「广告线的选源方法:成熟错价词道」全节——**本 skill 是它的执行载体,判据以它为准**
 - xinci-workflow/xinci-core/闸门契约.md 的 G6(尤其广告线算式与量级硬门)、G2、G3
-- xinci-workflow/xinci-core/陷阱类别.md(类别六、类别七与索引 pattern「成熟工具词」)
+- xinci-workflow/xinci-core/陷阱类别.md(类别六、类别七;本道另两条反向排除「成熟工具词」「YMYL 高竞争垂类」**不是**其正式类别,判据见数据采集指南「反向排除」)
 - xinci-workflow/xinci-core/生命周期契约.md
 
 ## 与新词道的三处硬差别(先记住,否则会照抄错判据)
@@ -73,10 +73,13 @@ printf '%s\n' "方向1" "方向2" ... | python3 xinci-workflow/xinci-core/script
 - **YMYL 高竞争垂类**:凡题目影响**健康、财务、安全或法律权利**的一律按 YMYL 处理。**按类别定义,不按例子清单**——原稿只列了健身/补剂/交易/健康,漏掉法律,首轮种子 A(`statute of limitations`)正栽在这里。
 - **横向对比与迁移**(陷阱类别七):`alternatives to X` / `X vs Y` 这类量级也真,但该对象类有自己的全集维护者——替代品目录站、分析机构榜单、社区 awesome 清单、竞品自建对比页。
 
-秒弃的每一条都要批量追加进淘汰索引,不逐条写:
+秒弃的每一条都要批量追加进淘汰索引,不逐条写。gate 栏的写法要分清:「横向对比与迁移」是陷阱类别七,记 `G5`;**「YMYL 高竞争垂类」不是陷阱类别.md 的正式类别**,它是本道的选源前置排除——死因是“这一格一定有人当生意经营、防守必强”,属 G3 占位判断的零成本预判,gate 记 `G3`,`pattern` 固定写 `YMYL 高竞争垂类`(累计样本够了再按陷阱类别.md 的追加规则决定是否建类,建类前不要写成 G5):
 
 ```bash
-printf '%s\n' "词|G5|[YMYL] 题目影响法律权利" "词|G5|[横向对比与迁移] 对象全集已有维护者" ... \
+# 本道一律用 JSON 行,因为要带 lane=mature(竖线格式写不了 lane,见第 8 层「淘汰索引的 lane 字段」)
+printf '%s\n' \
+  '{"term":"<词>","gate":"G3","reason":"[YMYL] 题目影响法律权利,高竞争垂类","pattern":"YMYL 高竞争垂类","lane":"mature"}' \
+  '{"term":"<词>","gate":"G5","reason":"[横向对比与迁移] 对象全集已有维护者","lane":"mature"}' ... \
   | python3 xinci-workflow/xinci-core/scripts/screen_index.py append --date <YYYY-MM-DD>
 ```
 
@@ -108,7 +111,7 @@ printf '%s\n' "词|G5|[YMYL] 题目影响法律权利" "词|G5|[横向对比与�
 
 示意量级:目标 $200/月、RPM $8、点击率 5% → 需求簇内月搜索量约 50 万;RPM $30 时约 13 万。
 
-其余五线也逐项判断：subscription、lead_generation、affiliate、transaction、paid_report。每条写付费者、付费事件/重复单位、交付物、保守单价与数量、收入算式、来源和最大反证；不适用才写 `N/A`。`repeat_paid_task` 答否只否决 subscription，不能连带杀死 lead generation / transaction / paid report。
+其余五线也逐项判断：subscription、lead_generation、affiliate、transaction、paid_report。每条写付费者、付费事件/重复单位、交付物、保守单价与数量、收入算式、来源和最大反证；不适用才写 `N/A`。`repeat_paid_task` 答否只否决 subscription，不能连带杀死 lead generation / transaction / paid report。闸门契约 G6「深审入口预检」的另两项也在本层一并做,不因赛道省略:`official_count_class`(受约束主体是不是官方会计数、且计数公开的类别)答否只否决依赖该总数的算式;`self_serve_legal_effect`(自助结论要不要第三方签字才算数)只否决声称替代签字的交付线,全部声称交付均依法无效时才是整候选否决。
 
 **任一适用线 pass 即 G6 pass。** 窗口期在 schema v2 observation 的 `g6_tentative_lines` 完整写六条 `tentative_pass|tentative_veto|N/A`；确认期才用正式 `g6_lines`。
 
@@ -130,13 +133,13 @@ https://www.google.com/search?q=<精确词>&gl=us&hl=en&pws=0
 
 **读法必须能读到 AI Overview**:用 JS 读 `document.body.innerText` 再检索 `AI Overview`;读回的文本若从 `Web results` 起始而非整页开头,该次观察作废重读(出处见数据采集指南)。**只有美区、桌面、未登录且可控的环境才能下 G1 结论。**
 
-否决的批量追加一行索引(gate 记 G1),不注册进账本；JSON 行必须携带 `cluster_counterfactual=atomic_only`,否则 `screen_index.py` 会拒收。
+否决的批量追加一行索引(gate 记 G1),不注册进账本；JSON 行必须携带 `cluster_counterfactual=atomic_only`(否则 `screen_index.py` 会拒收)与 `"lane":"mature"`,写法同 xinci-scan 第 3 层的 JSON 行示例再加 lane 字段。
 
 ### 第 6 层:G2 完整结构阅读 + 弱守六信号
 
 读完第一页,继续到第二页或明显质量断层为止,**禁止用 top-3 判断竞争**。
 
-先处理需要 G2 现场证据的第三个反向排除：**成熟工具词**的量级虽真，但赛道已经长期被争夺；完整首页若出现专做该任务的站，立即停止深审，按 G5 `[成熟工具词]` 留痕。它不属于第 2 层零成本秒弃，漏斗按本次实际 SERP/G2 审计归类。
+先处理需要 G2 现场证据的第三个反向排除：**成熟工具词**的量级虽真，但赛道已经长期被争夺；完整首页若出现专做该任务的站，立即停止深审，追加一行索引留痕:与 YMYL 同理,它不是陷阱类别.md 的正式类别,死因是 G3 意义上的“这一格早有人当生意经营”,所以 gate 记 `G3`、`pattern` 固定写 `成熟工具词`,建类前不写 G5。它不属于第 2 层零成本秒弃，漏斗按本次实际 SERP/G2 审计归类。
 
 "守得很弱"不是靠指标判的,是靠现场读出来的。六条信号(全部来自 G2 已有放行信号与 G3 第一问,不新增判据):
 
@@ -165,14 +168,21 @@ https://www.google.com/search?q=<精确词>&gl=us&hl=en&pws=0
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py register \
   --slug <slug> --term "<精确措辞>" --source-url <URL> --task "<任务>" \
+  --site-thesis "<为何能形成独立站>" \
+  --task-family "<任务家族1>" --task-family "<任务家族2>" \
   --lane mature --origin signal \
   --evidence "证据/<slug>/<日期>-scan.json" --by xinci-mature
   # 带 --gates 就必须同时带 --expiry(排队位规则与 new 道一致)
+  # --site-thesis / --task-family:registrar 只对 --by xinci-run 强制,单步下推荐照写,与 new 道模板一致
 ```
+
+**排队位的接队与过期也归本 skill**:xinci-scan 不接 `lane=mature` 的 `captured`(它只报告应交本 skill),所以下一轮开局先读账本里 `lane=mature,state=captured` 的候选,按 gates 补缺的门;expiry 已过的提议 `captured→expired --expiry-trigger date`(与 new 道同一条边,由用户确认)。这与 xinci-track 不收 mature 追踪一样,是生命周期契约「四条 expired 边各自的提议人」在本道的落点。
+
+**淘汰索引的 `lane` 字段**:本道写进索引的每一行都要带 `lane=mature`(闸门校准第 8.5 节给索引加了这个字段,缺省视为 new,两道死因不同不能混)。竖线格式写不了它,本道的 append 一律用 JSON 行,例如 `{"term":"<词>","gate":"G6","reason":"<量级与六线结论>","lane":"mature"}`;第 2 层与第 5 层的示例已按此写法给出。
 
 随后按缺口出闸:`captured→screened` 要 G0/G1/G2/G4/G5=`pass` 与有效 G3,并带 `--window-estimate` 与 `--expiry`。成熟词的窗口通常以**月**计(需求是历史积累的,不会几天蒸发),据实填,不要照抄新词道的 days/weeks。
 
-之后 `screened→tracking→formation_confirmed` 与 new 道同规则：累计 ≥2 个 `-track` 观察、跨度 ≥7 天，本次 G1=pass，并在本次 track 观察明确 `naming_status=stabilized` 与至少一项 `formation_signals`。**到 `formation_confirmed` 为止是本 skill 的边界**:确认期评分交 xinci-qualify,建站决策交 xinci-decide。
+之后 `screened→tracking→formation_confirmed` 与 new 道同规则：累计 ≥2 个 `-track` 观察、跨度 ≥7 天，本次 G1=pass，并在本次 track 观察明确 `naming_status=stabilized` 与至少一项 `formation_signals`。**mature 的追踪复查也由本 skill 单步执行**(xinci-track 只收 `lane=new`,遇到 mature 只报告跳过):复查动作照抄 xinci-track 工作流第 1–7 步(第 7 步的提议清单也照抄:继续追踪 / 续期修订 / formation_confirmed / expired / rejected,用户逐条确认后才执行 transition),但 `registrar.py checked` 与 `amend` 都要显式传 `--by xinci-mature`(`checked` 的默认值是 `xinci-track`,照抄默认会被 lane 校验拒收)。**到 `formation_confirmed` 为止是本 skill 的边界**:确认期评分交 xinci-qualify,建站决策交 xinci-decide。
 
 深审判否的候选同样先 register 再走 `captured→rejected`,reason 写清失败闸门与现场证据要点。
 
@@ -199,4 +209,4 @@ python3 xinci-workflow/xinci-core/scripts/run_manifest.py record-single \
 - **量级数据用来证明 mature 需求存在并判断 advertising / affiliate 等流量线**;广告量级门不得连带否决四条非流量线,KD / Authority Score / 外链数不得决定 G2/G3 或直接挣竞争分。
 - **闸门与分数线不因本道而降低**。本道的差别在于哪条盈利线可用、以及量级是不是准入条件,不在于判得松一点。
 - **单步形态,逐条确认**。本 skill 不在 xinci-run 的标准授权范围内;每一次 registrar 转移都要用户确认后执行。
-- **0/4 要如实说**。本道至今没有正例。报告时不得把"跑通了流程"说成"这条线成立",也不得因为想要正例而放宽任何一道判据。
+- **0 正例要如实说**(种子口径 0/4,含探针口径 1/6 进账本、随后否决)。本道至今没有正例。报告时不得把"跑通了流程"说成"这条线成立",也不得因为想要正例而放宽任何一道判据。

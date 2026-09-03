@@ -59,7 +59,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py checked \
   --slug <slug> --evidence "证据/<slug>/<日期>-track.json" --by xinci-track
 ```
 
-7. **向用户提交提议清单**,每候选一条,四种出口:
+7. **向用户提交提议清单**,每候选一条,五种出口(继续追踪 / 续期修订 / formation_confirmed / expired / rejected):
    - 继续追踪(观察已更新,无需转移);
    - 提议续期或字段修订(expiry 延后、aliases/失效条件追加),用户确认后:
 
@@ -70,7 +70,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
 ```
 
    - 提议 `formation_confirmed`(要求:累计 ≥2 次 -track 观察且最早与最新相隔 ≥7 天、命名定型、≥1 项形成信号、本次 G1=pass);
-   - 提议 `expired`(expiry 已过时提交 `--expiry-trigger date`;失效条件命中时提交 `--expiry-trigger invalidation`)或 `rejected`(G0/G1 翻转,或占位否决按盈利线生效时竞品到达 G3 否决线)。(「命中新归并的陷阱类别」那一条 rejected 由扫描侧提议,不在本清单里,见上第 2 步。)
+   - 提议 `expired`(expiry 已过时提交 `--expiry-trigger date`;失效条件命中时提交 `--expiry-trigger invalidation`)或 `rejected`(G0/G1 翻转;占位否决按盈利线生效时竞品到达 G3 否决线;第 2 步复核后六条适用线全部 `tentative_veto`;或第 4 步 `self_serve_legal_effect` 证明全部声称交付依法无效)。(「命中新归并的陷阱类别」那一条 rejected 由扫描侧提议,不在本清单里,见上第 2 步。)
 8. **用户确认后**才执行对应 transition；用 `run_manifest.py record-single --date <YYYY-MM-DD> --skill xinci-track [--suffix <HHMM>] ...` 原子写运行清单，控制器拒绝覆盖，不得手写 JSON。例外:xinci-run 连续运行模式下不另写本阶段清单,内容并入 run 清单。
 
 ## 硬规则

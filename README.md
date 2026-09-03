@@ -9,7 +9,7 @@
 | [xinci-run](xinci-workflow/xinci-run/SKILL.md) | 连续运行驱动器:启动后循环推进,直到产出任一 go 决策(全站 go,或标好价的快道赌注)、Semrush 额度实际耗尽,或预算用完(默认 `max_rounds=6`);会话资源耗尽或撞上 blocker 时如实报告后停。启动暗号 `xinci_run`,消息中出现即一体启动整个工作流 |
 | [xinci-status](xinci-workflow/xinci-status/SKILL.md) | 状态看板:只读汇报账本事实 |
 | [xinci-scan](xinci-workflow/xinci-scan/SKILL.md) | 扫描发现:真浏览器捕获候选,当场 G0–G5 初筛 |
-| [xinci-track](xinci-workflow/xinci-track/SKILL.md) | 追踪复查:用户指定候选,重跑 G1,提议转移 |
+| [xinci-track](xinci-workflow/xinci-track/SKILL.md) | 追踪复查:复查 new 道 tracking 候选(可指定,未指定则遍历全部),重跑 G1,提议转移 |
 | [xinci-mature](xinci-workflow/xinci-mature/SKILL.md) | 成熟错价词道:单步发现并推进 mature 候选到形成确认 |
 | [xinci-qualify](xinci-workflow/xinci-qualify/SKILL.md) | 深度认定:G6–G8 + 竞争审计 + 100 分制(80 分线) |
 | [xinci-decide](xinci-workflow/xinci-decide/SKILL.md) | 建站决策:页面地图 + 收入模型 + md/html 双格式决策书 |
