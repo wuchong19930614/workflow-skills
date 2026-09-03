@@ -1,27 +1,31 @@
 #!/usr/bin/env python3
 """xinci-run session 的共享契约与载入器。"""
 import json
-import re
-from datetime import datetime
 from pathlib import Path
+
+from _constants import ROUND_TYPES, RUN_ID_RE, SLUG_RE
+from _common import parse_aware_timestamp
 
 
 SESSION_DIR = "运行状态"
-RUN_ID_RE = re.compile(r"^run-\d{8}T\d{6}Z-[a-f0-9]{8}$")
-SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 FINAL_STATUSES = {"go", "quota_exhausted", "budget_reached", "resource_exhausted",
                   "calibration_triggered", "blocked", "cancelled"}
 STATUSES = {"active"} | FINAL_STATUSES
 FIELDS = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
           "finished_at", "max_rounds", "max_hours", "rounds_completed", "current_round",
-          "round_executor_id", "current_round_type", "confirmations", "finish_reason",
-          "go_candidates"}
+          "round_executor_id", "current_round_type", "current_round_preflight",
+          "confirmations", "finish_reason", "go_candidates"}
 REQUIRED = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
             "max_rounds", "max_hours", "rounds_completed", "current_round",
             "confirmations", "finish_reason"}
-CONFIRM_FIELDS = {"risk", "confirmed_at", "consumed_at", "voided_at", "history"}
-CONFIRM_HISTORY_FIELDS = {"risk", "confirmed_at", "consumed_at", "voided_at"}
-ROUND_TYPES = {"discovery", "progression", "tracking", "calibration"}
+# 窗口赌注确认只写不改:消费与否由候选 history 里带 window_bet_confirmation 的出闸条目决定,
+# session 侧不再有 consumed_at / voided_at / history。
+CONFIRM_FIELDS = {"risk", "confirmed_at"}
+# G1 浏览器前置条件:begin-round 时由执行者自报四项,g1_ready 由四项机器推导
+# (可控 + 桌面 + 美区 + 未登录),registrar 与 run_policy 只读它。
+PREFLIGHT_INPUTS = ("controllable", "desktop", "region", "logged_out")
+PREFLIGHT_FIELDS = set(PREFLIGHT_INPUTS) | {"g1_ready"}
+PREFLIGHT_REGIONS = {"us", "other", "unknown"}
 
 
 class RunStateError(Exception):
@@ -29,13 +33,7 @@ class RunStateError(Exception):
 
 
 def _timestamp(value, where):
-    try:
-        parsed = datetime.fromisoformat(value)
-    except (TypeError, ValueError):
-        raise RunStateError(f"{where} 必须是 ISO 时间")
-    if parsed.tzinfo is None:
-        raise RunStateError(f"{where} 必须带时区")
-    return parsed
+    return parse_aware_timestamp(value, where, RunStateError)
 
 
 def _confirmation(rec, where):
@@ -43,29 +41,30 @@ def _confirmation(rec, where):
         raise RunStateError(f"{where} 字段必须严格匹配 {sorted(CONFIRM_FIELDS)}")
     if rec.get("risk") != "window_bet":
         raise RunStateError(f"{where}.risk 必须是 window_bet")
-    confirmed = _timestamp(rec.get("confirmed_at"), f"{where}.confirmed_at")
-    consumed = (_timestamp(rec["consumed_at"], f"{where}.consumed_at")
-                if rec.get("consumed_at") else None)
-    voided = (_timestamp(rec["voided_at"], f"{where}.voided_at")
-              if rec.get("voided_at") else None)
-    if consumed and consumed < confirmed:
-        raise RunStateError(f"{where}.consumed_at 不得早于 confirmed_at")
-    if voided and (not consumed or voided < consumed):
-        raise RunStateError(f"{where}.voided_at 只可在消费后产生且不得早于 consumed_at")
-    history = rec.get("history")
-    if not isinstance(history, list):
-        raise RunStateError(f"{where}.history 必须是数组")
-    for i, old in enumerate(history):
-        old_where = f"{where}.history[{i}]"
-        if not isinstance(old, dict) or set(old) != CONFIRM_HISTORY_FIELDS:
-            raise RunStateError(f"{old_where} 字段非法")
-        if old.get("risk") != "window_bet" or not old.get("consumed_at") or not old.get("voided_at"):
-            raise RunStateError(f"{old_where} 必须是已消费且已作废的 window_bet 确认")
-        old_confirmed = _timestamp(old.get("confirmed_at"), f"{old_where}.confirmed_at")
-        old_consumed = _timestamp(old.get("consumed_at"), f"{old_where}.consumed_at")
-        old_voided = _timestamp(old.get("voided_at"), f"{old_where}.voided_at")
-        if not old_confirmed <= old_consumed <= old_voided:
-            raise RunStateError(f"{old_where} 时间顺序非法")
+    _timestamp(rec.get("confirmed_at"), f"{where}.confirmed_at")
+
+
+def g1_ready(controllable, desktop, region, logged_out) -> bool:
+    return controllable is True and desktop is True and region == "us" and logged_out is True
+
+
+def build_preflight(controllable, desktop, region, logged_out) -> dict:
+    """由四项自报输入组装 current_round_preflight;类型与取值在此处一次校验。"""
+    if not all(isinstance(x, bool) for x in (controllable, desktop, logged_out)):
+        raise RunStateError("浏览器预检 controllable/desktop/logged_out 必须是布尔值")
+    if region not in PREFLIGHT_REGIONS:
+        raise RunStateError(f"浏览器预检 region 必须属于 {sorted(PREFLIGHT_REGIONS)}")
+    return {"controllable": controllable, "desktop": desktop, "region": region,
+            "logged_out": logged_out,
+            "g1_ready": g1_ready(controllable, desktop, region, logged_out)}
+
+
+def _preflight(rec, where):
+    if not isinstance(rec, dict) or set(rec) != PREFLIGHT_FIELDS:
+        raise RunStateError(f"{where} 字段必须严格匹配 {sorted(PREFLIGHT_FIELDS)}")
+    expected = build_preflight(rec["controllable"], rec["desktop"], rec["region"], rec["logged_out"])
+    if rec != expected:
+        raise RunStateError(f"{where}.g1_ready 与四项输入不一致")
 
 
 def validate_session(obj, expected_run_id=None, where="运行会话"):
@@ -95,6 +94,9 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     current = obj.get("current_round")
     executor_id = obj.get("round_executor_id")
     round_type = obj.get("current_round_type")
+    preflight = obj.get("current_round_preflight")
+    if preflight is not None:
+        _preflight(preflight, f"{where}.current_round_preflight")
     if executor_id is not None and (not isinstance(executor_id, str) or not executor_id.strip()):
         raise RunStateError(f"{where}.round_executor_id 必须为 null 或非空字符串")
     if round_type is not None and round_type not in ROUND_TYPES:
@@ -114,6 +116,8 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
             raise RunStateError(f"{where}.current_round 超出 max_rounds")
         if current is None and executor_id is not None:
             raise RunStateError(f"{where} 未开始轮次时 round_executor_id 必须为 null")
+        if current is None and preflight is not None:
+            raise RunStateError(f"{where} 未开始轮次时 current_round_preflight 必须为 null")
         if version >= 3 and ((current is None) != (round_type is None)):
             raise RunStateError(f"{where} current_round 与 current_round_type 必须同时存在或同时为空")
         if obj.get("finished_at") is not None or obj.get("finish_reason") is not None:
@@ -125,6 +129,8 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
             raise RunStateError(f"{where} 结束状态 round_executor_id 必须为 null")
         if round_type is not None:
             raise RunStateError(f"{where} 结束状态 current_round_type 必须为 null")
+        if preflight is not None:
+            raise RunStateError(f"{where} 结束状态 current_round_preflight 必须为 null")
         if current is not None or not obj.get("finish_reason") or not obj.get("finished_at"):
             raise RunStateError(f"{where} 结束状态要求 current_round=null、finish_reason、finished_at")
         finished = _timestamp(obj["finished_at"], f"{where}.finished_at")

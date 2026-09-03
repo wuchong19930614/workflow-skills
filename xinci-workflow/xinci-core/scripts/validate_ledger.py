@@ -9,21 +9,17 @@ registrar 在转移时已校验证据齐备性;本脚本的职责是捕获绕过
 - history 链连续:每项 from == 前一项 to(amend/checked 条目 from==to,链天然连续);
 - evidence_refs 均为数据区内相对路径且存在于磁盘;
 - expiry 若存在则可解析为日期;
-- 状态不变式:screened 必有 window_estimate;tracking 必有 expiry;
-  captured 若带闸门结论(排队位)必有 expiry(否则窗口过了无处可去、无声腐烂);
-  fast_grab_ready 必有 expiry、window_estimate=days、play=fast_grab、score 为 null(快道不得声称全站分数);
-  过 screened 的非终态必有 G0/G1/G2/G4/G5=pass,G3 可为 pass 或 veto_window_bet 快道降级结论;
-  带 G3=veto_window_bet 的候选只能停在 captured(挂起待确认)/screened/fast_grab_ready 或终态,
-  且在 screened/fast_grab_ready 上 window_estimate=days;qualified 及其后继(build_ready/pilot_ready/hold)必有 G6–G8 全 pass;
-  formation_confirmed 及其后继必有 ≥2 个 -track 观察且跨度 ≥7 天;
-  qualified/build_ready/pilot_ready/hold 必有整数 score ≥80、income_score 1–20、
-  至少一条 g6_passed_lines(hold 是认定后的搁置,分数与 G6 结论已经产生);
-  build_ready/pilot_ready 的 play ∈ {single_domain, cluster_expansion};
-- go 决策态(build_ready/pilot_ready/fast_grab_ready)必须有 decision_ref,且 md+html 双文件存在;
-- hold/no_site 不得携带 decision_ref(no-go 不出决策书);
+- 状态不变式(条目与机器码见 registrar.check_state_invariants,registrar 转移写入前与本脚本
+  共用同一函数):screened 必有 window_estimate/expiry;tracking 必有 expiry;captured 带闸门结论
+  必有 expiry;fast_grab_ready 的 expiry/window_estimate=days/play=fast_grab/score=null;
+  过 screened 者 G0/G1/G2/G4/G5=pass 且 G3 ∈ {pass, veto_window_bet};veto_window_bet 只能停在
+  captured/screened/fast_grab_ready/终态;qualified 及后继 G6–G8 全 pass、≥2 个 -track 且跨度 ≥7 天、
+  score≥80、income_score 1–20、g6_passed_lines 合法且与 →qualified 快照/qualify 观察一致;
+  build_ready/pilot_ready 的 play 合法;go 态必有 decision_ref 且 md+html 双文件;
+  hold/no_site 不得携带 decision_ref;
 - 证据/ 下无账本外孤儿目录(警告)。
 
-运行清单检查项(对齐 数据结构/run-manifest.schema.json,见 validate_runs):
+运行清单检查项(字段白名单见 run_manifest.RUN_FIELDS / RUN_ROUND_FIELDS,见 validate_runs):
 文件名约定、必填 date/skill、字段白名单、类型、文件名与内容一致性、rounds 结构,
 以及扫描漏斗自洽性(funnel 四个去向加总 == extracted,即每个被提取的方向都有归宿;
 extracted 记去重后进入筛选的方向数,消化存量 captured 的深审记可选的 carryover_audited)。
@@ -38,52 +34,23 @@ from datetime import date
 from pathlib import Path
 
 import data_root
-from registrar import (STATES, WINDOWS, BUILD_PLAYS,
-                       SCREEN_GATES, QUALIFY_GATES, MIN_TRACK_SPAN_DAYS,
-                       G3_WINDOW_BET, TERMINAL, RegistrarError, _obs_time,
-                       SLUG_RE, VALID_ACTORS, _check_decision_files,
-                       _check_gate_payload, _check_gate_evidence)
+from _common import ledger_path, load_ledger
+from registrar import (STATES, RegistrarError, SLUG_RE, VALID_ACTORS,
+                       _check_gate_evidence, check_state_invariants)
 from run_state import RunStateError, load_session
 from run_manifest import validate_runs
-from transaction_journal import TransactionError, list_pending
-from dedup_decisions import DedupDecisionError, load as load_dedup_decisions
 from term_normalize import match_kind
-from screen_index import validate_index
+from screen_index import DedupDecisionError, load_decisions, validate_index
 from trigger_pool import TriggerPoolError, load as load_trigger_pool
-from stage_checkpoint import StageCheckpointError, list_open as list_open_checkpoints
-
-GO_STATES = {"build_ready", "pilot_ready", "fast_grab_ready"}
-NO_GO_STATES = {"hold", "no_site"}
-MONETIZATION_LINES = {"subscription", "lead_generation", "affiliate", "transaction",
-                      "paid_report", "advertising"}
-# 带分数的状态:认定产生分数,其后继一路带着它。hold 也在内——生命周期契约明确
-# "hold 本身已带着 G6–G8 全 pass 与分数",它只能从 qualified 转入,分数不会被清空。
-SCORED_STATES = {"qualified", "build_ready", "pilot_ready", "hold"}
-# 过了 screened 的非终态:G0–G5 应全 pass(复查翻转即原子转出,不存在带 veto 的中间态)
-SCREEN_PASSED_STATES = {"screened", "tracking", "formation_confirmed", "qualified",
-                        "build_ready", "pilot_ready", "fast_grab_ready", "hold"}
-# 过了认定的状态:G6–G8 应全 pass
-QUALIFY_PASSED_STATES = {"qualified", "build_ready", "pilot_ready", "hold"}
-# 过了形成确认的状态:≥2 个 -track 观察且跨度达标
-FORMED_STATES = {"formation_confirmed", "qualified", "build_ready", "pilot_ready", "hold"}
-# G3 快道降级结论(veto_window_bet)的候选只准停在这些状态:
-#   captured        —— 深审已出结论、但转移尚未被确认的挂起位(连续运行模式必经此处:
-#                      registrar 拒收 by=xinci-run 的该出口,候选只能挂着等用户单步确认);
-#   screened        —— 已确认窗口赌注风险、等决策;
-#   fast_grab_ready —— 快道决策态;
-#   终态            —— 已终结。
-# 禁止的是 tracking 及其后继:那等于让窗口赌注候选绕过 G3 走到全站。
-WINDOW_BET_STATES = {"captured", "screened", "fast_grab_ready"} | TERMINAL
 
 
 def validate(data_root):
     data_root = Path(data_root)
     errors, warnings = [], []
-    ledger_path = data_root / "账本" / "候选账本.json"
-    if not ledger_path.is_file():
-        return [f"账本不存在: {ledger_path}(先运行 init_workspace.py)"], warnings
+    if not ledger_path(data_root).is_file():
+        return [f"账本不存在: {ledger_path(data_root)}(先运行 init_workspace.py)"], warnings
     try:
-        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        ledger = load_ledger(data_root)
     except json.JSONDecodeError as e:
         return [f"账本不是合法 JSON: {e}"], warnings
 
@@ -147,145 +114,12 @@ def validate(data_root):
             except ValueError:
                 errors.append(f"{where} expiry 不可解析: {expiry!r}")
 
-        # 状态不变式(registrar 转移时已强制,此处防手工编辑绕过)
-        if state == "screened" and rec.get("window_estimate") not in WINDOWS:
-            errors.append(f"{where} screened 必有 window_estimate ∈ {sorted(WINDOWS)},"
-                          f"当前 {rec.get('window_estimate')!r}")
-        if state == "screened" and not expiry:
-            errors.append(f"{where} screened 必有 expiry(窗口失效日)")
-        if state == "tracking" and not expiry:
-            errors.append(f"{where} tracking 必有 expiry")
-        if state == "captured" and rec.get("gates") and not expiry:
-            errors.append(f"{where} captured 带闸门结论(排队位)必有 expiry:"
-                          "排队位每轮进多出少,没有 expiry 就没有过期出口,方向会无声腐烂")
-        if state == "fast_grab_ready":
-            if not expiry:
-                errors.append(f"{where} fast_grab_ready 必有 expiry")
-            if rec.get("window_estimate") != "days":
-                errors.append(f"{where} fast_grab_ready 必有 window_estimate=days,"
-                              f"当前 {rec.get('window_estimate')!r}")
-            if rec.get("play") != "fast_grab":
-                errors.append(f"{where} fast_grab_ready 的 play 必须是 fast_grab,当前 {rec.get('play')!r}")
-            if rec.get("score") is not None:
-                errors.append(f"{where} 快道不得声称全站分数,score 应为 null,当前 {rec.get('score')!r}")
-        gates = rec.get("gates", {})
-        try:
-            _check_gate_payload(gates)
-        except RegistrarError as e:
-            errors.append(f"{where} {e}")
-        g3 = gates.get("G3")
-        if state in SCREEN_PASSED_STATES:
-            bad = [g for g in SCREEN_GATES if g != "G3" and gates.get(g) != "pass"]
-            if g3 not in ("pass", G3_WINDOW_BET):
-                bad.append("G3")
-            if bad:
-                errors.append(f"{where} {state} 要求 G0/G1/G2/G4/G5=pass,"
-                              f"G3=pass 或 {G3_WINDOW_BET},未满足: {bad}")
-        if g3 == G3_WINDOW_BET:
-            # 降级结论只通向快道:出现在 tracking 及其后继意味着绕过了 G3
-            if state not in WINDOW_BET_STATES:
-                errors.append(f"{where} G3={G3_WINDOW_BET} 的候选只能是 captured(挂起待确认)/"
-                              f"screened/fast_grab_ready 或终态,当前 {state}"
-                              "——进入该状态意味着绕过了 G3")
-            if state in {"screened", "fast_grab_ready"} and rec.get("window_estimate") != "days":
-                errors.append(f"{where} G3={G3_WINDOW_BET} 要求 window_estimate=days,"
-                              f"当前 {rec.get('window_estimate')!r}")
-        if state in QUALIFY_PASSED_STATES:
-            bad = [g for g in QUALIFY_GATES if gates.get(g) != "pass"]
-            if bad:
-                errors.append(f"{where} {state} 要求 G6–G8 全 pass,未满足: {bad}")
-        if state in FORMED_STATES:
-            track_refs = [r for r in rec.get("evidence_refs", [])
-                          if Path(r).stem.endswith("-track") and (data_root / r).is_file()]
-            if len(track_refs) < 2:
-                errors.append(f"{where} {state} 要求 ≥2 个 -track 观察,当前 {len(track_refs)}")
-            else:
-                try:
-                    times = [_obs_time(data_root, r) for r in track_refs]
-                    span = (max(times) - min(times)).days
-                    if span < MIN_TRACK_SPAN_DAYS:
-                        errors.append(f"{where} {state} 要求 -track 观察跨度 ≥{MIN_TRACK_SPAN_DAYS} 天,"
-                                      f"当前 {span} 天")
-                except RegistrarError as e:
-                    errors.append(f"{where} {e}")
-        if state in SCORED_STATES:
-            score = rec.get("score")
-            if not (isinstance(score, int) and score >= 80):
-                errors.append(f"{where} {state} 必有整数 score ≥80,当前 {score!r}")
-            income_score = rec.get("income_score")
-            if not (isinstance(income_score, int) and not isinstance(income_score, bool)
-                    and 1 <= income_score <= 20):
-                errors.append(f"{where} {state} 必有 1–20 的整数 income_score,"
-                              f"当前 {income_score!r}")
-            lines = rec.get("g6_passed_lines")
-            allowed_lines = MONETIZATION_LINES
-            if not (isinstance(lines, list) and lines and len(lines) == len(set(lines))
-                    and set(lines) <= allowed_lines):
-                errors.append(f"{where} {state} 必有非空且合法的 g6_passed_lines,"
-                              f"当前 {lines!r}")
-            elif rec.get("lane") == "new" and "advertising" in lines:
-                errors.append(f"{where} lane=new 的 g6_passed_lines 不得包含 advertising")
-            qualified_entry = next((h for h in reversed(hist) if h.get("to") == "qualified"), None)
-            if qualified_entry is None:
-                errors.append(f"{where} {state} 缺 →qualified history 快照")
-            else:
-                if qualified_entry.get("income_score") != income_score:
-                    errors.append(f"{where} 顶层 income_score 与 →qualified history 快照不一致")
-                if qualified_entry.get("g6_passed_lines") != lines:
-                    errors.append(f"{where} 顶层 g6_passed_lines 与 →qualified history 快照不一致")
-                qualify_obs = []
-                for ref in qualified_entry.get("evidence", []):
-                    try:
-                        obs = json.loads((data_root / ref).read_text(encoding="utf-8"))
-                    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-                        continue
-                    if (obs.get("stage") == "qualify"
-                            and obs.get("gates", {}).get("G6") == "pass"):
-                        qualify_obs.append(obs)
-                if not qualify_obs:
-                    errors.append(f"{where} →qualified history 缺结构化 G6 qualify 观察")
-                elif isinstance(lines, list):
-                    def lines_match(obs):
-                        observed = obs.get("g6_lines") or {}
-                        return (all(observed.get(line) == "pass" for line in lines)
-                                and not any(value == "pass" and line not in lines
-                                            for line, value in observed.items())
-                                and (rec.get("lane") != "new"
-                                     or observed.get("advertising") == "N/A"))
-                    if any(not lines_match(obs) for obs in qualify_obs):
-                        errors.append(f"{where} qualify 观察 g6_lines 与账本不一致")
-                    if any(obs.get("income_score") != income_score for obs in qualify_obs):
-                        errors.append(f"{where} qualify 观察 income_score 与账本不一致")
-        if state in {"build_ready", "pilot_ready"} and rec.get("play") not in BUILD_PLAYS:
-            errors.append(f"{where} {state} 的 play 必须属于 {sorted(BUILD_PLAYS)},当前 {rec.get('play')!r}")
-
-        ref = rec.get("decision_ref")
-        if state in GO_STATES:
-            if not ref:
-                errors.append(f"{where} go 决策态缺 decision_ref")
-            else:
-                md = data_root / ref
-                if not md.is_file():
-                    errors.append(f"{where} 决策书 md 缺失: {ref}")
-                if not md.with_suffix(".html").is_file():
-                    errors.append(f"{where} 决策书 html 缺失(双格式要求): {md.with_suffix('.html').name}")
-                if md.is_file() and md.with_suffix(".html").is_file():
-                    try:
-                        _check_decision_files(data_root, ref)
-                    except RegistrarError as e:
-                        errors.append(f"{where} 决策书校验失败: {e}")
-        if state in NO_GO_STATES and ref:
-            errors.append(f"{where} no-go 结论不应携带 decision_ref: {ref}")
+        # 状态不变式:与 registrar 转移写入前的复核共用同一函数(registrar.check_state_invariants),
+        # 此处防手工编辑绕过;每条错误带 [INV-<code>] 机器码。
+        errors.extend(f"{where} {e}" for e in check_state_invariants(data_root, rec))
 
     try:
-        pending = list_pending(data_root)
-        if pending:
-            errors.append(f"存在未恢复跨文件事务: {[x.get('tx_id') for x in pending]};"
-                          "执行 run_controller.py recover")
-    except TransactionError as e:
-        errors.append(str(e))
-    try:
-        decisions = load_dedup_decisions(data_root)
+        decisions = load_decisions(data_root)
         seen_decision_ids = set()
         for i, row in enumerate(decisions, 1):
             required = ("decision_id", "reason", "decided_at", "actor", "term_task",
@@ -312,13 +146,6 @@ def validate(data_root):
     try:
         load_trigger_pool(data_root)
     except TriggerPoolError as e:
-        errors.append(str(e))
-    try:
-        open_checkpoints = list_open_checkpoints(data_root)
-        if open_checkpoints:
-            errors.append("存在未完成阶段检查点: " + ", ".join(
-                f"{x['run_id']}/round-{x['round']}/{x['stage']}" for x in open_checkpoints))
-    except StageCheckpointError as e:
         errors.append(str(e))
 
     evidence_dir = data_root / "证据"

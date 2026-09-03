@@ -7,6 +7,7 @@ from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import data_root
+from _common import load_ledger
 
 CHECKPOINT_DAYS = (3, 7, 14)
 
@@ -25,9 +26,8 @@ def _tracking_start(rec):
 
 def build(root, as_of=None):
     as_of = as_of or date.today()
-    path = Path(root) / "账本" / "候选账本.json"
     try:
-        candidates = json.loads(path.read_text(encoding="utf-8")).get("candidates", {})
+        candidates = load_ledger(root).get("candidates", {})
     except FileNotFoundError:
         candidates = {}
     rows = []

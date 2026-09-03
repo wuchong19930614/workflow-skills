@@ -10,7 +10,7 @@ import data_root
 
 # 数据区的定位统一走 data_root 模块:显式参数 > 环境变量 > 仓库配置 > 拒绝执行。
 # 这里刻意不再留任何默认值——数据区放哪是用户的决定,脚本不猜(理由见 data_root.py)。
-SUBDIRS = ("账本", "证据", "决策书", "运行", "运行状态", "运行状态/事务")
+SUBDIRS = ("账本", "证据", "决策书", "运行", "运行状态")
 
 
 def init_workspace(data_root) -> list:

@@ -8,12 +8,11 @@ import argparse
 import hashlib
 import json
 import sys
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from pathlib import Path
-from urllib.parse import urlparse
 
 import data_root
-from run_controller import RunControllerError, require_active_round
+from _common import check_actor, is_http_url as _url, now as _now
 
 
 FILE_NAME = "触发池.jsonl"
@@ -23,18 +22,6 @@ ACTORS = {"user", "xinci-scan", "xinci-run"}
 
 class TriggerPoolError(Exception):
     pass
-
-
-def _now():
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def _url(value):
-    try:
-        p = urlparse(value)
-        return p.scheme in {"http", "https"} and bool(p.netloc)
-    except (TypeError, ValueError):
-        return False
 
 
 def _day(value):
@@ -135,18 +122,9 @@ def _append(root, row):
 
 
 def _check_actor(root, actor, run_id):
-    if actor not in ACTORS:
-        raise TriggerPoolError(f"actor 必须属于 {sorted(ACTORS)}")
-    if actor == "xinci-run":
-        if not run_id:
-            raise TriggerPoolError("actor=xinci-run 要求 run_id")
-        try:
-            return require_active_round(root, run_id)["current_round"]
-        except RunControllerError as e:
-            raise TriggerPoolError(str(e))
-    elif run_id:
-        raise TriggerPoolError("非 xinci-run 事件不得携带 run_id")
-    return None
+    """身份/会话校验见 _common.check_actor;这里只取 xinci-run 的当前轮号绑定到事件。"""
+    session = check_actor(root, actor, run_id, actors=ACTORS, error_cls=TriggerPoolError)
+    return session["current_round"] if session else None
 
 
 def source_rotation_status(root, run_id, current_round=None):
@@ -268,16 +246,6 @@ def round_funnel(root, run_id, round_number):
         else:
             result["pending"] += 1
     return result
-
-
-def round_states(root, run_id, round_number):
-    """返回本轮 harvest 的 trigger 及其轮末真实状态，供检查点交叉核验。"""
-    events = load(root)
-    added = {row["trigger_id"] for row in events
-             if row.get("run_id") == run_id and row.get("round") == round_number
-             and row.get("event") == "add"}
-    states = current(root)
-    return {trigger_id: states[trigger_id]["status"] for trigger_id in added}
 
 
 def stats(root):

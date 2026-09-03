@@ -7,55 +7,28 @@
 """
 import argparse
 import json
-import os
 import secrets
 import sys
-import tempfile
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from pathlib import Path
 
 import data_root
+from _common import atomic_save as _save, flock as _flock, funlock as _funlock, load_ledger, now as _now
+from _constants import GO_STATES
 
-from transaction_journal import (TransactionError, recover as recover_transactions,
-                                 reconcile as reconcile_transaction, require_clean)
-from run_state import (SESSION_DIR, RUN_ID_RE, FINAL_STATUSES, ROUND_TYPES, RunStateError,
-                       load_session, session_path, validate_session)
+from run_state import (SESSION_DIR, FINAL_STATUSES, ROUND_TYPES, PREFLIGHT_REGIONS,
+                       RunStateError, build_preflight, load_session, session_path,
+                       validate_session)
 from run_manifest import (RunManifestError, append_round, candidates_by_run,
                           candidates_by_round, create_run_manifest, find_run_manifest,
                           finalize_manifest, validate_runs)
 from chinese_labels import (humanize_text, normalize_session_status,
                             session_status_label)
-from stage_checkpoint import (StageCheckpointError, require_no_open,
-                              require_scan_funnel, require_trigger_checkpoint)
-
-try:
-    import fcntl
-
-    def _flock(f):
-        fcntl.flock(f, fcntl.LOCK_EX)
-
-    def _funlock(f):
-        fcntl.flock(f, fcntl.LOCK_UN)
-except ImportError:  # pragma: no cover - Windows fallback
-    import msvcrt
-
-    def _flock(f):
-        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
-
-    def _funlock(f):
-        f.seek(0)
-        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
-
 
 # 数据区的定位统一走 data_root 模块:显式参数 > 环境变量 > 仓库配置 > 拒绝执行。
 # 这里刻意不再留任何默认值——数据区放哪是用户的决定,脚本不猜(理由见 data_root.py)。
-GO_STATES = {"fast_grab_ready", "pilot_ready", "build_ready"}
 RunControllerError = RunStateError
-
-
-def _now():
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
 def _session_dir(data_root):
@@ -76,15 +49,6 @@ def _locked(data_root):
             yield
         finally:
             _funlock(f)
-
-
-def _save(path, obj):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    os.replace(tmp, path)
 
 
 def active_sessions(data_root):
@@ -120,10 +84,6 @@ def start(data_root, max_rounds=6, max_hours=None):
     if max_hours is not None and max_hours <= 0:
         raise RunControllerError("max_hours 必须大于 0")
     with _locked(data_root):
-        try:
-            require_clean(data_root)
-        except TransactionError as e:
-            raise RunControllerError(str(e))
         existing = active_sessions(data_root)
         if existing:
             raise RunControllerError(f"已有活动运行会话: {existing[0]['run_id']};先恢复或结束它")
@@ -142,6 +102,7 @@ def start(data_root, max_rounds=6, max_hours=None):
             "current_round": None,
             "round_executor_id": None,
             "current_round_type": None,
+            "current_round_preflight": None,
             "confirmations": {},
             "finish_reason": None,
         }
@@ -167,12 +128,16 @@ def _discovery_rounds_since_calibration(data_root):
     return count
 
 
-def begin_round(data_root, run_id, executor_id=None, round_type="discovery"):
+def begin_round(data_root, run_id, executor_id=None, round_type="discovery", preflight=None):
+    """开始新一轮。preflight 是执行者自报的 G1 浏览器前置四项
+    {controllable, desktop, region, logged_out};CLI 强制提供,库级调用可省略
+    (省略即本轮无预检,run_policy 判 trigger_only、registrar 拒收 xinci-run 的 G1 结论)。"""
+    if preflight is not None:
+        if not isinstance(preflight, dict) or set(preflight) != {"controllable", "desktop",
+                                                                 "region", "logged_out"}:
+            raise RunControllerError("preflight 必须完整包含 controllable/desktop/region/logged_out")
+        preflight = build_preflight(**preflight)
     with _locked(data_root):
-        try:
-            require_clean(data_root)
-        except TransactionError as e:
-            raise RunControllerError(str(e))
         obj = load_session(data_root, run_id)
         if obj.get("status") != "active":
             raise RunControllerError(f"运行会话当前不是运行中，而是：{session_status_label(obj.get('status'))}")
@@ -193,120 +158,30 @@ def begin_round(data_root, run_id, executor_id=None, round_type="discovery"):
         obj["current_round"] = obj["rounds_completed"] + 1
         obj["round_executor_id"] = executor_id
         obj["current_round_type"] = round_type
+        obj["current_round_preflight"] = preflight
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
         return obj
 
 
-def end_round(data_root, run_id):
-    """兼容 API 的明确拒绝；轮次只能由 record_round 带清单事实原子收尾。"""
-    raise RunControllerError("end-round 已停用;使用 record-round 写清单并结束轮次")
-
-
-def _round_transition_metrics(data_root, run_id, round_number):
-    counts = {"tracking_added": 0, "formation_confirmed": 0,
-              "qualified": 0, "go_decisions": 0}
-    ledger_path = Path(data_root) / "账本" / "候选账本.json"
-    try:
-        candidates = json.loads(ledger_path.read_text(encoding="utf-8")).get("candidates", {})
-    except FileNotFoundError:
-        return counts
-    for candidate in candidates.values():
-        for event in candidate.get("history", []):
-            if event.get("run_id") != run_id or event.get("round") != round_number:
-                continue
-            target = event.get("to")
-            if target == "tracking" and event.get("from") != "tracking":
-                counts["tracking_added"] += 1
-            elif target == "formation_confirmed":
-                counts["formation_confirmed"] += 1
-            elif target == "qualified":
-                counts["qualified"] += 1
-            elif target in GO_STATES:
-                counts["go_decisions"] += 1
-    return counts
-
-
 def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None,
                  billable_calls=0, notes=None, funnel=None, candidates_reviewed=None,
-                 task_families=None, source_family_counts=None, g1_checks=0,
-                 deep_audit_families=None, false_negative_audit=None,
-                 source_family_outcomes=None):
+                 false_negative_audit=None):
+    """结束当前轮:组装轮记录并原子追加到运行清单。
+
+    本函数只负责组装;字段契约(funnel 加总、reviewed 的 slug/outcome/证据、校准轮的
+    假阴性审计、排队候选的 gates/expiry 等)统一由 run_manifest.validate_manifest 与
+    validate_round_ledger_contract 在 append_round 里校验一次,不在这里重复。
+    candidates_touched 与 trigger_funnel 分别从账本 history 与触发池事件按 run_id/round
+    机器推导,不接受自报。"""
     with _locked(data_root):
-        try:
-            require_clean(data_root)
-        except TransactionError as e:
-            raise RunControllerError(str(e))
         obj = load_session(data_root, run_id)
         if obj.get("status") != "active" or obj.get("current_round") is None:
             raise RunControllerError("没有正在执行的轮次")
-        for label, values in (("sources_opened", sources_opened or []),
-                              ("sources_blocked", sources_blocked or []),
-                              ("notes", notes or [])):
-            if not isinstance(values, list) or not all(isinstance(x, str) and x for x in values):
-                raise RunControllerError(f"{label} 必须是非空字符串数组")
-        if not isinstance(billable_calls, int) or isinstance(billable_calls, bool) or billable_calls < 0:
-            raise RunControllerError("billable_calls 必须是非负整数")
-        if not isinstance(funnel, dict):
-            raise RunControllerError("record-round 必须提交 funnel 对象;未扫描时五项都写 0")
-        if "pooled" in funnel:
-            raise RunControllerError(
-                "新轮次不得写 funnel.pooled；raw trigger 必须使用 stage=trigger 与 trigger_funnel")
-        if (not isinstance(g1_checks, int) or isinstance(g1_checks, bool) or g1_checks < 0):
-            raise RunControllerError("g1_checks 必须是非负整数")
-        task_families = list(dict.fromkeys(task_families or []))
-        deep_audit_families = list(dict.fromkeys(deep_audit_families or []))
-        if not all(isinstance(x, str) and x.strip() for x in task_families + deep_audit_families):
-            raise RunControllerError("task/deep-audit families 必须是非空字符串")
-        source_family_counts = dict(source_family_counts or {})
-        if (not all(isinstance(k, str) and k.strip()
-                    and isinstance(v, int) and not isinstance(v, bool) and v >= 0
-                    for k, v in source_family_counts.items())):
-            raise RunControllerError("source_family_counts 必须是来源家族到非负整数的对象")
-        source_family_outcomes = dict(source_family_outcomes or {})
-        outcome_fields = {"formal", "g1_pass", "deep", "tracking"}
-        if any(not isinstance(family, str) or not family.strip()
-               or not isinstance(values, dict) or set(values) != outcome_fields
-               or any(not isinstance(v, int) or isinstance(v, bool) or v < 0
-                      for v in values.values())
-               for family, values in source_family_outcomes.items()):
-            raise RunControllerError("source_family_outcomes 必须逐来源完整包含 formal/g1_pass/deep/tracking")
-        reviewed = list(candidates_reviewed or [])
-        ledger_path = Path(data_root) / "账本" / "候选账本.json"
-        try:
-            ledger_candidates = json.loads(ledger_path.read_text(encoding="utf-8")).get("candidates", {})
-        except FileNotFoundError:
-            ledger_candidates = {}
-        except (json.JSONDecodeError, UnicodeDecodeError):
-            raise RunControllerError("候选账本损坏,不能记录只读复核")
-        review_outcomes = {"reviewed_no_transition", "same_day_skipped", "not_due",
-                           "awaiting_external_evidence", "deferred_existing_evidence"}
-        seen_reviewed = set()
-        for row in reviewed:
-            if (not isinstance(row, dict) or set(row) - {"slug", "outcome", "reason", "evidence_refs"}
-                    or row.get("slug") not in ledger_candidates
-                    or row.get("outcome") not in review_outcomes
-                    or not isinstance(row.get("reason"), str) or not row["reason"].strip()
-                    or row.get("slug") in seen_reviewed):
-                raise RunControllerError("candidates_reviewed 必须是账本内唯一 slug、合法 outcome、非空 reason 的对象数组")
-            refs = row.get("evidence_refs", [])
-            if not isinstance(refs, list) or not all(isinstance(x, str) and x for x in refs):
-                raise RunControllerError("candidates_reviewed[].evidence_refs 必须是字符串数组")
-            for ref in refs:
-                rel = Path(ref)
-                if rel.is_absolute() or ".." in rel.parts or not (Path(data_root) / rel).is_file():
-                    raise RunControllerError(
-                        f"candidates_reviewed[].evidence_refs 不存在或越界: {ref}")
-            seen_reviewed.add(row["slug"])
         current = obj["current_round"]
         # 局部导入避免 trigger_pool -> run_controller 的授权依赖形成模块环。
         from trigger_pool import round_funnel
-        try:
-            require_no_open(data_root, run_id, current)
-            require_scan_funnel(data_root, run_id, current, funnel)
-        except StageCheckpointError as e:
-            raise RunControllerError(str(e))
         manifest_path, manifest = find_run_manifest(data_root, run_id)
         existing_rounds = manifest.get("rounds", []) if manifest else []
         already = existing_rounds[-1] if len(existing_rounds) == current else None
@@ -326,30 +201,16 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
             trigger_funnel = round_funnel(data_root, run_id, current)
         except Exception as e:
             raise RunControllerError(f"触发池无法生成本轮 trigger_funnel: {e}")
-        try:
-            require_trigger_checkpoint(data_root, run_id, current,
-                                       trigger_funnel["harvested"])
-        except StageCheckpointError as e:
-            raise RunControllerError(str(e))
         round_record = {
             "round": current,
             "round_type": obj.get("current_round_type") or "discovery",
             "sources_opened": list(sources_opened or []),
             "sources_blocked": list(sources_blocked or []),
             "candidates_touched": touched,
-            "candidates_reviewed": reviewed,
+            "candidates_reviewed": list(candidates_reviewed or []),
             "billable_calls": billable_calls,
-            "funnel": dict(funnel),
+            "funnel": dict(funnel) if isinstance(funnel, dict) else funnel,
             "trigger_funnel": trigger_funnel,
-            "metrics": {
-                "formal_extracted": funnel.get("extracted", 0),
-                "g1_checks": g1_checks,
-                "task_families": task_families,
-                "source_family_counts": source_family_counts,
-                "source_family_outcomes": source_family_outcomes,
-                "deep_audit_families": deep_audit_families,
-                "state_transitions": _round_transition_metrics(data_root, run_id, current),
-            },
             "notes": list(notes or []),
         }
         if false_negative_audit is not None:
@@ -362,6 +223,7 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
         obj["current_round"] = None
         obj["round_executor_id"] = None
         obj["current_round_type"] = None
+        obj["current_round_preflight"] = None
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
@@ -377,16 +239,11 @@ def confirm_window_bet(data_root, run_id, slug):
     if not slug:
         raise RunControllerError("slug 不可为空")
     with _locked(data_root):
-        try:
-            require_clean(data_root)
-        except TransactionError as e:
-            raise RunControllerError(str(e))
         obj = load_session(data_root, run_id)
         if obj.get("status") != "active":
             raise RunControllerError("只能给活动运行会话记录确认")
-        ledger_path = Path(data_root) / "账本" / "候选账本.json"
         try:
-            ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+            ledger = load_ledger(data_root)
         except FileNotFoundError:
             raise RunControllerError("窗口赌注确认要求候选已写入账本")
         except (json.JSONDecodeError, UnicodeDecodeError):
@@ -398,38 +255,13 @@ def confirm_window_bet(data_root, run_id, slug):
             raise RunControllerError(
                 f"候选 {slug} 必须先以 captured 且 G3=veto_window_bet 写入账本,再由用户确认")
         confirmations = obj.setdefault("confirmations", {})
-        previous = confirmations.get(slug)
-        if previous and not previous.get("voided_at"):
+        if slug in confirmations:
             raise RunControllerError(f"候选 {slug} 已记录过窗口赌注确认;确认不可覆盖或重新激活")
-        history = []
-        if previous:
-            history = list(previous.get("history") or [])
-            history.append({k: previous.get(k) for k in
-                            ("risk", "confirmed_at", "consumed_at", "voided_at")})
-        confirmations[slug] = {
-            "risk": "window_bet",
-            "confirmed_at": _now(),
-            "consumed_at": None,
-            "voided_at": None,
-            "history": history,
-        }
+        confirmations[slug] = {"risk": "window_bet", "confirmed_at": _now()}
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
         return obj
-
-
-def consume_window_bet_confirmation(data_root, run_id, slug):
-    with _locked(data_root):
-        obj = load_session(data_root, run_id)
-        rec = obj.get("confirmations", {}).get(slug)
-        if (not rec or rec.get("risk") != "window_bet" or rec.get("consumed_at")
-                or rec.get("voided_at")):
-            raise RunControllerError(f"候选 {slug} 没有未消费的窗口赌注确认")
-        rec["consumed_at"] = _now()
-        obj["updated_at"] = _now()
-        validate_session(obj, run_id)
-        _save(_path(data_root, run_id), obj)
 
 
 def require_active_round(data_root, run_id):
@@ -437,24 +269,6 @@ def require_active_round(data_root, run_id):
     if obj.get("status") != "active" or obj.get("current_round") is None:
         raise RunControllerError("xinci-run 写入要求活动 run_id 且已 begin-round")
     return obj
-
-
-def recover(data_root, run_id=None):
-    """幂等前滚未完成事务；恢复期间持有 session 总锁，避免并发启动/结束。"""
-    with _locked(data_root):
-        try:
-            return recover_transactions(data_root, run_id)
-        except TransactionError as e:
-            raise RunControllerError(str(e))
-
-
-def reconcile(data_root, tx_id, decision, reason, actor, confirmation_ref):
-    with _locked(data_root):
-        try:
-            return reconcile_transaction(data_root, tx_id, decision, reason,
-                                         actor, confirmation_ref)
-        except TransactionError as e:
-            raise RunControllerError(str(e))
 
 
 def finish(data_root, run_id, status, reason, evidence_refs=None):
@@ -471,10 +285,6 @@ def finish(data_root, run_id, status, reason, evidence_refs=None):
                 or not (Path(data_root) / rel).is_file()):
             raise RunControllerError(f"结束证据必须是数据区内已存在的相对文件: {ref!r}")
     with _locked(data_root):
-        try:
-            require_clean(data_root)
-        except TransactionError as e:
-            raise RunControllerError(str(e))
         obj = load_session(data_root, run_id)
         if obj.get("status") != "active":
             raise RunControllerError(f"运行会话已经结束：{session_status_label(obj.get('status'))}")
@@ -496,9 +306,8 @@ def finish(data_root, run_id, status, reason, evidence_refs=None):
         numbers = [x.get("round") for x in rounds if isinstance(x, dict)]
         if numbers != list(range(1, len(rounds) + 1)):
             raise RunControllerError("manifest round 必须从 1 开始连续且不重复")
-        ledger_path = Path(data_root) / "账本" / "候选账本.json"
         try:
-            ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+            ledger = load_ledger(data_root)
         except FileNotFoundError:
             ledger = {}
         except (json.JSONDecodeError, UnicodeDecodeError):
@@ -571,6 +380,7 @@ def finish(data_root, run_id, status, reason, evidence_refs=None):
         obj["updated_at"] = obj["finished_at"]
         obj["round_executor_id"] = None
         obj["current_round_type"] = None
+        obj["current_round_preflight"] = None
         validate_session(obj, run_id)
         try:
             finalize_manifest(data_root, obj, reason, evidence_refs)
@@ -619,13 +429,17 @@ def render_human_result(cmd, obj):
             f"运行清单：{obj['manifest']}",
             _render_session(session),
         ])
-    if cmd == "recover":
-        return f"已恢复未完成事务：{len(obj.get('recovered') or [])} 个"
-    if cmd == "reconcile":
-        return "分歧事务已按用户确认完成处理。"
     if isinstance(obj, dict) and "run_id" in obj and "status" in obj:
         return _render_session(obj)
     return "操作已完成。"
+
+
+def _yes_no(value):
+    if value == "yes":
+        return True
+    if value == "no":
+        return False
+    raise argparse.ArgumentTypeError("必须是 yes 或 no")
 
 
 def main(argv=None):
@@ -647,6 +461,15 @@ def main(argv=None):
             p.add_argument("--executor-id", required=True)
             p.add_argument("--round-type", choices=sorted(ROUND_TYPES), default="discovery",
                            help="本轮类型：发现/推进/跟踪/校准")
+            # G1 浏览器前置四项:全部必填,g1_ready 由脚本推导(可控+桌面+美区+未登录)
+            p.add_argument("--browser-controllable", type=_yes_no, required=True,
+                           help="浏览器是否可被脚本控制 yes|no")
+            p.add_argument("--browser-desktop", type=_yes_no, required=True,
+                           help="是否桌面版 SERP yes|no")
+            p.add_argument("--browser-region", choices=sorted(PREFLIGHT_REGIONS), required=True,
+                           help="实际生效的地区:us|other|unknown")
+            p.add_argument("--browser-logged-out", type=_yes_no, required=True,
+                           help="是否未登录 Google 账号 yes|no")
     p = sub.add_parser("record-round", help="原子追加运行清单并结束当前轮")
     p.add_argument("--run-id", required=True)
     p.add_argument("--source-opened", action="append", default=[])
@@ -656,16 +479,6 @@ def main(argv=None):
     p.add_argument("--funnel", required=True, help="漏斗 JSON 对象;未扫描时五项全 0")
     p.add_argument("--candidate-reviewed", action="append", default=[],
                    help="只读复核 JSON 对象，可重复；不冒充 candidates_touched")
-    p.add_argument("--task-family", action="append", default=[],
-                   help="本轮正式方向覆盖的独立任务家族，可重复")
-    p.add_argument("--source-family-counts", default="{}",
-                   help="本轮来源家族计数 JSON 对象")
-    p.add_argument("--source-family-outcomes", default="{}",
-                   help="逐来源 formal/g1_pass/deep/tracking 产出 JSON 对象")
-    p.add_argument("--g1-checks", type=int, default=0,
-                   help="本轮实际完成的 G1 首屏检查次数")
-    p.add_argument("--deep-audit-family", action="append", default=[],
-                   help="本轮完成深审的独立任务家族，可重复")
     p.add_argument("--false-negative-audit",
                    help="校准轮必填的结构化假阴性审计 JSON")
     p = sub.add_parser("confirm-window-bet")
@@ -678,15 +491,6 @@ def main(argv=None):
     p.add_argument("--reason", required=True)
     p.add_argument("--evidence-ref", action="append", default=[],
                    help="结束状态的事实证据文件，可重复；额度耗尽时必填")
-    p = sub.add_parser("recover", help="前滚恢复未完成的跨文件事务")
-    p.add_argument("--run-id")
-    p = sub.add_parser("reconcile", help="人工解决无法自动前滚的分歧事务")
-    p.add_argument("--tx-id", required=True)
-    p.add_argument("--decision", choices=["keep_current", "apply_after"], required=True)
-    p.add_argument("--reason", required=True)
-    p.add_argument("--by", choices=["user", "xinci-run"], required=True)
-    p.add_argument("--confirmation-ref", required=True,
-                   help="用户确认消息/任务引用或审计票据 ID")
     a = ap.parse_args(argv)
     # 数据区未配置时在这里就停,并打印「先问用户」的指引,
     # 不让空路径流进下游写操作(理由见 data_root.py)。
@@ -697,7 +501,11 @@ def main(argv=None):
         elif a.cmd == "list":
             obj = list_sessions(a.data_root)
         elif a.cmd == "begin-round":
-            obj = begin_round(a.data_root, a.run_id, a.executor_id, a.round_type)
+            obj = begin_round(a.data_root, a.run_id, a.executor_id, a.round_type,
+                              preflight={"controllable": a.browser_controllable,
+                                         "desktop": a.browser_desktop,
+                                         "region": a.browser_region,
+                                         "logged_out": a.browser_logged_out})
         elif a.cmd == "record-round":
             try:
                 funnel = json.loads(a.funnel)
@@ -708,36 +516,24 @@ def main(argv=None):
             except json.JSONDecodeError as e:
                 raise RunControllerError(f"--candidate-reviewed 不是合法 JSON: {e}")
             try:
-                source_family_counts = json.loads(a.source_family_counts)
-                source_family_outcomes = json.loads(a.source_family_outcomes)
                 false_negative_audit = (json.loads(a.false_negative_audit)
                                         if a.false_negative_audit else None)
             except json.JSONDecodeError as e:
-                raise RunControllerError(f"轮次指标或假阴性审计不是合法 JSON: {e}")
+                raise RunControllerError(f"--false-negative-audit 不是合法 JSON: {e}")
             obj = record_round(a.data_root, a.run_id,
                                sources_opened=a.source_opened,
                                sources_blocked=a.source_blocked,
                                billable_calls=a.billable_calls,
                                notes=a.note, funnel=funnel,
                                candidates_reviewed=reviewed,
-                               task_families=a.task_family,
-                               source_family_counts=source_family_counts,
-                               source_family_outcomes=source_family_outcomes,
-                               g1_checks=a.g1_checks,
-                               deep_audit_families=a.deep_audit_family,
                                false_negative_audit=false_negative_audit)
         elif a.cmd == "confirm-window-bet":
             obj = confirm_window_bet(a.data_root, a.run_id, a.slug)
         elif a.cmd == "finish":
             obj = finish(a.data_root, a.run_id, a.status, a.reason, a.evidence_ref)
-        elif a.cmd == "recover":
-            obj = {"recovered": recover(a.data_root, a.run_id)}
-        elif a.cmd == "reconcile":
-            obj = reconcile(a.data_root, a.tx_id, a.decision, a.reason,
-                            a.by, a.confirmation_ref)
         else:
             obj = load_session(a.data_root, a.run_id)
-    except (RunControllerError, TransactionError) as e:
+    except RunControllerError as e:
         print(f"run_controller 拒绝: {e}", file=sys.stderr)
         return 2
     print(json.dumps(obj, ensure_ascii=False, indent=2) if a.json

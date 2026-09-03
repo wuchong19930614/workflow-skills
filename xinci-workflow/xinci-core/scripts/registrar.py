@@ -5,50 +5,25 @@
 账本:<数据区>/账本/候选账本.json,本脚本独占写入,原子替换。
 """
 import argparse
-import copy
 import hashlib
 import json
-import os
 import re
 import sys
-import tempfile
 from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import data_root
-from urllib.parse import urlparse
+from _common import (atomic_save, check_actor, flock as _flock, funlock as _funlock, is_http_url,
+                     ledger_path as _ledger_path, now as _now)
+from _constants import GO_STATES, MIN_TRACK_SPAN_DAYS, MONETIZATION_LINES, SLUG_RE, TERMINAL
 
-from run_controller import (RunControllerError, active_sessions,
-                            consume_window_bet_confirmation,
-                            require_active_round)
+from run_controller import RunControllerError, require_active_round
 from term_normalize import match_kind, normalize as normalize_term
 from build_decision_html import render as render_decision_html
-from dedup_decisions import DedupDecisionError, find as find_dedup_decision
-from transaction_journal import (TransactionError, prepare_window_bet,
-                                 mark_committed, require_clean)
 from run_policy import evaluate as evaluate_run_policy
-from browser_preflight import BrowserPreflightError, show as show_browser_preflight
+from screen_index import DedupDecisionError, ScreenIndexError, check as check_screen_index
 from trigger_pool import TriggerPoolError, current as current_triggers
-
-# 文件锁跨平台:POSIX 用 fcntl.flock,Windows(如 Codex 多环境)降级 msvcrt.locking
-try:
-    import fcntl
-
-    def _flock(f):
-        fcntl.flock(f, fcntl.LOCK_EX)
-
-    def _funlock(f):
-        fcntl.flock(f, fcntl.LOCK_UN)
-except ImportError:  # Windows
-    import msvcrt
-
-    def _flock(f):
-        msvcrt.locking(f.fileno(), msvcrt.LK_LOCK, 1)
-
-    def _funlock(f):
-        f.seek(0)
-        msvcrt.locking(f.fileno(), msvcrt.LK_UNLCK, 1)
 
 # 数据区的定位统一走 data_root 模块:显式参数 > 环境变量 > 仓库配置 > 拒绝执行。
 # 这里刻意不再留任何默认值——数据区放哪是用户的决定,脚本不猜(理由见 data_root.py)。
@@ -58,8 +33,6 @@ STATES = {
     "build_ready", "pilot_ready", "fast_grab_ready", "hold",
     "rejected", "expired", "superseded", "withdrawn", "built", "disqualified", "no_site",
 }
-# 设计终态词汇为前五个;disqualified/no_site 是决策终局,除 superseded 外无出边,并入终态集
-TERMINAL = {"rejected", "expired", "superseded", "withdrawn", "built", "disqualified", "no_site"}
 # 决策终局的唯一出边:被更好措辞的候选取代
 SUPERSEDABLE_FINAL = {"disqualified", "no_site"}
 OBS_STAGES = {"scan", "track", "qualify", "decide"}
@@ -91,8 +64,6 @@ QUALIFY_GATES = ("G6", "G7", "G8")
 WINDOWS = {"days", "weeks", "months"}
 BUILD_PLAYS = {"single_domain", "cluster_expansion"}
 EXPIRY_TRIGGERS = {"date", "invalidation", "window_closed"}
-# 形成期以周计(生命周期契约):-track 观察最早与最新须相隔 ≥7 天,单次连续运行凑不出形成确认
-MIN_TRACK_SPAN_DAYS = 7
 # 自该日起新观察必须明示使用 schema v2；更早的 v1 历史证据继续只读兼容。
 OBS_V2_REQUIRED_FROM = date(2026, 9, 2)
 # 两条赛道(lane)。原 schema 已把 lane 预留为"本套固定为 new;为未来成熟词道预留"。
@@ -102,24 +73,34 @@ OBS_V2_REQUIRED_FROM = date(2026, 9, 2)
 LANES = {"new", "mature"}
 VALID_ACTORS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run",
                 "xinci-mature", "user"}
-SLUG_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
 GATE_NAMES = {f"G{i}" for i in range(9)}
 GATE_VALUES = {"pass", "veto", G3_WINDOW_BET}
-MONETIZATION_LINES = {"subscription", "lead_generation", "affiliate", "transaction",
-                      "paid_report", "advertising"}
 LEGACY_G6_LINES = {"subscription", "advertising"}
+
+# ---- 状态不变式涉及的状态集合(check_state_invariants 与 validate_ledger 共用) ----
+NO_GO_STATES = {"hold", "no_site"}
+# 带分数的状态:认定产生分数,其后继一路带着它。hold 也在内——生命周期契约明确
+# "hold 本身已带着 G6–G8 全 pass 与分数",它只能从 qualified 转入,分数不会被清空。
+SCORED_STATES = {"qualified", "build_ready", "pilot_ready", "hold"}
+# 过了 screened 的非终态:G0–G5 应全 pass(复查翻转即原子转出,不存在带 veto 的中间态)
+SCREEN_PASSED_STATES = {"screened", "tracking", "formation_confirmed", "qualified",
+                        "build_ready", "pilot_ready", "fast_grab_ready", "hold"}
+# 过了认定的状态:G6–G8 应全 pass
+QUALIFY_PASSED_STATES = {"qualified", "build_ready", "pilot_ready", "hold"}
+# 过了形成确认的状态:≥2 个 -track 观察且跨度达标
+FORMED_STATES = {"formation_confirmed", "qualified", "build_ready", "pilot_ready", "hold"}
+# G3 快道降级结论(veto_window_bet)的候选只准停在这些状态:
+#   captured        —— 深审已出结论、但转移尚未被确认的挂起位(连续运行模式必经此处:
+#                      registrar 拒收 by=xinci-run 的该出口,候选只能挂着等用户单步确认);
+#   screened        —— 已确认窗口赌注风险、等决策;
+#   fast_grab_ready —— 快道决策态;
+#   终态            —— 已终结。
+# 禁止的是 tracking 及其后继:那等于让窗口赌注候选绕过 G3 走到全站。
+WINDOW_BET_STATES = {"captured", "screened", "fast_grab_ready"} | TERMINAL
 
 
 class RegistrarError(Exception):
     pass
-
-
-def _now() -> str:
-    return datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-
-def _ledger_path(data_root: Path) -> Path:
-    return Path(data_root) / "账本" / "候选账本.json"
 
 
 def _load(data_root: Path) -> dict:
@@ -130,13 +111,7 @@ def _load(data_root: Path) -> dict:
 
 
 def _save(data_root: Path, ledger: dict) -> None:
-    p = _ledger_path(data_root)
-    p.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=p.parent, suffix=".tmp")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(ledger, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    os.replace(tmp, p)
+    atomic_save(_ledger_path(data_root), ledger)
 
 
 @contextmanager
@@ -158,22 +133,29 @@ def _require(cond: bool, msg: str) -> None:
 
 
 def _check_actor(data_root: Path, by: str, run_id=None) -> None:
-    """验证执行身份与连续运行会话，禁止靠伪造 --by 绕过授权边界。"""
-    _require(by in VALID_ACTORS, f"by 必须属于 {sorted(VALID_ACTORS)},当前 {by!r}")
-    try:
-        require_clean(data_root)
-        active = active_sessions(data_root)
-        if by == "xinci-run":
-            _require(bool(run_id), "by=xinci-run 要求 --run-id")
-            require_active_round(data_root, run_id)
-        else:
-            _require(not run_id, "单步模式不得携带 run_id")
-            if active:
-                raise RegistrarError(
-                    f"存在活动连续运行 {active[0]['run_id']};单步写入会破坏授权与顺序,"
-                    "请先恢复或结束该运行")
-    except (RunControllerError, TransactionError) as e:
-        raise RegistrarError(str(e))
+    """验证执行身份与连续运行会话，禁止靠伪造 --by 绕过授权边界(实现见 _common.check_actor)。"""
+    check_actor(data_root, by, run_id, actors=VALID_ACTORS, error_cls=RegistrarError)
+
+
+def _open_ledger(data_root: Path, slug: str, by: str, run_id=None, *,
+                 new_lane=None, lane_boundary=True):
+    """五个写入口共同的开场四件套(须在 _locked 内调用):
+    验执行身份 → 读账本 → 定位候选 → 验 lane 边界。返回 (ledger, rec)。
+
+    new_lane 给出时是注册语义:候选必须尚不存在,lane 边界按 (by, new_lane, "captured") 验,
+    rec 返回 None。lane_boundary=False 只给 reopen 用——它原本就没有这道检查
+    (reopen 只受理 rejected,不在 xinci-run 的 mature 前半程范围内),这里不替它新增拒绝路径。"""
+    _check_actor(data_root, by, run_id)
+    ledger = _load(data_root)
+    if new_lane is not None:
+        _require(slug not in ledger["candidates"], f"候选已存在: {slug}")
+        _check_run_lane_boundary(by, new_lane, "captured")
+        return ledger, None
+    _require(slug in ledger["candidates"], f"候选不存在: {slug}")
+    rec = ledger["candidates"][slug]
+    if lane_boundary:
+        _check_run_lane_boundary(by, rec.get("lane", "new"), rec["state"])
+    return ledger, rec
 
 
 MATURE_MANUAL_STATES = {"captured", "screened", "tracking"}
@@ -203,6 +185,25 @@ def _run_history_fields(data_root: Path, run_id):
     return {"run_id": run_id, "round": session["current_round"]}
 
 
+def _window_bet_confirmation(data_root: Path, rec: dict, run_id) -> dict:
+    """连续模式窗口赌注出闸的确认核对:该 run 的 session 对该 slug 有用户确认,
+    且候选 history 里尚无引用这条确认的出闸记录(确认只能消费一次)。返回要写进
+    出闸 history 条目的消费凭据。"""
+    try:
+        session = require_active_round(data_root, run_id)
+    except RunControllerError as e:
+        raise RegistrarError(str(e))
+    confirmation = session.get("confirmations", {}).get(rec["slug"])
+    _require(bool(confirmation) and confirmation.get("risk") == "window_bet",
+             f"G3={G3_WINDOW_BET} 出闸要求用户单步确认;"
+             "先运行 run_controller.py confirm-window-bet")
+    token = {"confirmed_at": confirmation["confirmed_at"], "run_id": run_id}
+    _require(not any(h.get("window_bet_confirmation") == token for h in rec.get("history") or []),
+             f"候选 {rec['slug']} 的窗口赌注确认已被 history 中的出闸记录消费;"
+             "确认只能使用一次")
+    return token
+
+
 def _check_gate_payload(gates) -> None:
     gates = gates or {}
     unknown = sorted(set(gates) - GATE_NAMES)
@@ -212,28 +213,26 @@ def _check_gate_payload(gates) -> None:
 
 
 def _check_run_g1_preflight(data_root: Path, by: str, run_id, gates) -> None:
-    """连续模式提交任何 G1 结论时，重验当前轮实际执行者的浏览器证据。"""
+    """连续模式提交任何 G1 结论时，重验当前轮的浏览器预检(begin-round 时写进 session)。"""
     if by != "xinci-run" or "G1" not in (gates or {}):
         return
     try:
         session = require_active_round(data_root, run_id)
-        executor_id = session.get("round_executor_id")
-        # round_executor_id 缺失只可能来自升级前已打开的轮次或库级兼容调用；
-        # 新 CLI 的 begin-round 已强制 executor-id。兼容旧轮，不替它创造新授权。
-        if executor_id is None:
-            return
-        preflight = show_browser_preflight(data_root, run_id, executor_id,
-                                           session["current_round"])
-    except (RunControllerError, BrowserPreflightError) as e:
-        raise RegistrarError(f"xinci-run 提交 G1 要求当前执行者、当前轮次的浏览器预检: {e}")
+    except RunControllerError as e:
+        raise RegistrarError(f"xinci-run 提交 G1 要求当前轮次的浏览器预检: {e}")
+    # round_executor_id 缺失只可能来自升级前已打开的轮次或库级兼容调用；
+    # 新 CLI 的 begin-round 已强制 executor-id。兼容旧轮，不替它创造新授权。
+    if session.get("round_executor_id") is None:
+        return
+    preflight = session.get("current_round_preflight")
+    _require(preflight is not None,
+             "xinci-run 提交 G1 要求当前轮次的浏览器预检:begin-round 时未提交 --browser-* 四项")
     _require(preflight.get("g1_ready") is True,
              "xinci-run 提交 G1 要求浏览器预检满足可控/桌面/美区/未登录")
 
 
 def _check_url(value: str, field: str) -> None:
-    parsed = urlparse(value or "")
-    _require(parsed.scheme in {"http", "https"} and bool(parsed.netloc),
-             f"{field} 必须是 http(s) URL: {value!r}")
+    _require(is_http_url(value), f"{field} 必须是 http(s) URL: {value!r}")
 
 
 def _check_evidence(data_root: Path, refs, slug=None) -> list:
@@ -545,6 +544,171 @@ def _check_decision_files(data_root: Path, decision_ref: str) -> str:
     return decision_ref
 
 
+def _inv(code: str, msg: str) -> str:
+    """状态不变式错误统一带机器码前缀 [INV-<code>]:文案可改,码不改,测试与外部工具按码识别。"""
+    return f"[INV-{code}] {msg}"
+
+
+def check_state_invariants(data_root, rec: dict) -> list:
+    """对一条候选记录返回它违反的状态不变式(文案列表,空即合规)。
+
+    这是 registrar 各目标状态准入条件的"记录视角"版本:转移成功写入前对写入后的记录调一次
+    (拒绝任何会写出不合规记录的转移);validate_ledger 对账本每条记录调同一函数,捕获绕过
+    registrar 的手工编辑。两处共用同一份条目,不再各抄一遍。
+
+    只看记录本身(含 history 与其引用的观察文件);"本次提交至少 1 个证据"、"reason 必填"
+    这类只在转移瞬间有意义的条件仍留在 transition 里。
+    """
+    data_root = Path(data_root)
+    errors = []
+    state = rec.get("state")
+    expiry = rec.get("expiry")
+    hist = rec.get("history") or []
+
+    if state == "screened" and rec.get("window_estimate") not in WINDOWS:
+        errors.append(_inv("screened-window",
+                           f"screened 必有 window_estimate ∈ {sorted(WINDOWS)},"
+                           f"当前 {rec.get('window_estimate')!r}"))
+    if state == "screened" and not expiry:
+        errors.append(_inv("screened-expiry", "screened 必有 expiry(窗口失效日)"))
+    if state == "tracking" and not expiry:
+        errors.append(_inv("tracking-expiry", "tracking 必有 expiry"))
+    if state == "captured" and rec.get("gates") and not expiry:
+        errors.append(_inv("captured-queue-expiry",
+                           "captured 带闸门结论(排队位)必有 expiry:"
+                           "排队位每轮进多出少,没有 expiry 就没有过期出口,方向会无声腐烂"))
+    if state == "fast_grab_ready":
+        if not expiry:
+            errors.append(_inv("fast-grab-expiry", "fast_grab_ready 必有 expiry"))
+        if rec.get("window_estimate") != "days":
+            errors.append(_inv("fast-grab-window",
+                               f"fast_grab_ready 必有 window_estimate=days,"
+                               f"当前 {rec.get('window_estimate')!r}"))
+        if rec.get("play") != "fast_grab":
+            errors.append(_inv("fast-grab-play",
+                               f"fast_grab_ready 的 play 必须是 fast_grab,当前 {rec.get('play')!r}"))
+        if rec.get("score") is not None:
+            errors.append(_inv("fast-grab-score",
+                               f"快道不得声称全站分数,score 应为 null,当前 {rec.get('score')!r}"))
+    gates = rec.get("gates") or {}
+    try:
+        _check_gate_payload(gates)
+    except RegistrarError as e:
+        errors.append(_inv("gates-payload", str(e)))
+    g3 = gates.get("G3")
+    if state in SCREEN_PASSED_STATES:
+        bad = [g for g in SCREEN_GATES if g != "G3" and gates.get(g) != "pass"]
+        if g3 not in ("pass", G3_WINDOW_BET):
+            bad.append("G3")
+        if bad:
+            errors.append(_inv("screen-gates",
+                               f"{state} 要求 G0/G1/G2/G4/G5=pass,"
+                               f"G3=pass 或 {G3_WINDOW_BET},未满足: {bad}"))
+    if g3 == G3_WINDOW_BET:
+        # 降级结论只通向快道:出现在 tracking 及其后继意味着绕过了 G3
+        if state not in WINDOW_BET_STATES:
+            errors.append(_inv("window-bet-state",
+                               f"G3={G3_WINDOW_BET} 的候选只能是 captured(挂起待确认)/"
+                               f"screened/fast_grab_ready 或终态,当前 {state}"
+                               "——进入该状态意味着绕过了 G3"))
+        if state in {"screened", "fast_grab_ready"} and rec.get("window_estimate") != "days":
+            errors.append(_inv("window-bet-window",
+                               f"G3={G3_WINDOW_BET} 要求 window_estimate=days,"
+                               f"当前 {rec.get('window_estimate')!r}"))
+    if state in QUALIFY_PASSED_STATES:
+        bad = [g for g in QUALIFY_GATES if gates.get(g) != "pass"]
+        if bad:
+            errors.append(_inv("qualify-gates", f"{state} 要求 G6–G8 全 pass,未满足: {bad}"))
+    if state in FORMED_STATES:
+        track_refs = [r for r in rec.get("evidence_refs", [])
+                      if Path(r).stem.endswith("-track") and (data_root / r).is_file()]
+        if len(track_refs) < 2:
+            errors.append(_inv("track-count",
+                               f"{state} 要求 ≥2 个 -track 观察,当前 {len(track_refs)}"))
+        else:
+            try:
+                times = [_obs_time(data_root, r) for r in track_refs]
+                span = (max(times) - min(times)).days
+                if span < MIN_TRACK_SPAN_DAYS:
+                    errors.append(_inv("track-span",
+                                       f"{state} 要求 -track 观察跨度 ≥{MIN_TRACK_SPAN_DAYS} 天,"
+                                       f"当前 {span} 天"))
+            except RegistrarError as e:
+                errors.append(_inv("track-obs-time", str(e)))
+    if state in SCORED_STATES:
+        score = rec.get("score")
+        if not (isinstance(score, int) and score >= 80):
+            errors.append(_inv("score", f"{state} 必有整数 score ≥80,当前 {score!r}"))
+        income_score = rec.get("income_score")
+        if not (isinstance(income_score, int) and not isinstance(income_score, bool)
+                and 1 <= income_score <= 20):
+            errors.append(_inv("income-score",
+                               f"{state} 必有 1–20 的整数 income_score,当前 {income_score!r}"))
+        lines = rec.get("g6_passed_lines")
+        if not (isinstance(lines, list) and lines and len(lines) == len(set(lines))
+                and set(lines) <= MONETIZATION_LINES):
+            errors.append(_inv("g6-lines",
+                               f"{state} 必有非空且合法的 g6_passed_lines,当前 {lines!r}"))
+        elif rec.get("lane") == "new" and "advertising" in lines:
+            errors.append(_inv("g6-advertising", "lane=new 的 g6_passed_lines 不得包含 advertising"))
+        qualified_entry = next((h for h in reversed(hist) if h.get("to") == "qualified"), None)
+        if qualified_entry is None:
+            errors.append(_inv("qualified-snapshot", f"{state} 缺 →qualified history 快照"))
+        else:
+            if qualified_entry.get("income_score") != income_score:
+                errors.append(_inv("snapshot-income",
+                                   "顶层 income_score 与 →qualified history 快照不一致"))
+            if qualified_entry.get("g6_passed_lines") != lines:
+                errors.append(_inv("snapshot-lines",
+                                   "顶层 g6_passed_lines 与 →qualified history 快照不一致"))
+            qualify_obs = []
+            for ref in qualified_entry.get("evidence", []):
+                try:
+                    obs = json.loads((data_root / ref).read_text(encoding="utf-8"))
+                except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                    continue
+                if (obs.get("stage") == "qualify"
+                        and obs.get("gates", {}).get("G6") == "pass"):
+                    qualify_obs.append(obs)
+            if not qualify_obs:
+                errors.append(_inv("qualify-obs", "→qualified history 缺结构化 G6 qualify 观察"))
+            elif isinstance(lines, list):
+                def lines_match(obs):
+                    observed = obs.get("g6_lines") or {}
+                    return (all(observed.get(line) == "pass" for line in lines)
+                            and not any(value == "pass" and line not in lines
+                                        for line, value in observed.items())
+                            and (rec.get("lane") != "new"
+                                 or observed.get("advertising") == "N/A"))
+                if any(not lines_match(obs) for obs in qualify_obs):
+                    errors.append(_inv("qualify-obs-lines", "qualify 观察 g6_lines 与账本不一致"))
+                if any(obs.get("income_score") != income_score for obs in qualify_obs):
+                    errors.append(_inv("qualify-obs-income", "qualify 观察 income_score 与账本不一致"))
+    if state in {"build_ready", "pilot_ready"} and rec.get("play") not in BUILD_PLAYS:
+        errors.append(_inv("build-play",
+                           f"{state} 的 play 必须属于 {sorted(BUILD_PLAYS)},当前 {rec.get('play')!r}"))
+
+    ref = rec.get("decision_ref")
+    if state in GO_STATES:
+        if not ref:
+            errors.append(_inv("decision-ref", "go 决策态缺 decision_ref"))
+        else:
+            md = data_root / ref
+            html = md.with_suffix(".html")
+            if not md.is_file():
+                errors.append(_inv("decision-md", f"决策书 md 缺失: {ref}"))
+            if not html.is_file():
+                errors.append(_inv("decision-html", f"决策书 html 缺失(双格式要求): {html.name}"))
+            if md.is_file() and html.is_file():
+                try:
+                    _check_decision_files(data_root, ref)
+                except RegistrarError as e:
+                    errors.append(_inv("decision-files", f"决策书校验失败: {e}"))
+    if state in NO_GO_STATES and ref:
+        errors.append(_inv("nogo-decision-ref", f"no-go 结论不应携带 decision_ref: {ref}"))
+    return errors
+
+
 def register(data_root, slug, term, source_url, task, evidence,
              source_note="", aliases=None, by="xinci-scan", gates=None, expiry=None,
              run_id=None, lane="new", origin=None, trigger_ref=None,
@@ -561,16 +725,7 @@ def register(data_root, slug, term, source_url, task, evidence,
     _require(bool(SLUG_RE.fullmatch(slug)), "slug 必须是 kebab-case 小写字母/数字/连字符")
     _check_gate_payload(gates)
     _check_url(source_url, "source_url")
-    _check_actor(data_root, by, run_id)
-    _check_run_g1_preflight(data_root, by, run_id, gates)
-    _check_run_lane_boundary(by, lane, "captured")
     task_families = list(dict.fromkeys(task_families or []))
-    if by == "xinci-run":
-        _require(isinstance(site_thesis, str) and site_thesis.strip(),
-                 "xinci-run 新候选必须记录 site_thesis")
-        _require(len(task_families) >= 2 and all(isinstance(x, str) and x.strip()
-                                                 for x in task_families),
-                 "xinci-run 新候选必须记录至少两个独立 task_family")
     with _locked(data_root):
         return _register_locked(data_root, slug, term, source_url, task, evidence,
                                 source_note, aliases, by, gates, expiry, run_id, lane,
@@ -601,52 +756,46 @@ def require_formal_admission(data_root, by, run_id, term=None, origin=None, trig
         _require(not trigger_ref, "origin=signal 不得携带 --trigger-id")
 
 
+def _check_not_duplicate(data_root: Path, wanted_names) -> None:
+    """注册期去重:term 与每个 alias 都不得与账本候选或淘汰方向索引重复。
+
+    匹配逻辑与 screen_index.check 完全同一份(精确命中即重复;疑似重复须有 distinct 裁决,
+    same 裁决即重复);索引损坏时 strict 读取直接拒绝,不能带着读不全的索引放行。
+    """
+    try:
+        found = check_screen_index(data_root, wanted_names, strict=True)
+    except ScreenIndexError as e:
+        raise RegistrarError(f"{e};不能安全去重注册")
+    except DedupDecisionError as e:
+        raise RegistrarError(str(e))
+
+    def owner(hit):
+        return "账本候选" if hit.get("gate") == "账本" else "淘汰方向索引"
+
+    for hit in found["seen"]:
+        if match_kind(hit["term"], hit["matched"]) == "exact":
+            raise RegistrarError(f"term/alias {hit['term']!r} 已存在于{owner(hit)}"
+                                 f"({hit['matched']!r}: {hit['reason']});不得重复注册")
+        raise RegistrarError(f"去重裁决已判定 {hit['term']!r} 与{owner(hit)}的 "
+                             f"{hit['matched']!r} 为 same;不得重复注册")
+    for hit in found["review"]:
+        raise RegistrarError(f"term/alias {hit['term']!r} 与{owner(hit)}的 {hit['matched']!r} 疑似重复;"
+                             "先用 screen_index.py resolve 登记 same/distinct 裁决")
+
+
 def _register_locked(data_root, slug, term, source_url, task, evidence,
                      source_note, aliases, by, gates=None, expiry=None, run_id=None,
                      lane="new", origin=None, trigger_ref=None,
                      site_thesis=None, task_families=None):
-    try:
-        require_clean(data_root)
-    except TransactionError as e:
-        raise RegistrarError(str(e))
-    ledger = _load(data_root)
-    _require(slug not in ledger["candidates"], f"候选已存在: {slug}")
-    wanted_names = [term] + list(aliases or [])
-    known = []
-    for other_slug, other in ledger["candidates"].items():
-        for name in [other.get("term", "")] + list(other.get("aliases", [])):
-            if normalize_term(name):
-                known.append((name, f"候选 {other_slug}"))
-    index_path = Path(data_root) / "淘汰方向.jsonl"
-    if index_path.is_file():
-        for i, line in enumerate(index_path.read_text(encoding="utf-8").splitlines(), 1):
-            if not line.strip():
-                continue
-            try:
-                row = json.loads(line)
-            except json.JSONDecodeError:
-                raise RegistrarError(f"淘汰方向索引第 {i} 行损坏;不能安全去重注册")
-            if normalize_term(row.get("term", "")):
-                known.append((row["term"], f"淘汰方向索引第 {i} 行"))
-    for wanted in wanted_names:
-        for existing, owner in known:
-            kind = match_kind(wanted, existing)
-            if kind == "exact":
-                raise RegistrarError(f"term/alias 已存在于{owner};不得重复注册")
-            if kind == "probable":
-                try:
-                    decision = find_dedup_decision(data_root, wanted, existing)
-                except DedupDecisionError as e:
-                    raise RegistrarError(str(e))
-                _require(bool(decision),
-                         f"term/alias 与{owner}的 {existing!r} 疑似重复;"
-                         "先用 screen_index.py resolve 登记 same/distinct 裁决")
-                audit_fields = ("decision_id", "actor", "term_task", "matched_task",
-                                "term_evidence_urls", "matched_evidence_urls", "decided_at")
-                _require(all(decision.get(k) for k in audit_fields),
-                         f"与 {existing!r} 的去重裁决缺审计字段;请用新版 resolve 重新裁决")
-                _require(decision["decision"] == "distinct",
-                         f"去重裁决已判定与{owner}的 {existing!r} 为 same;不得重复注册")
+    ledger, _ = _open_ledger(data_root, slug, by, run_id, new_lane=lane)
+    _check_run_g1_preflight(data_root, by, run_id, gates)
+    if by == "xinci-run":
+        _require(isinstance(site_thesis, str) and site_thesis.strip(),
+                 "xinci-run 新候选必须记录 site_thesis")
+        _require(len(task_families) >= 2 and all(isinstance(x, str) and x.strip()
+                                                 for x in task_families),
+                 "xinci-run 新候选必须记录至少两个独立 task_family")
+    _check_not_duplicate(data_root, [term] + list(aliases or []))
     _require(lane in LANES, f"lane 只能是 {sorted(LANES)},当前 {lane!r}")
     refs = _check_evidence(data_root, evidence, slug=slug)
     _require(len(refs) >= 1, "注册候选要求至少 1 个证据文件")
@@ -701,8 +850,6 @@ def transition(data_root, slug, to, by, gates=None, window_estimate=None, expiry
                run_id=None):
     data_root = Path(data_root)
     _check_gate_payload(gates)
-    _check_actor(data_root, by, run_id)
-    _check_run_g1_preflight(data_root, by, run_id, gates)
     with _locked(data_root):
         return _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                                   invalidation, score, income_score, g6_passed_lines,
@@ -714,16 +861,9 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                        invalidation, score, income_score, g6_passed_lines,
                        decision_ref, play,
                        reason, evidence, superseded_by, expiry_trigger, run_id):
-    try:
-        require_clean(data_root)
-    except TransactionError as e:
-        raise RegistrarError(str(e))
-    ledger = _load(data_root)
-    _require(slug in ledger["candidates"], f"候选不存在: {slug}")
-    rec = ledger["candidates"][slug]
-    candidate_before = copy.deepcopy(rec)
+    ledger, rec = _open_ledger(data_root, slug, by, run_id)
+    _check_run_g1_preflight(data_root, by, run_id, gates)
     frm = rec["state"]
-    _check_run_lane_boundary(by, rec.get("lane", "new"), frm)
     _require(to in STATES, f"未知状态: {to}")
     if to != "qualified":
         _require(income_score is None and g6_passed_lines is None,
@@ -746,6 +886,7 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
     _check_gate_evidence(data_root, refs, gates, f"{frm}→{to}")
     _check_evidence_reuse(data_root, rec, refs)
     merged_refs = rec["evidence_refs"] + [r for r in refs if r not in rec["evidence_refs"]]
+    window_bet_confirmation = None
 
     if to == "screened":
         # 闸门结论是候选的累积属性:排队的 captured 候选注册时已带 G0/G4/G5/G1,
@@ -769,15 +910,7 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                      f"G3={G3_WINDOW_BET} 要求 reason(降级依据:数到哪些免费实现、"
                      "为何判定它们只是还没被收录)")
             if by == "xinci-run":
-                try:
-                    session = require_active_round(data_root, run_id)
-                    confirmation = session.get("confirmations", {}).get(slug)
-                    _require(confirmation and confirmation.get("risk") == "window_bet"
-                             and not confirmation.get("consumed_at"),
-                             f"G3={G3_WINDOW_BET} 出闸要求用户单步确认;"
-                             "先运行 run_controller.py confirm-window-bet")
-                except RunControllerError as e:
-                    raise RegistrarError(str(e))
+                window_bet_confirmation = _window_bet_confirmation(data_root, rec, run_id)
     elif to == "rejected":
         _require(bool(reason), "rejected 要求 reason(失败闸门 + 现场证据要点)")
         if frm in {"captured", "tracking"}:
@@ -936,6 +1069,10 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
     # 没有快照就无法回答"当时的闸门结论是什么"(如 G1 pass→veto 的翻转史)。
     entry = {"at": now, "from": frm, "to": to, "by": by}
     entry.update(_run_history_fields(data_root, run_id))
+    if window_bet_confirmation:
+        # 确认的消费凭据写在出闸条目上:同一 (run_id, confirmed_at) 在 history 里只能出现一次,
+        # 单次消费语义由此保证,不再需要跨文件事务。
+        entry["window_bet_confirmation"] = window_bet_confirmation
     if refs:
         entry["evidence"] = refs
     for key, value in (("reason", reason), ("gates", gates), ("window_estimate", window_estimate),
@@ -947,39 +1084,20 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
             entry[key] = value
     rec["history"].append(entry)
     rec["state"] = to
-    tx_path = None
-    if to == "screened" and rec["gates"].get("G3") == G3_WINDOW_BET and by == "xinci-run":
-        try:
-            tx_path = prepare_window_bet(data_root, run_id, slug, candidate_before,
-                                         copy.deepcopy(rec))
-            consume_window_bet_confirmation(data_root, run_id, slug)
-        except (RunControllerError, TransactionError) as e:
-            raise RegistrarError(f"窗口事务未完成,请运行 run_controller.py recover: {e}")
-    try:
-        _save(data_root, ledger)
-        if tx_path:
-            mark_committed(tx_path)
-    except Exception as e:
-        if tx_path:
-            raise RegistrarError("窗口事务在跨文件写入中断;pending journal 已保留,"
-                                 "请运行 run_controller.py recover") from e
-        raise
+    # 写入前对写入后的记录复核状态不变式:与 validate_ledger 共用同一份条目,
+    # 转移瞬间就拒绝任何会写出不合规记录的提交,而不是等事后校验才发现。
+    violations = check_state_invariants(data_root, rec)
+    _require(not violations, f"{frm}→{to} 后的记录违反状态不变式: " + "; ".join(violations))
+    _save(data_root, ledger)
     return rec
 
 
 def reopen(data_root, slug, by, reason, evidence, run_id=None):
     """用新现场证据受控重开可逆的 SERP 型 rejected 候选。"""
     data_root = Path(data_root)
-    _check_actor(data_root, by, run_id)
     _require(bool(reason), "reopen 要求 reason(什么事实发生了变化)")
     with _locked(data_root):
-        try:
-            require_clean(data_root)
-        except TransactionError as e:
-            raise RegistrarError(str(e))
-        ledger = _load(data_root)
-        _require(slug in ledger["candidates"], f"候选不存在: {slug}")
-        rec = ledger["candidates"][slug]
+        ledger, rec = _open_ledger(data_root, slug, by, run_id, lane_boundary=False)
         _require(rec["state"] == "rejected", "reopen 只受理 rejected 候选")
         vetoes = {g for g, v in (rec.get("gates") or {}).items() if v == "veto"}
         _require(vetoes and vetoes <= {"G1", "G2", "G3"},
@@ -1035,16 +1153,8 @@ def checked(data_root, slug, evidence, by="xinci-track", run_id=None, same_day_r
     时传 same_day_reason,理由会写进 history。"""
     data_root = Path(data_root)
     _require(bool(by), "checked 要求 by(执行的 skill 名)")
-    _check_actor(data_root, by, run_id)
     with _locked(data_root):
-        try:
-            require_clean(data_root)
-        except TransactionError as e:
-            raise RegistrarError(str(e))
-        ledger = _load(data_root)
-        _require(slug in ledger["candidates"], f"候选不存在: {slug}")
-        rec = ledger["candidates"][slug]
-        _check_run_lane_boundary(by, rec.get("lane", "new"), rec["state"])
+        ledger, rec = _open_ledger(data_root, slug, by, run_id)
         _require(rec["state"] not in TERMINAL, f"终态候选无需复查: {rec['state']}")
         now = _now()
         refs = _check_evidence(data_root, evidence, slug=slug)
@@ -1086,22 +1196,14 @@ def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invali
     上的补记绕不过任何校验——出闸(captured→screened)与 rejected 都会重新按合并结果验。"""
     data_root = Path(data_root)
     _check_gate_payload(gates)
-    _check_actor(data_root, by, run_id)
-    _check_run_g1_preflight(data_root, by, run_id, gates)
     _require(bool(reason), "amend 要求 reason(如:用户确认续期的理由)")
     add_aliases = list(add_aliases or [])
     add_invalidation = list(add_invalidation or [])
     _require(bool(expiry) or add_aliases or add_invalidation or gates,
              "amend 要求至少提供一个可改字段:expiry / add_aliases / add_invalidation / gates")
     with _locked(data_root):
-        try:
-            require_clean(data_root)
-        except TransactionError as e:
-            raise RegistrarError(str(e))
-        ledger = _load(data_root)
-        _require(slug in ledger["candidates"], f"候选不存在: {slug}")
-        rec = ledger["candidates"][slug]
-        _check_run_lane_boundary(by, rec.get("lane", "new"), rec["state"])
+        ledger, rec = _open_ledger(data_root, slug, by, run_id)
+        _check_run_g1_preflight(data_root, by, run_id, gates)
         _require(rec["state"] not in TERMINAL, f"终态候选不可修订: {rec['state']}")
         amended = []
         refs = _check_evidence(data_root, evidence, slug=slug)
@@ -1153,85 +1255,94 @@ def _parse_gates(text):
     return out
 
 
+_RUN_ID_HELP = "by=xinci-run 时必填的活动运行会话"
+_REQUIRED = {"required": True}
+_APPEND = {"action": "append"}
+# CLI 参数表:每个子命令 → (help, [(flag, add_argument 关键字), ...])。
+# 同名参数在不同子命令下 required / default / help 各不相同,所以按子命令逐条列出、不跨命令合并。
+# 这张表就是 CLI 表面本身(SKILL.md 按它写调用):参数名、类型、默认值、help 文案改一处都算改接口。
+CLI_SPEC = {
+    "register": ("注册新候选(→captured)", [
+        ("--slug", _REQUIRED),
+        ("--term", _REQUIRED),
+        ("--source-url", _REQUIRED),
+        ("--source-note", {"default": ""}),
+        ("--task", _REQUIRED),
+        ("--site-thesis", {"help": "独立站为何成立的一句话假设;xinci-run 必填"}),
+        ("--task-family", {"action": "append", "default": [],
+                           "help": "站点可拥有的独立任务家族;xinci-run 至少两项"}),
+        ("--lane", {"default": "new", "choices": sorted(["new", "mature"]),
+                    "help": "new=新词道(默认);mature=成熟错价词道,广告线只能在此道工作"}),
+        ("--aliases", {"default": "", "help": "逗号分隔"}),
+        ("--evidence", {"action": "append", "required": True}),
+        ("--by", {"default": "xinci-scan"}),
+        ("--run-id", {"help": _RUN_ID_HELP}),
+        ("--origin", {"choices": ["signal", "trigger"],
+                      "help": "xinci-run 注册必填；trigger 还须 --trigger-id"}),
+        ("--trigger-id", {}),
+        ("--gates", {"default": "", "help": "已得的闸门结论,如 G0=pass,G4=pass,G5=pass,G1=pass"
+                                            "(排队的 captured 候选用;缺哪门下轮补哪门)"}),
+        ("--expiry", {"help": "排队位的失效日 YYYY-MM-DD(带 --gates 时必填)"}),
+    ]),
+    "transition": ("状态转移", [
+        ("--slug", _REQUIRED),
+        ("--to", _REQUIRED),
+        ("--by", _REQUIRED),
+        ("--run-id", {"help": _RUN_ID_HELP}),
+        ("--gates", {"default": "", "help": "如 G1=pass,G2=pass"}),
+        ("--window-estimate", {"choices": sorted(WINDOWS)}),
+        ("--expiry", {}),
+        ("--expiry-trigger", {"choices": sorted(EXPIRY_TRIGGERS),
+                              "help": "转 expired 时必填:date / invalidation / window_closed"}),
+        ("--invalidation", {"default": "", "help": "分号分隔"}),
+        ("--score", {"type": int}),
+        ("--income-score", {"type": int, "help": "收入可行性维度得分;qualified 必填且须为 1–20"}),
+        ("--g6-passed-lines", {"default": "", "help": "qualified 必填;逗号分隔通过的盈利线"}),
+        ("--decision-ref", {}),
+        ("--play", {}),
+        ("--reason", {}),
+        ("--evidence", _APPEND),
+        ("--superseded-by", {}),
+    ]),
+    "checked": ("复查登记(不改状态)", [
+        ("--slug", _REQUIRED),
+        ("--evidence", {"action": "append", "required": True}),
+        ("--by", {"default": "xinci-track"}),
+        ("--run-id", {"help": _RUN_ID_HELP}),
+        ("--same-day-reason", {"help": "当日已复查过仍要重测时的理由(如上次复查环境被污染);会记进 history"}),
+    ]),
+    "amend": ("观察性字段修订(不改状态):续期 expiry、追加 aliases/invalidation、captured 补记闸门结论", [
+        ("--slug", _REQUIRED),
+        ("--by", _REQUIRED),
+        ("--run-id", {"help": _RUN_ID_HELP}),
+        ("--reason", _REQUIRED),
+        ("--expiry", {}),
+        ("--add-alias", {"action": "append", "default": []}),
+        ("--add-invalidation", {"default": "", "help": "分号分隔"}),
+        ("--gates", {"default": "", "help": "仅 captured 候选:补记本轮跑出的闸门结论,"
+                                            "如 G3=veto_window_bet(captured→captured 不是转移,"
+                                            "排队位的 gates 只能从这里写)"}),
+        ("--evidence", {"action": "append", "help": "补记 gates 时必填:本次 observation 证据"}),
+    ]),
+    "reopen": ("用新证据重开 G1/G2/G3 可逆 SERP 型 rejected 候选", [
+        ("--slug", _REQUIRED),
+        ("--by", _REQUIRED),
+        ("--run-id", {}),
+        ("--reason", _REQUIRED),
+        ("--evidence", {"action": "append", "required": True}),
+    ]),
+}
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="xinci 候选账本 registrar")
     ap.add_argument("--data-root", default=None,
                     help="数据区路径。不给则按 XINCI_DATA_ROOT 环境变量、再按仓库配置 .xinci-data-root 解析;都没有则拒绝执行并提示先问用户")
     sub = ap.add_subparsers(dest="cmd", required=True)
-
-    p = sub.add_parser("register", help="注册新候选(→captured)")
-    p.add_argument("--slug", required=True)
-    p.add_argument("--term", required=True)
-    p.add_argument("--source-url", required=True)
-    p.add_argument("--source-note", default="")
-    p.add_argument("--task", required=True)
-    p.add_argument("--site-thesis", help="独立站为何成立的一句话假设;xinci-run 必填")
-    p.add_argument("--task-family", action="append", default=[],
-                   help="站点可拥有的独立任务家族;xinci-run 至少两项")
-    p.add_argument("--lane", default="new", choices=sorted(["new", "mature"]),
-                   help="new=新词道(默认);mature=成熟错价词道,广告线只能在此道工作")
-    p.add_argument("--aliases", default="", help="逗号分隔")
-    p.add_argument("--evidence", action="append", required=True)
-    p.add_argument("--by", default="xinci-scan")
-    p.add_argument("--run-id", help="by=xinci-run 时必填的活动运行会话")
-    p.add_argument("--origin", choices=["signal", "trigger"],
-                   help="xinci-run 注册必填；trigger 还须 --trigger-id")
-    p.add_argument("--trigger-id")
-    p.add_argument("--gates", default="", help="已得的闸门结论,如 G0=pass,G4=pass,G5=pass,G1=pass"
-                                              "(排队的 captured 候选用;缺哪门下轮补哪门)")
-    p.add_argument("--expiry", help="排队位的失效日 YYYY-MM-DD(带 --gates 时必填)")
-
-    p = sub.add_parser("transition", help="状态转移")
-    p.add_argument("--slug", required=True)
-    p.add_argument("--to", required=True)
-    p.add_argument("--by", required=True)
-    p.add_argument("--run-id", help="by=xinci-run 时必填的活动运行会话")
-    p.add_argument("--gates", default="", help="如 G1=pass,G2=pass")
-    p.add_argument("--window-estimate", choices=sorted(WINDOWS))
-    p.add_argument("--expiry")
-    p.add_argument("--expiry-trigger", choices=sorted(EXPIRY_TRIGGERS),
-                   help="转 expired 时必填:date / invalidation / window_closed")
-    p.add_argument("--invalidation", default="", help="分号分隔")
-    p.add_argument("--score", type=int)
-    p.add_argument("--income-score", type=int,
-                   help="收入可行性维度得分;qualified 必填且须为 1–20")
-    p.add_argument("--g6-passed-lines", default="",
-                   help="qualified 必填;逗号分隔通过的盈利线")
-    p.add_argument("--decision-ref")
-    p.add_argument("--play")
-    p.add_argument("--reason")
-    p.add_argument("--evidence", action="append")
-    p.add_argument("--superseded-by")
-
-    p = sub.add_parser("checked", help="复查登记(不改状态)")
-    p.add_argument("--slug", required=True)
-    p.add_argument("--evidence", action="append", required=True)
-    p.add_argument("--by", default="xinci-track")
-    p.add_argument("--run-id", help="by=xinci-run 时必填的活动运行会话")
-    p.add_argument("--same-day-reason",
-                   help="当日已复查过仍要重测时的理由(如上次复查环境被污染);会记进 history")
-
-    p = sub.add_parser("amend", help="观察性字段修订(不改状态):续期 expiry、"
-                                     "追加 aliases/invalidation、captured 补记闸门结论")
-    p.add_argument("--slug", required=True)
-    p.add_argument("--by", required=True)
-    p.add_argument("--run-id", help="by=xinci-run 时必填的活动运行会话")
-    p.add_argument("--reason", required=True)
-    p.add_argument("--expiry")
-    p.add_argument("--add-alias", action="append", default=[])
-    p.add_argument("--add-invalidation", default="", help="分号分隔")
-    p.add_argument("--gates", default="", help="仅 captured 候选:补记本轮跑出的闸门结论,"
-                                              "如 G3=veto_window_bet(captured→captured 不是转移,"
-                                              "排队位的 gates 只能从这里写)")
-    p.add_argument("--evidence", action="append",
-                   help="补记 gates 时必填:本次 observation 证据")
-
-    p = sub.add_parser("reopen", help="用新证据重开 G1/G2/G3 可逆 SERP 型 rejected 候选")
-    p.add_argument("--slug", required=True)
-    p.add_argument("--by", required=True)
-    p.add_argument("--run-id")
-    p.add_argument("--reason", required=True)
-    p.add_argument("--evidence", action="append", required=True)
+    for cmd, (help_text, params) in CLI_SPEC.items():
+        p = sub.add_parser(cmd, help=help_text)
+        for flag, kwargs in params:
+            p.add_argument(flag, **kwargs)
 
     a = ap.parse_args(argv)
     # 数据区未配置时在这里就停,并打印「先问用户」的指引,

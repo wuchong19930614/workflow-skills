@@ -4,6 +4,7 @@ import hashlib
 import sys
 import tempfile
 import unittest
+from contextlib import contextmanager
 from unittest.mock import patch
 from datetime import date, timedelta
 from pathlib import Path
@@ -13,9 +14,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import registrar as R
 import build_decision_html as BDH
 import run_controller as RC
-import transaction_journal as TJ
-import dedup_decisions as DD
-import browser_preflight as BP
+import screen_index as S
 
 
 def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
@@ -163,7 +162,7 @@ class RegistrarTest(unittest.TestCase):
                          gates=dict(GATES_678),
                          g6_lines={"subscription": "pass", "advertising": "N/A"},
                          income_score=8)
-        with self.assertRaisesRegex(R.RegistrarError, "完整包含六条盈利线"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="qualified", by="xinci-qualify", score=82,
                          income_score=8, g6_passed_lines=["subscription"],
                          gates=dict(GATES_678), evidence=[ev])
@@ -178,6 +177,21 @@ class RegistrarTest(unittest.TestCase):
     def load(self, slug):
         ledger = json.loads((self.root / "账本" / "候选账本.json").read_text(encoding="utf-8"))
         return ledger["candidates"][slug]
+
+    def exists(self, slug):
+        p = self.root / "账本" / "候选账本.json"
+        return p.is_file() and slug in json.loads(p.read_text(encoding="utf-8"))["candidates"]
+
+    @contextmanager
+    def refused(self, slug=None):
+        """断言 registrar 拒绝(抛 RegistrarError)且账本上该候选纹丝不动:
+        已存在的记录逐字段相同(状态、history、证据都没动),尚不存在的仍不存在。
+        断言的是行为而不是某句中文措辞,改文案不该让用例变红。"""
+        before = self.load(slug) if slug and self.exists(slug) else None
+        with self.assertRaises(R.RegistrarError):
+            yield
+        after = self.load(slug) if slug and self.exists(slug) else None
+        self.assertEqual(after, before)
 
     # ---- 用例 ----
 
@@ -211,13 +225,13 @@ class RegistrarTest(unittest.TestCase):
         run_id = session["run_id"]
         RC.begin_round(self.root, run_id)
         ev = mk_evidence(self.root, "mature-run-register", "2026-08-23-scan.json")
-        with self.assertRaisesRegex(R.RegistrarError, "mature 前半程"):
+        with self.refused("mature-run-register"):
             R.register(
                 self.root, slug="mature-run-register", term="mature run register",
                 source_url="https://e.com/t", task="t", evidence=[ev], lane="mature",
                 by="xinci-run", run_id=run_id)
 
-        with self.assertRaisesRegex(R.RegistrarError, "mature 前半程"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="withdrawn", by="xinci-run",
                          run_id=run_id, reason="不得由连续运行撤回")
 
@@ -235,7 +249,7 @@ class RegistrarTest(unittest.TestCase):
                    expiry="2026-09-11")
         # 同一路径改写成只带 G3=veto —— 上一次的 G0/G4/G5 结论被覆盖掉
         mk_evidence(self.root, slug, "2026-08-21-scan.json", gates={"G3": "veto"})
-        with self.assertRaisesRegex(R.RegistrarError, "覆盖"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="rejected", by="xinci-scan",
                          gates={"G3": "veto"}, evidence=[ev], reason="G3 veto")
 
@@ -273,7 +287,7 @@ class RegistrarTest(unittest.TestCase):
             source_urls=["https://e.com/payer-evidence"],
             g6_tentative_lines={
                 "subscription": "tentative_pass", "advertising": "N/A"})
-        with self.assertRaisesRegex(R.RegistrarError, "没有适用盈利线"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="rejected", by="xinci-scan",
                          evidence=[ev], reason="不能把可行线说成全灭")
 
@@ -284,7 +298,7 @@ class RegistrarTest(unittest.TestCase):
             source_urls=["https://agency.example/official-count"],
             g6_entry_veto={"criterion": "official_count_class",
                            "reason": "the official dataset does not count this object class"})
-        with self.assertRaisesRegex(R.RegistrarError, "没有适用盈利线"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="rejected", by="xinci-scan",
                          evidence=[ev], reason="官方统计不计该对象")
 
@@ -307,17 +321,40 @@ class RegistrarTest(unittest.TestCase):
             R.transition(self.root, slug, to="rejected", by="xinci-scan",
                          gates={"G1": "veto"}, evidence=[ev], reason="原子答案已出现")
 
-    def test_xinci_run_g1_write_requires_assigned_executor_preflight(self):
+    def test_xinci_run_g1_write_requires_current_round_preflight(self):
         slug = self.register("executor-bound-g1")
         session = RC.start(self.root)
-        BP.record(self.root, session["run_id"], channel="chrome", controllable=True,
-                  desktop=True, region="us", logged_out=True, executor_id="parent")
+        # 有执行者但 begin-round 时没自报预检:拒收 G1 结论
         RC.begin_round(self.root, session["run_id"], executor_id="round-worker")
         ev = mk_evidence(self.root, slug, "2026-08-31-scan.json", gates={"G1": "veto"})
-        with self.assertRaisesRegex(R.RegistrarError, "当前执行者"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="rejected", by="xinci-run",
                          gates={"G1": "veto"}, evidence=[ev], reason="G1 veto",
                          run_id=session["run_id"])
+        self.assertEqual(self.load(slug)["state"], "captured")
+
+    def test_xinci_run_g1_write_requires_g1_ready_preflight(self):
+        slug = self.register("region-bound-g1")
+        session = RC.start(self.root)
+        RC.begin_round(self.root, session["run_id"], executor_id="round-worker",
+                       preflight={"controllable": True, "desktop": True, "region": "other",
+                                  "logged_out": True})
+        ev = mk_evidence(self.root, slug, "2026-08-31-scan.json", gates={"G1": "veto"})
+        with self.refused(slug):
+            R.transition(self.root, slug, to="rejected", by="xinci-run",
+                         gates={"G1": "veto"}, evidence=[ev], reason="G1 veto",
+                         run_id=session["run_id"])
+
+    def test_xinci_run_g1_write_accepted_with_ready_preflight(self):
+        slug = self.register("ready-g1")
+        session = RC.start(self.root)
+        RC.begin_round(self.root, session["run_id"], executor_id="round-worker",
+                       preflight={"controllable": True, "desktop": True, "region": "us", "logged_out": True})
+        ev = mk_evidence(self.root, slug, "2026-08-31-scan.json", gates={"G1": "veto"})
+        R.transition(self.root, slug, to="rejected", by="xinci-run",
+                     gates={"G1": "veto"}, evidence=[ev], reason="G1 veto",
+                     run_id=session["run_id"])
+        self.assertEqual(self.load(slug)["state"], "rejected")
 
     def test_register_creates_captured(self):
         slug = self.register()
@@ -339,7 +376,7 @@ class RegistrarTest(unittest.TestCase):
                        task="t", evidence=[ev])
         slug = "bad-gate"
         ev = mk_evidence(self.root, slug, "2026-08-17-scan.json")
-        with self.assertRaisesRegex(R.RegistrarError, "未知闸门"):
+        with self.refused(slug):
             R.register(self.root, slug=slug, term="x", source_url="https://e.com",
                        task="t", evidence=[ev], gates={"G9": "pass"}, expiry="2026-09-01")
 
@@ -389,12 +426,12 @@ class RegistrarTest(unittest.TestCase):
         self.to_tracking(slug)
         R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
         same_day = mk_evidence(self.root, slug, "2026-08-20b-track.json", gates={"G1": "pass"})
-        with self.assertRaisesRegex(R.RegistrarError, "跨度"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
                          gates={"G1": "pass"}, evidence=[same_day])
         # 六天也不够
         six_days = mk_evidence(self.root, slug, "2026-08-26-track.json", gates={"G1": "pass"})
-        with self.assertRaisesRegex(R.RegistrarError, "跨度"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
                          gates={"G1": "pass"}, evidence=[six_days])
         # 满 7 天通过
@@ -530,7 +567,7 @@ class RegistrarTest(unittest.TestCase):
         ref = mk_decision(self.root, slug)
         (self.root / ref).write_text("# 被修改\n\n## 失效条件\n- x\n\n## 下一步人工动作清单\n- y\n",
                                      encoding="utf-8")
-        with self.assertRaisesRegex(R.RegistrarError, "不是由当前 md 生成"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="build_ready", by="xinci-decide",
                          decision_ref=ref, play="single_domain")
 
@@ -546,7 +583,7 @@ class RegistrarTest(unittest.TestCase):
         md.with_suffix(".html").write_text(
             f'<html><head><meta name="xinci-source-sha256" content="{digest}"></head>'
             '<body>伪造内容</body></html>', encoding="utf-8")
-        with self.assertRaisesRegex(R.RegistrarError, "确定性渲染"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="build_ready", by="xinci-decide",
                          decision_ref=ref, play="single_domain")
 
@@ -590,6 +627,28 @@ class RegistrarTest(unittest.TestCase):
         R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
                      decision_ref=ref, expiry="2026-08-25", play="fast_grab")
         self.assertEqual(self.load(slug)["state"], "fast_grab_ready")
+
+    def test_transition_refuses_record_that_breaks_state_invariants(self):
+        """转移写入前按 registrar.check_state_invariants 复核写入后的记录(与 validate_ledger 同一函数):
+        快道不得带全站分数、决策态不得把 score 改到 80 以下——这些以前只有事后校验才会发现。"""
+        slug = self.register()
+        self.to_screened(slug, window="days")
+        ref = mk_decision(self.root, slug)
+        with self.refused(slug):
+            R.transition(self.root, slug, to="fast_grab_ready", by="xinci-decide",
+                         decision_ref=ref, expiry="2026-08-25", play="fast_grab", score=90)
+        other = self.register("scored-one")
+        self.to_screened(other); self.to_tracking(other); self.to_formation(other); self.to_qualified(other)
+        with self.refused(other):
+            R.transition(self.root, other, to="build_ready", by="xinci-decide", score=50,
+                         decision_ref=mk_decision(self.root, other), play="single_domain")
+
+    def test_register_fails_closed_on_corrupt_index(self):
+        """注册期去重与 screen_index.check 同一份逻辑,但按 strict 读索引:索引有损坏行就不能安全放行。"""
+        (self.root / S.INDEX_NAME).write_text('{"term": "good one", "gate": "G0"}\n坏行\n', encoding="utf-8")
+        with self.refused("fresh-term"):
+            R.register(self.root, slug="fresh-term", term="fresh term", source_url="https://e.com",
+                       task="t", evidence=[mk_evidence(self.root, "fresh-term", "2026-08-17-scan.json")])
 
     def test_fast_grab_requires_days_window(self):
         # 快道只收 window_estimate=days 的 screened 候选(xinci-decide 硬规则,registrar 强制)
@@ -635,10 +694,10 @@ class RegistrarTest(unittest.TestCase):
                                            gates={"G2": "veto", "G3": "veto"})])
         stale = mk_evidence(self.root, slug, "2020-01-01-scan.json",
                             gates={"G2": "pass", "G3": "pass"})
-        with self.assertRaisesRegex(R.RegistrarError, "晚于最近拒绝时间"):
+        with self.refused(slug):
             R.reopen(self.root, slug, by="xinci-scan", reason="使用旧截图", evidence=[stale])
         partial = mk_evidence(self.root, slug, "2026-09-21-scan.json", gates={"G2": "pass"})
-        with self.assertRaisesRegex(R.RegistrarError, "尚未翻转.*G3"):
+        with self.refused(slug):
             R.reopen(self.root, slug, by="xinci-scan", reason="只翻转一道门", evidence=[partial])
 
     def test_structural_rejection_cannot_reopen(self):
@@ -648,7 +707,7 @@ class RegistrarTest(unittest.TestCase):
                      evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json",
                                            gates={"G4": "veto"})])
         new_ref = mk_evidence(self.root, slug, "2026-09-20-scan.json")
-        with self.assertRaisesRegex(R.RegistrarError, "结构性否决"):
+        with self.refused(slug):
             R.reopen(self.root, slug, by="xinci-scan", reason="想重开", evidence=[new_ref])
 
     def test_superseded_requires_existing_slug(self):
@@ -732,7 +791,7 @@ class RegistrarTest(unittest.TestCase):
 
     def test_xinci_mature_only_touches_mature_lane(self):
         """两条 lane 边界是对称的:xinci-run 不碰 mature 前半程,xinci-mature 不碰 new。"""
-        with self.assertRaisesRegex(R.RegistrarError, "只承接 lane=mature"):
+        with self.refused("new-one"):
             R.register(self.root, slug="new-one", term="some new term",
                        source_url="https://example.com/x", task="t", lane="new",
                        evidence=[mk_evidence(self.root, "new-one", "2026-08-20-scan.json")],
@@ -753,7 +812,7 @@ class RegistrarTest(unittest.TestCase):
         """同一天对同一候选再跑一次 SERP 是空烧;边界按观察日划,不按 run 划。"""
         slug = self.register(); self.to_screened(slug); self.to_tracking(slug)
         R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
-        with self.assertRaisesRegex(R.RegistrarError, "同日不重复复查"):
+        with self.refused(slug):
             R.checked(self.root, slug,
                       evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
 
@@ -851,10 +910,10 @@ class RegistrarTest(unittest.TestCase):
         future = (date.today() + timedelta(days=2)).isoformat()
         R.register(self.root, slug=slug, term="future expiry", source_url="https://e.com",
                    task="t", evidence=[ev], expiry=future, gates={"G1": "pass"})
-        with self.assertRaisesRegex(R.RegistrarError, "尚未到期"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="expired", by="xinci-scan",
                          reason="不能提前过期", expiry_trigger="date")
-        with self.assertRaisesRegex(R.RegistrarError, "不接受"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="expired", by="xinci-scan",
                          reason="captured 不能用窗口关闭", expiry_trigger="window_closed")
 
@@ -862,7 +921,7 @@ class RegistrarTest(unittest.TestCase):
         tracked = self.register("tracked-invalidation")
         self.to_screened(tracked)
         self.to_tracking(tracked)
-        with self.assertRaisesRegex(R.RegistrarError, "原样点名"):
+        with self.refused(tracked):
             R.transition(self.root, tracked, to="expired", by="xinci-track",
                          reason="某个未登记的新风险出现",
                          expiry_trigger="invalidation")
@@ -980,7 +1039,7 @@ class RegistrarTest(unittest.TestCase):
         session = RC.start(self.root)
         run_id = session["run_id"]
         RC.begin_round(self.root, run_id)
-        with self.assertRaisesRegex(R.RegistrarError, "单步确认"):
+        with self.refused(slug):
             self.to_screened_window_bet(slug, by="xinci-run", reason="临时空位", run_id=run_id)
         R.amend(self.root, slug, by="xinci-run", run_id=run_id,
                 reason="深审判定为窗口赌注,等待用户确认", expiry="2026-08-31",
@@ -990,7 +1049,12 @@ class RegistrarTest(unittest.TestCase):
         RC.confirm_window_bet(self.root, run_id, slug)
         self.to_screened_window_bet(slug, by="xinci-run", reason="临时空位", run_id=run_id)
         confirmation = RC.load_session(self.root, run_id)["confirmations"][slug]
-        self.assertIsNotNone(confirmation["consumed_at"])
+        # 消费凭据写在出闸 history 条目上,session 侧的确认只写不改
+        exit_entry = self.load(slug)["history"][-1]
+        self.assertEqual(exit_entry["to"], "screened")
+        self.assertEqual(exit_entry["window_bet_confirmation"],
+                         {"confirmed_at": confirmation["confirmed_at"], "run_id": run_id})
+        self.assertEqual(set(confirmation), {"risk", "confirmed_at"})
 
     def test_window_confirmation_cannot_be_rearmed_after_transition(self):
         slug = self.register()
@@ -1007,7 +1071,30 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaises(RC.RunControllerError):
             RC.confirm_window_bet(self.root, run_id, slug)
 
-    def test_window_transaction_recovers_after_ledger_write_failure(self):
+    def test_window_confirmation_is_consumed_once_via_history(self):
+        """同一条确认不能支撑第二次出闸:history 里已有引用它的出闸记录即视为已消费。"""
+        slug = self.register()
+        session = RC.start(self.root)
+        run_id = session["run_id"]
+        RC.begin_round(self.root, run_id)
+        gates = dict(GATES_SCREEN, G3=R.G3_WINDOW_BET)
+        R.amend(self.root, slug, by="xinci-run", run_id=run_id,
+                reason="窗口赌注", expiry="2026-08-31", gates=gates,
+                evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json", gates=gates)])
+        RC.confirm_window_bet(self.root, run_id, slug)
+        self.to_screened_window_bet(slug, by="xinci-run", reason="临时空位", run_id=run_id)
+        # 人工把候选拨回 captured(模拟绕过 registrar 的改动),再试图用同一确认二次出闸
+        ledger_path = self.root / "账本" / "候选账本.json"
+        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+        ledger["candidates"][slug]["state"] = "captured"
+        ledger["candidates"][slug]["history"].append(
+            {"at": "2026-08-18T01:00:00+00:00", "from": "screened", "to": "captured", "by": "user"})
+        ledger_path.write_text(json.dumps(ledger, ensure_ascii=False), encoding="utf-8")
+        with self.refused(slug):
+            self.to_screened_window_bet(slug, by="xinci-run", reason="临时空位", run_id=run_id)
+
+    def test_window_bet_ledger_write_failure_leaves_confirmation_reusable(self):
+        """账本写入中断时什么都没发生:候选仍在 captured,确认未被消费,重试即可成功。"""
         slug = self.register()
         session = RC.start(self.root)
         run_id = session["run_id"]
@@ -1018,73 +1105,12 @@ class RegistrarTest(unittest.TestCase):
                 evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json", gates=gates)])
         RC.confirm_window_bet(self.root, run_id, slug)
         with patch.object(R, "_save", side_effect=OSError("模拟账本写入中断")):
-            with self.assertRaisesRegex(R.RegistrarError, "pending journal"):
+            with self.assertRaises(OSError):
                 self.to_screened_window_bet(slug, by="xinci-run", reason="临时空位",
                                              run_id=run_id)
         self.assertEqual(self.load(slug)["state"], "captured")
-        self.assertEqual(len(TJ.list_pending(self.root)), 1)
-        with self.assertRaisesRegex(R.RegistrarError, "未恢复事务"):
-            R.checked(self.root, slug,
-                      evidence=[mk_evidence(self.root, slug, "2026-08-19-track.json")],
-                      by="xinci-run", run_id=run_id)
-        recovered = RC.recover(self.root, run_id)
-        self.assertEqual(len(recovered), 1)
+        self.to_screened_window_bet(slug, by="xinci-run", reason="临时空位", run_id=run_id)
         self.assertEqual(self.load(slug)["state"], "screened")
-        self.assertEqual(TJ.list_pending(self.root), [])
-
-    def test_divergent_transaction_requires_explicit_reconciliation(self):
-        slug = self.register()
-        session = RC.start(self.root)
-        run_id = session["run_id"]
-        RC.begin_round(self.root, run_id)
-        gates = dict(GATES_SCREEN, G3=R.G3_WINDOW_BET)
-        R.amend(self.root, slug, by="xinci-run", run_id=run_id,
-                reason="窗口赌注", expiry="2026-08-31", gates=gates,
-                evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json", gates=gates)])
-        RC.confirm_window_bet(self.root, run_id, slug)
-        with patch.object(R, "_save", side_effect=OSError("模拟中断")):
-            with self.assertRaises(R.RegistrarError):
-                self.to_screened_window_bet(slug, by="xinci-run", reason="临时空位",
-                                             run_id=run_id)
-        tx = TJ.list_pending(self.root)[0]
-        ledger_path = self.root / "账本" / "候选账本.json"
-        ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
-        ledger["candidates"][slug]["task"] = "人工修订后的任务"
-        ledger_path.write_text(json.dumps(ledger, ensure_ascii=False), encoding="utf-8")
-        with self.assertRaisesRegex(RC.RunControllerError, "非预期变化"):
-            RC.recover(self.root, run_id)
-        result = RC.reconcile(self.root, tx["tx_id"], "keep_current", "保留人工复核后的候选",
-                              "user", "user-message-42")
-        self.assertEqual(result["status"], "reconciled")
-        self.assertEqual(self.load(slug)["task"], "人工修订后的任务")
-        self.assertEqual(TJ.list_pending(self.root), [])
-        # keep_current 会作废已消费确认，但保留确认历史；用户可重新明确确认而不被永久卡死。
-        RC.confirm_window_bet(self.root, run_id, slug)
-        confirmation = RC.load_session(self.root, run_id)["confirmations"][slug]
-        self.assertIsNone(confirmation["consumed_at"])
-        self.assertEqual(len(confirmation["history"]), 1)
-
-    def test_transaction_candidate_snapshot_tamper_fails_closed(self):
-        slug = self.register()
-        session = RC.start(self.root)
-        run_id = session["run_id"]
-        RC.begin_round(self.root, run_id)
-        gates = dict(GATES_SCREEN, G3=R.G3_WINDOW_BET)
-        R.amend(self.root, slug, by="xinci-run", run_id=run_id,
-                reason="窗口赌注", expiry="2026-08-31", gates=gates,
-                evidence=[mk_evidence(self.root, slug, "2026-08-18-scan.json", gates=gates)])
-        RC.confirm_window_bet(self.root, run_id, slug)
-        with patch.object(R, "_save", side_effect=OSError("模拟中断")):
-            with self.assertRaises(R.RegistrarError):
-                self.to_screened_window_bet(slug, by="xinci-run", reason="临时空位",
-                                             run_id=run_id)
-        tx = TJ.list_pending(self.root)[0]
-        path = Path(tx["_path"])
-        body = json.loads(path.read_text(encoding="utf-8"))
-        body["candidate_after"]["task"] = "被篡改"
-        path.write_text(json.dumps(body), encoding="utf-8")
-        with self.assertRaisesRegex(TJ.TransactionError, "哈希不匹配"):
-            TJ.list_pending(self.root)
 
     def test_term_normalization_keeps_cplusplus_and_csharp_distinct(self):
         first = "cplusplus-tool"
@@ -1102,11 +1128,11 @@ class RegistrarTest(unittest.TestCase):
                    evidence=[mk_evidence(self.root, first, "2026-08-17-scan.json")])
         second = "qwen-requirements"
         evidence = [mk_evidence(self.root, second, "2026-08-17-scan.json")]
-        with self.assertRaisesRegex(R.RegistrarError, "疑似重复"):
+        with self.refused(second):
             R.register(self.root, slug=second, term="qwen 3.8 27b vram requirements",
                        source_url="https://e.com/new", task="list hardware requirements",
                        evidence=evidence)
-        DD.resolve(self.root, "qwen 3.8 27b vram requirements",
+        S.resolve_decision(self.root, "qwen 3.8 27b vram requirements",
                    "Qwen 3.8 27B vram quantization", "distinct",
                    "一个列硬件要求,另一个计算量化显存", actor="user",
                    term_task="列出部署显存要求", matched_task="计算量化显存",
@@ -1122,7 +1148,7 @@ class RegistrarTest(unittest.TestCase):
         R.register(self.root, slug=first, term="Qwen 3.8 27B vram quantization",
                    source_url="https://e.com/base", task="estimate vram",
                    evidence=[mk_evidence(self.root, first, "2026-08-17-scan.json")])
-        DD.resolve(self.root, "qwen 3.8 27b vram requirements",
+        S.resolve_decision(self.root, "qwen 3.8 27b vram requirements",
                    "Qwen 3.8 27B vram quantization", "same", "同一显存任务的措辞漂移",
                    actor="user", term_task="估算显存", matched_task="估算显存",
                    term_evidence_urls=["https://e.com/requirements"],
@@ -1138,7 +1164,7 @@ class RegistrarTest(unittest.TestCase):
         RC.begin_round(self.root, session["run_id"])
         slug = "single-during-run"
         ev = mk_evidence(self.root, slug, "2026-08-17-scan.json")
-        with self.assertRaisesRegex(R.RegistrarError, "存在活动连续运行"):
+        with self.refused(slug):
             R.register(self.root, slug=slug, term="x", source_url="https://e.com",
                        task="t", evidence=[ev], by="xinci-scan")
 
@@ -1363,7 +1389,7 @@ class RegistrarTest(unittest.TestCase):
                        task="t", evidence=[bad3])
         # schema 外字段(与 observation.schema.json 的 additionalProperties:false 对齐)
         bad4 = mk_evidence(self.root, slug, "2026-08-22-scan.json", verdict="looks good")
-        with self.assertRaisesRegex(R.RegistrarError, "schema 外字段"):
+        with self.refused(slug):
             R.register(self.root, slug=slug, term="t", source_url="https://e.com",
                        task="t", evidence=[bad4])
         # observed_at 不是 ISO 8601
@@ -1421,7 +1447,7 @@ class RegistrarTest(unittest.TestCase):
         slug = self.register()
         mismatch = mk_evidence(self.root, slug, "2026-08-18-scan.json",
                                gates={"G1": "veto"})
-        with self.assertRaisesRegex(R.RegistrarError, "冲突"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="rejected", by="xinci-scan",
                          gates={"G1": "pass"}, reason="不一致", evidence=[mismatch])
         no_sources = mk_evidence(self.root, slug, "2026-08-19-scan.json",
@@ -1435,7 +1461,7 @@ class RegistrarTest(unittest.TestCase):
         gates = dict(GATES_SCREEN, G3=R.G3_WINDOW_BET)
         ref = mk_evidence(self.root, slug, "2026-08-18-scan.json",
                           gates=gates, window_bet=None)
-        with self.assertRaisesRegex(R.RegistrarError, "结构化 window_bet"):
+        with self.refused(slug):
             R.transition(self.root, slug, to="screened", by="xinci-scan", gates=gates,
                          window_estimate="days", expiry="2026-08-31", reason="临时空位",
                          evidence=[ref])

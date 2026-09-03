@@ -2,24 +2,27 @@
 """运行清单的唯一校验、单步记录与原子写入实现。"""
 import argparse
 import json
-import os
 import re
-import tempfile
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
 
 import data_root
+from _common import atomic_save as _atomic_save, load_ledger
+from _constants import CALIBRATION_TARGETS, REVIEW_OUTCOMES, ROUND_TYPES
 from run_state import RunStateError, load_session
 from chinese_labels import session_status_label
 
 
 RUN_FIELDS = {"date", "skill", "run_id", "sources_opened", "sources_blocked",
               "candidates_touched", "candidates_reviewed", "billable_calls", "notes",
-              "rounds", "funnel", "trigger_funnel", "metrics_summary", "termination"}
+              "rounds", "funnel", "trigger_funnel", "termination"}
 RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
                     "candidates_reviewed", "billable_calls", "notes", "funnel", "trigger_funnel",
-                    "round_type", "metrics", "false_negative_audit"}
+                    "round_type", "false_negative_audit"}
+# 已停写的遥测字段(全仓无读取方):历史清单里仍有,读取时容忍、不校验内容;新清单不再写。
+LEGACY_RUN_FIELDS = {"metrics_summary"}
+LEGACY_ROUND_FIELDS = {"metrics"}
 RUN_STR_ARRAYS = ("sources_opened", "sources_blocked", "candidates_touched", "notes")
 RUN_SKILLS = {"xinci-scan", "xinci-track", "xinci-qualify", "xinci-decide", "xinci-run",
               "xinci-mature"}
@@ -35,31 +38,11 @@ FUNNEL_ALL_FIELDS = FUNNEL_FIELDS + FUNNEL_OPTIONAL_SINKS + (FUNNEL_CARRYOVER,)
 FUNNEL_REQUIRED_FROM = "2026-08-19"
 TRIGGER_FUNNEL_FIELDS = ("harvested", "discarded_preapproval", "discarded_postapproval",
                          "pending", "approved")
-REVIEW_OUTCOMES = {"reviewed_no_transition", "same_day_skipped", "not_due",
-                   "awaiting_external_evidence", "deferred_existing_evidence"}
-ROUND_TYPES = {"discovery", "progression", "tracking", "calibration"}
-ROUND_METRIC_FIELDS = {"formal_extracted", "g1_checks", "task_families",
-                       "source_family_counts", "source_family_outcomes",
-                       "deep_audit_families", "state_transitions"}
-SOURCE_OUTCOME_FIELDS = {"formal", "g1_pass", "deep", "tracking"}
-TRANSITION_METRIC_FIELDS = {"tracking_added", "formation_confirmed", "qualified",
-                            "go_decisions"}
 FALSE_NEGATIVE_OUTCOMES = {"valid_reject", "false_negative", "inconclusive"}
-CALIBRATION_TARGETS = {"G6": 10, "G7": 10, "G5": 5, "G1": 5, "G3": 5}
 
 
 class RunManifestError(Exception):
     pass
-
-
-def _atomic_save(path, obj):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
-    with os.fdopen(fd, "w", encoding="utf-8") as f:
-        json.dump(obj, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    os.replace(tmp, path)
 
 
 def _check_str_array(obj, key, where, errors):
@@ -144,85 +127,6 @@ def _check_reviews(obj, where, errors, root=None):
         seen.add(row["slug"])
 
 
-def _check_round_metrics(rnd, where, errors):
-    metrics = rnd.get("metrics")
-    if not isinstance(metrics, dict) or set(metrics) != ROUND_METRIC_FIELDS:
-        errors.append(f"{where} metrics 必须完整包含 {sorted(ROUND_METRIC_FIELDS)}")
-        return
-    for key in ("formal_extracted", "g1_checks"):
-        if (not isinstance(metrics.get(key), int) or isinstance(metrics.get(key), bool)
-                or metrics[key] < 0):
-            errors.append(f"{where} metrics.{key} 必须是非负整数")
-    for key in ("task_families", "deep_audit_families"):
-        rows = metrics.get(key)
-        if (not isinstance(rows, list) or len(rows) != len(set(rows))
-                or not all(isinstance(x, str) and x.strip() for x in rows)):
-            errors.append(f"{where} metrics.{key} 必须是唯一非空字符串数组")
-    source_counts = metrics.get("source_family_counts")
-    if (not isinstance(source_counts, dict)
-            or not all(isinstance(k, str) and k.strip()
-                       and isinstance(v, int) and not isinstance(v, bool) and v >= 0
-                       for k, v in source_counts.items())):
-        errors.append(f"{where} metrics.source_family_counts 必须是来源家族到非负整数的对象")
-    source_outcomes = metrics.get("source_family_outcomes")
-    if (not isinstance(source_outcomes, dict)
-            or any(not isinstance(family, str) or not family.strip()
-                   or not isinstance(values, dict) or set(values) != SOURCE_OUTCOME_FIELDS
-                   or any(not isinstance(v, int) or isinstance(v, bool) or v < 0
-                          for v in values.values())
-                   for family, values in source_outcomes.items())):
-        errors.append(f"{where} metrics.source_family_outcomes 必须逐来源完整包含"
-                      f" {sorted(SOURCE_OUTCOME_FIELDS)}")
-    transitions = metrics.get("state_transitions")
-    if (not isinstance(transitions, dict) or set(transitions) != TRANSITION_METRIC_FIELDS
-            or any(not isinstance(v, int) or isinstance(v, bool) or v < 0
-                   for v in transitions.values())):
-        errors.append(f"{where} metrics.state_transitions 必须完整包含"
-                      f" {sorted(TRANSITION_METRIC_FIELDS)} 且值为非负整数")
-    funnel = rnd.get("funnel") or {}
-    if metrics.get("formal_extracted") != funnel.get("extracted"):
-        errors.append(f"{where} metrics.formal_extracted 必须等于 funnel.extracted")
-    if len(metrics.get("deep_audit_families") or []) > funnel.get("deep_audited", 0):
-        errors.append(f"{where} deep_audit_families 数不得大于 funnel.deep_audited")
-    if funnel.get("deep_audited", 0) > 0 and not metrics.get("deep_audit_families"):
-        errors.append(f"{where} 有深审时必须记录至少一个 deep_audit_family")
-    if funnel.get("extracted", 0) > 0 and not metrics.get("task_families"):
-        errors.append(f"{where} 有正式提取时必须记录至少一个 task_family")
-    if funnel.get("extracted", 0) > 0:
-        counts = metrics.get("source_family_counts") or {}
-        if not counts:
-            errors.append(f"{where} 有正式提取时必须记录 source_family_counts")
-        outcomes = metrics.get("source_family_outcomes") or {}
-        if not outcomes:
-            errors.append(f"{where} 有正式提取时必须记录 source_family_outcomes")
-        elif sum(row.get("formal", 0) for row in outcomes.values()) != funnel["extracted"]:
-            errors.append(f"{where} source_family_outcomes.formal 加总必须等于 funnel.extracted")
-    outcomes = metrics.get("source_family_outcomes") or {}
-    if outcomes:
-        counts = metrics.get("source_family_counts") or {}
-        missing_count_families = sorted(set(outcomes) - set(counts))
-        if missing_count_families:
-            errors.append(f"{where} source_family_outcomes 的来源家族必须出现在"
-                          f" source_family_counts: {missing_count_families}")
-        totals = {field: sum(row.get(field, 0) for row in outcomes.values())
-                  for field in SOURCE_OUTCOME_FIELDS}
-        for family, row in outcomes.items():
-            # 验证型陷阱允许先跑 G3 再补 G1，因此 deep 与 g1_pass 不能互相强排顺序。
-            if not (row["tracking"] <= row["deep"] <= row["formal"]
-                    and row["g1_pass"] <= row["formal"]):
-                errors.append(f"{where} source_family_outcomes[{family!r}] 必须满足"
-                              " tracking <= deep <= formal 且 g1_pass <= formal")
-            if family in counts and row["formal"] > counts[family]:
-                errors.append(f"{where} source_family_outcomes[{family!r}].formal"
-                              " 不得大于该来源的提取计数")
-        if totals["deep"] != funnel.get("deep_audited", 0):
-            errors.append(f"{where} source_family_outcomes.deep 加总必须等于 funnel.deep_audited")
-        if totals["g1_pass"] + funnel.get("rejected_g1", 0) > metrics.get("g1_checks", 0):
-            errors.append(f"{where} G1 pass 加 G1 否决不得大于 metrics.g1_checks")
-        if totals["tracking"] > (metrics.get("state_transitions") or {}).get("tracking_added", 0):
-            errors.append(f"{where} source_family_outcomes.tracking 不得大于实际 tracking_added")
-
-
 def _check_false_negative_audit(rnd, where, errors, root=None):
     audit = rnd.get("false_negative_audit")
     if rnd.get("round_type") != "calibration":
@@ -284,47 +188,9 @@ def _check_false_negative_audit(rnd, where, errors, root=None):
                           "样本不足时应记录 blocked")
 
 
-def aggregate_metrics(rounds):
-    summary = {
-        "rounds_by_type": {key: 0 for key in sorted(ROUND_TYPES)},
-        "formal_extracted": 0, "g1_checks": 0, "deep_audited": 0,
-        "task_families": [], "source_family_counts": {},
-        "source_family_outcomes": {},
-        "state_transitions": {key: 0 for key in sorted(TRANSITION_METRIC_FIELDS)},
-        "false_negative_samples": 0, "false_negatives": 0,
-    }
-    task_families = set()
-    for rnd in rounds:
-        round_type = rnd.get("round_type")
-        if round_type in summary["rounds_by_type"]:
-            summary["rounds_by_type"][round_type] += 1
-        metrics = rnd.get("metrics") or {}
-        summary["formal_extracted"] += metrics.get("formal_extracted", 0)
-        summary["g1_checks"] += metrics.get("g1_checks", 0)
-        summary["deep_audited"] += (rnd.get("funnel") or {}).get("deep_audited", 0)
-        task_families.update(metrics.get("task_families") or [])
-        for family, count in (metrics.get("source_family_counts") or {}).items():
-            summary["source_family_counts"][family] = (
-                summary["source_family_counts"].get(family, 0) + count)
-        for family, values in (metrics.get("source_family_outcomes") or {}).items():
-            target = summary["source_family_outcomes"].setdefault(
-                family, {key: 0 for key in sorted(SOURCE_OUTCOME_FIELDS)})
-            for key, count in values.items():
-                target[key] += count
-        for key, count in (metrics.get("state_transitions") or {}).items():
-            if key in summary["state_transitions"]:
-                summary["state_transitions"][key] += count
-        samples = (rnd.get("false_negative_audit") or {}).get("samples") or []
-        summary["false_negative_samples"] += len(samples)
-        summary["false_negatives"] += sum(
-            1 for sample in samples if sample.get("outcome") == "false_negative")
-    summary["task_families"] = sorted(task_families)
-    return summary
-
-
 def _load_ledger(data_root):
     try:
-        ledger = json.loads((Path(data_root) / "账本" / "候选账本.json").read_text(encoding="utf-8"))
+        ledger = load_ledger(data_root)
     except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
         return {}
     return ledger if isinstance(ledger, dict) else {}
@@ -390,6 +256,11 @@ def _queued_contract(data_root, run_id, round_number):
 def validate_round_ledger_contract(data_root, run_id, round_record):
     errors = []
     number = round_record.get("round")
+    ledger_candidates = _load_ledger(data_root).get("candidates", {})
+    unknown_reviewed = sorted({row.get("slug") for row in round_record.get("candidates_reviewed") or []
+                               if isinstance(row, dict)} - set(ledger_candidates or {}))
+    if unknown_reviewed:
+        errors.append(f"第 {number} 轮 candidates_reviewed 含账本外 slug: {unknown_reviewed}")
     expected_touched = candidates_by_round(data_root).get((run_id, number), set())
     actual_touched = set(round_record.get("candidates_touched") or [])
     if expected_touched and actual_touched != expected_touched:
@@ -412,7 +283,7 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
     name = RUN_NAME_RE.fullmatch(Path(path).stem) if path else None
     if path and not name:
         errors.append(f"{where} 文件名不合约定 <YYYY-MM-DD>[-HHMM[SS][-run-token]]-<skill>.json")
-    unknown = sorted(set(obj) - RUN_FIELDS)
+    unknown = sorted(set(obj) - RUN_FIELDS - LEGACY_RUN_FIELDS)
     if unknown:
         errors.append(f"{where} 含 schema 外字段 {unknown}(数据极简,勿加仪式性字段)")
     for key in ("date", "skill"):
@@ -465,7 +336,7 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
         if not isinstance(rnd, dict):
             errors.append(f"{rw} 必须是对象")
             continue
-        extra = sorted(set(rnd) - RUN_ROUND_FIELDS)
+        extra = sorted(set(rnd) - RUN_ROUND_FIELDS - LEGACY_ROUND_FIELDS)
         if extra:
             errors.append(f"{rw} 含 schema 外字段 {extra}")
         number = rnd.get("round")
@@ -480,7 +351,6 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
         if session and session.get("schema_version", 1) >= 3:
             if rnd.get("round_type") not in ROUND_TYPES:
                 errors.append(f"{rw} schema v3 必须填写 round_type={sorted(ROUND_TYPES)}")
-            _check_round_metrics(rnd, rw, errors)
             _check_false_negative_audit(rnd, rw, errors, root)
         if enforce_funnel and rnd.get("funnel") is None:
             errors.append(f"{rw} 必须带 funnel(自 {FUNNEL_REQUIRED_FROM} 起强制)")
@@ -499,18 +369,15 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
     if session and session.get("status") != "active" and len(rounds) != session.get("rounds_completed"):
         errors.append(f"{where} rounds 数量 {len(rounds)} 与已结束 session.rounds_completed "
                       f"{session.get('rounds_completed')} 不一致")
-    if session and session.get("schema_version", 1) >= 3:
-        expected_metrics = aggregate_metrics(rounds)
-        if obj.get("metrics_summary") != expected_metrics:
-            errors.append(f"{where} metrics_summary 必须由 rounds 机器汇总生成")
     termination = obj.get("termination")
     if termination is not None:
         legacy_required = {"status", "status_label", "reason", "finished_at", "rounds_completed",
                            "max_rounds", "go_candidates"}
         current_required = legacy_required | {"evidence_refs"}
-        v3_required = current_required | {"metrics_summary"}
+        # 历史 v3 清单的 termination 曾带 metrics_summary,只容忍不校验
+        legacy_v3 = current_required | {"metrics_summary"}
         if not isinstance(termination, dict) or frozenset(termination) not in {
-                frozenset(legacy_required), frozenset(current_required), frozenset(v3_required)}:
+                frozenset(legacy_required), frozenset(current_required), frozenset(legacy_v3)}:
             errors.append(f"{where} termination 字段必须匹配当前或历史契约")
         elif (not all(termination.get(k) for k in ("status", "status_label", "reason", "finished_at"))
               or not isinstance(termination.get("rounds_completed"), int)
@@ -519,9 +386,6 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
               or not isinstance(termination.get("evidence_refs", []), list)
               or not all(isinstance(x, str) and x for x in termination.get("evidence_refs", []))):
             errors.append(f"{where} termination 值非法")
-        elif (session and session.get("schema_version", 1) >= 3
-              and termination.get("metrics_summary") != aggregate_metrics(rounds)):
-            errors.append(f"{where} termination.metrics_summary 必须由 rounds 机器汇总生成")
         elif session and session.get("status") != "active":
             expected = {
                 "status": session.get("status"),
@@ -621,8 +485,6 @@ def create_run_manifest(data_root, session):
            "run_id": session["run_id"], "sources_opened": [], "sources_blocked": [],
            "candidates_touched": [], "candidates_reviewed": [], "billable_calls": 0,
            "notes": [], "rounds": []}
-    if session.get("schema_version", 1) >= 3:
-        obj["metrics_summary"] = aggregate_metrics([])
     errors = validate_manifest(obj, path, session, set())
     if errors:
         raise RunManifestError("; ".join(errors))
@@ -698,6 +560,12 @@ def append_round(data_root, session, round_record):
         return path, manifest
     if len(rounds) != expected - 1:
         raise RunManifestError(f"manifest 已有 {len(rounds)} 轮,无法追加第 {expected} 轮")
+    funnel = round_record.get("funnel")
+    if not isinstance(funnel, dict):
+        raise RunManifestError("record-round 必须提交 funnel 对象;未扫描时五项都写 0")
+    if "pooled" in funnel:
+        raise RunManifestError(
+            "新轮次不得写 funnel.pooled；raw trigger 必须使用 stage=trigger 与 trigger_funnel")
     rounds.append(round_record)
     manifest["rounds"] = rounds
     for key in ("sources_opened", "sources_blocked", "candidates_touched", "notes"):
@@ -709,8 +577,6 @@ def append_round(data_root, session, round_record):
         for key in TRIGGER_FUNNEL_FIELDS
     }
     manifest["billable_calls"] = sum(r.get("billable_calls", 0) for r in rounds)
-    if session.get("schema_version", 1) >= 3:
-        manifest["metrics_summary"] = aggregate_metrics(rounds)
     errors = validate_manifest(manifest, path, session, candidates_by_run(data_root).get(session["run_id"], set()))
     errors += validate_round_ledger_contract(data_root, session["run_id"], round_record)
     if errors:
@@ -733,10 +599,9 @@ def finalize_manifest(data_root, session, reason, evidence_refs=None):
         "go_candidates": list(session.get("go_candidates") or []),
         "evidence_refs": list(evidence_refs or []),
     }
-    if session.get("schema_version", 1) >= 3:
-        termination["metrics_summary"] = aggregate_metrics(manifest.get("rounds") or [])
     existing = manifest.get("termination")
-    if existing is not None and existing != termination:
+    if existing is not None and {k: v for k, v in existing.items()
+                                 if k != "metrics_summary"} != termination:
         raise RunManifestError("manifest 已有不同 termination，拒绝覆盖")
     manifest["termination"] = termination
     errors = validate_manifest(manifest, path, session,

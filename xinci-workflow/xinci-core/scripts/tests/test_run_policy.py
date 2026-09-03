@@ -7,7 +7,6 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import browser_preflight as BP
 import run_controller as RC
 import run_policy as RP
 import trigger_pool as TP
@@ -27,9 +26,12 @@ class RunPolicyTest(unittest.TestCase):
                 for i in range(count)}
         (d / "候选账本.json").write_text(json.dumps({"candidates": rows}), encoding="utf-8")
 
+    PREFLIGHT_OK = {"controllable": True, "desktop": True, "region": "us", "logged_out": True}
+
     def ready(self):
-        BP.record(self.root, self.run["run_id"], channel="chrome", controllable=True,
-                  desktop=True, region="us", logged_out=True)
+        """开始一轮并自报满足 G1 前置的浏览器预检(预检随 begin-round 写进 session)。"""
+        RC.begin_round(self.root, self.run["run_id"], executor_id="worker",
+                       preflight=dict(self.PREFLIGHT_OK))
 
     def seed_ledger(self, rows):
         d = self.root / "账本"; d.mkdir(parents=True, exist_ok=True)
@@ -85,26 +87,32 @@ class RunPolicyTest(unittest.TestCase):
         self.assertEqual(ceiling["enablers"], ["mature-ready"])
 
     def test_missing_browser_preflight_forces_trigger_only(self):
+        # 轮次未开始:没有任何预检
         policy = RP.evaluate(self.root, self.run["run_id"])
         self.assertEqual(policy["mode"], "trigger_only")
         self.assertFalse(policy["formal_admission"])
-
-    def test_preflight_cannot_be_borrowed_by_another_executor(self):
-        BP.record(self.root, self.run["run_id"], channel="chrome", controllable=True,
-                  desktop=True, region="us", logged_out=True, executor_id="parent")
-        policy = RP.evaluate(self.root, self.run["run_id"], executor_id="round-worker")
+        # 轮次已开始但未自报预检(库级调用省略 preflight):同样按缺预检处理
+        RC.begin_round(self.root, self.run["run_id"], executor_id="worker")
+        policy = RP.evaluate(self.root, self.run["run_id"])
         self.assertEqual(policy["mode"], "trigger_only")
         self.assertFalse(policy["g1_ready"])
 
-    def test_preflight_is_bound_to_target_round(self):
-        BP.record(self.root, self.run["run_id"], channel="chrome", controllable=True,
-                  desktop=True, region="us", logged_out=True, executor_id="worker")
-        RC.begin_round(self.root, self.run["run_id"], executor_id="worker")
+    def test_preflight_not_meeting_g1_forces_trigger_only(self):
+        RC.begin_round(self.root, self.run["run_id"], executor_id="worker",
+                       preflight=dict(self.PREFLIGHT_OK, region="other"))
+        policy = RP.evaluate(self.root, self.run["run_id"])
+        self.assertEqual(policy["mode"], "trigger_only")
+        self.assertFalse(policy["g1_ready"])
+        self.assertTrue(any("浏览器预检未满足" in r for r in policy["reasons"]))
+
+    def test_preflight_is_bound_to_current_round(self):
+        """预检只对本轮有效:record-round 清空它,下一轮必须在 begin-round 时重新自报。"""
+        self.ready()
+        self.assertEqual(RP.evaluate(self.root, self.run["run_id"])["mode"], "full")
         RC.record_round(self.root, self.run["run_id"], funnel={
             "extracted": 0, "rejected_zero_cost": 0, "rejected_g1": 0,
             "deep_audited": 0, "queued": 0})
-        self.assertEqual(RP.evaluate(self.root, self.run["run_id"], "worker")["mode"],
-                         "trigger_only")
+        self.assertEqual(RP.evaluate(self.root, self.run["run_id"])["mode"], "trigger_only")
 
     def test_hard_backlog_gate_forces_debt_only(self):
         self.ready(); self.seed_backlog(21)
@@ -172,7 +180,6 @@ class RunPolicyTest(unittest.TestCase):
 
     def test_source_family_over_40_percent_stops_that_harvest(self):
         self.ready()
-        RC.begin_round(self.root, self.run["run_id"])
         for i in range(5):
             TP.add(self.root, observed_date="2026-08-25", title=f"Agency rule {i}",
                    source_url=f"https://agency.example/rule-{i}", source_family="agency",
@@ -194,7 +201,6 @@ class RunPolicyTest(unittest.TestCase):
 
     def test_source_share_rule_waits_for_five_adds(self):
         self.ready()
-        RC.begin_round(self.root, self.run["run_id"])
         for i in range(4):
             TP.add(self.root, observed_date="2026-08-25", title=f"Agency early rule {i}",
                    source_url=f"https://agency.example/early-{i}", source_family="agency",
@@ -227,7 +233,7 @@ class RunPolicyTest(unittest.TestCase):
         self.assertEqual(rotation["blocked_source_families"], ["agency"])
 
     def test_trigger_origin_must_bind_approved_query(self):
-        self.ready(); RC.begin_round(self.root, self.run["run_id"])
+        self.ready()
         added = TP.add(self.root, observed_date="2026-08-25", title="Official filing rule",
                        source_url="https://agency.example/rule", source_family="agency",
                        task_hypothesis="firms check filings", actor="xinci-run",

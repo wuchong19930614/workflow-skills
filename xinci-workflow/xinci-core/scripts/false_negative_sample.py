@@ -3,20 +3,19 @@
 import argparse
 import json
 import sys
-from pathlib import Path
 
 import data_root
 import screen_index
+from _common import load_ledger
+from _constants import CALIBRATION_TARGETS as DEFAULT_TARGETS
 
 
-DEFAULT_TARGETS = {"G6": 10, "G7": 10, "G5": 5, "G1": 5, "G3": 5}
 AUDIT_GATES = set(DEFAULT_TARGETS)
 
 
 def _ledger_rejections(root):
-    path = Path(root) / "账本" / "候选账本.json"
     try:
-        candidates = json.loads(path.read_text(encoding="utf-8")).get("candidates", {})
+        candidates = load_ledger(root).get("candidates", {})
     except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
         return []
     rows = []

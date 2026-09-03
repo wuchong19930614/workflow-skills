@@ -7,7 +7,8 @@ from datetime import date, datetime
 from pathlib import Path
 
 import data_root
-from browser_preflight import BrowserPreflightError, show as show_preflight
+from _common import load_ledger
+from _constants import MIN_TRACK_SPAN_DAYS
 from run_manifest import find_run_manifest
 from run_state import load_session
 from trigger_pool import TriggerPoolError, source_rotation_status, stats as trigger_stats
@@ -16,13 +17,11 @@ from trigger_pool import TriggerPoolError, source_rotation_status, stats as trig
 BACKLOG_HARD_LIMIT = 20
 TRIGGER_PENDING_LIMIT = 200
 STALL_ROUNDS = 3
-MIN_TRACK_SPAN_DAYS = 7  # 与 registrar 的形成跨度闸保持一致
 
 
 def _ledger(root):
-    path = Path(root) / "账本" / "候选账本.json"
     try:
-        return json.loads(path.read_text(encoding="utf-8"))
+        return load_ledger(root)
     except (FileNotFoundError, json.JSONDecodeError, UnicodeDecodeError):
         return {"candidates": {}}
 
@@ -118,19 +117,19 @@ def reachable_ceiling(root, mode, today=None):
                    "存量侧本次最远只能推进到 tracking;新扫出窗口以天计的候选仍可走快道到 go"}
 
 
-def evaluate(root, run_id, executor_id=None):
+def evaluate(root, run_id):
     session = load_session(root, run_id)
-    expected_executor = executor_id or session.get("round_executor_id")
     target_round = session.get("current_round") or session["rounds_completed"] + 1
     candidates = (_ledger(root).get("candidates") or {}).values()
     backlog = sum(1 for rec in candidates if isinstance(rec, dict)
                   and rec.get("lane", "new") == "new" and rec.get("state") == "captured")
-    try:
-        preflight = show_preflight(root, run_id, expected_executor, target_round)
+    # 预检随 begin-round 写进 session 当前轮;轮次未开始或本轮没报预检都按"缺预检"处理
+    preflight = session.get("current_round_preflight")
+    if preflight is None:
+        g1_ready = False; browser_reason = "缺浏览器预检(begin-round 时提交 --browser-* 四项)"
+    else:
         g1_ready = preflight["g1_ready"]
         browser_reason = None if g1_ready else "浏览器预检未满足 US/desktop/logged-out/controllable"
-    except BrowserPreflightError:
-        preflight = None; g1_ready = False; browser_reason = "缺浏览器预检"
     try:
         tstats = trigger_stats(root)
     except TriggerPoolError as e:
@@ -189,9 +188,8 @@ def evaluate(root, run_id, executor_id=None):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="计算 xinci 当前轮运行策略")
     ap.add_argument("--data-root", default=None); ap.add_argument("--run-id", required=True)
-    ap.add_argument("--executor-id", help="将 G1 预检绑定到本轮实际执行者")
     a = ap.parse_args(argv); root = data_root.resolve_or_exit(a.data_root)
-    try: obj = evaluate(root, a.run_id, a.executor_id)
+    try: obj = evaluate(root, a.run_id)
     except Exception as e:
         print(f"run_policy 拒绝: {e}", file=sys.stderr); return 2
     print(json.dumps(obj, ensure_ascii=False, indent=2)); return 0

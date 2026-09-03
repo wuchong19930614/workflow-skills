@@ -11,7 +11,8 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 import data_root
-from registrar import TERMINAL
+from _common import ledger_path, load_ledger
+from _constants import TERMINAL
 from chinese_labels import candidate_state_label
 
 
@@ -22,10 +23,9 @@ def _days_since(iso_ts: str) -> int:
 
 def build_report(data_root):
     data_root = Path(data_root)
-    ledger_path = data_root / "账本" / "候选账本.json"
-    if not ledger_path.is_file():
-        raise FileNotFoundError(f"账本不存在: {ledger_path}(先运行 init_workspace.py)")
-    ledger = json.loads(ledger_path.read_text(encoding="utf-8"))
+    if not ledger_path(data_root).is_file():
+        raise FileNotFoundError(f"账本不存在: {ledger_path(data_root)}(先运行 init_workspace.py)")
+    ledger = load_ledger(data_root)
     today = date.today()
 
     counts, rows, overdue, recheck_due = {}, [], [], []

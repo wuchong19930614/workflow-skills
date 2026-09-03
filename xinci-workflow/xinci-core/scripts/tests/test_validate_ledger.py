@@ -11,7 +11,6 @@ import registrar as R
 import validate_ledger as V
 import run_controller as RC
 import screen_index as SI
-import stage_checkpoint as SC
 from test_registrar import mk_evidence, mk_decision, GATES_SCREEN, GATES_678
 
 
@@ -85,6 +84,12 @@ class ValidateLedgerTest(unittest.TestCase):
         errs, _ = V.validate(self.root)
         return errs
 
+    def assertInvariant(self, code, *also):
+        """断言校验错误里有带该机器码 [INV-<code>] 的条目;also 是同一条里还须出现的数据片段
+        (闸门名之类)。按码识别而不是按中文句子,改文案不该让用例变红。"""
+        errs = self.errors()
+        self.assertTrue(any(f"[INV-{code}]" in e and all(x in e for x in also) for e in errs), errs)
+
     # ---- 用例 ----
 
     def test_clean_full_chain_passes(self):
@@ -104,29 +109,21 @@ class ValidateLedgerTest(unittest.TestCase):
                         reason="从运行清单重建", actor="user")
         self.assertEqual(self.errors(), [])
 
-    def test_open_stage_checkpoint_is_integrity_error(self):
-        ledger_dir = self.root / "账本"; ledger_dir.mkdir(parents=True)
-        (ledger_dir / "候选账本.json").write_text(
-            json.dumps({"schema_version": 1, "candidates": {}}), encoding="utf-8")
-        run = RC.start(self.root); RC.begin_round(self.root, run["run_id"])
-        SC.start(self.root, run["run_id"], 1, ["alpha"])
-        self.assertTrue(any("未完成阶段检查点" in e for e in self.errors()))
-
     def test_detects_missing_window_on_screened(self):
         slug = self.build_chain(until="screened")
         self.corrupt(slug, window_estimate=None)
-        self.assertTrue(any("window_estimate" in e for e in self.errors()))
+        self.assertInvariant("screened-window")
 
     def test_detects_missing_expiry_on_tracking(self):
         slug = self.build_chain(until="tracking")
         self.corrupt(slug, expiry=None)
-        self.assertTrue(any("expiry" in e for e in self.errors()))
+        self.assertInvariant("tracking-expiry")
 
     def test_queued_captured_without_expiry_is_caught(self):
         # 手工编辑抹掉排队位的 expiry(registrar 会拦,校验是第二道防线)
         slug = self.build_chain(until="captured")
         self.corrupt(slug, gates={"G0": "pass", "G1": "pass"}, expiry=None)
-        self.assertTrue(any("captured 带闸门结论" in e for e in self.errors()), self.errors())
+        self.assertInvariant("captured-queue-expiry")
 
     def test_captured_without_gates_needs_no_expiry(self):
         # 未排队的普通 captured(注册后当轮就要出结论)不要求 expiry
@@ -140,33 +137,32 @@ class ValidateLedgerTest(unittest.TestCase):
         R.transition(self.root, slug, to="hold", by="xinci-decide", reason="页面地图存疑,搁置重审")
         self.assertEqual(self.errors(), [])
         self.corrupt(slug, score=None)
-        self.assertTrue(any("score" in e for e in self.errors()), self.errors())
+        self.assertInvariant("score")
 
     def test_detects_fast_grab_invariants(self):
         slug = self.build_chain(until="fast_grab_ready", window="days")
         self.corrupt(slug, expiry=None, play="single_domain", score=90)
-        errs = self.errors()
-        self.assertTrue(any("expiry" in e for e in errs))
-        self.assertTrue(any("play" in e for e in errs))
-        self.assertTrue(any("score" in e for e in errs))
+        self.assertInvariant("fast-grab-expiry")
+        self.assertInvariant("fast-grab-play")
+        self.assertInvariant("fast-grab-score")
 
     def test_detects_fast_grab_window_not_days(self):
         slug = self.build_chain(until="fast_grab_ready", window="days")
         self.corrupt(slug, window_estimate="weeks")
-        self.assertTrue(any("window_estimate=days" in e for e in self.errors()))
+        self.assertInvariant("fast-grab-window")
 
     def test_detects_screen_gate_veto(self):
         slug = self.build_chain(until="screened")
         ledger_gates = dict(GATES_SCREEN)
         ledger_gates["G3"] = "veto"
         self.corrupt(slug, gates=ledger_gates)
-        self.assertTrue(any("G0/G1/G2/G4/G5=pass" in e and "G3" in e for e in self.errors()))
+        self.assertInvariant("screen-gates", "G3")
 
     def test_detects_qualify_gate_missing(self):
         slug = self.build_chain(until="qualified")
         gates = {**GATES_SCREEN, "G6": "pass", "G8": "pass"}  # 缺 G7
         self.corrupt(slug, gates=gates)
-        self.assertTrue(any("G6–G8 全 pass" in e and "G7" in e for e in self.errors()))
+        self.assertInvariant("qualify-gates", "G7")
 
     def test_detects_missing_track_observations(self):
         slug = self.build_chain(until="formation_confirmed")
@@ -175,7 +171,7 @@ class ValidateLedgerTest(unittest.TestCase):
         rec = ledger["candidates"][slug]
         rec["evidence_refs"] = [r for r in rec["evidence_refs"] if not r.endswith("-track.json")]
         p.write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding="utf-8")
-        self.assertTrue(any("≥2 个 -track 观察" in e for e in self.errors()))
+        self.assertInvariant("track-count")
 
     def test_detects_track_span_too_short(self):
         slug = self.build_chain(until="formation_confirmed")
@@ -187,27 +183,27 @@ class ValidateLedgerTest(unittest.TestCase):
         rec["evidence_refs"] += [mk_evidence(self.root, slug, "2026-09-03-track.json"),
                                  mk_evidence(self.root, slug, "2026-09-03b-track.json")]
         p.write_text(json.dumps(ledger, ensure_ascii=False, indent=2), encoding="utf-8")
-        self.assertTrue(any("跨度" in e for e in self.errors()))
+        self.assertInvariant("track-span")
 
     def test_detects_low_score_on_qualified(self):
         slug = self.build_chain(until="qualified")
         self.corrupt(slug, score=79)
-        self.assertTrue(any("score" in e for e in self.errors()))
+        self.assertInvariant("score")
 
     def test_detects_missing_or_zero_income_score_on_qualified(self):
         slug = self.build_chain(until="qualified")
         self.corrupt(slug, income_score=0)
-        self.assertTrue(any("income_score" in e for e in self.errors()), self.errors())
+        self.assertInvariant("income-score")
 
     def test_detects_invalid_g6_passed_lines(self):
         slug = self.build_chain(until="qualified")
         self.corrupt(slug, g6_passed_lines=[])
-        self.assertTrue(any("g6_passed_lines" in e for e in self.errors()), self.errors())
+        self.assertInvariant("g6-lines")
 
     def test_detects_advertising_line_on_new_lane(self):
         slug = self.build_chain(until="qualified")
         self.corrupt(slug, g6_passed_lines=["advertising"])
-        self.assertTrue(any("lane=new" in e for e in self.errors()), self.errors())
+        self.assertInvariant("g6-advertising")
 
     def test_detects_qualify_observation_income_contract_drift(self):
         slug = self.build_chain(until="qualified")
@@ -216,14 +212,13 @@ class ValidateLedgerTest(unittest.TestCase):
         obs["income_score"] = 11
         obs["g6_lines"] = {"subscription": "veto", "advertising": "N/A"}
         path.write_text(json.dumps(obs, ensure_ascii=False), encoding="utf-8")
-        errs = self.errors()
-        self.assertTrue(any("qualify 观察 income_score" in e for e in errs), errs)
-        self.assertTrue(any("qualify 观察 g6_lines" in e for e in errs), errs)
+        self.assertInvariant("qualify-obs-income")
+        self.assertInvariant("qualify-obs-lines")
 
     def test_detects_bad_play_on_build_ready(self):
         slug = self.build_chain(until="build_ready")
         self.corrupt(slug, play="fast_grab")
-        self.assertTrue(any("play" in e for e in self.errors()))
+        self.assertInvariant("build-play")
 
     def test_detects_broken_history_chain(self):
         slug = self.build_chain(until="tracking")
@@ -272,18 +267,18 @@ class ValidateLedgerTest(unittest.TestCase):
         # 手工把豁免候选改成 tracking = 绕过 G3 走向全站
         slug = self.build_window_bet()
         self.corrupt(slug, state="tracking", expiry="2026-09-30")
-        self.assertTrue(any("绕过了 G3" in e for e in self.errors()), self.errors())
+        self.assertInvariant("window-bet-state")
 
     def test_window_bet_must_stay_days(self):
         slug = self.build_window_bet()
         self.corrupt(slug, window_estimate="weeks")
-        self.assertTrue(any("要求 window_estimate=days" in e for e in self.errors()), self.errors())
+        self.assertInvariant("window-bet-window")
 
     def test_plain_g3_veto_at_screened_is_caught(self):
         # 真否决被手工塞进 screened:三分里只有 pass / veto_window_bet 放行
         slug = self.build_window_bet()
         self.corrupt(slug, gates=dict(GATES_SCREEN, G3="veto"))
-        self.assertTrue(any("未满足: ['G3']" in e for e in self.errors()), self.errors())
+        self.assertInvariant("screen-gates", "'G3'")
 
     def hang_window_bet_at_captured(self, slug="hang-bet"):
         """深审判出豁免、但转移尚未被确认的候选:带 gates 与 expiry 挂在 captured。"""
@@ -308,7 +303,7 @@ class ValidateLedgerTest(unittest.TestCase):
         # 挂起位仍是排队位:没有 expiry 就没有过期出口,方向会无声腐烂
         slug = self.hang_window_bet_at_captured()
         self.corrupt(slug, expiry=None)
-        self.assertTrue(any("必有 expiry" in e for e in self.errors()), self.errors())
+        self.assertInvariant("captured-queue-expiry")
 
 class ValidateRunsTest(unittest.TestCase):
     """运行清单校验:清单不经 registrar 写入,格式漂移只能靠本校验捕获。"""
