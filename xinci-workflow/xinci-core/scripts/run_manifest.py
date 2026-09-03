@@ -8,7 +8,7 @@ from datetime import date, datetime, timezone
 from pathlib import Path
 
 import data_root
-from _common import atomic_save as _atomic_save, load_ledger
+from _common import atomic_save as _atomic_save, load_ledger, now as _now
 from _constants import CALIBRATION_TARGETS, REVIEW_OUTCOMES, ROUND_TYPES
 from run_state import RunStateError, load_session
 from chinese_labels import session_status_label
@@ -492,6 +492,30 @@ def create_run_manifest(data_root, session):
     return path, obj
 
 
+def correct_note(data_root, run_id, text):
+    """给已写入的 run 清单追加一条更正备注。
+
+    清单是审计轨迹:写错的备注不删、不改,只在其后追加一条带时间戳的更正,
+    与淘汰索引 resolve --supersedes 同一条纪律(禁止编辑或覆盖旧行)。
+    只动顶层 notes;轮次、漏斗、终止快照一律不碰,写入前后都跑全量校验。
+    """
+    if not isinstance(text, str) or not text.strip():
+        raise RunManifestError("更正备注不得为空")
+    path, obj = find_run_manifest(data_root, run_id)
+    if path is None:
+        raise RunManifestError(f"run_id={run_id} 没有对应的 xinci-run 清单")
+    try:
+        session = load_session(data_root, run_id)
+    except RunStateError as e:
+        raise RunManifestError(f"run_id 无效: {e}")
+    obj["notes"] = list(obj.get("notes") or []) + [f"[更正 {_now()}] {text.strip()}"]
+    errors = validate_manifest(obj, path, session, candidates_by_run(data_root).get(run_id, set()))
+    if errors:
+        raise RunManifestError("; ".join(errors))
+    _atomic_save(path, obj)
+    return path, obj
+
+
 def record_single(data_root, *, run_date, skill, suffix=None, sources_opened=None,
                   sources_blocked=None, candidates_touched=None, billable_calls=0,
                   notes=None, funnel=None):
@@ -626,9 +650,17 @@ def main(argv=None):
     p.add_argument("--billable-calls", type=int, default=0)
     p.add_argument("--note", action="append", default=[])
     p.add_argument("--funnel", help="xinci-scan 必填的漏斗 JSON")
+    c = sub.add_parser("correct-note",
+                       help="给已写入的 run 清单追加一条更正备注(只追加,不改原备注与轮次)")
+    c.add_argument("--run-id", required=True)
+    c.add_argument("--note", required=True)
     a = ap.parse_args(argv)
     root = data_root.resolve_or_exit(a.data_root)
     try:
+        if a.cmd == "correct-note":
+            path, _ = correct_note(root, a.run_id, a.note)
+            print(f"已追加更正备注: {path}")
+            return 0
         funnel = json.loads(a.funnel) if a.funnel is not None else None
         path, _ = record_single(
             root, run_date=a.date, skill=a.skill, suffix=a.suffix,

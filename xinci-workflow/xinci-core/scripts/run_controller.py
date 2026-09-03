@@ -390,6 +390,24 @@ def finish(data_root, run_id, status, reason, evidence_refs=None):
         return obj
 
 
+# 四项自报预检的中文回显:执行者开完轮即知本轮能不能写 G1,不必再跑 run_policy 才发现。
+PREFLIGHT_LABELS = (("controllable", "可控"), ("desktop", "桌面"),
+                    ("region", "美区"), ("logged_out", "未登录"))
+
+
+def _preflight_met(preflight, key):
+    return preflight.get(key) == "us" if key == "region" else preflight.get(key) is True
+
+
+def _render_preflight(preflight):
+    if preflight is None:
+        return "浏览器预检：本轮未提交(不得写 G1;run_policy 判 trigger_only)"
+    if preflight.get("g1_ready") is True:
+        return "浏览器预检：满足 G1 前置(可控、桌面、美区、未登录)"
+    missing = [label for key, label in PREFLIGHT_LABELS if not _preflight_met(preflight, key)]
+    return "浏览器预检：不满足 G1 前置,缺 " + "、".join(missing)
+
+
 def _render_session(obj):
     lines = [
         f"运行编号：{obj['run_id']}",
@@ -398,6 +416,7 @@ def _render_session(obj):
     ]
     if obj.get("current_round") is not None:
         lines.append(f"当前轮次：第 {obj['current_round']} 轮")
+        lines.append(_render_preflight(obj.get("current_round_preflight")))
     if obj.get("finish_reason"):
         lines.append(f"终止说明：{humanize_text(obj['finish_reason'])}")
     if obj.get("go_candidates"):

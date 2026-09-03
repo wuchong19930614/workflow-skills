@@ -28,7 +28,8 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round --run-id
 python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id>
 python3 xinci-workflow/xinci-core/scripts/report_status.py
 ```
-- `executor_id` 是本轮实际执行者的稳定 ID;四个 `--browser-*` 项由该执行者亲自核对本轮浏览器状态,不得借用父任务、上一轮或其他子代理的状态;执行者或浏览器状态改变后重开轮。
+- `executor_id` 是本轮实际执行者的稳定 ID;四个 `--browser-*` 项由该执行者亲自核对本轮浏览器状态,不得借用父任务、上一轮或其他子代理的状态;执行者或浏览器状态改变后重开轮。派子代理执行某阶段时,由该子代理自己调 `begin-round` 提交它亲自核对的四项。
+- `begin-round` 的回显直接给出本轮预检判定(满足 G1 前置 / 不满足并点名缺哪几项 / 本轮未提交),不必跑 `run_policy` 才知道。
 - 轮型:发现新方向 discovery;清理/推进存量 progression;专门复查追踪池 tracking;误杀回测 calibration。只推进存量的轮不得写 discovery。
 - 每累计 10 个 discovery 轮,控制器强制下一次发现前先完成 calibration 轮:先跑 `false_negative_sample.py`,按 G6=10、G7=10、G5=5、G1=5、G3=5 分层复核,结果经 `record-round --false-negative-audit` 提交。
   JSON 键为 `status`(completed|blocked)、`reason`、`samples`、`untested_gates`。`completed` 须 35 条样本每条有证据;库存不足或某层无法复核写 `blocked`,`untested_gates` 与样本零覆盖的门一致,`blocked` 不重置计数;暂定与不确定结果不得改写为正式闸门结论。

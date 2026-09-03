@@ -454,6 +454,69 @@ class RunControllerTest(unittest.TestCase):
         with self.refused():
             RC.active_sessions(self.root)
 
+    def test_begin_round_echoes_preflight_verdict(self):
+        """开轮的中文回显要直接说本轮预检是否满足 G1 前置,不必再跑 run_policy 才知道。"""
+        run = RC.start(self.root, max_rounds=2)
+        ok = RC.begin_round(self.root, run["run_id"], executor_id="e1",
+                            preflight={"controllable": True, "desktop": True,
+                                       "region": "us", "logged_out": True})
+        text = RC.render_human_result("begin-round", ok)
+        self.assertIn("浏览器预检", text)
+        self.assertTrue(ok["current_round_preflight"]["g1_ready"])
+        self.assertNotIn("不满足", text)
+
+    def test_begin_round_echo_names_failing_preflight_items(self):
+        """不达标时要点名是哪几项,否则执行者得自己回去比对四个参数。"""
+        run = RC.start(self.root, max_rounds=2)
+        bad = RC.begin_round(self.root, run["run_id"], executor_id="e1",
+                             preflight={"controllable": True, "desktop": False,
+                                        "region": "other", "logged_out": True})
+        text = RC.render_human_result("begin-round", bad)
+        self.assertFalse(bad["current_round_preflight"]["g1_ready"])
+        self.assertIn("不满足", text)
+        self.assertIn("桌面", text)
+        self.assertIn("美区", text)
+        self.assertNotIn("未登录", text.split("不满足", 1)[1])
+
+    def test_begin_round_without_preflight_echoes_absence(self):
+        """库级调用可省预检;回显要说明本轮没有预检,而不是沉默。"""
+        run = RC.start(self.root, max_rounds=2)
+        obj = RC.begin_round(self.root, run["run_id"], executor_id="e1")
+        text = RC.render_human_result("begin-round", obj)
+        self.assertIn("浏览器预检", text)
+        self.assertIn("未提交", text)
+
+    def test_correct_note_appends_without_touching_existing_record(self):
+        """清单是审计轨迹:更正只能追加,原备注与轮次数据一字不动。"""
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"], executor_id="e1")
+        RC.record_round(self.root, run["run_id"], notes=["原始判断(后被证明有误)"],
+                        funnel=dict(self.ZEROS))
+        RC.finish(self.root, run["run_id"], status="budget_reached", reason="预算命中")
+        path, before = RM.find_run_manifest(self.root, run["run_id"])
+        path2, after = RM.correct_note(self.root, run["run_id"], "更正:原判断有误,实际结论相反")
+        self.assertEqual(path2, path)
+        self.assertEqual(after["rounds"], before["rounds"])
+        self.assertEqual(after["termination"], before["termination"])
+        self.assertEqual(after["notes"][:len(before["notes"])], before["notes"])
+        self.assertEqual(len(after["notes"]), len(before["notes"]) + 1)
+        self.assertIn("更正", after["notes"][-1])
+        self.assertIn("原判断有误", after["notes"][-1])
+        self.assertEqual(after["rounds"][0]["notes"], ["原始判断(后被证明有误)"])
+        self.assertEqual(RM.validate_runs(self.root), [])
+
+    def test_correct_note_rejects_unknown_run(self):
+        with self.refused(RM.RunManifestError):
+            RM.correct_note(self.root, "run-20260820T000000Z-deadbeef", "无处可追加")
+
+    def test_correct_note_rejects_blank_text(self):
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"], executor_id="e1")
+        RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+        RC.finish(self.root, run["run_id"], status="budget_reached", reason="预算命中")
+        with self.refused(RM.RunManifestError):
+            RM.correct_note(self.root, run["run_id"], "   ")
+
 
 if __name__ == "__main__":
     unittest.main()

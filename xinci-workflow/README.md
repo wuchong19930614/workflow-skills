@@ -78,7 +78,7 @@ rejected            fast_grab_ready              rejected           qualified / 
 | `trigger_pool.py` | 官方变化原料的 add/approve/discard 事件日志 |
 | `run_controller.py` | xinci-run 的可恢复运行会话控制器(开轮时提交浏览器预检) |
 | `run_policy.py` | 由预检、积压、停滞、来源轮换计算 full / trigger_only / debt_only / paused |
-| `run_state.py` / `run_manifest.py` | 运行会话与运行清单的契约与原子写入 |
+| `run_state.py` / `run_manifest.py` | 运行会话与运行清单的契约与原子写入;`correct-note` 给已写清单追加更正,不改原文 |
 | `validate_ledger.py` | 账本不变式 + 运行清单格式校验,有错非零退出 |
 | `report_status.py` | 只读状态汇报 |
 | `data_root.py` / `init_workspace.py` | 数据区定位与初始化 |
