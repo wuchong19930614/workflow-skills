@@ -15,7 +15,7 @@ from pathlib import Path
 
 import data_root
 from _common import (atomic_save, check_actor, flock as _flock, funlock as _funlock, is_http_url,
-                     ledger_path as _ledger_path, now as _now)
+                     ledger_path as _ledger_path, now as _now, span_days as _span_days)
 from _constants import GO_STATES, MIN_TRACK_SPAN_DAYS, MONETIZATION_LINES, SLUG_RE, TERMINAL
 
 from run_controller import RunControllerError, require_active_round
@@ -507,6 +507,11 @@ def _obs_time(data_root: Path, ref: str) -> datetime:
     return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
 
 
+def _obs_day(data_root: Path, ref: str):
+    """观察发生在哪一天(UTC 自然日)。跨度、同日判定与提醒共用这一个口径。"""
+    return _obs_time(data_root, ref).date()
+
+
 def _check_date(value: str, field: str) -> str:
     try:
         date.fromisoformat(value)
@@ -628,8 +633,7 @@ def check_state_invariants(data_root, rec: dict) -> list:
                                f"{state} 要求 ≥2 个 -track 观察,当前 {len(track_refs)}"))
         else:
             try:
-                times = [_obs_time(data_root, r) for r in track_refs]
-                span = (max(times) - min(times)).days
+                span = _span_days([_obs_day(data_root, r) for r in track_refs])
                 if span < MIN_TRACK_SPAN_DAYS:
                     errors.append(_inv("track-span",
                                        f"{state} 要求 -track 观察跨度 ≥{MIN_TRACK_SPAN_DAYS} 天,"
@@ -953,10 +957,9 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         track_obs = [r for r in merged_refs if Path(r).stem.endswith("-track")]
         _require(len(track_obs) >= 2,
                  f"tracking→formation_confirmed 要求 ≥2 个追踪期观察(-track 证据),当前 {len(track_obs)}")
-        times = [_obs_time(data_root, r) for r in track_obs]
-        span = (max(times) - min(times)).days
+        span = _span_days([_obs_day(data_root, r) for r in track_obs])
         _require(span >= MIN_TRACK_SPAN_DAYS,
-                 f"tracking→formation_confirmed 要求 -track 观察时间跨度 ≥{MIN_TRACK_SPAN_DAYS} 天"
+                 f"tracking→formation_confirmed 要求 -track 观察跨度 ≥{MIN_TRACK_SPAN_DAYS} 个自然日"
                  f"(形成期以周计,单次运行无法压缩),当前 {span} 天")
         _check_gates(gates, ("G1",), "tracking→formation_confirmed")
         _require(len(refs) >= 1, "tracking→formation_confirmed 要求本次至少 1 个证据")
@@ -1173,7 +1176,7 @@ def checked(data_root, slug, evidence, by="xinci-track", run_id=None, same_day_r
             # 不同日期的观察是正常的,同一天把 SERP 又跑一遍才是空烧。只比 -track 观察,
             # 注册当天先 scan 后 track 不受影响。
             def _track_days(items):
-                return {_obs_time(data_root, r).date() for r in items
+                return {_obs_day(data_root, r) for r in items
                         if Path(r).stem.endswith("-track")}
             dup = sorted(_track_days(refs) & _track_days(rec["evidence_refs"]))
             if dup:

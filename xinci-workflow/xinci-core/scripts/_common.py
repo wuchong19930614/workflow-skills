@@ -9,7 +9,7 @@
 import json
 import os
 import tempfile
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -68,6 +68,18 @@ def parse_aware_timestamp(value, where, error_cls):
     return parsed
 
 
+def span_days(days) -> int:
+    """一组日期里最早与最新的自然日差:形成跨度判据的唯一实现。
+
+    按自然日算而不按满 24 小时算,原因是同一条判据此前有两个实现且互相矛盾:
+    run_policy 的天花板计算按自然日、registrar 的转移校验按 24 小时,于是
+    2026-09-07 出现"策略说本次复查即可凑齐跨度、registrar 判 6 天拒收"的现场,
+    被拒后又撞上同日不重复复查规则,当天再无合法出路。自然日也是人预判到期日
+    时的读法(最早观察那天 + 7 天),跨度提醒与看板都按它显示。
+    """
+    return (max(days) - min(days)).days
+
+
 def ledger_path(data_root) -> Path:
     return Path(data_root) / "账本" / "候选账本.json"
 
@@ -76,6 +88,34 @@ def load_ledger(data_root) -> dict:
     """读候选账本原文并解析。缺文件/损坏时原样抛出 FileNotFoundError /
     json.JSONDecodeError / UnicodeDecodeError,由调用方决定默认值或报错方式。"""
     return json.loads(ledger_path(data_root).read_text(encoding="utf-8"))
+
+
+def track_observation_days(data_root, rec) -> list:
+    """该候选已登记的 -track 观察日期(只读侧共用)。
+
+    读不出的证据跳过:看板、提醒与策略计算不因一份证据损坏而崩。registrar 不用
+    这一版——它在转移时必须对坏证据大声报错,而不是静默少算一份跨度。
+    """
+    days = []
+    for ref in rec.get("evidence_refs", []) or []:
+        if not str(ref).endswith("-track.json"):
+            continue
+        try:
+            obs = json.loads((Path(data_root) / ref).read_text(encoding="utf-8"))
+            days.append(datetime.fromisoformat(obs["observed_at"]).date())
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
+            continue
+    return sorted(days)
+
+
+def formation_eligible_date(track_days, min_span_days):
+    """最早 -track 观察那天 + 跨度下限 = 最早可提交形成确认的自然日。
+
+    预判到期日时读这一个数,不要拿账本 history 里 tracking 那条的时间戳去加 7 天:
+    两者可以差几十分钟(实测 cpr-avcp:history 03:42Z、观察文件 04:10Z),按 history
+    推算会早到被拒。
+    """
+    return (min(track_days) + timedelta(days=min_span_days)) if track_days else None
 
 
 def check_actor(data_root, by, run_id, *, actors, error_cls):

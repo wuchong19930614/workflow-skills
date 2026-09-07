@@ -7,7 +7,7 @@ from datetime import date, datetime
 from pathlib import Path
 
 import data_root
-from _common import load_ledger
+from _common import load_ledger, span_days, track_observation_days
 from _constants import MIN_TRACK_SPAN_DAYS
 from run_manifest import find_run_manifest
 from run_state import load_session
@@ -59,20 +59,6 @@ def captured_backlog_delta_by_round(root, run_id):
     return deltas
 
 
-def _track_days(root, rec):
-    """该候选已登记的 -track 观察日期;读不出的证据跳过,策略计算不因证据损坏而崩。"""
-    days = []
-    for ref in rec.get("evidence_refs", []) or []:
-        if not str(ref).endswith("-track.json"):
-            continue
-        try:
-            obs = json.loads((Path(root) / ref).read_text(encoding="utf-8"))
-            days.append(datetime.fromisoformat(obs["observed_at"]).date())
-        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError):
-            continue
-    return days
-
-
 def reachable_ceiling(root, mode, today=None):
     """本次运行在当前账本下最远能推进到哪一步。
 
@@ -100,9 +86,10 @@ def reachable_ceiling(root, mode, today=None):
         elif state == "screened" and rec.get("window_estimate") == "days":
             go_ready.append(slug)
         elif state == "tracking":
-            days = _track_days(root, rec)
-            # 本次复查会新增一份观察,故只要最早那份已满 7 天就够跨度
-            if days and (today - min(days)).days >= MIN_TRACK_SPAN_DAYS:
+            days = track_observation_days(root, rec)
+            # 本次复查会新增一份观察,故只要最早那份已满 7 天就够跨度;跨度口径与
+            # registrar 同源(_common.span_days,按自然日)
+            if days and span_days(days + [today]) >= MIN_TRACK_SPAN_DAYS:
                 formation_ready.append(slug)
     if go_ready:
         return {"state": "go", "enablers": sorted(go_ready),

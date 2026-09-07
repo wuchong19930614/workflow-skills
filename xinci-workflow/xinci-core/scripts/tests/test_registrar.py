@@ -445,6 +445,26 @@ class RegistrarTest(unittest.TestCase):
                      gates={"G1": "pass"}, evidence=[ok])
         self.assertEqual(self.load(slug)["state"], "formation_confirmed")
 
+    def test_formation_span_counts_calendar_days_not_24h_units(self):
+        """跨度按自然日算,不按满 24 小时算。
+
+        实测触发(2026-09-07):最早 -track 观察在 08-31T04:10Z、复查在 09-07T03:44Z,
+        自然日相隔 7 天但不足 7×24 小时。旧实现按 24 小时判 6 天拒收,而 run_policy
+        的天花板计算按自然日已判定"本次复查即可凑齐跨度",两个实现对同一条判据给出
+        相反答案;被拒后又撞上"同一自然日不重复复查",当天再无合法出路。
+        """
+        slug = self.register("calendar-span")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        R.checked(self.root, slug, evidence=[mk_evidence(
+            self.root, slug, "2026-08-31-track.json",
+            observed_at="2026-08-31T04:10:00+00:00")])
+        later = mk_evidence(self.root, slug, "2026-09-07-track.json", gates={"G1": "pass"},
+                            observed_at="2026-09-07T03:44:00+00:00")
+        R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
+                     gates={"G1": "pass"}, evidence=[later])
+        self.assertEqual(self.load(slug)["state"], "formation_confirmed")
+
     def test_formation_requires_stable_name_and_signal(self):
         slug = self.register("formation-meaning")
         self.to_screened(slug)

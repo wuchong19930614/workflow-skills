@@ -47,7 +47,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
   [--expiry YYYY-MM-DD] [--add-alias <胜出的叫法>] [--add-invalidation "<新失效条件>"]
 ```
 
-   - `formation_confirmed`:累计 ≥2 次 `-track` 观察且最早与最新相隔 ≥7 天、`naming_status=stabilized`、`formation_signals` ≥1 项、本次 G1=pass;
+   - `formation_confirmed`:累计 ≥2 次 `-track` 观察且跨度达标(按自然日,口径与最早可推进日见生命周期契约「时间字段」;`report_status.py` 直接给出 `formation_eligible_date`)、`naming_status=stabilized`、`formation_signals` ≥1 项、本次 G1=pass;
    - `expired`:expiry 已过用 `--expiry-trigger date`,失效条件命中用 `--expiry-trigger invalidation`;
    - `rejected`:第 1 步 G0/G1 翻转;第 2 步占位否决生效或六条适用线全部 `tentative_veto`;第 4 步 `self_serve_legal_effect` 证明全部声称交付依法无效。
 8. **用户确认后**执行对应 transition(模板见生命周期契约「CLI 模板」),再按通用约定写运行清单(`--skill xinci-track`)。

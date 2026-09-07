@@ -39,6 +39,25 @@ class ReportStatusTest(unittest.TestCase):
                          expiry=expiry, invalidation=["官方工具上线"],
                          evidence=[mk_evidence(self.root, slug, "2026-08-17c-scan.json")])
 
+    def test_tracking_rows_report_formation_eligible_date(self):
+        """追踪中候选要直接给出"最早哪天能提交形成确认",与 registrar 判据同源。"""
+        future = (date.today() + timedelta(days=30)).isoformat()
+        self._mk("span-one", state="tracking", expiry=future)
+        R.checked(self.root, "span-one", evidence=[mk_evidence(
+            self.root, "span-one", "2026-08-20-track.json",
+            observed_at="2026-08-20T04:10:00+00:00")])
+        rows = {r["slug"]: r for r in S.build_report(self.root)["candidates"]}
+        row = rows["span-one"]
+        self.assertEqual(row["track_observations"], 1)
+        self.assertEqual(row["formation_eligible_date"], "2026-08-27")
+        text = S.render_text(S.build_report(self.root))
+        self.assertIn("形成跨度", text)
+        self.assertIn("可推进", text)
+        # 非 tracking 状态不算这一列,避免看板给出无意义的日期
+        self._mk("dead-two", state="rejected")
+        rows = {r["slug"]: r for r in S.build_report(self.root)["candidates"]}
+        self.assertIsNone(rows["dead-two"]["formation_eligible_date"])
+
     def test_missing_ledger_raises(self):
         with self.assertRaises(FileNotFoundError):
             S.build_report(self.root / "不存在")

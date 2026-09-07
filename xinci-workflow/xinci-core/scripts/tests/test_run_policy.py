@@ -11,6 +11,7 @@ import run_controller as RC
 import run_policy as RP
 import trigger_pool as TP
 import registrar as R
+from test_registrar import mk_evidence as R_mk, GATES_SCREEN as R_GATES_SCREEN
 
 
 class RunPolicyTest(unittest.TestCase):
@@ -68,6 +69,45 @@ class RunPolicyTest(unittest.TestCase):
         ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
         self.assertEqual(ceiling["state"], "go")
         self.assertEqual(ceiling["enablers"], ["ripe"])
+
+    def test_ceiling_and_registrar_agree_on_span_boundary(self):
+        """策略天花板与 registrar 必须对同一条跨度判据给出同一个答案。
+
+        2026-09-07 实测的故障:天花板按自然日说"本次复查即可凑齐跨度、可一路走到
+        go",registrar 按满 24 小时判 6 天拒收。两个实现分歧的代价是当天再无合法
+        出路(被拒后又撞上同日不重复复查)。这里用同一份账本同时问两边。
+        """
+        self.ready()
+        slug = "agree-one"
+        earliest = (date.today() - timedelta(days=RP.MIN_TRACK_SPAN_DAYS))
+        run_id = self.run["run_id"]
+        kw = {"by": "xinci-run", "run_id": run_id}
+        expiry = (date.today() + timedelta(days=30)).isoformat()
+        R.register(self.root, slug=slug, term=slug, source_url="https://e.com", task="t",
+                   evidence=[R_mk(self.root, slug, "2026-08-17-scan.json")],
+                   site_thesis="判定表可成站", task_families=["f1", "f2"], origin="signal", **kw)
+        R.transition(self.root, slug, to="screened", gates=dict(R_GATES_SCREEN),
+                     window_estimate="weeks", expiry=expiry,
+                     evidence=[R_mk(self.root, slug, "2026-08-17b-scan.json",
+                                    gates=dict(R_GATES_SCREEN))], **kw)
+        R.transition(self.root, slug, to="tracking", expiry=expiry,
+                     invalidation=["官方工具上线"],
+                     evidence=[R_mk(self.root, slug, "2026-08-17c-scan.json")], **kw)
+        # 最早那份 -track 观察在当天较晚的时刻,复查在第 7 个自然日的较早时刻:
+        # 自然日相隔 7 天,满 24 小时算只有 6 天
+        R.checked(self.root, slug, evidence=[R_mk(
+            self.root, slug, f"{earliest.isoformat()}-track.json",
+            observed_at=f"{earliest.isoformat()}T23:30:00+00:00")], **kw)
+        ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
+        self.assertEqual(ceiling["state"], "go")
+        self.assertIn(slug, ceiling["enablers"])
+        today_ref = R_mk(self.root, slug, f"{date.today().isoformat()}-track.json",
+                         gates={"G1": "pass"},
+                         observed_at=f"{date.today().isoformat()}T00:10:00+00:00")
+        R.transition(self.root, slug, to="formation_confirmed", gates={"G1": "pass"},
+                     evidence=[today_ref], **kw)
+        self.assertEqual(json.loads((self.root / "账本" / "候选账本.json").read_text(
+            encoding="utf-8"))["candidates"][slug]["state"], "formation_confirmed")
 
     def test_ceiling_is_go_for_days_window_screened_candidate(self):
         self.ready()
