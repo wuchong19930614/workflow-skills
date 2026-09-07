@@ -39,6 +39,9 @@ FUNNEL_REQUIRED_FROM = "2026-08-19"
 TRIGGER_FUNNEL_FIELDS = ("harvested", "discarded_preapproval", "discarded_postapproval",
                          "pending", "approved")
 FALSE_NEGATIVE_OUTCOMES = {"valid_reject", "false_negative", "inconclusive"}
+# "每道门至少一条有结论的样本才算 completed" 是后加的收紧规则(见 _check_false_negative_audit)。
+# 清单是只追加的审计轨迹,不回溯改写:该日之前的轮次只给警告,不判错。
+CALIBRATION_CONCLUSIVE_REQUIRED_FROM = "2026-09-07"
 
 
 class RunManifestError(Exception):
@@ -127,7 +130,7 @@ def _check_reviews(obj, where, errors, root=None):
         seen.add(row["slug"])
 
 
-def _check_false_negative_audit(rnd, where, errors, root=None):
+def _check_false_negative_audit(rnd, where, errors, root=None, run_date=None):
     audit = rnd.get("false_negative_audit")
     if rnd.get("round_type") != "calibration":
         if audit is not None:
@@ -183,7 +186,13 @@ def _check_false_negative_audit(rnd, where, errors, root=None):
     # completed 记录,把"已累计 10 个发现轮"的计数重置了)。
     expected_untested = sorted(gate for gate, count in conclusive_gate_counts.items()
                                if count == 0)
-    if isinstance(untested, list) and sorted(untested) != expected_untested:
+    legacy_untested = sorted(gate for gate, count in sample_gate_counts.items() if count == 0)
+    # 生效日之前的清单按当时的读法(按样本数)写的 untested_gates 照旧放行:
+    # 清单是只追加的审计轨迹,不回溯改写。
+    enforce_conclusive = (not run_date) or run_date >= CALIBRATION_CONCLUSIVE_REQUIRED_FROM
+    accepted = ([expected_untested] if enforce_conclusive
+                else [expected_untested, legacy_untested])
+    if isinstance(untested, list) and sorted(untested) not in accepted:
         errors.append(f"{where} false_negative_audit.untested_gates 必须由"
                       f"有结论(非 inconclusive)的样本覆盖自动对应，应为 {expected_untested}")
     if audit.get("status") == "completed":
@@ -193,7 +202,7 @@ def _check_false_negative_audit(rnd, where, errors, root=None):
         if shortfalls:
             errors.append(f"{where} 已完成校准必须满足默认 35 条分层样本，缺口 {shortfalls};"
                           "样本不足时应记录 blocked")
-        if expected_untested:
+        if expected_untested and enforce_conclusive:
             errors.append(f"{where} 已完成校准要求每道门至少有一条有结论的样本，"
                           f"全部 inconclusive 的门: {expected_untested};"
                           "取不到现场依据时应记录 blocked")
@@ -362,7 +371,7 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
         if session and session.get("schema_version", 1) >= 3:
             if rnd.get("round_type") not in ROUND_TYPES:
                 errors.append(f"{rw} schema v3 必须填写 round_type={sorted(ROUND_TYPES)}")
-            _check_false_negative_audit(rnd, rw, errors, root)
+            _check_false_negative_audit(rnd, rw, errors, root, run_date)
         if enforce_funnel and rnd.get("funnel") is None:
             errors.append(f"{rw} 必须带 funnel(自 {FUNNEL_REQUIRED_FROM} 起强制)")
     numbers = [rnd.get("round") for rnd in rounds if isinstance(rnd, dict)]

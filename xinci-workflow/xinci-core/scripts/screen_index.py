@@ -518,8 +518,10 @@ def repair_dates(data_root, terms, *, value, reason, actor="user", run_id=None) 
         if norm in already:
             raise ScreenIndexError(f"淘汰方向 {requested[norm]!r} 已有日期修订；修订不可覆盖")
         original = next(row for row in base_rows if normalize(row.get("term", "")) == norm)
-        if _valid_date(original.get("date")):
-            raise ScreenIndexError(f"淘汰方向 {requested[norm]!r} 已有合法日期，无需修订")
+        # 写错的合法日期也要能更正,不只是空日期:本机时钟可能在同一轮内跳日
+        # (实测 2026-09-06),当轮追加的索引行日期就会写错,而索引是追加式、不得手改。
+        if original.get("date") == value:
+            raise ScreenIndexError(f"淘汰方向 {requested[norm]!r} 的更正值与原日期相同，无需修订")
         row = {
             "term": original["term"], "field": "date", "value": value,
             "corrected_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),

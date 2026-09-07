@@ -346,6 +346,32 @@ class ScreenIndexTest(unittest.TestCase):
         (d / "候选账本.json").write_text("{坏", encoding="utf-8")
         self.assertEqual(S.check(self.root, ["some direction"])["fresh"], ["some direction"])
 
+    def test_repair_date_can_correct_a_wrong_but_valid_date(self):
+        """写错的日期也要能更正,不只是空日期。
+
+        实测(2026-09-06):本机时钟在同一轮里从 09-05 跳到 09-06,当轮追加的索引行
+        --date 写成了 2026-09-05;而 repair-date 只肯修空日期,写错的合法日期没有
+        任何更正通道,只能在运行清单里留一句说明。
+        """
+        S.append(self.root, [{"date": "2026-09-05", "term": "wrong-day", "gate": "G5",
+                              "reason": "首屏做完"}])
+        S.repair_dates(self.root, ["wrong-day"], value="2026-09-06",
+                       reason="本机时钟在同轮内跳变,实际观察日为 09-06", actor="user")
+        rows = {r["term"]: r for r in S.load(self.root)}
+        self.assertEqual(rows["wrong-day"]["date"], "2026-09-06")
+        self.assertTrue(rows["wrong-day"]["date_corrected"])
+        # 同一条只能修一次,修订本身不可覆盖
+        with self.assertRaisesRegex(S.ScreenIndexError, "不可覆盖"):
+            S.repair_dates(self.root, ["wrong-day"], value="2026-09-07",
+                           reason="再改一次", actor="user")
+
+    def test_repair_date_rejects_a_no_op_correction(self):
+        S.append(self.root, [{"date": "2026-09-06", "term": "same-day", "gate": "G5",
+                              "reason": "首屏做完"}])
+        with self.assertRaisesRegex(S.ScreenIndexError, "与原日期相同"):
+            S.repair_dates(self.root, ["same-day"], value="2026-09-06",
+                           reason="无意义更正", actor="user")
+
 
 if __name__ == "__main__":
     unittest.main()
