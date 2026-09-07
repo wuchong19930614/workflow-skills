@@ -55,6 +55,7 @@ def build_report(data_root):
             "formation_span_days": span_days(track_days) if track_days else None,
             "formation_eligible_date": eligible.isoformat() if eligible else None,
             "formation_eligible_days_left": (eligible - today).days if eligible else None,
+            "qualify_pending": rec.get("qualify_pending"),
         }
         rows.append(row)
         if expiry_days is not None and expiry_days < 0 and state not in TERMINAL:
@@ -81,6 +82,12 @@ def render_text(report) -> str:
             formation = (f" | 形成跨度 {r['formation_span_days']}/{MIN_TRACK_SPAN_DAYS} 天"
                          + (f"，可推进（自 {r['formation_eligible_date']}）" if left <= 0
                             else f"，{r['formation_eligible_date']} 起可推进（余 {left} 天）"))
+        pending = r.get("qualify_pending")
+        if pending:
+            left = (date.fromisoformat(pending["pending_until"]) - today).days
+            formation += (f" | 认定暂缓至 {pending['pending_until']}"
+                          + ("（已到期，该按现有证据出结论）" if left < 0 else f"（余 {left} 天）")
+                          + "，待补：" + "、".join(pending["pending_evidence"]))
         lines.append(f"【{candidate_state_label(r['state'])}】{r['slug']} — {r['term']} | 年龄 {r['age_days']} 天 | "
                      f"距上次复查 {r['days_since_checked']} 天 | {exp}{formation}")
     if report["expired_unhandled"]:

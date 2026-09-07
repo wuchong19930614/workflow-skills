@@ -109,6 +109,27 @@ class RunPolicyTest(unittest.TestCase):
         self.assertEqual(json.loads((self.root / "账本" / "候选账本.json").read_text(
             encoding="utf-8"))["candidates"][slug]["state"], "formation_confirmed")
 
+    def test_ceiling_excludes_qualify_deferred_candidate_until_due(self):
+        """认定暂缓未到期的候选本轮推不动:缺的是环境性证据,再跑一遍只会得到同一个"取不到"。"""
+        self.ready()
+        future = (date.today() + timedelta(days=14)).isoformat()
+        self.seed_ledger({"deferred": {
+            "slug": "deferred", "lane": "new", "state": "formation_confirmed", "history": [],
+            "qualify_pending": {"pending_evidence": ["竞品 footprint"], "pending_until": future,
+                                "deferred_at": "2026-09-07T00:00:00+00:00",
+                                "reason": "Semrush 未登录", "by": "xinci-qualify"}}})
+        ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
+        self.assertNotIn("deferred", ceiling["enablers"])
+        # 到期后必须出结论,天花板重新算它
+        past = (date.today() - timedelta(days=1)).isoformat()
+        self.seed_ledger({"deferred": {
+            "slug": "deferred", "lane": "new", "state": "formation_confirmed", "history": [],
+            "qualify_pending": {"pending_evidence": ["竞品 footprint"], "pending_until": past,
+                                "deferred_at": "2026-09-07T00:00:00+00:00",
+                                "reason": "Semrush 未登录", "by": "xinci-qualify"}}})
+        ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
+        self.assertEqual(ceiling["enablers"], ["deferred"])
+
     def test_ceiling_is_go_for_days_window_screened_candidate(self):
         self.ready()
         self.seed_ledger({"fast": {"slug": "fast", "lane": "new", "state": "screened",

@@ -640,6 +640,24 @@ def check_state_invariants(data_root, rec: dict) -> list:
                                        f"当前 {span} 天"))
             except RegistrarError as e:
                 errors.append(_inv("track-obs-time", str(e)))
+    pending = rec.get("qualify_pending")
+    if pending is not None:
+        if state != "formation_confirmed":
+            errors.append(_inv("qualify-pending-state",
+                               f"qualify_pending 只允许出现在 formation_confirmed,当前 {state}"))
+        elif (not isinstance(pending, dict) or set(pending) != QUALIFY_PENDING_FIELDS
+                or not isinstance(pending.get("pending_evidence"), list)
+                or not pending["pending_evidence"]
+                or not all(isinstance(x, str) and x.strip()
+                           for x in pending["pending_evidence"])):
+            errors.append(_inv("qualify-pending-shape",
+                               f"qualify_pending 结构非法: {pending!r}"))
+        else:
+            try:
+                date.fromisoformat(pending["pending_until"])
+            except (TypeError, ValueError):
+                errors.append(_inv("qualify-pending-date",
+                                   f"qualify_pending.pending_until 非法: {pending.get('pending_until')!r}"))
     if state in SCORED_STATES:
         score = rec.get("score")
         if not (isinstance(score, int) and score >= 80):
@@ -1077,6 +1095,8 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         rec["play"] = play
     if superseded_by:
         rec["superseded_by"] = superseded_by
+    # 出了结论就不再是暂缓:补齐证据后照常 transition,标记随之清除
+    rec.pop("qualify_pending", None)
     if to == "rejected":
         merged_gates = dict(rec.get("gates") or {}, **(gates or {}))
         vetoes = {g for g, v in merged_gates.items() if v == "veto"}
@@ -1209,6 +1229,54 @@ def checked(data_root, slug, evidence, by="xinci-track", run_id=None, same_day_r
         return rec
 
 
+QUALIFY_PENDING_FIELDS = {"pending_evidence", "pending_until", "deferred_at", "reason", "by"}
+
+
+def defer_qualify(data_root, slug, by, reason, pending_evidence, pending_until,
+                  evidence=None, run_id=None):
+    """认定暂缓:本次认定所缺的证据是**环境性**取不到,不出分、不出结论。
+
+    评分契约把"证据缺失"一律判成"该维度不得分",但缺失有两种,后果不该一样:
+    - **结构性缺失**:这个数根本不存在或不公开(如化妆品 responsible person 的计数,
+      八条路径全走空)。它是关于机会本身的事实,照常不得分、照常出结论;
+    - **环境性缺失**:本次会话取不到(Semrush 未登录、官方站维护、小站无 footprint
+      数据)。它是关于本次执行条件的事实,与机会好坏无关。
+    实测代价(2026-09-07 cpr-avcp):三处环境性缺失被当成结构性缺失,收入维度扣到
+    12/20、竞争维度再扣 4、红队再扣 8,同一个"取不到"扣了三次并判 disqualified。
+
+    候选留在 formation_confirmed,记下待补项与暂缓到期日;到期后必须按当时手上的证据
+    出结论,不能无限期挂着。补齐后照常 transition,暂缓标记随之清除。
+    """
+    data_root = Path(data_root)
+    pending_evidence = [str(x).strip() for x in (pending_evidence or []) if str(x).strip()]
+    _require(bool(reason), "认定暂缓要求 reason(说明缺的是哪一类证据、为何是环境性的)")
+    _require(bool(pending_evidence),
+             "认定暂缓要求至少一项 pending_evidence:说不出缺什么,就是该出结论了")
+    _check_date(pending_until, "pending_until")
+    _require(date.fromisoformat(pending_until) > date.today(),
+             f"认定暂缓的 pending_until 必须在未来,当前 {pending_until}")
+    with _locked(data_root):
+        ledger, rec = _open_ledger(data_root, slug, by, run_id)
+        _require(rec["state"] == "formation_confirmed",
+                 f"认定暂缓只对 formation_confirmed 开放,当前 {rec['state']}")
+        refs = _check_evidence(data_root, evidence, slug=slug)
+        _require(any(Path(r).stem.endswith("-qualify") for r in refs),
+                 "认定暂缓要求提交本次的 qualify 观察(证明认定确实做了,并记下取不到什么)")
+        _check_evidence_reuse(data_root, rec, refs)
+        now = _now()
+        pending = {"pending_evidence": pending_evidence, "pending_until": pending_until,
+                   "deferred_at": now, "reason": reason, "by": by}
+        rec["qualify_pending"] = pending
+        rec["evidence_refs"] += [r for r in refs if r not in rec["evidence_refs"]]
+        rec["last_checked_at"] = now
+        rec["history"].append(dict({"at": now, "from": rec["state"], "to": rec["state"],
+                                    "by": by, "reason": reason, "evidence": refs,
+                                    "qualify_pending": pending},
+                                   **_run_history_fields(data_root, run_id)))
+        _save(data_root, ledger)
+        return rec
+
+
 def amend(data_root, slug, by, reason, expiry=None, add_aliases=None, add_invalidation=None,
           gates=None, evidence=None, run_id=None):
     """观察性字段修订(不改状态):续期 expiry、追加 aliases/invalidation、
@@ -1310,6 +1378,17 @@ CLI_SPEC = {
                                             "(排队的 captured 候选用;缺哪门下轮补哪门)"}),
         ("--expiry", {"help": "排队位的失效日 YYYY-MM-DD(带 --gates 时必填)"}),
     ]),
+    "defer-qualify": ("认定暂缓(环境性缺证据,不出分不出结论)", [
+        ("--slug", _REQUIRED),
+        ("--by", {"default": "xinci-qualify"}),
+        ("--run-id", {"help": _RUN_ID_HELP}),
+        ("--reason", _REQUIRED),
+        ("--pending-evidence", {"action": "append", "required": True,
+                                "help": "本次取不到、需要补的具体证据项;可重复"}),
+        ("--pending-until", {"required": True, "help": "暂缓到期日 YYYY-MM-DD,必须在未来"}),
+        ("--evidence", {"action": "append", "required": True,
+                        "help": "本次的 qualify 观察(记下取不到什么)"}),
+    ]),
     "transition": ("状态转移", [
         ("--slug", _REQUIRED),
         ("--to", _REQUIRED),
@@ -1375,6 +1454,14 @@ def main(argv=None):
     # 不让空路径流进下游写操作(理由见 data_root.py)。
     a.data_root = data_root.resolve_or_exit(a.data_root)
     try:
+        if a.cmd == "defer-qualify":
+            out = defer_qualify(a.data_root, a.slug, by=a.by, reason=a.reason,
+                                pending_evidence=a.pending_evidence,
+                                pending_until=a.pending_until,
+                                evidence=a.evidence, run_id=a.run_id)
+            print(json.dumps({"slug": a.slug, "state": out["state"],
+                              "qualify_pending": out["qualify_pending"]}, ensure_ascii=False))
+            return 0
         if a.cmd == "register":
             require_formal_admission(a.data_root, a.by, a.run_id, a.term,
                                      a.origin, a.trigger_id)

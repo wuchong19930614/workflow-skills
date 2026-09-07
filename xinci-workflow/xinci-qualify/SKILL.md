@@ -25,6 +25,16 @@ description: '对已进入形成确认(formation_confirmed)的 new 或 mature �
 6. **评分。** 按评分契约六维打分,红队反驳并扣分。硬否决后不产生分数;`income_score` 必须 1–20。
 7. **写观察文件并提议。** `证据/<slug>/<日期>-qualify.json`,`schema_version: 2`:逐维得分、红队记录、竞争分类清单、footprint 实测;`gates` 写 G6/G7/G8 的 pass,`g6_lines` 完整写六条 `pass|veto|N/A`,`income_score` 写收入维度分,`source_urls` 非空。
    向用户提议 qualified(附总分、`income_score`、通过线)或 disqualified(附决定性缺口:哪一项、差多少;两种出口都必须随 transition 提交本次 observation,不能只写 reason)。
+   **第三个出口:认定暂缓。** 缺的证据是环境性的(本次会话取不到,如 Semrush 未登录、官方站维护、小站无 footprint 数据)时不出分、不出结论,按评分契约「证据缺失分两种」走:
+
+```bash
+python3 xinci-workflow/xinci-core/scripts/registrar.py defer-qualify \
+  --slug <slug> --by xinci-qualify --reason "<缺的是哪一类证据、为何是环境性的>" \
+  --pending-evidence "<待补项1>" --pending-evidence "<待补项2>" \
+  --pending-until <YYYY-MM-DD> --evidence "证据/<slug>/<日期>-qualify.json"
+```
+
+   暂缓期内该候选不进 `run_policy` 的 go 天花板(再跑一遍只会得到同一个"取不到");到期后必须按当时手上的证据出结论。
 8. **用户确认后**执行,再按通用约定写运行清单(`--skill xinci-qualify --billable-calls <N>`):
 ```bash
 # qualified:score ≥80 与 income-score 1–20 都必填

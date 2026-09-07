@@ -82,7 +82,15 @@ def reachable_ceiling(root, mode, today=None):
         if lane == "mature" and state in {"captured", "screened", "tracking"}:
             continue
         if state in {"qualified", "hold", "formation_confirmed"}:
-            go_ready.append(slug)
+            # 认定暂缓未到期的候选本轮推不动:缺的是环境性证据,再跑一遍认定只会
+            # 得到同一个"取不到"。到期后必须按当时手上的证据出结论。
+            pending = rec.get("qualify_pending") or {}
+            try:
+                deferred = date.fromisoformat(pending["pending_until"]) > today
+            except (KeyError, TypeError, ValueError):
+                deferred = False
+            if not deferred:
+                go_ready.append(slug)
         elif state == "screened" and rec.get("window_estimate") == "days":
             go_ready.append(slug)
         elif state == "tracking":

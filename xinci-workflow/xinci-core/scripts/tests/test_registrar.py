@@ -446,6 +446,58 @@ class RegistrarTest(unittest.TestCase):
                      gates={"G1": "pass"}, evidence=[ok])
         self.assertEqual(self.load(slug)["state"], "formation_confirmed")
 
+    def test_defer_qualify_holds_instead_of_scoring_on_environmental_gaps(self):
+        """环境性取不到证据时不出分、不出结论,记「认定暂缓」并列出待补项。
+
+        实测(2026-09-07 cpr-avcp):Semrush 未登录、EUR-Lex 维护中、similarweb 对小站
+        无数据,三处都是"本次会话取不到",却按"证据缺失=该维度不得分"扣成收入 12/20、
+        竞争 -4,再叠红队 -8,判 disqualified。同一个取不到被扣了三次。
+        """
+        slug = self.register("defer-one")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        ev = mk_evidence(self.root, slug, "2026-09-07-qualify.json", gates=dict(GATES_678))
+        R.defer_qualify(self.root, slug, by="xinci-qualify",
+                        reason="Semrush 未登录、EUR-Lex 维护中,两个乘数取不到一手出处",
+                        pending_evidence=["hEN/EAD 覆盖子集比例", "至少一个竞品 footprint"],
+                        pending_until="2026-09-21", evidence=[ev])
+        rec = self.load(slug)
+        self.assertEqual(rec["state"], "formation_confirmed")
+        self.assertIsNone(rec["score"])
+        self.assertEqual(rec["qualify_pending"]["pending_until"], "2026-09-21")
+        self.assertEqual(len(rec["qualify_pending"]["pending_evidence"]), 2)
+        self.assertEqual(rec["history"][-1]["to"], "formation_confirmed")
+        self.assertEqual(VL.validate(self.root)[0], [])
+        # 暂缓期不是免死金牌:补齐后照常出结论,并清掉暂缓标记
+        ev2 = mk_evidence(self.root, slug, "2026-09-22-qualify.json", gates=dict(GATES_678),
+                          income_score=3,
+                          g6_lines={"subscription": "pass", "lead_generation": "N/A",
+                                    "affiliate": "N/A", "transaction": "N/A",
+                                    "paid_report": "N/A", "advertising": "N/A"})
+        R.transition(self.root, slug, to="disqualified", by="xinci-qualify",
+                     gates=dict(GATES_678), score=71, income_score=3,
+                     g6_passed_lines=["subscription"],
+                     reason="补齐子集比例后收入仍只有 3/20", evidence=[ev2])
+        self.assertNotIn("qualify_pending", self.load(slug))
+
+    def test_defer_qualify_needs_future_date_and_pending_items(self):
+        slug = self.register("defer-two")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        ev = mk_evidence(self.root, slug, "2026-09-07-qualify.json", gates=dict(GATES_678))
+        with self.refused(slug):  # 待补项不能为空:说不出缺什么就是该出结论了
+            R.defer_qualify(self.root, slug, by="xinci-qualify", reason="r",
+                            pending_evidence=[], pending_until="2026-09-21", evidence=[ev])
+        with self.refused(slug):  # 暂缓到期日必须在未来
+            R.defer_qualify(self.root, slug, by="xinci-qualify", reason="r",
+                            pending_evidence=["x"], pending_until="2020-01-01", evidence=[ev])
+        with self.refused(slug):  # 必须提交本次的 qualify 观察
+            R.defer_qualify(self.root, slug, by="xinci-qualify", reason="r",
+                            pending_evidence=["x"], pending_until="2026-09-21",
+                            evidence=[mk_evidence(self.root, slug, "2026-09-07-track.json")])
+
     def test_disqualified_records_income_score_and_passed_lines(self):
         """认定判否也要把收入维度与通过的盈利线记进账本。
 
