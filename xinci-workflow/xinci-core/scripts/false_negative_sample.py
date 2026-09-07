@@ -33,6 +33,26 @@ def _ledger_rejections(root):
     return rows
 
 
+def audited_terms(root):
+    """历史校准轮里已经复核出结论的词(按 gate 分组,小写比较)。
+
+    只算有结论的(valid_reject / false_negative);inconclusive 表示当时没取到现场依据,
+    那道门其实还没被测,应该优先补测而不是跳过。清单读不出的按无历史处理。
+    """
+    from run_manifest import iter_run_manifests
+    done = {}
+    for _, manifest in iter_run_manifests(root):
+        for rnd in manifest.get("rounds") or []:
+            audit = rnd.get("false_negative_audit") or {}
+            for sample in audit.get("samples") or []:
+                if not isinstance(sample, dict) or sample.get("outcome") == "inconclusive":
+                    continue
+                gate, term = sample.get("gate"), sample.get("term")
+                if gate in AUDIT_GATES and isinstance(term, str) and term.strip():
+                    done.setdefault(gate, set()).add(term.strip().casefold())
+    return done
+
+
 def build_sample(root, targets=None):
     targets = dict(DEFAULT_TARGETS if targets is None else targets)
     unknown = set(targets) - AUDIT_GATES
@@ -51,19 +71,27 @@ def build_sample(root, targets=None):
     # 旧闸门优先，其次最近记录；同一词只抽一次。
     rows.sort(key=lambda r: r.get("date", ""), reverse=True)
     rows.sort(key=lambda r: r.get("gate_version") == screen_index.GATE_VERSION)
+    # 已复核出结论的词降到最后:两个相邻校准轮此前会抽到完全相同的 35 条(实测
+    # 2026-09-03 与 09-05),第二轮等于把同一批词又核一遍,没有新增覆盖面。
+    # 只降优先级、不硬排除:池子被抽空时仍得凑够分层样本,否则校准永远 blocked、
+    # 发现轮也就永远开不了。
+    already = audited_terms(root)
     selected, seen = [], set()
     coverage = {}
     for gate, target in targets.items():
         pool = [r for r in rows if r["gate"] == gate and r["term"].casefold() not in seen]
+        audited = {r["term"].casefold() for r in pool} & already.get(gate, set())
+        pool.sort(key=lambda r: r["term"].casefold() in already.get(gate, set()))
         picked = pool[:target] if target else []
         selected.extend(picked)
         seen.update(r["term"].casefold() for r in picked)
         coverage[gate] = {"target": target, "available": len(pool), "selected": len(picked),
-                          "shortfall": max(0, target - len(picked))}
+                          "shortfall": max(0, target - len(picked)),
+                          "already_audited_deprioritised": len(audited)}
     return {
         "schema_version": 1,
         "gate_version": screen_index.GATE_VERSION,
-        "selection_rule": "old-gate-priority_then_recent_unique-term",
+        "selection_rule": "unaudited-first_then_old-gate-priority_then_recent_unique-term",
         "samples": selected,
         "coverage": coverage,
         "untested_gates": sorted(g for g, row in coverage.items() if row["selected"] == 0),

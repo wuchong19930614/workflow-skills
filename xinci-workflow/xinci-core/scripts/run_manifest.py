@@ -149,6 +149,7 @@ def _check_false_negative_audit(rnd, where, errors, root=None):
         errors.append(f"{where} false_negative_audit.samples 必须是数组")
         return
     sample_gate_counts = {gate: 0 for gate in CALIBRATION_TARGETS}
+    conclusive_gate_counts = {gate: 0 for gate in CALIBRATION_TARGETS}
     seen_samples = set()
     for i, sample in enumerate(samples):
         sw = f"{where} false_negative_audit.samples[{i}]"
@@ -163,6 +164,8 @@ def _check_false_negative_audit(rnd, where, errors, root=None):
             errors.append(f"{sw} term/gate/outcome/reason 非法")
         elif sample.get("gate") in sample_gate_counts:
             sample_gate_counts[sample["gate"]] += 1
+            if sample.get("outcome") != "inconclusive":
+                conclusive_gate_counts[sample["gate"]] += 1
             sample_key = (sample["gate"], sample["term"].strip().casefold())
             if sample_key in seen_samples:
                 errors.append(f"{sw} 同一 gate 下 term 不得重复")
@@ -175,10 +178,14 @@ def _check_false_negative_audit(rnd, where, errors, root=None):
                 rel = Path(ref)
                 if rel.is_absolute() or ".." in rel.parts or not (root / rel).is_file():
                     errors.append(f"{sw} 证据不存在或越界: {ref}")
-    expected_untested = sorted(gate for gate, count in sample_gate_counts.items() if count == 0)
+    # "抽到了"不等于"测到了":某道门的样本全是 inconclusive 时那道门没有任何现场依据,
+    # 必须算未测(实测 2026-09-05:G1 五条因无合规 SERP 通道全部 inconclusive,却仍以
+    # completed 记录,把"已累计 10 个发现轮"的计数重置了)。
+    expected_untested = sorted(gate for gate, count in conclusive_gate_counts.items()
+                               if count == 0)
     if isinstance(untested, list) and sorted(untested) != expected_untested:
-        errors.append(f"{where} false_negative_audit.untested_gates 必须由样本覆盖自动对应"
-                      f"，应为 {expected_untested}")
+        errors.append(f"{where} false_negative_audit.untested_gates 必须由"
+                      f"有结论(非 inconclusive)的样本覆盖自动对应，应为 {expected_untested}")
     if audit.get("status") == "completed":
         shortfalls = {gate: target - sample_gate_counts[gate]
                       for gate, target in CALIBRATION_TARGETS.items()
@@ -186,6 +193,10 @@ def _check_false_negative_audit(rnd, where, errors, root=None):
         if shortfalls:
             errors.append(f"{where} 已完成校准必须满足默认 35 条分层样本，缺口 {shortfalls};"
                           "样本不足时应记录 blocked")
+        if expected_untested:
+            errors.append(f"{where} 已完成校准要求每道门至少有一条有结论的样本，"
+                          f"全部 inconclusive 的门: {expected_untested};"
+                          "取不到现场依据时应记录 blocked")
 
 
 def _load_ledger(data_root):
@@ -454,6 +465,22 @@ def validate_runs(data_root):
                 errors.append(f"[运行状态/{path.name}] 已结束会话缺对应 xinci-run manifest"
                               f"(run_id={session['run_id']})")
     return errors
+
+
+def iter_run_manifests(data_root):
+    """遍历数据区里的运行清单((path, obj) 对);损坏或非清单的文件跳过。
+
+    只读用途(如校准抽样查历史审计过的词)。受控写入路径用 find_run_manifest,
+    它对损坏清单大声报错而不是静默跳过。
+    """
+    run_dir = Path(data_root) / "运行"
+    for path in sorted(run_dir.glob("*.json")) if run_dir.is_dir() else []:
+        try:
+            obj = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+            continue
+        if isinstance(obj, dict) and obj.get("skill") == "xinci-run":
+            yield path, obj
 
 
 def find_run_manifest(data_root, run_id):

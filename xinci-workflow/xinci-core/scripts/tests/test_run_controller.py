@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import run_controller as RC
 import run_manifest as RM
 import trigger_pool as TP
+from _constants import CALIBRATION_TARGETS
 
 
 class RunControllerTest(unittest.TestCase):
@@ -142,6 +143,40 @@ class RunControllerTest(unittest.TestCase):
         RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         RC.begin_round(self.root, run["run_id"], executor_id="w",
                        preflight=dict(self.PREFLIGHT_LOGGED_IN))
+
+    def _audit(self, status, samples, untested):
+        return {"status": status, "reason": "校准轮理由", "samples": samples,
+                "untested_gates": untested}
+
+    def _sample(self, gate, i, outcome="valid_reject"):
+        return {"term": f"{gate}-term-{i}", "gate": gate, "outcome": outcome,
+                "reason": "复核理由", "evidence_refs": ["证据/x/2026-09-05-fn.json"]}
+
+    def test_calibration_completed_needs_one_conclusive_sample_per_gate(self):
+        """某道门的样本全是 inconclusive 时,那道门其实没被测到。
+
+        实测(2026-09-05):G1 抽了 5 条、因无合规 SERP 通道全部 inconclusive,审计仍以
+        completed 记录,于是"发现轮已累计 10 轮"的计数被重置——完成与有效被混用。
+        """
+        run = RC.start(self.root, max_rounds=3)
+        (self.root / "证据" / "x").mkdir(parents=True, exist_ok=True)
+        (self.root / "证据" / "x" / "2026-09-05-fn.json").write_text("{}", encoding="utf-8")
+        samples = []
+        for gate, target in CALIBRATION_TARGETS.items():
+            for i in range(target):
+                # G1 五条全部无现场依据
+                outcome = "inconclusive" if gate == "G1" else "valid_reject"
+                samples.append(self._sample(gate, i, outcome))
+        RC.begin_round(self.root, run["run_id"], executor_id="w", round_type="calibration",
+                       preflight=dict(self.PREFLIGHT_OK))
+        with self.refused():
+            RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS),
+                            false_negative_audit=self._audit("completed", samples, []))
+        # 如实记 blocked 并把该门列入 untested_gates 就能收尾
+        RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS),
+                        false_negative_audit=self._audit("blocked", samples, ["G1"]))
+        _, manifest = RC.find_run_manifest(self.root, run["run_id"])
+        self.assertEqual(manifest["rounds"][0]["false_negative_audit"]["status"], "blocked")
 
     def test_finish_rejects_unproven_terminal_statuses(self):
         run = RC.start(self.root, max_rounds=2)

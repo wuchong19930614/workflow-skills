@@ -12,6 +12,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import registrar as R
+import validate_ledger as VL
 import build_decision_html as BDH
 import run_controller as RC
 import screen_index as S
@@ -444,6 +445,33 @@ class RegistrarTest(unittest.TestCase):
         R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
                      gates={"G1": "pass"}, evidence=[ok])
         self.assertEqual(self.load(slug)["state"], "formation_confirmed")
+
+    def test_disqualified_records_income_score_and_passed_lines(self):
+        """认定判否也要把收入维度与通过的盈利线记进账本。
+
+        实测(2026-09-07 cpr-avcp):xinci-qualify 要求观察文件写 income_score,
+        registrar 却只在 →qualified 时接受,于是 disqualified 的账本只留一个总分,
+        "为什么差"要去翻证据文件。第一次提交因此被拒。
+        """
+        slug = self.register("dq-income")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        self.to_formation(slug)
+        ev = mk_evidence(self.root, slug, "2026-09-01-qualify.json",
+                         gates=dict(GATES_678), income_score=12,
+                         g6_lines={"subscription": "pass", "lead_generation": "pass",
+                                   "affiliate": "veto", "transaction": "veto",
+                                   "paid_report": "pass", "advertising": "N/A"})
+        R.transition(self.root, slug, to="disqualified", by="xinci-qualify",
+                     gates=dict(GATES_678), score=69, income_score=12,
+                     g6_passed_lines=["subscription", "lead_generation", "paid_report"],
+                     reason="收入可行性 12/20 是决定性缺口", evidence=[ev])
+        rec = self.load(slug)
+        self.assertEqual(rec["state"], "disqualified")
+        self.assertEqual((rec["score"], rec["income_score"]), (69, 12))
+        self.assertEqual(rec["g6_passed_lines"],
+                         ["subscription", "lead_generation", "paid_report"])
+        self.assertEqual(VL.validate(self.root)[0], [])
 
     def test_formation_span_counts_calendar_days_not_24h_units(self):
         """跨度按自然日算,不按满 24 小时算。

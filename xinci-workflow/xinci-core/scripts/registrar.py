@@ -870,9 +870,12 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
     _check_run_g1_preflight(data_root, by, run_id, gates)
     frm = rec["state"]
     _require(to in STATES, f"未知状态: {to}")
-    if to != "qualified":
+    # qualified 必填、disqualified 可选:判否也要能把"收入维度几分、哪几条盈利线过了"
+    # 记进账本,否则"为什么差"只存在于证据文件里(实测 2026-09-07 cpr-avcp:
+    # xinci-qualify 要求观察写 income_score,registrar 却拒收,提交被打回)。
+    if to not in {"qualified", "disqualified"}:
         _require(income_score is None and g6_passed_lines is None,
-                 "income_score / g6_passed_lines 只能在 →qualified 时提交")
+                 "income_score / g6_passed_lines 只能在 →qualified / →disqualified 时提交")
 
     if to == "withdrawn":
         _require(frm not in TERMINAL, f"终态候选不可再转移: {frm}")
@@ -1030,6 +1033,17 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                  "qualify 观察 income_score 必须与 transition 参数一致")
     elif to == "disqualified":
         _require(bool(reason), "disqualified 要求 reason(决定性缺口:哪一项、差多少)")
+        if income_score is not None:
+            _require(isinstance(income_score, int) and not isinstance(income_score, bool)
+                     and 1 <= income_score <= 20,
+                     f"disqualified 的 income_score 若提交须为 1–20 的整数,当前 {income_score!r}")
+        if g6_passed_lines is not None:
+            lines = list(dict.fromkeys(g6_passed_lines))
+            _require(bool(lines) and set(lines) <= MONETIZATION_LINES,
+                     "disqualified 的 g6_passed_lines 若提交须为非空合法盈利线")
+            _require(rec.get("lane") != "new" or "advertising" not in lines,
+                     "lane=new 的广告线结构上不适用,g6_passed_lines 不得包含 advertising")
+            g6_passed_lines = lines
         _require(len(refs) >= 1, "disqualified 要求本次至少 1 个 qualify 证据")
         qualify_obs = [_load_observation(data_root, ref) for ref in refs
                        if Path(ref).stem.endswith("-qualify")]
@@ -1308,8 +1322,8 @@ CLI_SPEC = {
                               "help": "转 expired 时必填:date / invalidation / window_closed"}),
         ("--invalidation", {"default": "", "help": "分号分隔"}),
         ("--score", {"type": int}),
-        ("--income-score", {"type": int, "help": "收入可行性维度得分;qualified 必填且须为 1–20"}),
-        ("--g6-passed-lines", {"default": "", "help": "qualified 必填;逗号分隔通过的盈利线"}),
+        ("--income-score", {"type": int, "help": "收入可行性维度得分,1–20;qualified 必填,disqualified 可选"}),
+        ("--g6-passed-lines", {"default": "", "help": "逗号分隔通过的盈利线;qualified 必填,disqualified 可选"}),
         ("--decision-ref", {}),
         ("--play", {}),
         ("--reason", {}),
@@ -1321,7 +1335,7 @@ CLI_SPEC = {
         ("--evidence", {"action": "append", "required": True}),
         ("--by", {"default": "xinci-track"}),
         ("--run-id", {"help": _RUN_ID_HELP}),
-        ("--same-day-reason", {"help": "当日已复查过仍要重测时的理由(如上次复查环境被污染);会记进 history"}),
+        ("--same-day-reason", {"help": "当日已复查过仍要重测时的理由(如上次复查环境被污染,或当日首次复查早于形成跨度下限被拒、需在同日稍晚补一份达标观察);会记进 history"}),
     ]),
     "amend": ("观察性字段修订(不改状态):续期 expiry、追加 aliases/invalidation、captured 补记闸门结论", [
         ("--slug", _REQUIRED),
