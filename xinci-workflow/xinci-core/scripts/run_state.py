@@ -14,7 +14,7 @@ STATUSES = {"active"} | FINAL_STATUSES
 FIELDS = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
           "finished_at", "max_rounds", "max_hours", "rounds_completed", "current_round",
           "round_executor_id", "current_round_type", "current_round_preflight",
-          "confirmations", "finish_reason", "go_candidates"}
+          "confirmations", "finish_reason", "go_candidates", "degraded_rounds"}
 REQUIRED = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
             "max_rounds", "max_hours", "rounds_completed", "current_round",
             "confirmations", "finish_reason"}
@@ -101,10 +101,16 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
         raise RunStateError(f"{where}.round_executor_id 必须为 null 或非空字符串")
     if round_type is not None and round_type not in ROUND_TYPES:
         raise RunStateError(f"{where}.current_round_type 必须属于 {sorted(ROUND_TYPES)} 或为 null")
+    # 降级轮(预检不满足 G1 前置)不消耗预算,所以 rounds_completed 可以超过 max_rounds,
+    # 真正受 max_rounds 约束的是"合规轮"= rounds_completed - degraded_rounds。
+    degraded = obj.get("degraded_rounds", 0)
+    if (not isinstance(degraded, int) or isinstance(degraded, bool) or degraded < 0):
+        raise RunStateError(f"{where}.degraded_rounds 必须是非负整数")
     if (not isinstance(max_rounds, int) or isinstance(max_rounds, bool) or max_rounds < 1
             or not isinstance(completed, int) or isinstance(completed, bool)
-            or not 0 <= completed <= max_rounds):
-        raise RunStateError(f"{where} max_rounds/rounds_completed 非法")
+            or completed < 0 or degraded > completed
+            or not 0 <= completed - degraded <= max_rounds):
+        raise RunStateError(f"{where} max_rounds/rounds_completed/degraded_rounds 非法")
     max_hours = obj.get("max_hours")
     if max_hours is not None and (isinstance(max_hours, bool)
                                   or not isinstance(max_hours, (int, float)) or max_hours <= 0):
@@ -112,8 +118,8 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     if status == "active":
         if current is not None and current != completed + 1:
             raise RunStateError(f"{where}.current_round 必须为 null 或 rounds_completed+1")
-        if current is not None and current > max_rounds:
-            raise RunStateError(f"{where}.current_round 超出 max_rounds")
+        if current is not None and current - degraded > max_rounds:
+            raise RunStateError(f"{where}.current_round 超出 max_rounds(降级轮不计入)")
         if current is None and executor_id is not None:
             raise RunStateError(f"{where} 未开始轮次时 round_executor_id 必须为 null")
         if current is None and preflight is not None:

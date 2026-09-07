@@ -15,7 +15,7 @@ from pathlib import Path
 
 import data_root
 from _common import atomic_save as _save, flock as _flock, funlock as _funlock, load_ledger, now as _now
-from _constants import GO_STATES
+from _constants import GO_STATES, MAX_CONSECUTIVE_DEGRADED_ROUNDS
 
 from run_state import (SESSION_DIR, FINAL_STATUSES, ROUND_TYPES, PREFLIGHT_REGIONS,
                        RunStateError, build_preflight, load_session, session_path,
@@ -99,6 +99,7 @@ def start(data_root, max_rounds=6, max_hours=None):
             "max_rounds": max_rounds,
             "max_hours": max_hours,
             "rounds_completed": 0,
+            "degraded_rounds": 0,
             "current_round": None,
             "round_executor_id": None,
             "current_round_type": None,
@@ -128,6 +129,32 @@ def _discovery_rounds_since_calibration(data_root):
     return count
 
 
+def _is_degraded(preflight) -> bool:
+    """本轮是否为降级轮:提交了预检、但四项没过。
+
+    只有"报了且没过"才免预算。没提交预检不算降级——否则省略预检就能白拿轮次,
+    而 CLI 本来就强制四项必填,真实轮次总会申报。
+    """
+    return isinstance(preflight, dict) and preflight.get("g1_ready") is not True
+
+
+def _trailing_degraded_rounds(data_root, run_id) -> int:
+    """运行清单尾部连续的降级轮数。
+
+    只数清单里明确记了 browser_preflight 的轮次;该字段建立之前的历史轮按未知处理,
+    不追溯判定为降级(免得旧 run 被新规则回溯堵住)。
+    """
+    _, manifest = find_run_manifest(data_root, run_id)
+    count = 0
+    for rnd in reversed((manifest or {}).get("rounds") or []):
+        if "browser_preflight" not in rnd:
+            break
+        if not _is_degraded(rnd.get("browser_preflight")):
+            break
+        count += 1
+    return count
+
+
 def begin_round(data_root, run_id, executor_id=None, round_type="discovery", preflight=None):
     """开始新一轮。preflight 是执行者自报的 G1 浏览器前置四项
     {controllable, desktop, region, logged_out};CLI 强制提供,库级调用可省略
@@ -148,8 +175,16 @@ def begin_round(data_root, run_id, executor_id=None, round_type="discovery", pre
         if (obj.get("schema_version", 1) >= 3 and round_type == "discovery"
                 and _discovery_rounds_since_calibration(data_root) >= 10):
             raise RunControllerError("已累计 10 个发现轮；下一轮必须先执行校准轮并提交假阴性审计")
-        if obj["rounds_completed"] >= obj["max_rounds"]:
+        # 预算算的是"能干活的轮次":降级轮(浏览器不满足 G1 前置)不计入,
+        # 免得通道故障把用户给的 max_rounds 白白烧掉(实测 2026-09-05:三轮全烧在 trigger_only)。
+        if obj["rounds_completed"] - obj.get("degraded_rounds", 0) >= obj["max_rounds"]:
             raise RunControllerError("轮次预算已用完；请结束会话并将状态设为“运行预算已用完”")
+        if (_is_degraded(preflight)
+                and _trailing_degraded_rounds(data_root, run_id) >= MAX_CONSECUTIVE_DEGRADED_ROUNDS):
+            raise RunControllerError(
+                f"已连续 {MAX_CONSECUTIVE_DEGRADED_ROUNDS} 轮浏览器不满足 G1 前置；"
+                "降级轮不计预算,但也不许无限降级下去。请先修好干净未登录通道再开轮,"
+                "或以“执行受阻”结束本次运行")
         if obj.get("max_hours") is not None:
             started = datetime.fromisoformat(obj["started_at"])
             elapsed_hours = (datetime.now(timezone.utc) - started).total_seconds() / 3600
@@ -212,6 +247,8 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
             "funnel": dict(funnel) if isinstance(funnel, dict) else funnel,
             "trigger_funnel": trigger_funnel,
             "notes": list(notes or []),
+            # 预检留在清单里才可事后核对;此前它只活在 session 的当前轮,收尾即被清空
+            "browser_preflight": obj.get("current_round_preflight"),
         }
         if false_negative_audit is not None:
             round_record["false_negative_audit"] = false_negative_audit
@@ -220,6 +257,8 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
         except RunManifestError as e:
             raise RunControllerError(str(e))
         obj["rounds_completed"] = obj["current_round"]
+        if _is_degraded(obj.get("current_round_preflight")):
+            obj["degraded_rounds"] = obj.get("degraded_rounds", 0) + 1
         obj["current_round"] = None
         obj["round_executor_id"] = None
         obj["current_round_type"] = None
@@ -354,7 +393,8 @@ def finish(data_root, run_id, status, reason, evidence_refs=None):
         elif status == "budget_reached":
             started = datetime.fromisoformat(obj["started_at"])
             elapsed_hours = (datetime.now(timezone.utc) - started).total_seconds() / 3600
-            rounds_hit = obj["rounds_completed"] >= obj["max_rounds"]
+            rounds_hit = (obj["rounds_completed"] - obj.get("degraded_rounds", 0)
+                          >= obj["max_rounds"])
             hours_hit = obj.get("max_hours") is not None and elapsed_hours >= obj["max_hours"]
             if not (rounds_hit or hours_hit):
                 raise RunControllerError("运行预算尚未命中，不能以“运行预算已用完”结束")
@@ -412,7 +452,9 @@ def _render_session(obj):
     lines = [
         f"运行编号：{obj['run_id']}",
         f"运行状态：{session_status_label(obj['status'])}",
-        f"已完成轮次：{obj.get('rounds_completed', 0)}/{obj.get('max_rounds', '未设置')}",
+        f"已完成轮次：{obj.get('rounds_completed', 0)}/{obj.get('max_rounds', '未设置')}"
+        + (f"（其中 {obj['degraded_rounds']} 轮浏览器不合规、不计预算）"
+           if obj.get("degraded_rounds") else ""),
     ]
     if obj.get("current_round") is not None:
         lines.append(f"当前轮次：第 {obj['current_round']} 轮")

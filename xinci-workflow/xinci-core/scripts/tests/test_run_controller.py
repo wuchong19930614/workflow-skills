@@ -85,6 +85,64 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(manifest["termination"]["status"], "budget_reached")
         self.assertEqual(manifest["termination"]["rounds_completed"], 1)
 
+    PREFLIGHT_OK = {"controllable": True, "desktop": True, "region": "us", "logged_out": True}
+    PREFLIGHT_LOGGED_IN = {"controllable": True, "desktop": True, "region": "us",
+                           "logged_out": False}
+
+    def test_degraded_round_does_not_consume_round_budget(self):
+        """浏览器不满足 G1 前置的轮次不计预算。
+
+        实测(2026-09-05 run 64ad35c4):面板读取整场不可用,三轮都降级成只维护触发池,
+        却照样扣掉 max_rounds=10 里的 3 轮。用户给的预算是"能干活的轮次",不是
+        "开轮的次数"。
+        """
+        run = RC.start(self.root, max_rounds=1)
+        RC.begin_round(self.root, run["run_id"], executor_id="w",
+                       preflight=dict(self.PREFLIGHT_LOGGED_IN))
+        RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+        session = RC.load_session(self.root, run["run_id"])
+        self.assertEqual(session["rounds_completed"], 1)
+        self.assertEqual(session["degraded_rounds"], 1)
+        # 预算未被消耗,合规轮照样能开
+        RC.begin_round(self.root, run["run_id"], executor_id="w",
+                       preflight=dict(self.PREFLIGHT_OK))
+        RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+        session = RC.load_session(self.root, run["run_id"])
+        self.assertEqual((session["rounds_completed"], session["degraded_rounds"]), (2, 1))
+        # 这一轮是合规轮,预算已用完
+        with self.refused():
+            RC.begin_round(self.root, run["run_id"], executor_id="w",
+                           preflight=dict(self.PREFLIGHT_OK))
+
+    def test_round_record_keeps_browser_preflight(self):
+        """预检要留在清单里:此前它只存在于 session 的当前轮,收尾即被清空,
+        事后只能靠执行者手写 notes 复述,无法核对。"""
+        run = RC.start(self.root, max_rounds=2)
+        RC.begin_round(self.root, run["run_id"], executor_id="w",
+                       preflight=dict(self.PREFLIGHT_OK))
+        result = RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+        self.assertEqual(result["round"]["browser_preflight"]["g1_ready"], True)
+        _, manifest = RC.find_run_manifest(self.root, run["run_id"])
+        self.assertEqual(manifest["rounds"][0]["browser_preflight"]["logged_out"], True)
+
+    def test_consecutive_degraded_rounds_stop_the_run(self):
+        """连续降级到上限就不许再开轮:trigger_only 永远算"可行工作",
+        于是浏览器整场不可用时既不能停也不产出。上限把这条路封住,指向 blocked 收尾。"""
+        run = RC.start(self.root, max_rounds=10)
+        for _ in range(RC.MAX_CONSECUTIVE_DEGRADED_ROUNDS):
+            RC.begin_round(self.root, run["run_id"], executor_id="w",
+                           preflight=dict(self.PREFLIGHT_LOGGED_IN))
+            RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+        with self.refused():
+            RC.begin_round(self.root, run["run_id"], executor_id="w",
+                           preflight=dict(self.PREFLIGHT_LOGGED_IN))
+        # 浏览器修好后照常继续,计数按"连续"而不是"累计"
+        RC.begin_round(self.root, run["run_id"], executor_id="w",
+                       preflight=dict(self.PREFLIGHT_OK))
+        RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
+        RC.begin_round(self.root, run["run_id"], executor_id="w",
+                       preflight=dict(self.PREFLIGHT_LOGGED_IN))
+
     def test_finish_rejects_unproven_terminal_statuses(self):
         run = RC.start(self.root, max_rounds=2)
         with self.refused():

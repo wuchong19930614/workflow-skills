@@ -19,7 +19,7 @@ RUN_FIELDS = {"date", "skill", "run_id", "sources_opened", "sources_blocked",
               "rounds", "funnel", "trigger_funnel", "termination"}
 RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
                     "candidates_reviewed", "billable_calls", "notes", "funnel", "trigger_funnel",
-                    "round_type", "false_negative_audit"}
+                    "round_type", "false_negative_audit", "browser_preflight"}
 # 已停写的遥测字段(全仓无读取方):历史清单里仍有,读取时容忍、不校验内容;新清单不再写。
 LEGACY_RUN_FIELDS = {"metrics_summary"}
 LEGACY_ROUND_FIELDS = {"metrics"}

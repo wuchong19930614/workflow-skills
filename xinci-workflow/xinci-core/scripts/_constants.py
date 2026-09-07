@@ -20,6 +20,10 @@ MIN_TRACK_SPAN_DAYS = 7
 MONETIZATION_LINES = {"subscription", "lead_generation", "affiliate", "transaction",
                       "paid_report", "advertising"}
 
+# 浏览器不满足 G1 前置的轮次(降级轮)不计预算,但不许无限降级下去:连续到这个数就
+# 拒绝再开轮,让执行者去修通道或以「执行受阻」收尾。理由见生命周期契约「连续运行模式」。
+MAX_CONSECUTIVE_DEGRADED_ROUNDS = 3
+
 ROUND_TYPES = {"discovery", "progression", "tracking", "calibration"}
 REVIEW_OUTCOMES = {"reviewed_no_transition", "same_day_skipped", "not_due",
                    "awaiting_external_evidence", "deferred_existing_evidence"}
