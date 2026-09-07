@@ -19,18 +19,28 @@ class TriggerPoolTest(unittest.TestCase):
                       source_url="https://agency.example/rule", source_family="agency",
                       task_hypothesis="small firms must prepare a filing")
 
-    def test_official_trigger_is_not_candidate_until_approved(self):
-        row = self.add(); state = TP.current(self.root)[row["trigger_id"]]
-        self.assertEqual(state["status"], "pending")
-        with self.assertRaisesRegex(TP.TriggerPoolError, "商业预检"):
-            TP.approve(self.root, row["trigger_id"], query="filing checker",
-                       search_evidence_urls=[], payer="firm", repeat_unit="filing",
-                       self_serve_path="upload", base_case_source="https://example.com/base",
-                       reason="task language seen")
-        TP.approve(self.root, row["trigger_id"], query="filing rule checker",
-                   search_evidence_urls=["https://forum.example/questions/filing-checker"],
-                   payer="small firm", repeat_unit="each filing", self_serve_path="upload and check",
-                   base_case_source="https://agency.example/impact", reason="repeated compliance task")
+    def test_approve_needs_task_query_and_hypotheses_not_search_evidence(self):
+        """approve 现在只是给原料配任务措辞与商业假设,不再是进入漏斗的门槛。
+
+        旧前置要求"已有独立搜索语言证据 URL",而那份证据只有跑了 G1 才拿得到,
+        当门槛用就成了"筛选前先完成筛选"(实测 290 条里 267 弃、仅 20 批准)。
+        """
+        row = self.add()
+        self.assertEqual(TP.current(self.root)[row["trigger_id"]]["status"], "pending")
+        with self.assertRaisesRegex(TP.TriggerPoolError, "任务措辞或商业假设"):
+            TP.approve(self.root, row["trigger_id"], query="checker",  # 单词措辞不算任务
+                       payer="firm", repeat_unit="filing", self_serve_path="upload",
+                       base_case_source="https://example.com/base", reason="r")
+        with self.assertRaisesRegex(TP.TriggerPoolError, "任务措辞或商业假设"):
+            TP.approve(self.root, row["trigger_id"], query="filing rule checker",
+                       payer="", repeat_unit="filing", self_serve_path="upload",
+                       base_case_source="https://example.com/base", reason="r")
+        # 不带搜索语言证据也能批准:那一步交给后面的 G1
+        TP.approve(self.root, row["trigger_id"], query="which filing rule applies to my firm",
+                   payer="small firm", repeat_unit="each filing",
+                   self_serve_path="upload and check",
+                   base_case_source="https://agency.example/impact",
+                   reason="repeated compliance task")
         self.assertEqual(TP.current(self.root)[row["trigger_id"]]["status"], "approved")
 
     def test_terminal_trigger_cannot_be_reopened(self):

@@ -771,10 +771,18 @@ def require_formal_admission(data_root, by, run_id, term=None, origin=None, trig
             trigger = current_triggers(data_root).get(trigger_ref)
         except TriggerPoolError as e:
             raise RegistrarError(str(e))
-        _require(trigger and trigger.get("status") == "approved",
-                 "--trigger-id 必须指向 approved trigger")
-        _require(normalize_term(trigger.get("query", "")) == normalize_term(term or ""),
-                 "candidate term 必须与 approved trigger.query 精确归一化一致")
+        # 触发池是去重表与原料表,不是准入门槛:pending 也可作为来源。approve 的旧前置
+        # 里有一条"已有独立搜索语言证据 URL",而那份证据只有跑了 G1 才拿得到,等于要求
+        # 在筛选前完成筛选(实测 290 条里 267 弃、仅 20 批准,这一层几乎不产出)。
+        # 这里保留的是可追溯性:trigger 必须真实存在且未废弃。
+        _require(bool(trigger), "--trigger-id 必须指向触发池里真实存在的 trigger")
+        _require(trigger.get("status") in {"pending", "approved"},
+                 f"--trigger-id 指向的 trigger 已废弃,不能作为注册来源: {trigger.get('status')}")
+        # 已 approve 的 trigger 配了 task query,term 仍须与它一致(否则那次批准形同虚设);
+        # pending 的 trigger 只有官方标题,term 由后面的 G0/G1 去验。
+        if trigger.get("status") == "approved":
+            _require(normalize_term(trigger.get("query", "")) == normalize_term(term or ""),
+                     "candidate term 必须与 approved trigger.query 精确归一化一致")
     else:
         _require(not trigger_ref, "origin=signal 不得携带 --trigger-id")
 

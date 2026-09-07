@@ -293,6 +293,34 @@ class RunPolicyTest(unittest.TestCase):
         self.assertEqual(rotation["consecutive_family"], "agency")
         self.assertEqual(rotation["blocked_source_families"], ["agency"])
 
+    def test_pending_trigger_is_enough_to_register(self):
+        """触发池是去重表,不是准入门槛。
+
+        approve 的旧前置里有一条"已有独立搜索语言证据 URL",而那份证据只有跑了 G1
+        才拿得到,等于要求在筛选前完成筛选。实测(290 条里 267 弃、仅 20 批准)说明这一层
+        几乎不产出,官方变化应该直接进零成本漏斗;trigger_ref 保留的是可追溯性。
+        """
+        self.ready()
+        added = TP.add(self.root, observed_date="2026-08-25", title="Official filing rule",
+                       source_url="https://agency.example/rule", source_family="agency",
+                       task_hypothesis="firms check filings", actor="xinci-run",
+                       run_id=self.run["run_id"])
+        self.assertEqual(TP.current(self.root)[added["trigger_id"]]["status"], "pending")
+        # pending 也能作为 origin=trigger 的来源:任务措辞由后面的 G0/G1 去验
+        R.require_formal_admission(self.root, "xinci-run", self.run["run_id"],
+                                   "which filing rule applies to my firm", "trigger",
+                                   added["trigger_id"])
+        # 但 trigger 必须真实存在,且不能是已废弃的
+        with self.assertRaisesRegex(R.RegistrarError, "trigger"):
+            R.require_formal_admission(self.root, "xinci-run", self.run["run_id"],
+                                       "x y", "trigger", "trigger-" + "0" * 16)
+        TP.discard(self.root, added["trigger_id"], reason="形态④预告",
+                   actor="xinci-run", run_id=self.run["run_id"])
+        with self.assertRaisesRegex(R.RegistrarError, "trigger"):
+            R.require_formal_admission(self.root, "xinci-run", self.run["run_id"],
+                                       "which filing rule applies to my firm", "trigger",
+                                       added["trigger_id"])
+
     def test_trigger_origin_must_bind_approved_query(self):
         self.ready()
         added = TP.add(self.root, observed_date="2026-08-25", title="Official filing rule",

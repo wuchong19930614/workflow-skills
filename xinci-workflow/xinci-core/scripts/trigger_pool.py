@@ -60,16 +60,18 @@ def _validate(row, line=None):
         if row["trigger_id"] != _id(row["title"], row["source_url"]):
             raise TriggerPoolError(f"触发池{where} trigger_id 与标题/来源不一致")
     elif row["event"] == "approve":
-        needed = {"query", "search_evidence_urls", "payer", "repeat_unit",
-                  "self_serve_path", "base_case_source", "reason"}
+        # approve 不再是进入漏斗的门槛(见 registrar.require_formal_admission 的注释),
+        # 它现在的作用是给一条原料配上任务措辞与商业假设。搜索语言证据改为可选:
+        # 那份证据只有跑了 G1 才拿得到,当门槛用就成了"筛选前先完成筛选"。
+        needed = {"query", "payer", "repeat_unit", "self_serve_path", "base_case_source", "reason"}
+        urls = row.get("search_evidence_urls")
         if (not needed <= set(row) or len((row.get("query") or "").split()) < 2
-                or not isinstance(row.get("search_evidence_urls"), list)
-                or not row["search_evidence_urls"]
-                or not all(_url(x) for x in row["search_evidence_urls"])
+                or (urls is not None
+                    and (not isinstance(urls, list) or not all(_url(x) for x in urls)))
                 or not all(row.get(x) for x in
                            ("payer", "repeat_unit", "self_serve_path", "base_case_source", "reason"))
                 or not _url(row["base_case_source"])):
-            raise TriggerPoolError(f"触发池{where} approve 缺搜索语言证据或商业预检")
+            raise TriggerPoolError(f"触发池{where} approve 缺任务措辞或商业假设")
     elif not row.get("reason"):
         raise TriggerPoolError(f"触发池{where} discard 要求 reason")
     return row
@@ -198,14 +200,15 @@ def add(root, *, observed_date, title, source_url, source_family, task_hypothesi
     return _append(root, row)
 
 
-def approve(root, trigger_id, *, query, search_evidence_urls, payer, repeat_unit,
+def approve(root, trigger_id, *, query, payer, repeat_unit, search_evidence_urls=None,
             self_serve_path, base_case_source, reason, actor="user", run_id=None):
     round_number = _check_actor(root, actor, run_id)
     state = current(root).get(trigger_id)
     if not state or state["status"] != "pending":
         raise TriggerPoolError("approve 要求存在且 pending 的 trigger_id")
     row = {"trigger_id": trigger_id, "event": "approve", "at": _now(), "actor": actor,
-           "query": query, "search_evidence_urls": list(search_evidence_urls), "payer": payer,
+           "query": query, "search_evidence_urls": list(search_evidence_urls or []),
+           "payer": payer,
            "repeat_unit": repeat_unit, "self_serve_path": self_serve_path,
            "base_case_source": base_case_source, "reason": reason}
     if run_id:
@@ -271,7 +274,8 @@ def main(argv=None):
     p = sub.add_parser("approve"); p.add_argument("--trigger-id", required=True)
     for name in ("query", "payer", "repeat-unit", "self-serve-path", "base-case-source", "reason"):
         p.add_argument("--" + name, required=True)
-    p.add_argument("--search-evidence-url", action="append", required=True)
+    p.add_argument("--search-evidence-url", action="append", default=[],
+                   help="独立搜索语言证据 URL;可选(它通常要跑过 G1 才拿得到)")
     p.add_argument("--by", default="xinci-run"); p.add_argument("--run-id")
     p = sub.add_parser("discard"); p.add_argument("--trigger-id", required=True)
     p.add_argument("--reason", required=True); p.add_argument("--by", default="xinci-run"); p.add_argument("--run-id")

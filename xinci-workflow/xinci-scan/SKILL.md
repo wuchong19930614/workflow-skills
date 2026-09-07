@@ -36,9 +36,9 @@ python3 xinci-workflow/xinci-core/scripts/screen_index.py resolve \
 - 200–300 是单步或 `run_policy.mode=full` 的目标;`debt_only` / `trigger_only` / `paused` 的正式候选提取目标为 0,不得缩小批次绕过。`trigger_only` 可继续收集原始变化,不得进候选漏斗。
 - 真浏览器打开来源(来源表见数据采集指南;轮换选源,覆盖优先)。变化面从有日期的法规/平台/技术/成本变化推导付费者的被迫任务,按"七条正向选源信号"排序(只排序,不是硬门);变化面允许列表页/RSS/导出接口批量采集,社区面仍须真浏览器直读。
 - 把一个源里所有有任务嫌疑的方向都提出来,逐条列,不合并不省略。每条只记两样:搜索措辞(不转述;官方标题只能进触发池)+ 一句话任务假设。记录打开的每个 URL;素材不足换源补足。提取结果以紧凑清单存在,一行一条。
-- 变化面先 `trigger_pool.py add --date --title --source-url --source-family --task-hypothesis`;出现独立搜索语言证据并补齐 payer、重复单元、自助交付路径、基础情景来源后才 approve,批准的 `query` 才进漏斗:
+- 变化面先 `trigger_pool.py add --date --title --source-url --source-family --task-hypothesis`(去重表:同一份公报不重复看)。派生的任务措辞可直接进零成本漏斗,不必先 approve;要给原料配上任务措辞与商业假设时才用 approve(`--search-evidence-url` 可选):
   `trigger_pool.py approve --trigger-id --query --payer --repeat-unit --self-serve-path --base-case-source --search-evidence-url --reason`。
-- 批准不产生 G0–G8 结论;raw trigger 不计 `extracted`,其漏斗由 `record-round` 自动生成。注册时变化面候选带 `--origin trigger --trigger-id <id>`,信号面带 `--origin signal`(连续运行必填,见通用约定)。
+- approve 不产生 G0–G8 结论;raw trigger 不计 `extracted`,其漏斗由 `record-round` 自动生成。注册时变化面候选带 `--origin trigger --trigger-id <id>`(pending 亦可,只要未废弃),信号面带 `--origin signal`(连续运行必填,见通用约定)。
 
 ### 第 2 层:零成本批筛 G0 → G4 → G5 → G6/G7 预筛(便宜)
 
