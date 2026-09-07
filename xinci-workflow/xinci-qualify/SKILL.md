@@ -24,13 +24,22 @@ description: '对已进入形成确认(formation_confirmed)的 new 或 mature �
    实测至少一个竞品 footprint(authority、流量、词量、增速),用途与边界按闸门契约「关于 KD / KGR / allintitle 的统一立场」。
 6. **评分。** 按评分契约六维打分,红队反驳并扣分。硬否决后不产生分数;`income_score` 必须 1–20。
 7. **写观察文件并提议。** `证据/<slug>/<日期>-qualify.json`,`schema_version: 2`:逐维得分、红队记录、竞争分类清单、footprint 实测;`gates` 写 G6/G7/G8 的 pass,`g6_lines` 完整写六条 `pass|veto|N/A`,`income_score` 写收入维度分,`source_urls` 非空。
-   向用户提议 qualified(附总分、`income_score`、通过线)或 disqualified(附决定性缺口:哪一项、差多少;两种来源态都必须随 transition 提交本次 observation,不能只写 reason)。
+   向用户提议 qualified(附总分、`income_score`、通过线)或 disqualified(附决定性缺口:哪一项、差多少;两种出口都必须随 transition 提交本次 observation,不能只写 reason)。
 8. **用户确认后**执行,再按通用约定写运行清单(`--skill xinci-qualify --billable-calls <N>`):
 ```bash
+# qualified:score ≥80 与 income-score 1–20 都必填
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to qualified --by xinci-qualify --score <N> \
   --income-score <1-20> --g6-passed-lines <六条盈利线中实际通过者,逗号分隔> \
   --gates G6=pass,G7=pass,G8=pass --evidence "证据/<slug>/<日期>-qualify.json"
+
+# disqualified:reason 写决定性缺口(哪一项、差多少);income-score 与 g6-passed-lines
+# 可选但建议照写,否则"为什么差"只留在证据文件里
+python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
+  --slug <slug> --to disqualified --by xinci-qualify --score <N> \
+  --income-score <1-20> --g6-passed-lines <实际通过者> \
+  --gates G6=pass,G7=pass,G8=pass --evidence "证据/<slug>/<日期>-qualify.json" \
+  --reason "<决定性缺口:哪一项、差多少>"
 ```
 
 ## 硬规则

@@ -1,6 +1,10 @@
+import re
+import sys
 import unittest
 from pathlib import Path
 
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 ROOT = Path(__file__).resolve().parents[3]
 REPO_ROOT = ROOT.parent
@@ -51,6 +55,32 @@ class DocumentationContractsTest(unittest.TestCase):
         self.assertIn("用户配置的数据区", root_readme)
         self.assertIn("不是规范默认值", root_readme)
         self.assertIn("默认是用户逐步确认的单步模式", root_readme)
+
+    def test_documented_registrar_flags_exist_in_the_real_parser(self):
+        """文档里写的 registrar 命令行参数必须真实存在。
+
+        SKILL.md 与契约里手写的命令模板会和 CLI 漂移:2026-09-07 按 xinci-qualify 的
+        模板给 disqualified 带上 --income-score,被 registrar 直接拒收——那份模板只
+        覆盖了 qualified 那一条路径。这里把"文档提到的参数"与 argparse 实际接受的
+        参数对住,改了 CLI 而忘记改文档(或反过来)就会红。
+        """
+        import registrar as R
+
+        known = {cmd: {flag for flag, _ in params} for cmd, (_, params) in R.CLI_SPEC.items()}
+        problems = []
+        for doc in sorted(ROOT.glob("*/SKILL.md")) + sorted(ROOT.glob("xinci-core/*.md")):
+            text = doc.read_text(encoding="utf-8")
+            for match in re.finditer(r"registrar\.py\s+([a-z-]+)([^\n]*(?:\n\s+[^\n]*)*)", text):
+                cmd, tail = match.group(1), match.group(2)
+                if cmd == "--help":
+                    continue
+                if cmd not in known:
+                    problems.append(f"{doc.parent.name}/{doc.name}: registrar.py 无子命令 {cmd}")
+                    continue
+                for flag in sorted(set(re.findall(r"(--[a-z][a-z0-9-]+)", tail))):
+                    if flag not in known[cmd] and flag not in {"--data-root", "--help"}:
+                        problems.append(f"{doc.parent.name}/{doc.name}: registrar.py {cmd} 无参数 {flag}")
+        self.assertEqual(problems, [])
 
     def test_progressive_disclosure_keeps_history_out_of_runtime_read_set(self):
         run = read("xinci-run/SKILL.md")
