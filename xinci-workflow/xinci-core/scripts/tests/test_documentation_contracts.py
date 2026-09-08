@@ -17,6 +17,13 @@ def read(relative):
 class DocumentationContractsTest(unittest.TestCase):
     """锁定跨文档的行为边界，避免摘述重新偏离核心契约。"""
 
+    def test_published_score_weights_match_runtime_schema(self):
+        import qualification as Q
+        # 校验对外契约表与运行中的同一组数值，避免改 Schema 后文档继续承诺旧分值。
+        rows = re.findall(r"^\| ([^|]+) \| (\d+) \|", read("xinci-core/评分契约.md"), re.M)
+        self.assertEqual([int(weight) for _, weight in rows], list(Q.WEIGHTS.values()))
+        self.assertEqual(sum(Q.WEIGHTS.values()), 100)
+
     def test_continuous_run_has_one_executor_per_round(self):
         run = read("xinci-run/SKILL.md")
         self.assertIn("每一轮只派一个轮次子代理", run)

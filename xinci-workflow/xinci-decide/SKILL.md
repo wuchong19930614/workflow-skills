@@ -44,7 +44,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to fast_grab_ready --by xinci-decide --play fast_grab --expiry <日期> --decision-ref "决策书/<slug>.md"
 ```
-4. **快道 no-go。** 读完证据判定赌注不值(收录时差太短、任务其实一次性、投入上限兜不住)→ 提议 `rejected`(reason 写清不成立的判据)或由用户 `withdrawn`。不出决策书。
+4. **快道 no-go。** 读完证据判定赌注不值(收录时差太短、所选盈利线缺少可成立的付费事件或持续用户需求、投入上限兜不住)→ 提议 `rejected`(reason 写清不成立的判据)或由用户 `withdrawn`。单个用户只做一次不独立构成否决；未知按公共证据契约处理。不出决策书。
 5. **到期处置。** 归属见通用约定「四条 expired 边的提议人」;用户按 xinci-status 到期清单送来,本 skill 提议、用户确认,不出决策书。`screened`:expiry 已过(`date`);`fast_grab_ready`:expiry 已过(`date`)或窗口关闭(`window_closed`,通用工具已收录该对象)。
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \

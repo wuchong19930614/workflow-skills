@@ -8,8 +8,12 @@ from pathlib import Path
 from _common import is_http_url
 from _constants import MONETIZATION_LINES
 
-WEIGHTS = {"trigger": 15, "task": 12, "language": 8,
-           "competition": 30, "alignment": 15, "income": 20}
+# 数值只由 Schema 定义；文档展示值另由契约一致性检查核对。
+_ASSESSMENT_SCHEMA = json.loads(
+    (Path(__file__).resolve().parents[1] / "数据结构/assessment.schema.json").read_text(encoding="utf-8"))
+_SCORE_SCHEMA = next(s for s in _ASSESSMENT_SCHEMA["properties"]["scores"]["anyOf"]
+                     if s["type"] == "object")
+WEIGHTS = {key: spec["maximum"] for key, spec in _SCORE_SCHEMA["properties"].items()}
 
 
 def require(ok, message):

@@ -116,7 +116,7 @@
     "trigger_ref": {
       "type": "string",
       "pattern": "^trigger-[a-f0-9]{16}$",
-      "description": "origin=trigger 时指向 approved 触发事件"
+      "description": "origin=trigger 时指向真实存在且未废弃的触发事件；pending 或 approved 均可，approved 时 term 须与已批准 query 归一化一致"
     },
     "window_estimate": {
       "type": [

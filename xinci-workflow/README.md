@@ -74,6 +74,7 @@ rejected            fast_grab_ready              rejected           qualified / 
 
 | 脚本 | 作用 |
 | --- | --- |
+| `evidence_index.py` | 只读生成已登记观察的阅读导航；不回写摘要、不推断证据有效性 |
 | `qualification.py` | 只读校验 v3 认定证据，统一计分并生成提交参数；registrar 共用同一实现 |
 | `audit_rejections.py` | 按历史证据生成复核分组与样本，不修改旧结论、不估计现场误杀率 |
 | `registrar.py` | 账本唯一状态转移入口,逐项校验证据,原子替换 |
