@@ -5,179 +5,159 @@
   "type": "object",
   "required": ["slug", "observed_at", "stage", "points"],
   "properties": {
-    "schema_version": { "type": "integer", "enum": [1, 2], "description": "v2 表示六条盈利线与站点簇反事实契约；历史缺省按 v1 只读" },
-    "slug": { "type": "string", "description": "所属候选" },
-    "observed_at": { "type": "string", "description": "观察时间 ISO 8601" },
-    "stage": { "type": "string", "enum": ["scan", "track", "qualify", "decide"], "description": "产生本观察的阶段" },
-    "source_urls": { "type": "array", "items": { "type": "string" }, "description": "本次实际打开过的页面;未打开的不得列入" },
-    "points": {
-      "type": "array",
-      "items": { "type": "string" },
-      "minItems": 1,
-      "description": "要点式观察,每条一句话(如:SERP 首屏无原生组件;第 2 页出现完整题库竞品)"
-    },
+    "schema_version": {"type": "integer", "enum": [1, 2, 3], "description": "v3 支持未定盈利线；qualify 必须有 assessment。旧 v1/v2 继续可读。"},
+    "slug": {"type": "string", "description": "所属候选"},
+    "observed_at": {"type": "string", "description": "观察时间 ISO 8601"},
+    "stage": {"type": "string", "enum": ["scan", "track", "qualify", "decide"], "description": "产生本观察的阶段"},
+    "source_urls": {"type": "array", "items": {"type": "string"}, "description": "本次实际打开过的页面;未打开的不得列入"},
+    "points": {"type": "array", "items": {"type": "string"}, "minItems": 1, "description": "要点式观察,每条一句话(如:SERP 首屏无原生组件;第 2 页出现完整题库竞品)"},
     "gates": {
       "type": "object",
-      "additionalProperties": { "type": "string" },
+      "additionalProperties": {"type": "string"},
       "description": "本次涉及的闸门结论(G0–G8 → pass/veto;G3 另有第三种结论 veto_window_bet,见闸门契约 G3),仅列实际检查过的"
     },
     "g6_lines": {
       "type": "object",
       "required": ["subscription", "advertising"],
       "properties": {
-        "subscription": { "type": "string", "enum": ["pass", "veto", "N/A"] },
-        "advertising": { "type": "string", "enum": ["pass", "veto", "N/A"] },
-        "lead_generation": { "type": "string", "enum": ["pass", "veto", "N/A"] },
-        "affiliate": { "type": "string", "enum": ["pass", "veto", "N/A"] },
-        "transaction": { "type": "string", "enum": ["pass", "veto", "N/A"] },
-        "paid_report": { "type": "string", "enum": ["pass", "veto", "N/A"] }
+        "subscription": {"type": "string", "enum": ["pass", "veto", "N/A", "inconclusive"]},
+        "advertising": {"type": "string", "enum": ["pass", "veto", "N/A", "inconclusive"]},
+        "lead_generation": {"type": "string", "enum": ["pass", "veto", "N/A", "inconclusive"]},
+        "affiliate": {"type": "string", "enum": ["pass", "veto", "N/A", "inconclusive"]},
+        "transaction": {"type": "string", "enum": ["pass", "veto", "N/A", "inconclusive"]},
+        "paid_report": {"type": "string", "enum": ["pass", "veto", "N/A", "inconclusive"]}
       },
       "additionalProperties": false,
-      "description": "正式 G6 的逐线结论。schema v2 必须完整填写六条；历史 v1 至少含 subscription/advertising。lane=new 的 advertising 应为 N/A。算式、假设与出处写入 points/source_urls"
+      "description": "正式 G6 的逐线结论。schema v2 必须完整填写六条；历史 v1 至少含 subscription/advertising。lane=new 的 advertising 应为 N/A。算式、假设与出处写入 points/source_urls v3 允许 inconclusive，表示未知而非不适用或否决。"
     },
     "g6_tentative_lines": {
       "type": "object",
       "required": ["subscription", "advertising"],
       "properties": {
-        "subscription": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
-        "advertising": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
-        "lead_generation": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
-        "affiliate": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
-        "transaction": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] },
-        "paid_report": { "type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A"] }
+        "subscription": {"type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A", "tentative_inconclusive"]},
+        "advertising": {"type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A", "tentative_inconclusive"]},
+        "lead_generation": {"type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A", "tentative_inconclusive"]},
+        "affiliate": {"type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A", "tentative_inconclusive"]},
+        "transaction": {"type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A", "tentative_inconclusive"]},
+        "paid_report": {"type": "string", "enum": ["tentative_pass", "tentative_veto", "N/A", "tentative_inconclusive"]}
       },
       "additionalProperties": false,
-      "description": "窗口期 scan/track 观察的逐线暂定结论，仅供当期 G3 判断占位否决是否生效。schema v2 必须完整填写六条；历史 v1 至少含 subscription/advertising。它不是正式 G6；lane=new 的 advertising 应为 N/A。依据写入 points/source_urls"
+      "description": "窗口期 scan/track 观察的逐线暂定结论，仅供当期 G3 判断占位否决是否生效。schema v2 必须完整填写六条；历史 v1 至少含 subscription/advertising。它不是正式 G6；lane=new 的 advertising 应为 N/A。依据写入 points/source_urls v3 允许 tentative_inconclusive，表示未知而非不适用或否决。"
     },
     "g6_entry_veto": {
       "type": "object",
       "required": ["criterion", "reason"],
       "properties": {
-        "criterion": { "type": "string", "enum": ["repeat_paid_task", "official_count_class", "self_serve_legal_effect"] },
-        "reason": { "type": "string", "minLength": 1 }
+        "criterion": {"type": "string", "enum": ["repeat_paid_task", "official_count_class", "self_serve_legal_effect"]},
+        "reason": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false,
       "description": "G6 深算前的结构事实，不是正式 gates.G6。repeat_paid_task 只约束 subscription；official_count_class 只约束依赖该口径的算式，二者不能单独否决整候选并可与逐线暂定结论并存。self_serve_legal_effect 仅在所有声称交付均依赖法律签字且全部依法无效时使用，表示整候选全局否决；只影响部分盈利线时不得填写该 criterion，应在 g6_tentative_lines 逐线判定。"
     },
-    "naming_status": {
-      "type": "string",
-      "enum": ["unstable", "stabilized"],
-      "description": "仅用于 track：当前搜索叫法是否已经定型"
-    },
+    "naming_status": {"type": "string", "enum": ["unstable", "stabilized"], "description": "仅用于 track：当前搜索叫法是否已经定型"},
     "formation_signals": {
       "type": "array",
       "uniqueItems": true,
-      "items": { "enum": ["autocomplete", "semrush_rows", "sustained_discussion", "repeated_independent_queries"] },
+      "items": {"enum": ["autocomplete", "semrush_rows", "sustained_discussion", "repeated_independent_queries"]},
       "description": "仅用于 track：本次实际观察到的需求形成信号；空数组表示尚未形成"
     },
     "cluster_counterfactual": {
       "type": "object",
       "required": ["atomic_task_completed", "batch_processing", "monitoring", "audit_trail", "export_integration", "multi_jurisdiction", "decision", "reason"],
       "properties": {
-        "atomic_task_completed": { "type": "boolean" },
-        "batch_processing": { "type": "boolean" },
-        "monitoring": { "type": "boolean" },
-        "audit_trail": { "type": "boolean" },
-        "export_integration": { "type": "boolean" },
-        "multi_jurisdiction": { "type": "boolean" },
-        "decision": { "enum": ["viable_cluster", "atomic_only"] },
-        "reason": { "type": "string", "minLength": 1 }
+        "atomic_task_completed": {"type": "boolean"},
+        "batch_processing": {"type": "boolean"},
+        "monitoring": {"type": "boolean"},
+        "audit_trail": {"type": "boolean"},
+        "export_integration": {"type": "boolean"},
+        "multi_jurisdiction": {"type": "boolean"},
+        "decision": {"enum": ["viable_cluster", "atomic_only"]},
+        "reason": {"type": "string", "minLength": 1}
       },
       "additionalProperties": false,
       "description": "G1 看似完成原子任务时的站点簇反事实，防止把可扩展任务簇误杀。"
     },
-    "income_score": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 20,
-      "description": "正式认定的收入可行性维度得分；qualified 观察必填并与 transition 参数一致"
-    },
+    "income_score": {"type": "integer", "minimum": 1, "maximum": 20, "description": "正式认定的收入可行性维度得分；qualified 观察必填并与 transition 参数一致"},
     "window_bet": {
       "type": "object",
       "required": ["implementation_urls", "lag_sample_url", "lag_days", "rationale"],
       "properties": {
-        "implementation_urls": {
-          "type": "array",
-          "minItems": 1,
-          "items": { "type": "string", "format": "uri" },
-          "description": "已实测可完成任务的免费实现"
-        },
-        "lag_sample_url": { "type": "string", "format": "uri", "description": "同一实现收录上一个同类对象的页面" },
-        "lag_days": { "type": "integer", "minimum": 0, "description": "实测收录时差天数" },
-        "rationale": { "type": "string", "minLength": 1, "description": "为何判断只是尚未收录而非结构上不可见" }
+        "implementation_urls": {"type": "array", "minItems": 1, "items": {"type": "string", "format": "uri"}, "description": "已实测可完成任务的免费实现"},
+        "lag_sample_url": {"type": "string", "format": "uri", "description": "同一实现收录上一个同类对象的页面"},
+        "lag_days": {"type": "integer", "minimum": 0, "description": "实测收录时差天数"},
+        "rationale": {"type": "string", "minLength": 1, "description": "为何判断只是尚未收录而非结构上不可见"}
       },
       "additionalProperties": false
-    }
+    },
+    "assessment": {"$ref": "assessment.schema.json"}
   },
   "allOf": [
     {
-      "if": {
-        "properties": { "schema_version": { "const": 2 } },
-        "required": ["schema_version"]
-      },
+      "if": {"properties": {"schema_version": {"enum": [2, 3]}}, "required": ["schema_version"]},
       "then": {
         "properties": {
-          "g6_lines": {
-            "required": ["subscription", "lead_generation", "affiliate", "transaction", "paid_report", "advertising"]
-          },
-          "g6_tentative_lines": {
-            "required": ["subscription", "lead_generation", "affiliate", "transaction", "paid_report", "advertising"]
-          }
+          "g6_lines": {"required": ["subscription", "lead_generation", "affiliate", "transaction", "paid_report", "advertising"]},
+          "g6_tentative_lines": {"required": ["subscription", "lead_generation", "affiliate", "transaction", "paid_report", "advertising"]}
         }
       }
     },
+    {"not": {"required": ["g6_lines", "g6_tentative_lines"]}},
+    {"if": {"required": ["g6_tentative_lines"]}, "then": {"properties": {"stage": {"enum": ["scan", "track"]}}}},
     {
-      "not": {
-        "required": ["g6_lines", "g6_tentative_lines"]
-      }
+      "if": {"properties": {"stage": {"enum": ["scan", "track"]}, "gates": {"required": ["G3"]}}, "required": ["stage", "gates"]},
+      "then": {"required": ["g6_tentative_lines"]}
     },
+    {"if": {"required": ["naming_status"]}, "then": {"properties": {"stage": {"const": "track"}}}},
+    {"if": {"required": ["formation_signals"]}, "then": {"properties": {"stage": {"const": "track"}}}},
     {
-      "if": {
-        "required": ["g6_tentative_lines"]
-      },
-      "then": {
-        "properties": {
-          "stage": { "enum": ["scan", "track"] }
-        }
-      }
-    },
-    {
-      "if": {
-        "properties": {
-          "stage": { "enum": ["scan", "track"] },
-          "gates": { "required": ["G3"] }
-        },
-        "required": ["stage", "gates"]
-      },
-      "then": {
-        "required": ["g6_tentative_lines"]
-      }
-    },
-    {
-      "if": { "required": ["naming_status"] },
-      "then": { "properties": { "stage": { "const": "track" } } }
-    },
-    {
-      "if": { "required": ["formation_signals"] },
-      "then": { "properties": { "stage": { "const": "track" } } }
-    },
-    {
-      "if": {
-        "properties": { "gates": { "properties": { "G1": { "const": "veto" } }, "required": ["G1"] } },
-        "required": ["gates"]
-      },
+      "if": {"properties": {"gates": {"properties": {"G1": {"const": "veto"}}, "required": ["G1"]}}, "required": ["gates"]},
       "then": {
         "required": ["cluster_counterfactual"],
         "properties": {
           "cluster_counterfactual": {
             "properties": {
-              "atomic_task_completed": { "const": true },
-              "batch_processing": { "const": false },
-              "monitoring": { "const": false },
-              "audit_trail": { "const": false },
-              "export_integration": { "const": false },
-              "multi_jurisdiction": { "const": false },
-              "decision": { "const": "atomic_only" }
+              "atomic_task_completed": {"const": true},
+              "batch_processing": {"const": false},
+              "monitoring": {"const": false},
+              "audit_trail": {"const": false},
+              "export_integration": {"const": false},
+              "multi_jurisdiction": {"const": false},
+              "decision": {"const": "atomic_only"}
+            }
+          }
+        }
+      }
+    },
+    {
+      "if": {"properties": {"schema_version": {"const": 3}, "stage": {"const": "qualify"}}, "required": ["schema_version", "stage"]},
+      "then": {"required": ["assessment"]}
+    },
+    {
+      "if": {"required": ["assessment"]},
+      "then": {"properties": {"schema_version": {"const": 3}, "stage": {"const": "qualify"}}, "required": ["schema_version", "stage"]}
+    },
+    {
+      "if": {"not": {"properties": {"schema_version": {"const": 3}}, "required": ["schema_version"]}},
+      "then": {
+        "properties": {
+          "g6_lines": {
+            "properties": {
+              "subscription": {"not": {"const": "inconclusive"}},
+              "advertising": {"not": {"const": "inconclusive"}},
+              "lead_generation": {"not": {"const": "inconclusive"}},
+              "affiliate": {"not": {"const": "inconclusive"}},
+              "transaction": {"not": {"const": "inconclusive"}},
+              "paid_report": {"not": {"const": "inconclusive"}}
+            }
+          },
+          "g6_tentative_lines": {
+            "properties": {
+              "subscription": {"not": {"const": "tentative_inconclusive"}},
+              "advertising": {"not": {"const": "tentative_inconclusive"}},
+              "lead_generation": {"not": {"const": "tentative_inconclusive"}},
+              "affiliate": {"not": {"const": "tentative_inconclusive"}},
+              "transaction": {"not": {"const": "tentative_inconclusive"}},
+              "paid_report": {"not": {"const": "tentative_inconclusive"}}
             }
           }
         }

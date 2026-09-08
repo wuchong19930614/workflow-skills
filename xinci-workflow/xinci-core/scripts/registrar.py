@@ -14,6 +14,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 
 import data_root
+import qualification
 from _common import (atomic_save, check_actor, flock as _flock, funlock as _funlock, is_http_url,
                      ledger_path as _ledger_path, now as _now, span_days as _span_days)
 from _constants import GO_STATES, MIN_TRACK_SPAN_DAYS, MONETIZATION_LINES, SLUG_RE, TERMINAL
@@ -253,7 +254,7 @@ def _check_evidence(data_root: Path, refs, slug=None) -> list:
 
 OBS_FIELDS = {"schema_version", "slug", "observed_at", "stage", "source_urls", "points", "gates",
               "g6_lines", "g6_tentative_lines", "g6_entry_veto", "income_score", "window_bet",
-              "naming_status", "formation_signals", "cluster_counterfactual"}
+              "naming_status", "formation_signals", "cluster_counterfactual", "assessment"}
 WINDOW_BET_FIELDS = {"implementation_urls", "lag_sample_url", "lag_days", "rationale"}
 
 
@@ -265,8 +266,8 @@ def _check_observation(path: Path, ref: str, slug) -> None:
     except (json.JSONDecodeError, UnicodeDecodeError):
         raise RegistrarError(f"观察文件不是合法 JSON: {ref}")
     _require(isinstance(obs, dict), f"观察文件必须是 JSON 对象: {ref}")
-    _require(obs.get("schema_version", 1) in {1, 2},
-             f"观察文件 schema_version 只能是 1/2: {ref}")
+    _require(obs.get("schema_version", 1) in {1, 2, 3},
+             f"观察文件 schema_version 只能是 1/2/3: {ref}")
     for k in ("slug", "observed_at", "stage", "points"):
         _require(bool(obs.get(k)), f"观察文件缺必填字段 {k}: {ref}")
     unknown = sorted(set(obs) - OBS_FIELDS)
@@ -279,8 +280,8 @@ def _check_observation(path: Path, ref: str, slug) -> None:
         raise RegistrarError(f"观察文件 observed_at 必须是 ISO 8601 时间: {ref}")
     _require(observed.tzinfo is not None, f"观察文件 observed_at 必须带时区: {ref}")
     if observed.date() >= OBS_V2_REQUIRED_FROM:
-        _require(obs.get("schema_version") == 2,
-                 f"自 {OBS_V2_REQUIRED_FROM.isoformat()} 起的新观察必须明示写 schema_version=2: {ref}")
+        _require(obs.get("schema_version", 1) >= 2,
+                 f"自 {OBS_V2_REQUIRED_FROM.isoformat()} 起的新观察必须明示写 schema_version≥2: {ref}")
     _require(obs["stage"] in OBS_STAGES, f"观察文件 stage 必须属于 {sorted(OBS_STAGES)}: {ref}")
     _require(Path(ref).stem.endswith(f"-{obs['stage']}"),
              f"观察文件 stage={obs['stage']!r} 与文件名不一致(约定 <日期>-<阶段>.json): {ref}")
@@ -301,8 +302,11 @@ def _check_observation(path: Path, ref: str, slug) -> None:
         _require(isinstance(g6_lines, dict)
                  and LEGACY_G6_LINES <= set(g6_lines) <= MONETIZATION_LINES,
                  f"观察文件 g6_lines 至少包含 subscription/advertising 且不得含未知盈利线: {ref}")
-        _require(all(v in {"pass", "veto", "N/A"} for v in g6_lines.values()),
-                 f"观察文件 g6_lines 结论只能是 pass/veto/N/A: {ref}")
+        allowed = {"pass", "veto", "N/A"}
+        if obs.get("schema_version", 1) >= 3:
+            allowed.add("inconclusive")
+        _require(all(isinstance(v, str) and v in allowed for v in g6_lines.values()),
+                 f"观察文件 g6_lines 结论只能是 {sorted(allowed)}: {ref}")
         if obs.get("schema_version", 1) >= 2:
             _require(set(g6_lines) == MONETIZATION_LINES,
                      f"schema v2 的 g6_lines 必须完整包含六条盈利线: {ref}")
@@ -315,16 +319,38 @@ def _check_observation(path: Path, ref: str, slug) -> None:
         _require(isinstance(g6_tentative_lines, dict)
                  and LEGACY_G6_LINES <= set(g6_tentative_lines) <= MONETIZATION_LINES,
                  f"观察文件 g6_tentative_lines 至少包含 subscription/advertising 且不得含未知盈利线: {ref}")
-        _require(all(v in {"tentative_pass", "tentative_veto", "N/A"}
-                     for v in g6_tentative_lines.values()),
-                 f"观察文件 g6_tentative_lines 结论只能是 "
-                 f"tentative_pass/tentative_veto/N/A: {ref}")
+        allowed = {"tentative_pass", "tentative_veto", "N/A"}
+        if obs.get("schema_version", 1) >= 3:
+            allowed.add("tentative_inconclusive")
+        _require(all(isinstance(v, str) and v in allowed for v in g6_tentative_lines.values()),
+                 f"观察文件 g6_tentative_lines 结论只能是 {sorted(allowed)}: {ref}")
         if obs.get("schema_version", 1) >= 2:
             _require(set(g6_tentative_lines) == MONETIZATION_LINES,
                      f"schema v2 的 g6_tentative_lines 必须完整包含六条盈利线: {ref}")
     if obs["stage"] in {"scan", "track"} and "G3" in gates:
         _require(g6_tentative_lines is not None,
                  f"scan/track 观察提交 G3 时必须同时写 g6_tentative_lines: {ref}")
+    if obs.get("schema_version", 1) >= 3:
+        if "G6" in gates:
+            _require(g6_lines is not None, "正式 G6 结论必须提供完整逐线证据")
+        if g6_lines is not None and gates.get("G6") == "veto":
+            applicable = [v for v in g6_lines.values() if v != "N/A"]
+            _require(bool(applicable) and all(v == "veto" for v in applicable),
+                     "G6=veto 要求所有适用线已否决；未知不等于否决")
+        if str(gates.get("G3", "")).startswith("veto"):
+            lines = g6_tentative_lines if g6_tentative_lines is not None else g6_lines
+            if lines is not None:
+                _require(not any(v in {"inconclusive", "tentative_inconclusive"} for v in lines.values()),
+                         "盈利线仍未知，不能用占位否决结束候选")
+                _require(not any(lines.get(k) in {"pass", "tentative_pass"}
+                                 for k in {"subscription", "lead_generation", "transaction", "paid_report"}),
+                         "非流量线已成立，G3 占位不能作为有效否决")
+        if g6_tentative_lines is not None and "G3" in gates:
+            _require("tentative_pass" in g6_tentative_lines.values(),
+                     "G3 结论要求至少一条暂定盈利线已成立")
+            if gates["G3"].startswith("veto"):
+                _require("tentative_inconclusive" not in g6_tentative_lines.values(),
+                         "盈利线仍未知，不能用占位否决结束候选")
     entry_veto = obs.get("g6_entry_veto")
     if entry_veto is not None:
         allowed = {"repeat_paid_task", "official_count_class", "self_serve_legal_effect"}
@@ -379,6 +405,13 @@ def _check_observation(path: Path, ref: str, slug) -> None:
         _require(isinstance(obs_income_score, int) and not isinstance(obs_income_score, bool)
                  and 1 <= obs_income_score <= 20,
                  f"观察文件 income_score 必须是 1–20 的整数: {ref}")
+    if obs.get("schema_version", 1) >= 3 and obs["stage"] == "qualify":
+        try:
+            qualification.assess(obs)
+        except ValueError as exc:
+            raise RegistrarError(f"认定 assessment 非法: {exc}: {ref}")
+    elif "assessment" in obs:
+        raise RegistrarError(f"assessment 只适用于 v3 qualify 观察: {ref}")
     window_bet = obs.get("window_bet")
     if window_bet is not None:
         _require(isinstance(window_bet, dict), f"观察文件 window_bet 必须是对象: {ref}")
@@ -705,6 +738,14 @@ def check_state_invariants(data_root, rec: dict) -> list:
                                  or observed.get("advertising") == "N/A"))
                 if any(not lines_match(obs) for obs in qualify_obs):
                     errors.append(_inv("qualify-obs-lines", "qualify 观察 g6_lines 与账本不一致"))
+                for obs in qualify_obs:
+                    if obs.get("schema_version", 1) >= 3:
+                        try:
+                            result = qualification.assess(obs)
+                            if result["outcome"] != "qualified" or result["score"] != score:
+                                errors.append(_inv("qualify-score", "账本分数与 assessment 不一致"))
+                        except ValueError as exc:
+                            errors.append(_inv("qualify-assessment", str(exc)))
                 if any(obs.get("income_score") != income_score for obs in qualify_obs):
                     errors.append(_inv("qualify-obs-income", "qualify 观察 income_score 与账本不一致"))
     if state in {"build_ready", "pilot_ready"} and rec.get("play") not in BUILD_PLAYS:
@@ -1081,6 +1122,16 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         _require(bool(reason), f"{to} 要求 reason")
         _require(decision_ref is None, "no-go 结论不出决策书,不得携带 decision_ref(数据极简原则)")
 
+    if to in {"qualified", "disqualified"}:
+        for obs in qualify_obs:
+            if obs.get("schema_version", 1) < 3:
+                continue  # 历史 v1/v2 的读取与转移契约保持兼容。
+            result = qualification.assess(obs)
+            _require(result["outcome"] == to, "认定出口与 assessment 冲突；缺证据应暂缓")
+            _require(score == result["score"] and income_score == result["income_score"],
+                     "提交的 score/income_score 与自动计分不一致")
+            _require(set(g6_passed_lines or []) == set(result["g6_passed_lines"]),
+                     "提交的通过线与 assessment 不一致")
     now = _now()
     rec["evidence_refs"] = merged_refs
     if gates:
@@ -1242,22 +1293,10 @@ QUALIFY_PENDING_FIELDS = {"pending_evidence", "pending_until", "deferred_at", "r
 
 def defer_qualify(data_root, slug, by, reason, pending_evidence, pending_until,
                   evidence=None, run_id=None):
-    """认定暂缓:本次认定所缺的证据是**环境性**取不到,不出分、不出结论。
-
-    评分契约把"证据缺失"一律判成"该维度不得分",但缺失有两种,后果不该一样:
-    - **结构性缺失**:这个数根本不存在或不公开(如化妆品 responsible person 的计数,
-      八条路径全走空)。它是关于机会本身的事实,照常不得分、照常出结论;
-    - **环境性缺失**:本次会话取不到(Semrush 未登录、官方站维护、小站无 footprint
-      数据)。它是关于本次执行条件的事实,与机会好坏无关。
-    实测代价(2026-09-07 cpr-avcp):三处环境性缺失被当成结构性缺失,收入维度扣到
-    12/20、竞争维度再扣 4、红队再扣 8,同一个"取不到"扣了三次并判 disqualified。
-
-    候选留在 formation_confirmed,记下待补项与暂缓到期日;到期后必须按当时手上的证据
-    出结论,不能无限期挂着。补齐后照常 transition,暂缓标记随之清除。
-    """
+    """决定性证据不足时暂缓，复核日期到期不自动变成商业否决。"""
     data_root = Path(data_root)
     pending_evidence = [str(x).strip() for x in (pending_evidence or []) if str(x).strip()]
-    _require(bool(reason), "认定暂缓要求 reason(说明缺的是哪一类证据、为何是环境性的)")
+    _require(bool(reason), "认定暂缓要求 reason(说明缺的是哪一类决定性证据、为何尚未解决)")
     _require(bool(pending_evidence),
              "认定暂缓要求至少一项 pending_evidence:说不出缺什么,就是该出结论了")
     _check_date(pending_until, "pending_until")
@@ -1270,6 +1309,12 @@ def defer_qualify(data_root, slug, by, reason, pending_evidence, pending_until,
         refs = _check_evidence(data_root, evidence, slug=slug)
         _require(any(Path(r).stem.endswith("-qualify") for r in refs),
                  "认定暂缓要求提交本次的 qualify 观察(证明认定确实做了,并记下取不到什么)")
+        for ref in refs:
+            if Path(ref).stem.endswith("-qualify"):
+                obs = _load_observation(data_root, ref)
+                if obs.get("schema_version", 1) >= 3:
+                    _require(qualification.assess(obs)["outcome"] == "defer",
+                             "defer-qualify 要求未解决的决定性缺口")
         _check_evidence_reuse(data_root, rec, refs)
         now = _now()
         pending = {"pending_evidence": pending_evidence, "pending_until": pending_until,

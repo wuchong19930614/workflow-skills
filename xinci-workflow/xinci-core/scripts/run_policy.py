@@ -72,7 +72,7 @@ def reachable_ceiling(root, mode, today=None):
                 "why": "浏览器不满足 G1 前置或触发池已满,本轮不能注册正式候选,"
                        "只能维护触发池"}
     candidates = (_ledger(root).get("candidates") or {})
-    go_ready, formation_ready = [], []
+    go_ready, formation_ready, evidence_review_due = [], [], []
     for slug, rec in candidates.items():
         if not isinstance(rec, dict):
             continue
@@ -82,15 +82,15 @@ def reachable_ceiling(root, mode, today=None):
         if lane == "mature" and state in {"captured", "screened", "tracking"}:
             continue
         if state in {"qualified", "hold", "formation_confirmed"}:
-            # 认定暂缓未到期的候选本轮推不动:缺的是环境性证据,再跑一遍认定只会
-            # 得到同一个"取不到"。到期后必须按当时手上的证据出结论。
             pending = rec.get("qualify_pending") or {}
-            try:
-                deferred = date.fromisoformat(pending["pending_until"]) > today
-            except (KeyError, TypeError, ValueError):
-                deferred = False
-            if not deferred:
-                go_ready.append(slug)
+            if pending:
+                try:
+                    if date.fromisoformat(pending["pending_until"]) <= today:
+                        evidence_review_due.append(slug)
+                except (KeyError, TypeError, ValueError):
+                    evidence_review_due.append(slug)
+                continue  # 到期只要求复核，不证明已能出 go。
+            go_ready.append(slug)
         elif state == "screened" and rec.get("window_estimate") == "days":
             go_ready.append(slug)
         elif state == "tracking":
@@ -100,14 +100,14 @@ def reachable_ceiling(root, mode, today=None):
             if days and span_days(days + [today]) >= MIN_TRACK_SPAN_DAYS:
                 formation_ready.append(slug)
     if go_ready:
-        return {"state": "go", "enablers": sorted(go_ready),
+        return {"state": "go", "enablers": sorted(go_ready), "evidence_review_due": sorted(evidence_review_due),
                 "why": "存在可在本次运行内走到 go 决策的候选(qualified/hold/"
                        "formation_confirmed,或窗口以天计的 screened)"}
     if formation_ready:
-        return {"state": "go", "enablers": sorted(formation_ready),
+        return {"state": "go", "enablers": sorted(formation_ready), "evidence_review_due": sorted(evidence_review_due),
                 "why": f"追踪中候选的最早 -track 观察已满 {MIN_TRACK_SPAN_DAYS} 天,"
                        "本次复查即可凑齐形成跨度,之后可一路走到 go"}
-    return {"state": "tracking", "enablers": [],
+    return {"state": "tracking", "enablers": [], "evidence_review_due": sorted(evidence_review_due),
             "why": f"存量里没有能满足 {MIN_TRACK_SPAN_DAYS} 天形成跨度的候选,"
                    "存量侧本次最远只能推进到 tracking;新扫出窗口以天计的候选仍可走快道到 go"}
 

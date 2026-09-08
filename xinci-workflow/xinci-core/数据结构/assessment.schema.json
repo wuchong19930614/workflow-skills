@@ -1,0 +1,71 @@
+{
+  "type": "object",
+  "required": ["evidence_gaps", "scores", "risks", "seo"],
+  "properties": {
+    "evidence_gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["item", "kind", "decisive", "resolved", "reason"],
+        "properties": {
+          "item": {"type": "string", "minLength": 1},
+          "kind": {"enum": ["structural", "access", "coverage", "unverified"]},
+          "decisive": {"type": "boolean"},
+          "resolved": {"type": "boolean"},
+          "reason": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "scores": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["trigger", "task", "language", "competition", "alignment", "income"],
+          "properties": {
+            "trigger": {"type": "integer", "minimum": 0, "maximum": 15},
+            "task": {"type": "integer", "minimum": 0, "maximum": 12},
+            "language": {"type": "integer", "minimum": 0, "maximum": 8},
+            "competition": {"type": "integer", "minimum": 0, "maximum": 30},
+            "alignment": {"type": "integer", "minimum": 0, "maximum": 15},
+            "income": {"type": "integer", "minimum": 0, "maximum": 20}
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "risks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "charged_to", "deduction", "reason"],
+        "properties": {
+          "id": {"type": "string", "minLength": 1},
+          "charged_to": {"enum": ["trigger", "task", "language", "competition", "alignment", "income", "red_team"]},
+          "deduction": {"type": "integer", "minimum": 0, "maximum": 100},
+          "reason": {"type": "string", "minLength": 1}
+        },
+        "additionalProperties": false
+      }
+    },
+    "seo": {
+      "anyOf": [
+        {"type": "null"},
+        {
+          "type": "object",
+          "required": ["query", "gap", "source_urls"],
+          "properties": {
+            "query": {"type": "string", "minLength": 1},
+            "gap": {"type": "string", "minLength": 1},
+            "source_urls": {"type": "array", "minItems": 1, "items": {"type": "string", "format": "uri"}}
+          },
+          "additionalProperties": false
+        }
+      ]
+    }
+  },
+  "additionalProperties": false,
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "v3 qualify 公共认定记录；跨字段语义、风险唯一性与计分由 qualification.py 校验。"
+}

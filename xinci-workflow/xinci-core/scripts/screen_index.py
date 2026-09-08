@@ -27,7 +27,7 @@ import secrets
 import sys
 import tempfile
 from contextlib import contextmanager
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from functools import lru_cache
 from pathlib import Path
 
@@ -47,7 +47,7 @@ MERGE_THRESHOLD = 3  # stats 的兜底提醒线:累计 ≥3 次仍未归并的�
 # (闸门校准.md)改了 G3 的否决线并给深审加了 G6 入口预检,此前按旧闸门写下的
 # 1400 余条永久否决因此可能包含误杀。记下版本号,check 才能把"旧闸门下的否决"
 # 单独标出来,让闸门修订可以触发选择性重开,而不是把错误永久固化。
-GATE_VERSION = "2026-09-02.2"  # 六线入口边界 + G1 反事实强制 + 35 条校准闭环
+GATE_VERSION = "2026-09-07.1"  # 供给验证、逐线未知、证据与计分去重
 PATTERN_ALIASES_PATH = Path(__file__).resolve().parents[1] / "数据结构" / "pattern-aliases.json"
 
 
@@ -377,6 +377,20 @@ def resolve_decision(data_root, term, matched, decision, reason, *, actor, term_
         return row
 
 
+def review_due(rec, today=None):
+    """旧规则或到期 SERP 索引进入复核；不释放去重约束。"""
+    if rec.get("gate") == "账本":
+        return False  # 账本按 registrar 的 recheck_after 与状态路由。
+    if rec.get("gate_version", "") != GATE_VERSION:
+        return True
+    if rec.get("gate") not in {"G1", "G2", "G3"}:
+        return False
+    try:
+        return date.fromisoformat(rec["date"]) + timedelta(days=30) <= (today or date.today())
+    except (KeyError, TypeError, ValueError):
+        return True  # 缺观察日期不能推定证据仍然新鲜。
+
+
 def check(data_root, terms, strict=False) -> dict:
     """返回 exact seen、需要快审的 probable review，以及 fresh。
 
@@ -410,7 +424,8 @@ def check(data_root, terms, strict=False) -> dict:
                            "gate_version": rec.get("gate_version", ""),
                            # 该否决是否出自当前闸门。False 表示它写在闸门修订之前,
                            # 可能是旧判据下的误杀,值得按现行闸门重看一遍。
-                           "current_gates": rec.get("gate_version", "") == GATE_VERSION}
+                           "current_gates": rec.get("gate_version", "") == GATE_VERSION,
+                           "review_due": review_due(rec)}
         if hit:
             seen.append(row(hit))
         elif same:
@@ -672,7 +687,7 @@ def main(argv=None):
             if stale:
                 print(f"  其中 {stale} 条出自旧闸门(当前闸门版本 {GATE_VERSION}),按现行判据可能是误杀,值得重看")
             for s in r["seen"]:
-                tag = "见过" if s["current_gates"] else "见过·旧闸门"
+                tag = ("见过·到期须复核" if s["review_due"] else "见过") if s["current_gates"] else "见过·旧闸门"
                 print(f"  [{tag}] {s['term']} ← {s['date']} {s['matched']} ({s['gate']}: {s['reason']})")
             for s in r["review"]:
                 tag = "疑似重复·须快审" if s["current_gates"] else "疑似重复·须快审·旧闸门"

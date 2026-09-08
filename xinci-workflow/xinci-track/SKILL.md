@@ -31,7 +31,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py reopen \
    观察必写 `naming_status=unstable|stabilized` 与 `formation_signals`,合法取值 `autocomplete / semrush_rows / sustained_discussion / repeated_independent_queries`,无信号写空数组,不得用叙述性乐观判断替代。
    来源新暴露 G6 结构事实时写 `g6_entry_veto`,出口边界见生命周期契约「G6 结构事实的出口边界」。
 5. **对照 expiry 与失效条件。** 命中或已过 → 如实报告,不许沉默跳过。
-6. **写观察文件并登记复查。** `证据/<slug>/<日期>-track.json`,`schema_version: 2`。`gates` 只列本次实际重跑且证据合规的门(G1=`veto` 时须带 `cluster_counterfactual=atomic_only`);`g6_tentative_lines` 写本次逐线暂定结论;`source_urls` 列实际打开的页面。
+6. **写观察文件并登记复查。** `证据/<slug>/<日期>-track.json`,`schema_version: 3`。`gates` 只列本次实际重跑且证据合规的门(G1=`veto` 时须带 `cluster_counterfactual=atomic_only`);`g6_tentative_lines` 写本次逐线暂定结论;`source_urls` 列实际打开的页面。
    历史只含两线的观察只证明当时那两线,不能冒充其余四线已否决。仅登记不转移用 checked;随后 transition 提交 gates 时复用这份观察作 `--evidence`,registrar 逐门核对。
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py checked \

@@ -176,7 +176,7 @@ class RegistrarTest(unittest.TestCase):
     def test_current_observation_cannot_claim_legacy_v1(self):
         slug = "current-v1-refused"
         ev = mk_evidence(self.root, slug, "2026-09-03-scan.json", schema_version=1)
-        with self.assertRaisesRegex(R.RegistrarError, "schema_version=2"):
+        with self.assertRaisesRegex(R.RegistrarError, "schema_version≥2"):
             R.register(self.root, slug=slug, term="current v1 refused",
                        source_url="https://e.com/t", task="t", evidence=[ev])
 
@@ -563,6 +563,43 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaisesRegex(R.RegistrarError, "formation_signals"):
             R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
                          gates={"G1": "pass"}, evidence=[no_signal])
+
+    def test_v3_generated_score_is_checked_before_ledger_write(self):
+        from test_qualification import observation
+        slug = self.register("report")
+        self.to_screened(slug); self.to_tracking(slug); self.to_formation(slug)
+        payload = observation()
+        ev = mk_evidence(self.root, slug, "2026-09-07-qualify.json", **payload)
+        before = (self.root / "账本" / "候选账本.json").read_bytes()
+        with self.assertRaisesRegex(R.RegistrarError, "自动计分"):
+            R.transition(self.root, slug, to="qualified", by="xinci-qualify",
+                         score=99, income_score=18, g6_passed_lines=["paid_report"],
+                         gates=dict(GATES_678), evidence=[ev])
+        self.assertEqual(before, (self.root / "账本" / "候选账本.json").read_bytes())
+        R.transition(self.root, slug, to="qualified", by="xinci-qualify",
+                     score=90, income_score=18, g6_passed_lines=["paid_report"],
+                     gates=dict(GATES_678), evidence=[ev])
+        self.assertEqual(self.load(slug)["score"], 90)
+        self.assertEqual(R.check_state_invariants(self.root, self.load(slug)), [])
+
+    def test_v3_unresolved_evidence_cannot_be_disqualified(self):
+        from test_qualification import observation
+        slug = self.register("report")
+        self.to_screened(slug); self.to_tracking(slug); self.to_formation(slug)
+        payload = observation()
+        payload.pop("income_score")
+        payload["assessment"].update(scores=None, seo=None, evidence_gaps=[{
+            "item": "volume", "kind": "coverage", "decisive": True,
+            "resolved": False, "reason": "没有可替代证据"}])
+        ev = mk_evidence(self.root, slug, "2026-09-07-qualify.json", **payload)
+        with self.assertRaisesRegex(R.RegistrarError, "缺证据应暂缓"):
+            R.transition(self.root, slug, to="disqualified", by="xinci-qualify",
+                         reason="到期", gates=dict(GATES_678), evidence=[ev])
+        rec = R.defer_qualify(self.root, slug, by="xinci-qualify", reason="覆盖缺失",
+                             pending_evidence=["volume"],
+                             pending_until=(date.today() + timedelta(days=7)).isoformat(), evidence=[ev])
+        self.assertEqual(rec["state"], "formation_confirmed")
+        self.assertIsNone(rec["score"])
 
     def test_qualified_requires_score_80(self):
         slug = self.register()

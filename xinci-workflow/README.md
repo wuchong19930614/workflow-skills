@@ -64,6 +64,7 @@ rejected            fast_grab_ready              rejected           qualified / 
 | [生命周期契约.md](xinci-core/生命周期契约.md) | 状态机、每条边的证据要求、留痕分界、连续运行模式、registrar 用法 |
 | [陷阱速查.md](xinci-core/陷阱速查.md) / [陷阱类别.md](xinci-core/陷阱类别.md) | 默认先读 14 类路由表，疑似命中后再展开完整判据与案例 |
 | [数据采集指南.md](xinci-core/数据采集指南.md) | 真浏览器原则、G1 SERP 读取规程、来源表、Semrush 纪律、选源信号、mature 道选源 |
+| [证据判定契约.md](xinci-core/证据判定契约.md) | 证据缺口、供给覆盖、复用与认定机器记录 |
 | [评分契约.md](xinci-core/评分契约.md) | 六维权重、红队扣分、80 分线 |
 | [闸门校准.md](xinci-core/闸门校准.md) | 当前校准索引与待验证项；历史回测按需进入 `xinci-core/history/` 阅读，不参与运行时默认上下文 |
 
@@ -73,6 +74,8 @@ rejected            fast_grab_ready              rejected           qualified / 
 
 | 脚本 | 作用 |
 | --- | --- |
+| `qualification.py` | 只读校验 v3 认定证据，统一计分并生成提交参数；registrar 共用同一实现 |
+| `audit_rejections.py` | 按历史证据生成复核分组与样本，不修改旧结论、不估计现场误杀率 |
 | `registrar.py` | 账本唯一状态转移入口,逐项校验证据,原子替换 |
 | `screen_index.py` | 淘汰方向索引:批量去重、带日期追加、去重裁决 |
 | `trigger_pool.py` | 官方变化原料的 add/approve/discard 事件日志 |

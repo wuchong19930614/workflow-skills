@@ -120,7 +120,7 @@ class RunPolicyTest(unittest.TestCase):
                                 "reason": "Semrush 未登录", "by": "xinci-qualify"}}})
         ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
         self.assertNotIn("deferred", ceiling["enablers"])
-        # 到期后必须出结论,天花板重新算它
+        # 到期只复核证据，不把未解决的缺口算成 go 能力
         past = (date.today() - timedelta(days=1)).isoformat()
         self.seed_ledger({"deferred": {
             "slug": "deferred", "lane": "new", "state": "formation_confirmed", "history": [],
@@ -128,7 +128,8 @@ class RunPolicyTest(unittest.TestCase):
                                 "deferred_at": "2026-09-07T00:00:00+00:00",
                                 "reason": "Semrush 未登录", "by": "xinci-qualify"}}})
         ceiling = RP.evaluate(self.root, self.run["run_id"])["reachable_ceiling"]
-        self.assertEqual(ceiling["enablers"], ["deferred"])
+        self.assertEqual(ceiling["enablers"], [])
+        self.assertEqual(ceiling["evidence_review_due"], ["deferred"])
 
     def test_ceiling_is_go_for_days_window_screened_candidate(self):
         self.ready()

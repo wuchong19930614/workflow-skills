@@ -19,7 +19,7 @@ description: '扫描发现新兴/全新的英文 Google 搜索词候选(lane=new
 ```bash
 printf '%s\n' "方向1" "方向2" ... | python3 xinci-workflow/xinci-core/scripts/screen_index.py check
 ```
-- `[见过]` 自动跳过,且不计入 funnel 的 `extracted`;`[疑似重复·须快审]` 必须比较两者具体任务后登记裁决,不能口头略过:
+- `[见过·旧闸门]` 或 review_due=true 进入只读校准复核，保留原条目且不自动重复注册；普通 `[见过]` 自动跳过,且不计入 funnel 的 `extracted`;`[疑似重复·须快审]` 必须比较两者具体任务后登记裁决,不能口头略过:
 ```bash
 python3 xinci-workflow/xinci-core/scripts/screen_index.py resolve \
   --term "<待查方向>" --matched "<输出中的 matched>" --term-task "<待查方向的具体任务>" \
@@ -31,11 +31,13 @@ python3 xinci-workflow/xinci-core/scripts/screen_index.py resolve \
 - 排队候选 expiry 已过的提议 `captured→expired --expiry-trigger date`(含 `G3=veto_window_bet` 挂起候选),不再花深审配额。mature 候选只报告"应交 xinci-mature"。
 - 连续运行下接队不在这里做(xinci-run 运行循环步骤 1 统一处理存量),本 skill 直接从第 1 层开始;去重 check 照做。
 
-### 第 1 层:广度提取(便宜,常态目标一轮 200–300 个方向)
+### 第 1 层:按深审容量分批提取
 
-- 200–300 是单步或 `run_policy.mode=full` 的目标;`debt_only` / `trigger_only` / `paused` 的正式候选提取目标为 0,不得缩小批次绕过。`trigger_only` 可继续收集原始变化,不得进候选漏斗。
+默认每批提取 10–20 个独立任务方向，完成去重与轻筛后再补下一批；深审配额满或队列已覆盖剩余能力就停止扩展。本轮 200–300 不再是提取目标。只处理实际提取项，不为报数扩充方向。
+
+- 分批提取只适用于单步或 `run_policy.mode=full`;`debt_only` / `trigger_only` / `paused` 的正式候选提取目标为 0,不得缩小批次绕过。`trigger_only` 可继续收集原始变化,不得进候选漏斗。
 - 真浏览器打开来源(来源表见数据采集指南;轮换选源,覆盖优先)。变化面从有日期的法规/平台/技术/成本变化推导付费者的被迫任务,按"七条正向选源信号"排序(只排序,不是硬门);变化面允许列表页/RSS/导出接口批量采集,社区面仍须真浏览器直读。
-- 把一个源里所有有任务嫌疑的方向都提出来,逐条列,不合并不省略。每条只记两样:搜索措辞(不转述;官方标题只能进触发池)+ 一句话任务假设。记录打开的每个 URL;素材不足换源补足。提取结果以紧凑清单存在,一行一条。
+- 只提取本批准备处理的独立任务方向，逐条留痕；来源里尚未提取的内容不计入漏斗，不为穷尽整个来源强行扩大批次。每条只记两样:搜索措辞(不转述;官方标题只能进触发池)+ 一句话任务假设。记录打开的每个 URL;需要继续补充深审候选时换源。提取结果以紧凑清单存在,一行一条。
 - 变化面先 `trigger_pool.py add --date --title --source-url --source-family --task-hypothesis`(去重表:同一份公报不重复看)。派生的任务措辞可直接进零成本漏斗,不必先 approve;要给原料配上任务措辞与商业假设时才用 approve(`--search-evidence-url` 可选):
   `trigger_pool.py approve --trigger-id --query --payer --repeat-unit --self-serve-path --base-case-source --search-evidence-url --reason`。
 - approve 不产生 G0–G8 结论;raw trigger 不计 `extracted`,其漏斗由 `record-round` 自动生成。注册时变化面候选带 `--origin trigger --trigger-id <id>`(pending 亦可,只要未废弃),信号面带 `--origin signal`(连续运行必填,见通用约定)。
@@ -51,7 +53,7 @@ printf '%s\n' "词|G0|违反 ToS" "词|G4|需要到场" "词|G6|六线全灭" "�
 ```
 - 第 4 个字段标 `pattern`;认出新模式时按生命周期契约「归并纪律」形成新增类别提案,附实际观察并等待用户确认,不得把一次观察静默升级成通用判据。确认后的归并记录写法见同节。`screen_index.py stats` 只统计索引一侧,账本一侧的模式名靠运行清单 notes 累计。
 - 已在账本的排队候选补跑时才判出六线全灭,走 `captured→rejected`(生命周期契约 rejected 边第⑦种),不进索引。
-- 预期本层砍掉 85%,剩 30–50 条进 G1。`rejected_zero_cost` 的语义是"第 2 层筛除",不等于"从未打开浏览器":验证型 G3 判 `veto` 的方向计入本格(类别级死因走索引,不注册)。
+- 淘汰率只作实测统计，不设预期淘汰比例。`rejected_zero_cost` 的语义是"第 2 层筛除",不等于"从未打开浏览器":验证型 G3 判 `veto` 的方向计入本格(类别级死因走索引,不注册)。
 - 验证判 `pass` 的方向存活,按排队位注册(带 gates 含 G3 结论 + expiry,见第 4 层),本轮继续补 G1/G2。funnel 按本轮走到的层记:补 G1 被否 → `captured→rejected`,记 `deep_audited`;走完 G2 → `deep_audited`;没排上 → `queued`;下轮再审属存量 `carryover_audited`。
 
 ### 第 3 层:G1 快筛(中等,每轮 30–50 次上限)
@@ -64,7 +66,7 @@ printf '%s\n' "词|G0|违反 ToS" "词|G4|需要到场" "词|G6|六线全灭" "�
 printf '%s\n' '{"term":"<词>","gate":"G1","reason":"<首屏是什么把任务做完了>","cluster_counterfactual":{"atomic_task_completed":true,"batch_processing":false,"monitoring":false,"audit_trail":false,"export_integration":false,"multi_jurisdiction":false,"decision":"atomic_only","reason":"<五种扩展为何都不成立>"}}' \
   | python3 xinci-workflow/xinci-core/scripts/screen_index.py append --date <YYYY-MM-DD>
 ```
-- 已注册候选(排队的、验证存活的)补跑 G1 被否走 `captured→rejected`(rejected 边第⑤种),不进索引;分界见生命周期契约「留痕分界」。预期本层再砍一半。
+- 已注册候选(排队的、验证存活的)补跑 G1 被否走 `captured→rejected`(rejected 边第⑤种),不进索引;分界见生命周期契约「留痕分界」。不设本层淘汰率目标。
 - 两条纪律:①每轮 30–50 次上限,超出的方向照样排队注册为 `captured`,但 gates 不写 G1(没搜就是没搜),下轮第 0 层先补;②记录搜索健康度——本轮搜了多少次、第几次起出现验证码/限流/结果异常,写进运行清单 notes。撞到验证码属 blocker,停止本层如实报告,不得绕过、不得用接口替代。
 
 ### 第 4 层:G2/G3 深审(昂贵,每轮配额 ≤5 个)
@@ -95,7 +97,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
 
 ### 第 5 层:窗口评估与注册(只对深审存活的候选)
 
-- 每个候选一份观察文件 `证据/<slug>/<日期>-scan.json`(要点式,`schema_version: 2`,schema 见 数据结构/observation.schema.json),按闸门契约逐项写六条盈利线与 `cluster_counterfactual`;不得用"重复任务=否"一票否决所有盈利线。
+- 每个候选一份观察文件 `证据/<slug>/<日期>-scan.json`(要点式,`schema_version: 3`,schema 见 数据结构/observation.schema.json),按闸门契约逐项写六条盈利线与 `cluster_counterfactual`;不得用"重复任务=否"一票否决所有盈利线。
 - 估计窗口(days/weeks/months)并写明推理。本轮走完全程的候选 register 不带 `--gates`(模板见第 4 层);上轮已排队注册过的跳过 register,直接出闸。
 - 第一步一律是出闸 `captured→screened`,不能跳(tracking 与快道都只从 `screened` 出发)。`--expiry` 写窗口失效日(覆盖排队位的旧 expiry);`--gates` 按缺口提交全部已验证结论(排队候选典型只补 `G2=pass,G3=pass`,gates 为空时交齐,不照抄),registrar 按账本已有 gates + 本次提交合并校验:
 ```bash
