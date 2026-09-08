@@ -44,7 +44,7 @@ python3 xinci-workflow/xinci-core/scripts/screen_index.py resolve \
 
 ### 第 2 层:零成本批筛 G0 → G4 → G5 → G6/G7 预筛(便宜)
 
-对每条逐个过,判据按闸门契约 G0 / G4 / G5 / G6「深审入口预检」/ G7 与「G6/G7 的扫描期用法」执行;提不出任务的同批弃。G5 命中「直接筛除型」零成本弃;「验证型」先完成 G6/G7 预筛,再开浏览器跑 G3 验证(本层唯一的浏览器动作)。observation 完整写六条 `g6_tentative_lines`,new 道 advertising 固定 `N/A`。
+对每条逐个过,判据按闸门契约 G0 / G4 / G5 / G6「深审入口预检」/ G7 与「G6/G7 的扫描期用法」执行;提不出任务的同批弃。G5 命中直接筛除判据且证据充分才弃；验证型只记待核实项，继续第 3–4 层的统一现场审计，不在本层跑 G3。observation 完整写六条 `g6_tentative_lines`,new 道 advertising 固定 `N/A`。
 
 秒弃的批量追加进淘汰索引,不注册:
 ```bash
@@ -53,8 +53,8 @@ printf '%s\n' "词|G0|违反 ToS" "词|G4|需要到场" "词|G6|六线全灭" "�
 ```
 - 第 4 个字段标 `pattern`;认出新模式时按生命周期契约「归并纪律」形成新增类别提案,附实际观察并等待用户确认,不得把一次观察静默升级成通用判据。确认后的归并记录写法见同节。`screen_index.py stats` 只统计索引一侧,账本一侧的模式名靠运行清单 notes 累计。
 - 已在账本的排队候选补跑时才判出六线全灭,走 `captured→rejected`(生命周期契约 rejected 边第⑦种),不进索引。
-- 淘汰率只作实测统计，不设预期淘汰比例。`rejected_zero_cost` 的语义是"第 2 层筛除",不等于"从未打开浏览器":验证型 G3 判 `veto` 的方向计入本格(类别级死因走索引,不注册)。
-- 验证判 `pass` 的方向存活,按排队位注册(带 gates 含 G3 结论 + expiry,见第 4 层),本轮继续补 G1/G2。funnel 按本轮走到的层记:补 G1 被否 → `captured→rejected`,记 `deep_audited`;走完 G2 → `deep_audited`;没排上 → `queued`;下轮再审属存量 `carryover_audited`。
+- 淘汰率只作实测统计，不设预期比例。`rejected_zero_cost` 保留旧字段名，新轮只统计第 2 层轻筛结束的方向；它不是访问次数。历史轮包含验证型 G3 的旧归格不回写、不跨版本混算。
+- G5 验证统一占用第 4 层深审配额，存活与否都记 `deep_audited`；未排上记 `queued`，下轮补审记 `carryover_audited`。
 
 ### 第 3 层:G1 快筛(中等,每轮 30–50 次上限)
 
@@ -80,7 +80,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py register \
   --task "<任务>" --site-thesis "<为何能形成独立站>" --task-family "<家族1>" --task-family "<家族2>" \
   [--gates G0=pass,G4=pass,G5=pass,G1=pass --expiry <YYYY-MM-DD>] --evidence "证据/<slug>/<日期>-scan.json" --by xinci-scan
 ```
-- 深审判否(G2 veto,或占位否决生效前提下 G3 veto)的处置在本层完成:register 不带 `--gates`,闸门结论随 transition 提交;死在 G2 写 `...,G2=veto`,没跑的门不写。例外:命中已成册陷阱类别、当场验证判 `veto` 的方向按第 2 层走索引。死因像结构性模式时把模式名记进运行清单 notes。
+- 深审判否(G2 veto,或占位否决生效前提下 G3 veto)的处置在本层完成:register 不带 `--gates`,闸门结论随 transition 提交;死在 G2 写 `...,G2=veto`,没跑的门不写。命中验证型陷阱也走同一留档路径，类别与覆盖事实写入观察，不把运行证据写回规则文档。死因像结构性模式时把模式名记进运行清单 notes。
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to rejected --by xinci-scan --gates G0=pass,G4=pass,G5=pass,G1=pass,G2=pass,G3=veto \
@@ -123,7 +123,7 @@ python3 xinci-workflow/xinci-core/scripts/run_manifest.py record-single \
 ## 硬规则
 
 - 每个进入 tracking 的候选必须带 expiry(附推理)和至少一条失效条件。
-- 区分"发布"与"一时热闹":只产生一周好奇、没有重复任务的东西,直说不值得,不进清单。
+- 区分"发布"与"一时热闹":只有短期好奇且无持续任务群体或可付费事件时才按对应门处理；单次报告或线索不因缺复购出局。
 - 决策推进优先于广度:先还存量候选的证据债与状态债,仅 `mode=full` 做广度扫描。
 - 排队位三条纪律:①`expiry` 由候选自身证据支撑,不得整批套同一天;②`gates` 只写真跑过的门;③new captured >20 时进入硬积压闸,连续运行禁止新增正式候选,只还债与清理到期项。
 - 索引日期是硬字段:`append` 的每个新 term 必须写**该来源/SERP 实际被观察那一天(UTC)**,不是登记那一刻的本机日期。写错或缺失都只能用 `repair-date` 追加式修订(每条只修一次、要写事实理由),不得手改 JSONL、不得用当前日期猜补。

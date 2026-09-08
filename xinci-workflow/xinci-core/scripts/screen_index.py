@@ -47,7 +47,7 @@ MERGE_THRESHOLD = 3  # stats 的兜底提醒线:累计 ≥3 次仍未归并的�
 # (闸门校准.md)改了 G3 的否决线并给深审加了 G6 入口预检,此前按旧闸门写下的
 # 1400 余条永久否决因此可能包含误杀。记下版本号,check 才能把"旧闸门下的否决"
 # 单独标出来,让闸门修订可以触发选择性重开,而不是把错误永久固化。
-GATE_VERSION = "2026-09-08.1"  # 计数缺口、暂定边界与公共证据口径统一
+GATE_VERSION = "2026-09-08.2"  # 统一现场审计；移除量级经验否决与旧类别捷径
 PATTERN_ALIASES_PATH = Path(__file__).resolve().parents[1] / "数据结构" / "pattern-aliases.json"
 
 

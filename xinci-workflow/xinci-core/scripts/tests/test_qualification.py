@@ -28,6 +28,63 @@ def observation():
 
 
 class QualificationTest(unittest.TestCase):
+    def test_submission_proposals_preserve_verdict_evidence_and_mode(self):
+        import argparse
+        import copy
+        ref = "证据/report/2026-09-07-qualify.json"
+        for outcome in ("qualified", "low_score", "veto", "defer"):
+            with self.subTest(outcome=outcome):
+                obs = observation()
+                if outcome == "low_score":
+                    obs["assessment"]["scores"]["competition"] = 10
+                if outcome in {"veto", "defer"}:
+                    obs.pop("income_score")
+                    obs["assessment"].update(scores=None, seo=None)
+                    if outcome == "veto":
+                        obs["gates"] = {"G4": "veto"}
+                    else:
+                        obs["assessment"]["evidence_gaps"] = [{"item": "market", "kind": "coverage",
+                            "decisive": True, "resolved": False, "reason": "缺决定性证据"}]
+                before = copy.deepcopy(obs)
+                proposal = Q.submission_proposal(obs, ref, "xinci-run", "run-test")
+                argv = proposal["registrar_argv"]
+                parser = argparse.ArgumentParser()
+                for flag, options in R.CLI_SPEC[argv[0]][1]:
+                    parser.add_argument(flag, **options)
+                supplied = argv[1:]
+                for flag in proposal["missing_arguments"]:
+                    supplied += [flag, "2026-10-01" if flag == "--pending-until" else "现场依据"]
+                args = parser.parse_args(supplied)
+                self.assertEqual(args.evidence, [ref])
+                self.assertEqual(args.by, "xinci-run")
+                self.assertEqual(args.run_id, "run-test")
+                if outcome in {"qualified", "low_score"}:
+                    self.assertEqual(args.score, Q.assess(obs)["score"])
+                    self.assertEqual(args.g6_passed_lines, "paid_report")
+                elif outcome == "veto":
+                    self.assertIsNone(args.score)
+                    self.assertEqual(args.gates, "G4=veto")
+                else:
+                    self.assertEqual(args.pending_evidence, ["market"])
+                self.assertFalse(proposal["executed"])
+                self.assertEqual(obs, before)
+
+    def test_submission_proposal_rejects_unsafe_reference_and_incomplete_mode(self):
+        for ref, by, run_id in [("../x.json", "xinci-qualify", None),
+                                ("/tmp/x.json", "xinci-qualify", None),
+                                ("证据/other/2026-09-07-qualify.json", "xinci-qualify", None),
+                                ("证据/report/2026-09-07-qualify.json", "xinci-run", None),
+                                ("证据/report/2026-09-07-qualify.json", "xinci-qualify", "run-test")]:
+            with self.subTest(ref=ref, by=by), self.assertRaises(ValueError):
+                Q.submission_proposal(observation(), ref, by, run_id)
+
+    def test_low_income_score_does_not_imply_total_below_threshold(self):
+        obs = observation()
+        obs["assessment"]["scores"] = dict(Q.WEIGHTS, income=1)
+        obs["income_score"] = 1
+        self.assertEqual(Q.assess(obs)["score"], 81)
+        self.assertEqual(Q.assess(obs)["outcome"], "qualified")
+
     def test_scan_and_track_cannot_publish_formal_g6_but_legacy_is_readable(self):
         with tempfile.TemporaryDirectory() as tmp:
             for stage in ("scan", "track"):

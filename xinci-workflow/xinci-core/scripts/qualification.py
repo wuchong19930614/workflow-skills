@@ -86,15 +86,59 @@ def assess(obs):
             "income_score": scores["income"], "g6_passed_lines": passed}
 
 
+def submission_proposal(obs, evidence_ref, by="xinci-qualify", run_id=None):
+    """只生成参数，不执行、不推断授权、复核日期或业务理由。"""
+    ref = Path(evidence_ref)
+    require(not ref.is_absolute() and ".." not in ref.parts
+            and len(ref.parts) == 3 and ref.parts[:2] == ("证据", obs["slug"])
+            and ref.name.endswith("-qualify.json"), "提交证据须为该候选的数据区相对观察路径")
+    require(by in {"xinci-qualify", "xinci-run"}, "认定执行者必须是 xinci-qualify 或 xinci-run")
+    require(bool(run_id) == (by == "xinci-run"), "连续模式必须带 run_id，单步模式不得带 run_id")
+    result = assess(obs)
+    command = "defer-qualify" if result["outcome"] == "defer" else "transition"
+    argv = [command, "--slug", obs["slug"], "--by", by, "--evidence", evidence_ref]
+    if run_id:
+        argv += ["--run-id", run_id]
+    missing = []
+    if command == "defer-qualify":
+        for gap in obs["assessment"]["evidence_gaps"]:
+            if gap["decisive"] and not gap["resolved"]:
+                argv += ["--pending-evidence", gap["item"]]
+        missing = ["--reason", "--pending-until"]
+    else:
+        argv += ["--to", result["outcome"]]
+        gates = obs.get("gates") or {}
+        if gates:
+            argv += ["--gates", ",".join(f"{k}={v}" for k, v in sorted(gates.items()))]
+        if result["score"] is not None:
+            argv += ["--score", str(result["score"]), "--income-score", str(result["income_score"]),
+                     "--g6-passed-lines", ",".join(result["g6_passed_lines"])]
+        if result["outcome"] == "disqualified":
+            missing = ["--reason"]
+    return {"result": result, "registrar_argv": argv, "missing_arguments": missing,
+            "executed": False,
+            "boundary": "仅提案；提交前核对当前状态与授权。hold 暂缓不调用 defer-qualify。"}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("observation", type=Path)
+    parser.add_argument("--evidence-ref", help="生成提交提案；数据区相对观察路径")
+    parser.add_argument("--by", choices=["xinci-qualify", "xinci-run"], default="xinci-qualify")
+    parser.add_argument("--run-id")
     args = parser.parse_args(argv)
     try:
         # 使用完整观察校验，避免 CLI 与实际提交接受不同的文件。
         import registrar
         registrar._check_observation(args.observation, args.observation.name, None)
-        result = assess(json.loads(args.observation.read_text(encoding="utf-8")))
+        obs = json.loads(args.observation.read_text(encoding="utf-8"))
+        require(args.evidence_ref or (args.by == "xinci-qualify" and not args.run_id),
+                "执行者参数需与 --evidence-ref 一起使用")
+        if args.evidence_ref:
+            require(Path(args.evidence_ref).name == args.observation.name,
+                    "提交引用与输入观察文件名必须一致")
+        result = (submission_proposal(obs, args.evidence_ref, args.by, args.run_id)
+                  if args.evidence_ref else assess(obs))
     except (OSError, ValueError, registrar.RegistrarError) as exc:
         print(f"认定校验拒绝: {exc}", file=sys.stderr)
         return 2

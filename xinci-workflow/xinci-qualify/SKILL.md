@@ -35,23 +35,13 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py defer-qualify \
 ```
 
    暂缓期内该候选不进 `run_policy` 的 go 天花板(再跑一遍只会得到同一个"取不到");到期只复核证据是否变化；仍有决定性缺口则更新暂缓，不强制商业否决。
-8. **先用 `qualification.py <观察文件路径>` 校验 assessment 并生成 score、income_score、g6_passed_lines 与建议出口。** 暂缓/硬否决不带 score；可评分的 qualified 和 disqualified 都带生成的 score。下方 disqualified 模板仅适用于打分不通过，硬门失败改交实际 gates，省略分数字段。
-9. **用户确认后**执行,再按通用约定写运行清单(`--skill xinci-qualify --billable-calls <N>`):
+8. **生成提交提案。** 用公共脚本校验观察并生成参数，避免重填 gates、分数与通过线：
 ```bash
-# qualified:score ≥80 与 income-score 1–20 都必填
-python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
-  --slug <slug> --to qualified --by xinci-qualify --score <N> \
-  --income-score <1-20> --g6-passed-lines <六条盈利线中实际通过者,逗号分隔> \
-  --gates G6=pass,G7=pass,G8=pass --evidence "证据/<slug>/<日期>-qualify.json"
-
-# disqualified:reason 写决定性缺口(哪一项、差多少);income-score 与 g6-passed-lines
-# v3 必须与 assessment 派生结果一致；仅历史 v1/v2 可选
-python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
-  --slug <slug> --to disqualified --by xinci-qualify --score <N> \
-  --income-score <1-20> --g6-passed-lines <实际通过者> \
-  --gates G6=pass,G7=pass,G8=pass --evidence "证据/<slug>/<日期>-qualify.json" \
-  --reason "<决定性缺口:哪一项、差多少>"
+python3 xinci-workflow/xinci-core/scripts/qualification.py <观察文件路径> \
+  --evidence-ref "证据/<slug>/<日期>-qualify.json"
 ```
+连续运行加 `--by xinci-run --run-id <活动会话>`。输出 `registrar_argv` 是参数数组，不是已执行命令；补齐 `missing_arguments`（业务理由、暂缓复核日期），核对输入状态与授权后交 registrar。hold 暂缓仅保留状态，不执行 defer-qualify；其余出口遵守本 Skill 输入边界。
+9. **执行并收尾。** 单步用户确认后提交；连续模式按既有启动授权提交，再按通用约定写清单。脚本只生成提案，registrar 仍执行全部证据、状态与权限校验。
 
 ## 硬规则
 

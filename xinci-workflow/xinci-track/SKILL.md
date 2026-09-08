@@ -21,7 +21,9 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py reopen \
 
 重开后状态回到 captured、旧窗口闸门清空,后续交 xinci-scan 重跑完整初筛。G0/G4/G5 结构性否决不可重开;本入口不接受 mature。
 
-## 工作流
+## 追踪共用操作
+
+以下操作由 new 道的 xinci-track 与 mature 道的 xinci-mature 共用；输入与 `--by` 按通用约定的 lane 边界，复用操作不转移候选所有权。
 
 1. **重跑 G1,同批零成本重核 G0。** 真浏览器搜精确词(美区桌面未登录)。判据与站点簇反事实见闸门契约 G1;环境不合规时只记带环境说明的观察,不写 G1 gates、不据此转移,候选留在 `tracking`。G0 或 G1 翻转 → 提议 `rejected`。
 2. **看 SERP 变化(G2/G3 复看)。** 对照上次观察读完整首页,按"做什么"分类。完整复核六条 `g6_tentative_lines`,占位否决是否生效按闸门契约 G3「前置:G3 的否决只对"靠自然位吃流量"的模式生效」;六条适用线全部 `tentative_veto` 时按生命周期契约 rejected 边第⑦种提议 `rejected`。
@@ -29,7 +31,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py reopen \
 3. **看命名定型。** 回访来源社区:叫法统一了还是分裂了?aliases 有没有胜出者?
 4. **看需求形成信号。** 自动补全、首批 Semrush 行、讨论增长。Semrush 探针仅限 `tracking` 状态(按状态判不按年龄)、仅限能改变决策的查询;查了改变不了提议的,不查。
    观察必写 `naming_status=unstable|stabilized` 与 `formation_signals`,合法取值 `autocomplete / semrush_rows / sustained_discussion / repeated_independent_queries`,无信号写空数组,不得用叙述性乐观判断替代。
-   来源新暴露 G6 结构事实时写 `g6_entry_veto`,出口边界见生命周期契约「G6 结构事实的出口边界」。
+   新 G6 事实按闸门契约逐线记录；计数缺口记 points 与未知，不写历史 official_count_class 入口否决。其他结构事实的出口见生命周期契约。
 5. **对照 expiry 与失效条件。** 命中或已过 → 如实报告,不许沉默跳过。
 6. **写观察文件并登记复查。** `证据/<slug>/<日期>-track.json`,`schema_version: 3`。`gates` 只列本次实际重跑且证据合规的门(G1=`veto` 时须带 `cluster_counterfactual=atomic_only`);`g6_tentative_lines` 写本次逐线暂定结论;`source_urls` 列实际打开的页面。
    历史只含两线的观察只证明当时那两线,不能冒充其余四线已否决。仅登记不转移用 checked;随后 transition 提交 gates 时复用这份观察作 `--evidence`,registrar 逐门核对。
