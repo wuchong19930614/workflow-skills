@@ -5,7 +5,8 @@ import json
 import sys
 from pathlib import Path
 
-from _common import is_http_url
+import data_root
+from _common import is_http_url, load_ledger
 from _constants import MONETIZATION_LINES
 
 # 数值只由 Schema 定义；文档展示值另由契约一致性检查核对。
@@ -90,7 +91,7 @@ def assess(obs):
             "income_score": scores["income"], "g6_passed_lines": passed}
 
 
-def submission_proposal(obs, evidence_ref, by="xinci-qualify", run_id=None):
+def submission_proposal(obs, evidence_ref, by="xinci-qualify", run_id=None, *, current_state):
     """只生成参数，不执行、不推断授权、复核日期或业务理由。"""
     ref = Path(evidence_ref)
     require(not ref.is_absolute() and ".." not in ref.parts
@@ -98,7 +99,14 @@ def submission_proposal(obs, evidence_ref, by="xinci-qualify", run_id=None):
             and ref.name.endswith("-qualify.json"), "提交证据须为该候选的数据区相对观察路径")
     require(by in {"xinci-qualify", "xinci-run"}, "认定执行者必须是 xinci-qualify 或 xinci-run")
     require(bool(run_id) == (by == "xinci-run"), "连续模式必须带 run_id，单步模式不得带 run_id")
+    require(current_state in {"formation_confirmed", "hold"}, "认定提案只接受 formation_confirmed 或 hold")
     result = assess(obs)
+    if current_state == "hold" and result["outcome"] != "disqualified":
+        return {"result": result, "current_state": current_state, "registrar_argv": [],
+                "missing_arguments": [], "executed": False,
+                "next_action": "交回 xinci-decide 重出决策" if result["outcome"] == "qualified"
+                               else "保留 hold，记录证据缺口与复核条件",
+                "boundary": "不转移、不调用 defer-qualify；不覆盖既有分数与历史。"}
     command = "defer-qualify" if result["outcome"] == "defer" else "transition"
     argv = [command, "--slug", obs["slug"], "--by", by, "--evidence", evidence_ref]
     if run_id:
@@ -119,7 +127,7 @@ def submission_proposal(obs, evidence_ref, by="xinci-qualify", run_id=None):
                      "--g6-passed-lines", ",".join(result["g6_passed_lines"])]
         if result["outcome"] == "disqualified":
             missing = ["--reason"]
-    return {"result": result, "registrar_argv": argv, "missing_arguments": missing,
+    return {"result": result, "current_state": current_state, "registrar_argv": argv, "missing_arguments": missing,
             "executed": False,
             "boundary": "仅提案；提交前核对当前状态与授权。hold 暂缓不调用 defer-qualify。"}
 
@@ -127,6 +135,7 @@ def submission_proposal(obs, evidence_ref, by="xinci-qualify", run_id=None):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("observation", type=Path)
+    parser.add_argument("--data-root", help="生成提案时读取当前账本状态")
     parser.add_argument("--evidence-ref", help="生成提交提案；数据区相对观察路径")
     parser.add_argument("--by", choices=["xinci-qualify", "xinci-run"], default="xinci-qualify")
     parser.add_argument("--run-id")
@@ -141,8 +150,16 @@ def main(argv=None):
         if args.evidence_ref:
             require(Path(args.evidence_ref).name == args.observation.name,
                     "提交引用与输入观察文件名必须一致")
-        result = (submission_proposal(obs, args.evidence_ref, args.by, args.run_id)
-                  if args.evidence_ref else assess(obs))
+        if args.evidence_ref:
+            root = data_root.resolve_or_exit(args.data_root)
+            require((Path(root) / args.evidence_ref).resolve() == args.observation.resolve(),
+                    "提交引用与输入观察文件路径必须一致")
+            rec = load_ledger(root).get("candidates", {}).get(obs["slug"])
+            require(isinstance(rec, dict), "候选不在当前账本中")
+            result = submission_proposal(obs, args.evidence_ref, args.by, args.run_id,
+                                         current_state=rec.get("state"))
+        else:
+            result = assess(obs)
     except (OSError, ValueError, registrar.RegistrarError) as exc:
         print(f"认定校验拒绝: {exc}", file=sys.stderr)
         return 2

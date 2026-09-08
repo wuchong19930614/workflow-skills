@@ -84,7 +84,7 @@ rejected            fast_grab_ready              rejected           qualified / 
 | `run_policy.py` | 由预检、积压、停滞、来源轮换计算 full / trigger_only / debt_only / paused |
 | `run_state.py` / `run_manifest.py` | 运行会话与运行清单的契约与原子写入;`correct-note` 给已写清单追加更正,不改原文 |
 | `validate_ledger.py` | 账本不变式 + 运行清单格式校验,有错非零退出 |
-| `report_status.py` | 只读状态汇报 |
+| `report_status.py` | 默认汇总与非终态明细；`--all` 展开历史，`--json` 保留完整只读报告 |
 | `data_root.py` / `init_workspace.py` | 数据区定位与初始化 |
 | `build_decision_html.py` | 决策书 md → html |
 | `tracking_schedule.py` / `false_negative_sample.py` | 追踪提示 / 校准轮抽样 |

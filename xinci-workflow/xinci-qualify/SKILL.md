@@ -22,7 +22,7 @@ description: '对已进入形成确认(formation_confirmed)的 new 或 mature �
 4. **G8 簇广度(硬门)。** 枚举意图簇:合计 ≥3 个任务型查询、分布在 ≥2 个独立 family(不是每族各 3 条),合并表述性变体,不许同义改写凑数。达不到即 disqualified;pilot 由决策阶段页面地图触发,不是 G8 的降级出口。
 5. **完整竞争审计。** 真浏览器读核心任务查询的完整 top-10(到第二页或质量断层),按"做什么"分类。占位否决是否生效按闸门契约 G3「前置」,用本次第 2 步的正式 G6 结论,不继承扫描期暂定线;数工具用问句式 + 产品向两族措辞各检索一次。
    调查至少一个竞品 footprint；覆盖不足时按证据判定契约取替代证据。补齐 SEO 查询与任务缺口，不以买量或直销代替自然搜索入口。
-6. **评分。** 按评分契约六维打分,红队反驳并扣分。硬否决后不产生分数;`income_score` 必须 1–20。
+6. **复核后评分。** 先按证据判定契约「评分前的证据复核」核对既有商业假设和扣分归属，再按评分契约六维打分、红队扣分；疑似一次性任务误罚、代理报价或覆盖缺口时参考「样本纠偏示例」。硬否决后不产生分数;`income_score` 必须 1–20。
 7. **写观察文件并提议。** `证据/<slug>/<日期>-qualify.json`,`schema_version: 3`:assessment（字段见证据判定契约）、竞争分类清单、footprint 或替代证据;`gates` 只写实测结论，硬否决写对应 veto，不照抄 pass,`g6_lines` 完整写六条 `pass|veto|N/A|inconclusive`,可评分时 `income_score` 写收入维度分，暂缓或硬否决时省略,`source_urls` 非空。
    向用户提议 qualified(附总分、`income_score`、通过线)或 disqualified(附决定性缺口:哪一项、差多少;两种出口都必须随 transition 提交本次 observation,不能只写 reason)。
    **第三个出口:认定暂缓。** 存在未解决的决定性证据缺口（访问失败、数据不覆盖或未核实假设，且没有足够替代证据）时不出分、不出结论,按证据判定契约走:
@@ -40,7 +40,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py defer-qualify \
 python3 xinci-workflow/xinci-core/scripts/qualification.py <观察文件路径> \
   --evidence-ref "证据/<slug>/<日期>-qualify.json"
 ```
-连续运行加 `--by xinci-run --run-id <活动会话>`。输出 `registrar_argv` 是参数数组，不是已执行命令；补齐 `missing_arguments`（业务理由、暂缓复核日期），核对输入状态与授权后交 registrar。hold 暂缓仅保留状态，不执行 defer-qualify；其余出口遵守本 Skill 输入边界。
+连续运行加 `--by xinci-run --run-id <活动会话>`。脚本从当前数据区账本读取状态（可用 `--data-root` 指定）；输出 `registrar_argv` 是参数数组，不是已执行命令。数组为空时按 `next_action` 保持 hold 并交回决策或记录缺口，不提交转移。非空时补齐 `missing_arguments`（业务理由、暂缓复核日期），核对输入状态与授权后交 registrar。提案不替代提交时 registrar 对当前状态与授权的再次校验。
 9. **执行并收尾。** 单步用户确认后提交；连续模式按既有启动授权提交，再按通用约定写清单。脚本只生成提案，registrar 仍执行全部证据、状态与权限校验。
 
 ## 硬规则

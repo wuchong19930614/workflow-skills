@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """全局状态汇报(只读)。供 xinci-status 使用;只陈述事实,不推荐动作、不调度。
 
-输出:各状态计数;每候选的年龄天数、距上次复查天数、expiry 余量;
+输出:各状态计数;默认仅非终态候选明细，--all 展开历史;
 "expiry 已过且非终态"清单。--json 输出机器格式。
 """
 import argparse
@@ -66,15 +66,18 @@ def build_report(data_root):
             "recheck_due": recheck_due}
 
 
-def render_text(report) -> str:
+def render_text(report, *, all_candidates=False) -> str:
+    today = date.today()
     lines = ["== 各状态候选数 =="]
     if not report["counts"]:
         lines.append("(账本为空)")
     for state, n in sorted(report["counts"].items()):
         lines.append(f"{candidate_state_label(state)}：{n}")
     lines.append("")
-    lines.append("== 候选明细 ==")
+    lines.append("== 候选明细 ==" if all_candidates else "== 当前非终态候选 ==")
     for r in report["candidates"]:
+        if not all_candidates and r["state"] in TERMINAL:
+            continue
         exp = "无失效日" if r["expiry"] is None else f"失效日 {r['expiry']}（余 {r['expiry_days_left']} 天）"
         formation = ""
         if r["formation_eligible_date"]:
@@ -86,7 +89,7 @@ def render_text(report) -> str:
         if pending:
             left = (date.fromisoformat(pending["pending_until"]) - today).days
             formation += (f" | 认定暂缓至 {pending['pending_until']}"
-                          + ("（已到期，该按现有证据出结论）" if left < 0 else f"（余 {left} 天）")
+                          + ("（已到期，复核证据是否变化；仍不足可继续暂缓）" if left <= 0 else f"（余 {left} 天）")
                           + "，待补：" + "、".join(pending["pending_evidence"]))
         lines.append(f"【{candidate_state_label(r['state'])}】{r['slug']} — {r['term']} | 年龄 {r['age_days']} 天 | "
                      f"距上次复查 {r['days_since_checked']} 天 | {exp}{formation}")
@@ -100,6 +103,8 @@ def render_text(report) -> str:
         lines.append("== 可逆搜索结果页型否决已到复核日 ==")
         for slug in report["recheck_due"]:
             lines.append(f"- {slug}")
+    if not all_candidates:
+        lines.append("\n历史终态明细按需使用 --all；完整机器报告使用 --json。")
     return "\n".join(lines)
 
 
@@ -107,7 +112,8 @@ def main(argv=None):
     ap = argparse.ArgumentParser(description="xinci 全局状态汇报(只读)")
     ap.add_argument("--data-root", default=None,
                     help="数据区路径。不给则按 XINCI_DATA_ROOT 环境变量、再按仓库配置 .xinci-data-root 解析;都没有则拒绝执行并提示先问用户")
-    ap.add_argument("--json", action="store_true")
+    ap.add_argument("--json", action="store_true", help="完整机器报告，保留所有候选")
+    ap.add_argument("--all", action="store_true", help="文本展开全部候选，包括终态")
     a = ap.parse_args(argv)
     # 数据区未配置时在这里就停,并打印「先问用户」的指引,
     # 不让空路径流进下游写操作(理由见 data_root.py)。
@@ -117,7 +123,7 @@ def main(argv=None):
     except FileNotFoundError as e:
         print(str(e), file=sys.stderr)
         return 1
-    print(json.dumps(report, ensure_ascii=False, indent=2) if a.json else render_text(report))
+    print(json.dumps(report, ensure_ascii=False, indent=2) if a.json else render_text(report, all_candidates=a.all))
     return 0
 
 

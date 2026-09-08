@@ -46,7 +46,7 @@ class QualificationTest(unittest.TestCase):
                         obs["assessment"]["evidence_gaps"] = [{"item": "market", "kind": "coverage",
                             "decisive": True, "resolved": False, "reason": "缺决定性证据"}]
                 before = copy.deepcopy(obs)
-                proposal = Q.submission_proposal(obs, ref, "xinci-run", "run-test")
+                proposal = Q.submission_proposal(obs, ref, "xinci-run", "run-test", current_state="formation_confirmed")
                 argv = proposal["registrar_argv"]
                 parser = argparse.ArgumentParser()
                 for flag, options in R.CLI_SPEC[argv[0]][1]:
@@ -76,7 +76,53 @@ class QualificationTest(unittest.TestCase):
                                 ("证据/report/2026-09-07-qualify.json", "xinci-run", None),
                                 ("证据/report/2026-09-07-qualify.json", "xinci-qualify", "run-test")]:
             with self.subTest(ref=ref, by=by), self.assertRaises(ValueError):
-                Q.submission_proposal(observation(), ref, by, run_id)
+                Q.submission_proposal(observation(), ref, by, run_id, current_state="formation_confirmed")
+
+    def test_cli_proposal_reads_live_state_and_does_not_mutate_ledger(self):
+        import contextlib
+        import io
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            ref = "证据/report/2026-09-07-qualify.json"
+            path = root / ref
+            path.parent.mkdir(parents=True)
+            path.write_text(json.dumps(observation()))
+            ledger = root / "账本/候选账本.json"
+            ledger.parent.mkdir()
+            for state in ("formation_confirmed", "hold", "rejected"):
+                ledger.write_text(json.dumps({"candidates": {"report": {"state": state}}}))
+                before = ledger.read_bytes()
+                stdout, stderr = io.StringIO(), io.StringIO()
+                with contextlib.redirect_stdout(stdout), contextlib.redirect_stderr(stderr):
+                    code = Q.main([str(path), "--evidence-ref", ref, "--data-root", str(root)])
+                self.assertEqual(ledger.read_bytes(), before)
+                if state == "rejected":
+                    self.assertEqual(code, 2)
+                else:
+                    self.assertEqual(code, 0, stderr.getvalue())
+                    result = json.loads(stdout.getvalue())
+                    self.assertEqual(result["current_state"], state)
+                    self.assertEqual(bool(result["registrar_argv"]), state == "formation_confirmed")
+
+    def test_hold_proposal_only_transitions_on_disqualification(self):
+        ref = "证据/report/2026-09-07-qualify.json"
+        obs = observation()
+        passed = Q.submission_proposal(obs, ref, current_state="hold")
+        self.assertEqual(passed["registrar_argv"], [])
+        self.assertIn("xinci-decide", passed["next_action"])
+        obs["assessment"]["scores"]["competition"] = 10
+        failed = Q.submission_proposal(obs, ref, current_state="hold")
+        self.assertEqual(failed["registrar_argv"][failed["registrar_argv"].index("--to") + 1], "disqualified")
+        obs.pop("income_score")
+        obs["assessment"].update(scores=None, seo=None, evidence_gaps=[{
+            "item": "market", "kind": "coverage", "decisive": True,
+            "resolved": False, "reason": "缺决定性证据"}])
+        pending = Q.submission_proposal(obs, ref, current_state="hold")
+        self.assertEqual(pending["registrar_argv"], [])
+        self.assertEqual(pending["missing_arguments"], [])
+        for state in ("captured", "qualified", "disqualified", None):
+            with self.subTest(state=state), self.assertRaises(ValueError):
+                Q.submission_proposal(obs, ref, current_state=state)
 
     def test_low_income_score_does_not_imply_total_below_threshold(self):
         obs = observation()

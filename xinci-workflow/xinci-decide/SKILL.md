@@ -17,7 +17,7 @@ description: '对已认定(qualified)或搁置待议(hold)的 new 或 mature 候
 3. **收入三情景。** downside / base / upside，引用公共证据契约的 income 记录，只补情景变化与新增依据。沿用认定时实际通过的盈利线，不换线绕门；假设变化使原认定不成立时交回认定重审。
 4. **风险清单。** 技术可行性、合规、免费与付费替代、维护负担、数据/API 成本。
 5. **红队复核。** 换立场反驳整个决策一轮,成立的反驳如实写入。
-6. **先提议决策。** go(`build_ready` / `pilot_ready`)才按「双格式约定」写 md+html 决策书,用户确认后执行;no-go(`hold` / `no_site`)不写决策书、不带 decision-ref,只提交 `--reason`。随后按通用约定写运行清单(`--skill xinci-decide`)。
+6. **先提议决策。** go(`build_ready` / `pilot_ready`)才按「双格式约定」写 md+html 决策书,按通用约定的当前运行模式授权执行;no-go(`hold` / `no_site`)不写决策书、不带 decision-ref,只提交 `--reason`。随后按通用约定收尾：单步写阶段清单，连续模式汇入 record-round。
 ```bash
 python3 xinci-workflow/xinci-core/scripts/registrar.py transition \
   --slug <slug> --to build_ready --by xinci-decide --decision-ref "决策书/<slug>.md" --play single_domain

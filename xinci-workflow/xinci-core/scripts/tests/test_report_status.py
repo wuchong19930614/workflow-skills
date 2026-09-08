@@ -58,6 +58,31 @@ class ReportStatusTest(unittest.TestCase):
         rows = {r["slug"]: r for r in S.build_report(self.root)["candidates"]}
         self.assertIsNone(rows["dead-two"]["formation_eligible_date"])
 
+    def test_default_hides_terminal_details_but_preserves_counts_and_json_rows(self):
+        self._mk("dead-one", state="rejected")
+        self._mk("live-one")
+        report = S.build_report(self.root)
+        text = S.render_text(report)
+        self.assertIn("live-one", text)
+        self.assertNotIn("【已淘汰】dead-one", text)
+        self.assertNotIn("dead-one —", text)
+        self.assertIn("dead-one —", S.render_text(report, all_candidates=True))
+        self.assertEqual(len(report["candidates"]), 2)
+        self.assertEqual(report["counts"]["rejected"], 1)
+
+    def test_pending_due_date_renders_without_forcing_a_verdict(self):
+        self._mk("pending-one")
+        report = S.build_report(self.root)
+        for offset in (-1, 0, 1):
+            report["candidates"][0]["qualify_pending"] = {
+                "pending_until": (date.today() + timedelta(days=offset)).isoformat(),
+                "pending_evidence": ["市场证据"]}
+            text = S.render_text(report)
+            self.assertIn("市场证据", text)
+            self.assertNotIn("该按现有证据出结论", text)
+            if offset <= 0:
+                self.assertIn("仍不足可继续暂缓", text)
+
     def test_missing_ledger_raises(self):
         with self.assertRaises(FileNotFoundError):
             S.build_report(self.root / "不存在")
