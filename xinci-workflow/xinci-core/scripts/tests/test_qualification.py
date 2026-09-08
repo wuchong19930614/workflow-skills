@@ -28,6 +28,42 @@ def observation():
 
 
 class QualificationTest(unittest.TestCase):
+    def test_scan_and_track_cannot_publish_formal_g6_but_legacy_is_readable(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            for stage in ("scan", "track"):
+                with self.subTest(stage=stage):
+                    obs = observation()
+                    obs.pop("assessment")
+                    obs.pop("income_score")
+                    obs.update(stage=stage, gates={"G6": "pass"})
+                    obs["g6_lines"] = {k: "N/A" if v == "inconclusive" else v
+                                       for k, v in obs["g6_lines"].items()}
+                    path = Path(tmp) / f"2026-09-07-{stage}.json"
+                    path.write_text(json.dumps(obs))
+                    with self.assertRaisesRegex(R.RegistrarError, "不得产生正式 G6"):
+                        R._check_observation(path, path.name, "report")
+                    obs["schema_version"] = 2
+                    path.write_text(json.dumps(obs))
+                    R._check_observation(path, path.name, "report")
+                    obs["schema_version"] = 3
+                    obs["g6_tentative_lines"] = {k: "N/A" if v == "N/A" else "tentative_" + v
+                                                 for k, v in obs.pop("g6_lines").items()}
+                    obs["gates"] = {"G3": "pass"}
+                    path.write_text(json.dumps(obs))
+                    R._check_observation(path, path.name, "report")
+
+    def test_missing_advertising_estimate_can_defer_or_allow_other_line(self):
+        obs = observation()
+        obs["g6_lines"]["advertising"] = "inconclusive"
+        self.assertEqual(Q.assess(obs)["outcome"], "qualified")
+        obs["g6_lines"]["paid_report"] = "veto"
+        obs["gates"] = {"G7": "pass", "G8": "pass"}
+        obs.pop("income_score")
+        obs["assessment"].update(scores=None, seo=None, evidence_gaps=[{
+            "item": "advertising estimate", "kind": "coverage", "decisive": True,
+            "resolved": False, "reason": "量级来源未取得，尚不能证明广告收入达标或不足"}])
+        self.assertEqual(Q.assess(obs)["outcome"], "defer")
+
     def test_one_off_report_can_qualify_with_other_lines_unknown(self):
         result = Q.assess(observation())
         self.assertEqual(result, {"outcome": "qualified", "score": 90,
@@ -155,6 +191,12 @@ class QualificationTest(unittest.TestCase):
         self.assertTrue(list(validator.iter_errors(obs)))
         obs["g6_lines"] = {k: "N/A" if v == "inconclusive" else v for k, v in obs["g6_lines"].items()}
         self.assertEqual(list(validator.iter_errors(obs)), [])
+        for stage in ("scan", "track"):
+            obs["stage"] = stage
+            self.assertEqual(list(validator.iter_errors(obs)), [])  # v2 remains readable
+            obs["schema_version"] = 3
+            self.assertTrue(list(validator.iter_errors(obs)))
+            obs["schema_version"] = 2
 
     def test_offline_audit_reports_review_candidates_without_mutation(self):
         import audit_rejections

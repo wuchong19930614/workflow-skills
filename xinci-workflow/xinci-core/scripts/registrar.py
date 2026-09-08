@@ -331,6 +331,9 @@ def _check_observation(path: Path, ref: str, slug) -> None:
         _require(g6_tentative_lines is not None,
                  f"scan/track 观察提交 G3 时必须同时写 g6_tentative_lines: {ref}")
     if obs.get("schema_version", 1) >= 3:
+        if obs["stage"] in {"scan", "track"}:
+            _require(g6_lines is None and "G6" not in gates,
+                     "scan/track 仅提交暂定盈利线，不得产生正式 G6")
         if "G6" in gates:
             _require(g6_lines is not None, "正式 G6 结论必须提供完整逐线证据")
         if g6_lines is not None and gates.get("G6") == "veto":
