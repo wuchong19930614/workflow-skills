@@ -65,6 +65,45 @@ class BuildReportTest(unittest.TestCase):
             with self.assertRaises(B.ReportError):
                 B.build(root, "s")
 
+    def test_dr_missing_is_disclosed_not_counted_as_zero(self):
+        """dr 全为 null 时不得报'0 个 DR>=50',必须说明 DR 未取——否则报告会与 verify 判定矛盾。"""
+        with TmpRoot() as root:
+            slug = "null-dr"
+            ev = write_obs(root, slug, "2026-09-10-scan.json")
+            L.register(root, slug=slug, primary_keyword="null dr", cluster=dict(CLUSTER, total_volume=120000),
+                       seed=SEED, proxy=PROXY, evidence=[ev], by="t", reason="r")
+            vo = dict(VERIFY_OBS)
+            vo["serp_top10"] = [
+                {"pos": 1, "domain": "a.com", "dr": None, "type": "tool", "completes_task": True, "dated": None},
+                {"pos": 2, "domain": "b.com", "dr": None, "type": "forum", "completes_task": False, "dated": None},
+            ]
+            vev = write_obs(root, slug, "2026-09-11-verify.json", **vo)
+            L.transition(root, slug, to="verified", evidence=[vev], by="t", reason="r",
+                         form="tool", revenue=dict(REVENUE, base=640))
+            text = B.build(root, slug).read_text(encoding="utf-8")
+            # 允许出现"0 个",但必须紧跟披露行,否则报告会与 verify 判定矛盾
+            self.assertIn("DR 未取", text)
+            self.assertIn("a.com", text)
+            self.assertIn("K 值以 verify 观察的结论为准", text)
+
+    def test_known_dr_counted_normally(self):
+        with TmpRoot() as root:
+            slug = "known-dr"
+            ev = write_obs(root, slug, "2026-09-10-scan.json")
+            L.register(root, slug=slug, primary_keyword="known dr", cluster=dict(CLUSTER, total_volume=120000),
+                       seed=SEED, proxy=PROXY, evidence=[ev], by="t", reason="r")
+            vo = dict(VERIFY_OBS)
+            vo["serp_top10"] = [
+                {"pos": 1, "domain": "big.com", "dr": 84, "type": "tool", "completes_task": True, "dated": "2026-06"},
+                {"pos": 2, "domain": "small.com", "dr": 28, "type": "tool", "completes_task": True, "dated": "2026-05"},
+            ]
+            vev = write_obs(root, slug, "2026-09-11-verify.json", **vo)
+            L.transition(root, slug, to="verified", evidence=[vev], by="t", reason="r",
+                         form="tool", revenue=dict(REVENUE, base=640))
+            text = B.build(root, slug).read_text(encoding="utf-8")
+            self.assertIn("**1** 个（big.com）", text)
+            self.assertNotIn("DR 未取", text)
+
     def test_uses_latest_verify_observation(self):
         with TmpRoot() as root:
             slug = verified(root)

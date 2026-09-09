@@ -37,7 +37,9 @@ def render(rec, scan_obs, verify_obs) -> str:
     top10 = verify_obs.get("serp_top10") or []
     scope = verify_obs.get("scope_recheck") or {}
     preview = scan_obs.get("semrush_preview") or {}
-    strong = [r for r in top10 if r.get("completes_task") and (r.get("dr") or 0) >= 50]
+    strong = [r for r in top10 if r.get("completes_task")
+              and isinstance(r.get("dr"), (int, float)) and r["dr"] >= 50]
+    unknown_dr = [r for r in top10 if r.get("completes_task") and r.get("dr") is None]
     play = "single_domain" if cluster["total_volume"] < PLAY_SINGLE_MAX else "cluster_expansion"
     lines = [f"# 机会报告：{rec['primary_keyword']}", "",
              f"- slug：`{slug}`", f"- 状态：{rec['state']}", f"- 生成依据：{verify_obs.get('observed_at')} 的 verify 观察", ""]
@@ -63,8 +65,11 @@ def render(rec, scan_obs, verify_obs) -> str:
     for r in top10:
         lines.append(f"| {r.get('pos')} | {r.get('domain')} | {r.get('dr')} | {r.get('type')} | "
                      f"{'是' if r.get('completes_task') else '否'} | {r.get('dated') or '-'} |")
-    lines += ["", f"- 完整完成任务且 DR ≥ 50 的结果：**{len(strong)}** 个（{', '.join(r['domain'] for r in strong) or '无'}）",
-              f"- 第二页：{verify_obs.get('page2_note', '-')}", ""]
+    lines += ["", f"- 完整完成任务且 DR ≥ 50 的结果：**{len(strong)}** 个（{', '.join(r['domain'] for r in strong) or '无'}）"]
+    if unknown_dr:
+        lines.append(f"- 另有 {len(unknown_dr)} 条完成任务但 **DR 未取**（{', '.join(r['domain'] for r in unknown_dr)}）："
+                     f"上面这个计数只覆盖已实测 DR 的结果，G3 的 K 值以 verify 观察的结论为准")
+    lines += [f"- 第二页：{verify_obs.get('page2_note', '-')}", ""]
     lines += ["## 5. AI Overview 状态", "",
               ("- 无 AI Overview" if not aio.get("present") else
                f"- 有，**未完成任务**；要点：{aio.get('excerpt', '-')}"), ""]
@@ -87,7 +92,8 @@ def render(rec, scan_obs, verify_obs) -> str:
               f"- play：**{play}**（簇量 {'<' if play == 'single_domain' else '≥'} {_fmt(PLAY_SINGLE_MAX)}）",
               "- 风险：",
               f"  1. AI Overview：{'存在，可能继续扩展覆盖' if aio.get('present') else '暂无，可能出现'}",
-              f"  2. 强占位：{len(strong)} 个 DR ≥ 50 的完整答案",
+              f"  2. 强占位：{len(strong)} 个 DR ≥ 50 的完整答案"
+              + (f"，另有 {len(unknown_dr)} 条 DR 未取" if unknown_dr else ""),
               f"  3. 季节性：{verify_obs.get('trends_12m', '-')}",
               "- 下一步是人的动作：决定建站方式后再做页面地图；本报告不含域名与内容大纲。", ""]
     if verify_obs.get("points"):
