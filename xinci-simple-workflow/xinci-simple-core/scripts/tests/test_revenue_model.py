@@ -15,6 +15,12 @@ class RevenueModelTest(unittest.TestCase):
         self.assertAlmostEqual(r["downside"], 250, delta=1)
         self.assertAlmostEqual(r["upside"], 750, delta=1)
         self.assertEqual(r["assumptions_version"], M.VERSION)
+        self.assertEqual(r["threshold"], M.THRESHOLD)
+
+    def test_threshold_is_200(self):
+        """2026-09-09 用户拍板:门槛由 500 降为 200。"""
+        self.assertEqual(M.THRESHOLD, 200)
+        self.assertEqual(M.VERSION, "2026-09-09.2")
 
     def test_lookup_home_rpm(self):
         r = M.model("lookup", 100000, niche="home")
@@ -45,13 +51,22 @@ class RevenueModelTest(unittest.TestCase):
                                plain * 0.6 * 0.7, places=2)
 
     def test_threshold_boundary(self):
-        self.assertFalse(M.passes({"base": 499.99}))
-        self.assertTrue(M.passes({"base": 500}))
+        self.assertFalse(M.passes({"base": M.THRESHOLD - 0.01}))
+        self.assertTrue(M.passes({"base": M.THRESHOLD}))
+        # 旧门槛下过不了、新门槛下过得了的真实候选:wire size(base 234.59)
+        self.assertTrue(M.passes({"base": 234.59}))
 
     def test_volume_needed_roundtrip(self):
         r = M.model("info", 100000, aio_present=True, strong_complete_count=1)
-        again = M.model("info", r["volume_needed_for_500"], aio_present=True, strong_complete_count=1)
-        self.assertAlmostEqual(again["base"], 500, delta=1)
+        again = M.model("info", r["volume_needed_for_threshold"], aio_present=True, strong_complete_count=1)
+        self.assertAlmostEqual(again["base"], M.THRESHOLD, delta=1)
+
+    def test_wire_size_case_passes_under_new_threshold(self):
+        """首跑实测:wire size 310,300 / tool / home / AIO 折减 / K=1 → base 234.59,新门槛下过线。"""
+        r = M.model("tool", 310300, niche="home", aio_present=True, strong_complete_count=1)
+        self.assertAlmostEqual(r["base"], 234.59, delta=0.5)
+        self.assertTrue(r["base"] >= M.THRESHOLD)
+        self.assertAlmostEqual(r["volume_needed_for_threshold"], 264550, delta=600)
 
     def test_invalid_form_and_volume(self):
         with self.assertRaises(ValueError):

@@ -30,9 +30,9 @@
     "form": {"enum": ["info", "lookup", "tool", "commercial", "mixed", null]},
     "revenue": {
       "type": ["object", "null"],
-      "required": ["downside", "base", "upside", "volume_needed_for_500", "assumptions_version"],
+      "required": ["downside", "base", "upside", "volume_needed_for_threshold", "threshold", "assumptions_version"],
       "properties": {"downside": {"type": "number"}, "base": {"type": "number"}, "upside": {"type": "number"},
-                     "volume_needed_for_500": {"type": "integer"}, "assumptions_version": {"type": "string"},
+                     "volume_needed_for_threshold": {"type": "integer"}, "threshold": {"type": "number"}, "assumptions_version": {"type": "string"},
                      "inputs": {"type": "object"}}
     },
     "evidence_refs": {"type": "array", "items": {"type": "string"}, "minItems": 1},

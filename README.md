@@ -19,7 +19,7 @@
 
 ## xinci-simple-workflow（流量型选词）
 
-2026-09-09 起新增的第二套工作流：从已有真实搜索量的英文词里找守得弱、AI Overview 吃不掉、base case ≥ $500/月 的主题簇，产出机会报告。与 xinci 新词工作流零运行时依赖、数据区独立。入口见 [xinci-simple-workflow/README.md](xinci-simple-workflow/README.md)。
+2026-09-09 起新增的第二套工作流：从已有真实搜索量的英文词里找守得弱、AI Overview 吃不掉、base case ≥ $200/月 的主题簇，产出机会报告。与 xinci 新词工作流零运行时依赖、数据区独立。入口见 [xinci-simple-workflow/README.md](xinci-simple-workflow/README.md)。
 
 | 单元 | 职责 |
 | --- | --- |

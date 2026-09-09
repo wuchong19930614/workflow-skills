@@ -7,14 +7,15 @@ base 公式(选词契约 §收入模型):
   commercial:  簇量 × CTR 0.07 × 0.15 × 0.03 × 30
   mixed:       min(info, commercial)
 折减(乘在 CTR 上):AIO 存在未完成 ×0.6;强完整结果 1–2 个 ×0.7。
-downside = CTR ×0.5;upside = CTR ×1.5。threshold = 500。
+downside = CTR ×0.5;upside = CTR ×1.5。
+门槛 THRESHOLD 由用户拍板,改它必须同时改 VERSION(见 选词契约.md §6.4 变更记录)。
 """
 import argparse
 import json
 import sys
 
-VERSION = "2026-09-09"
-THRESHOLD = 500
+VERSION = "2026-09-09.2"
+THRESHOLD = 200  # 2026-09-09 用户拍板由 500 降为 200(依据:首跑 6 个候选实测,见 §6.5)
 FORMS = ("info", "lookup", "tool", "commercial", "mixed")
 RPM = {"tech": 10, "home": 18, "hobby": 12}
 CTR = {"info": 0.07, "lookup": 0.07, "tool": 0.10, "commercial": 0.07}
@@ -66,7 +67,8 @@ def model(form, cluster_volume, niche="tech", aio_present=False, strong_complete
         "downside": round(f(cluster_volume, 0.5), 2),
         "base": round(base, 2),
         "upside": round(f(cluster_volume, 1.5), 2),
-        "volume_needed_for_500": int(round(THRESHOLD / per_unit)),
+        "volume_needed_for_threshold": int(round(THRESHOLD / per_unit)),
+        "threshold": THRESHOLD,
         "assumptions_version": VERSION,
         "inputs": {"form": form, "cluster_volume": cluster_volume, "niche": niche,
                    "aio_present": bool(aio_present), "strong_complete_count": strong_complete_count},

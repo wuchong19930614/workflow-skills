@@ -54,5 +54,5 @@ VERIFY_OBS = {
     "source_urls": ["https://www.google.com/search?q=heic+to+jpg+converter&gl=us&hl=en&pws=0"],
     "points": ["首屏 AIO 只罗列工具名"],
 }
-REVENUE = {"downside": 320, "base": 640, "upside": 960, "volume_needed_for_500": 142000,
-           "assumptions_version": "2026-09-09"}
+REVENUE = {"downside": 320, "base": 640, "upside": 960, "volume_needed_for_threshold": 56875,
+           "threshold": 200, "assumptions_version": "2026-09-09.2"}

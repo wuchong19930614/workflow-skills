@@ -8,6 +8,7 @@ import json
 import sys
 from pathlib import Path
 
+import revenue_model
 from _common import atomic_save, ledger_path, load_ledger, now
 
 STATES = ("found", "parked", "verified", "rejected")
@@ -17,7 +18,8 @@ LEGAL = {
     ("parked", "verified"), ("parked", "rejected"),
 }
 FORMS = ("info", "lookup", "tool", "commercial", "mixed")
-REVENUE_KEYS = ("downside", "base", "upside", "volume_needed_for_500", "assumptions_version")
+REVENUE_KEYS = ("downside", "base", "upside", "volume_needed_for_threshold", "threshold",
+                "assumptions_version")
 
 
 class LedgerError(Exception):
@@ -65,6 +67,43 @@ def register(root, *, slug, primary_keyword, cluster, seed, proxy, evidence, by,
     return rec
 
 
+def _check_revenue_threshold(revenue):
+    """base 必须达当前门槛,且记录里的 threshold 必须等于当前门槛(防止改小 threshold 绕过)。"""
+    th = revenue.get("threshold")
+    _require(th == revenue_model.THRESHOLD,
+             f"revenue.threshold 必须等于当前生效门槛 {revenue_model.THRESHOLD},当前 {th!r}")
+    _require(isinstance(revenue["base"], (int, float)) and revenue["base"] >= th,
+             f"verified 要求 revenue.base ≥ {th};不达标应转 rejected")
+
+
+def requalify(root, slug, *, evidence, by, reason, form, revenue) -> dict:
+    """判据变更后对 rejected 候选的受控翻案:rejected → verified。
+
+    普通 transition 不开这条边(rejected 是终态)。本入口只在门槛、假设表或范围排除
+    经用户拍板变更后使用,要求 reason 写明变更依据,并按新门槛重校 base。
+    """
+    ledger = load(root)
+    _require(slug in ledger["candidates"], f"候选不存在: {slug}")
+    rec = ledger["candidates"][slug]
+    _require(rec["state"] == "rejected", f"requalify 只对 rejected 开放,当前 {rec['state']}")
+    _require(by and reason and reason.strip(), "by 与 reason 必填")
+    _require(form in FORMS, f"requalify 要求 form ∈ {FORMS}")
+    _require(isinstance(revenue, dict) and all(k in revenue for k in REVENUE_KEYS),
+             f"requalify 要求 revenue 含 {REVENUE_KEYS}")
+    _check_evidence(root, evidence)
+    _check_revenue_threshold(revenue)
+    rec["form"] = form
+    rec["revenue"] = revenue
+    rec["state"] = "verified"
+    for ref in evidence:
+        if ref not in rec["evidence_refs"]:
+            rec["evidence_refs"].append(ref)
+    rec["history"].append({"at": now(), "from": "rejected", "to": "verified", "by": by,
+                           "reason": reason})
+    save(root, ledger)
+    return rec
+
+
 def transition(root, slug, *, to, evidence, by, reason, form=None, revenue=None) -> dict:
     ledger = load(root)
     _require(slug in ledger["candidates"], f"候选不存在: {slug}")
@@ -78,8 +117,7 @@ def transition(root, slug, *, to, evidence, by, reason, form=None, revenue=None)
         _require(form in FORMS, f"verified 要求 form ∈ {FORMS}")
         _require(isinstance(revenue, dict) and all(k in revenue for k in REVENUE_KEYS),
                  f"verified 要求 revenue 含 {REVENUE_KEYS}")
-        _require(isinstance(revenue["base"], (int, float)) and revenue["base"] >= 500,
-                 "verified 要求 revenue.base ≥ 500;不达标应转 rejected")
+        _check_revenue_threshold(revenue)
     if form is not None:
         _require(form in FORMS, f"form ∈ {FORMS}")
         rec["form"] = form
@@ -130,6 +168,13 @@ def main(argv=None):
     t.add_argument("--reason", required=True)
     t.add_argument("--form", default=None, choices=FORMS)
     t.add_argument("--revenue-json", default=None)
+    rq = sub.add_parser("requalify", help="判据变更后的受控翻案:rejected → verified")
+    rq.add_argument("--slug", required=True)
+    rq.add_argument("--evidence", action="append", required=True)
+    rq.add_argument("--by", required=True)
+    rq.add_argument("--reason", required=True)
+    rq.add_argument("--form", required=True, choices=FORMS)
+    rq.add_argument("--revenue-json", required=True)
     ls = sub.add_parser("list")
     ls.add_argument("--state", default=None, choices=STATES)
     a = ap.parse_args(argv)
@@ -147,6 +192,10 @@ def main(argv=None):
                              form=a.form,
                              revenue=_json_arg(a.revenue_json, "--revenue-json") if a.revenue_json else None)
             print(f"{rec['slug']}:{rec['history'][-2]['to']} → {rec['state']}")
+        elif a.cmd == "requalify":
+            rec = requalify(root, a.slug, evidence=a.evidence, by=a.by, reason=a.reason,
+                            form=a.form, revenue=_json_arg(a.revenue_json, "--revenue-json"))
+            print(f"{rec['slug']}:rejected → {rec['state']}(判据变更重审)")
         else:
             for rec in list_candidates(root, a.state):
                 score = (rec.get("proxy") or {}).get("rank_score")

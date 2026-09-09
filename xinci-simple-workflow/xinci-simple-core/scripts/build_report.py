@@ -78,7 +78,8 @@ def render(rec, scan_obs, verify_obs) -> str:
               "| 情景 | 月收入 |", "| --- | ---: |",
               f"| downside | ${_fmt(rev['downside'])} |", f"| **base** | **${_fmt(rev['base'])}** |",
               f"| upside | ${_fmt(rev['upside'])} |", "",
-              f"- 在当前假设下 base 到 $500 需要簇量：{_fmt(rev['volume_needed_for_500'])}", ""]
+              f"- 门槛：**${_fmt(rev['threshold'])}/月**",
+              f"- 在当前假设下 base 到门槛需要簇量：{_fmt(rev['volume_needed_for_threshold'])}", ""]
     lines += ["## 8. 范围排除复核", ""]
     for k, label in SCOPE_LABELS.items():
         lines.append(f"- [{'x' if not scope.get(k) else ' '}] {label}：{'未命中' if not scope.get(k) else '**命中**'}")

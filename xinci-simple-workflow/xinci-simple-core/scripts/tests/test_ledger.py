@@ -7,6 +7,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import ledger as L
+import revenue_model as M
 from helpers import TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE
 
 
@@ -81,6 +82,57 @@ class LedgerTest(unittest.TestCase):
                          form="info", revenue=REVENUE)
             rec = L.load(root)["candidates"][slug]
             self.assertEqual([h["to"] for h in rec["history"]], ["found", "parked", "verified"])
+
+    def test_verified_rejects_base_below_threshold(self):
+        with TmpRoot() as root:
+            slug = reg(root)
+            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
+            low = dict(REVENUE, base=M.THRESHOLD - 1)
+            with self.assertRaises(L.LedgerError):
+                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
+                             form="tool", revenue=low)
+
+    def test_verified_rejects_tampered_threshold(self):
+        """不许把记录里的 threshold 改小来绕过当前门槛。"""
+        with TmpRoot() as root:
+            slug = reg(root)
+            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
+            tampered = dict(REVENUE, base=10, threshold=1)
+            with self.assertRaises(L.LedgerError):
+                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
+                             form="tool", revenue=tampered)
+
+    def test_requalify_reopens_rejected_under_new_threshold(self):
+        """判据变更后的受控翻案:只走 requalify,transition 仍拒。"""
+        with TmpRoot() as root:
+            slug = reg(root)
+            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
+            L.transition(root, slug, to="rejected", evidence=[ev], by="x",
+                         reason="收入不足:base 234.59,差 265.41")
+            # 普通 transition 不给翻案
+            with self.assertRaises(L.LedgerError):
+                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
+                             form="tool", revenue=dict(REVENUE, base=234.59))
+            rec = L.requalify(root, slug, evidence=[ev], by="x",
+                              reason="判据变更重审:门槛 500→200,base 234.59 过线",
+                              form="tool", revenue=dict(REVENUE, base=234.59))
+            self.assertEqual(rec["state"], "verified")
+            self.assertEqual([h["to"] for h in rec["history"]], ["found", "rejected", "verified"])
+            self.assertIn("判据变更", rec["history"][-1]["reason"])
+
+    def test_requalify_only_from_rejected_and_needs_threshold(self):
+        with TmpRoot() as root:
+            slug = reg(root)
+            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
+            # found 不能 requalify
+            with self.assertRaises(L.LedgerError):
+                L.requalify(root, slug, evidence=[ev], by="x", reason="r",
+                            form="tool", revenue=REVENUE)
+            L.transition(root, slug, to="rejected", evidence=[ev], by="x", reason="G1")
+            # base 仍不达新门槛的不能翻
+            with self.assertRaises(L.LedgerError):
+                L.requalify(root, slug, evidence=[ev], by="x", reason="r",
+                            form="tool", revenue=dict(REVENUE, base=M.THRESHOLD - 1))
 
     def test_invalid_form_rejected(self):
         with TmpRoot() as root:

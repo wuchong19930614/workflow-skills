@@ -37,8 +37,8 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
 5. **出口**（契约 §6.4）：
    - 硬门否决 → `transition --to rejected`，reason 写"哪道门 + 现场看到什么"
    - 季节性 → `transition --to parked`，reason 写月份分布
-   - `base ≥ 500` → `transition --to verified --form <form> --revenue-json '<模型输出去掉 passes>'`，随后 `build_report.py --slug <slug>`
-   - `base < 500` → `transition --to rejected`，reason 写"收入不足：base $X，差 $Y"
+   - `base ≥ 200`（当前门槛，见契约 §6.4）→ `transition --to verified --form <form> --revenue-json '<模型输出去掉 passes>'`，随后 `build_report.py --slug <slug>`
+   - `base < 200` → `transition --to rejected`，reason 写"收入不足：base $X，差 $Y"
 6. **写运行清单**：`run_log.py`，Google 与 Semrush 打开的 URL 都记进 `--source-opened`；`--billable-calls` 只计 Semrush。
 7. **向用户报告**：每个候选一行——slug / 结论 / 决定性的门或 base / 报告路径。零通过如实说零。
 
@@ -49,6 +49,7 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
 - 代理指标（KD / AS / KGR）不能单独否决；否决只出自 G1 / G2 / G3 / 季节性 / 排除 / 收入五处。
 - 没通过就写 `rejected` 并给数字，不留 maybe、不留 `found` 等下次。
 - 报告只由 `build_report.py` 生成，不手写、不手改。
+- 门槛与假设表只能由用户变更。运行中发现门槛不合现实时，提交实测证据与提案，不自行改（判据变更后的翻案走 `ledger.py requalify`）。
 
 ## 命令模板
 
@@ -57,14 +58,14 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/rank.py --no-write --top
 
 python3 xinci-simple-workflow/xinci-simple-core/scripts/revenue_model.py \
   --form tool --cluster-volume 1600000 --niche tech --aio-present --strong-complete-count 1
-# → base $672(1.6M × CTR 0.10 × 0.6 × 0.7 ÷ 1000 × RPM $10);182K 的簇在同样折减下只有 $76,过不了线
+# → base $672(1.6M × CTR 0.10 × 0.6 × 0.7 ÷ 1000 × RPM $10)。当前门槛 $200:同样折减下 tool+tech 需簇量 476,190、tool+home 需 264,550
 
 python3 xinci-simple-workflow/xinci-simple-core/scripts/ledger.py transition \
   --slug heic-to-jpg-converter --to verified \
   --evidence "证据/heic-to-jpg-converter/2026-09-11-verify.json" --by xinci-simple-verify \
   --reason "G1 pass(AIO 只罗列工具名未做转换),G2 pass(首页 6 条小站内页),G3 K=1(cloudconvert),base $672" \
   --form tool \
-  --revenue-json '{"downside":336.0,"base":672.0,"upside":1008.0,"volume_needed_for_500":1190476,"assumptions_version":"2026-09-09","inputs":{"form":"tool","cluster_volume":1600000,"niche":"tech","aio_present":true,"strong_complete_count":1}}'
+  --revenue-json '{"downside":336.0,"base":672.0,"upside":1008.0,"volume_needed_for_threshold":476190,"threshold":200,"assumptions_version":"2026-09-09.2","inputs":{"form":"tool","cluster_volume":1600000,"niche":"tech","aio_present":true,"strong_complete_count":1}}'
 
 python3 xinci-simple-workflow/xinci-simple-core/scripts/build_report.py --slug heic-to-jpg-converter
 

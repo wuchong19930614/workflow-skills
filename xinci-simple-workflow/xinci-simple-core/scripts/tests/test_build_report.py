@@ -38,8 +38,8 @@ class BuildReportTest(unittest.TestCase):
             self.assertIn("120,000", text)
             self.assertIn("cloudconvert.com", text)
             self.assertIn("640", text)
-            self.assertIn("142,000", text)
-            self.assertIn("2026-09-09", text)
+            self.assertIn("56,875", text)
+            self.assertIn("2026-09-09.2", text)
             self.assertIn("lists converters", text)
             self.assertIn("single_domain", text)
 
