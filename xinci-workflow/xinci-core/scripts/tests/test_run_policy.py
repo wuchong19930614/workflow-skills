@@ -17,7 +17,7 @@ from test_registrar import mk_evidence as R_mk, GATES_SCREEN as R_GATES_SCREEN
 class RunPolicyTest(unittest.TestCase):
     def setUp(self):
         self._tmp = tempfile.TemporaryDirectory(); self.root = Path(self._tmp.name)
-        self.run = RC.start(self.root, max_rounds=5)
+        self.run = RC.start(self.root, schema_version=3, max_rounds=5)
 
     def tearDown(self): self._tmp.cleanup()
 
@@ -35,6 +35,8 @@ class RunPolicyTest(unittest.TestCase):
                        preflight=dict(self.PREFLIGHT_OK))
 
     def seed_ledger(self, rows):
+        for row in rows.values():
+            row.setdefault("first_observed_at", f"{date.today().isoformat()}T00:00:00+00:00")
         d = self.root / "账本"; d.mkdir(parents=True, exist_ok=True)
         (d / "候选账本.json").write_text(json.dumps({"candidates": rows}), encoding="utf-8")
 

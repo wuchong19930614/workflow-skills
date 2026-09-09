@@ -52,7 +52,7 @@ class ReportStatusTest(unittest.TestCase):
         self.assertEqual(row["formation_eligible_date"], "2026-08-27")
         text = S.render_text(S.build_report(self.root))
         self.assertIn("形成跨度", text)
-        self.assertIn("可推进", text)
+        self.assertIn("时间达标", text)
         # 非 tracking 状态不算这一列,避免看板给出无意义的日期
         self._mk("dead-two", state="rejected")
         rows = {r["slug"]: r for r in S.build_report(self.root)["candidates"]}

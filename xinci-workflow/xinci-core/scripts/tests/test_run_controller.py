@@ -74,7 +74,7 @@ class RunControllerTest(unittest.TestCase):
         }), encoding="utf-8")
 
     def test_start_round_resume_finish(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         self.assertEqual(run["status"], "active")
         RC.begin_round(self.root, run["run_id"])
         resumed = RC.load_session(self.root, run["run_id"])
@@ -97,7 +97,7 @@ class RunControllerTest(unittest.TestCase):
         却照样扣掉 max_rounds=10 里的 3 轮。用户给的预算是"能干活的轮次",不是
         "开轮的次数"。
         """
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"], executor_id="w",
                        preflight=dict(self.PREFLIGHT_LOGGED_IN))
         RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
@@ -118,7 +118,7 @@ class RunControllerTest(unittest.TestCase):
     def test_round_record_keeps_browser_preflight(self):
         """预检要留在清单里:此前它只存在于 session 的当前轮,收尾即被清空,
         事后只能靠执行者手写 notes 复述,无法核对。"""
-        run = RC.start(self.root, max_rounds=2)
+        run = RC.start(self.root, schema_version=3, max_rounds=2)
         RC.begin_round(self.root, run["run_id"], executor_id="w",
                        preflight=dict(self.PREFLIGHT_OK))
         result = RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
@@ -129,7 +129,7 @@ class RunControllerTest(unittest.TestCase):
     def test_consecutive_degraded_rounds_stop_the_run(self):
         """连续降级到上限就不许再开轮:trigger_only 永远算"可行工作",
         于是浏览器整场不可用时既不能停也不产出。上限把这条路封住,指向 blocked 收尾。"""
-        run = RC.start(self.root, max_rounds=10)
+        run = RC.start(self.root, schema_version=3, max_rounds=10)
         for _ in range(RC.MAX_CONSECUTIVE_DEGRADED_ROUNDS):
             RC.begin_round(self.root, run["run_id"], executor_id="w",
                            preflight=dict(self.PREFLIGHT_LOGGED_IN))
@@ -158,7 +158,7 @@ class RunControllerTest(unittest.TestCase):
         实测(2026-09-05):G1 抽了 5 条、因无合规 SERP 通道全部 inconclusive,审计仍以
         completed 记录,于是"发现轮已累计 10 轮"的计数被重置——完成与有效被混用。
         """
-        run = RC.start(self.root, max_rounds=3)
+        run = RC.start(self.root, schema_version=3, max_rounds=3)
         (self.root / "证据" / "x").mkdir(parents=True, exist_ok=True)
         (self.root / "证据" / "x" / "2026-09-05-fn.json").write_text("{}", encoding="utf-8")
         samples = []
@@ -179,7 +179,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(manifest["rounds"][0]["false_negative_audit"]["status"], "blocked")
 
     def test_finish_rejects_unproven_terminal_statuses(self):
-        run = RC.start(self.root, max_rounds=2)
+        run = RC.start(self.root, schema_version=3, max_rounds=2)
         with self.refused():
             RC.finish(self.root, run["run_id"], "budget_reached", "提前收尾")
         with self.refused():
@@ -189,7 +189,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(RC.load_session(self.root, run["run_id"])["status"], "active")
 
     def test_quota_finish_persists_evidence(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         ref = "证据/运行/semrush-quota.txt"
         path = self.root / ref
         path.parent.mkdir(parents=True)
@@ -201,7 +201,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(manifest["termination"]["evidence_refs"], [ref])
 
     def test_record_round_separates_trigger_funnel_and_read_only_reviews(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         self.seed_candidate()
         trigger = TP.add(self.root, observed_date="2026-08-31", title="New official rule",
@@ -221,7 +221,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(manifest["rounds"][0]["trigger_funnel"]["discarded_preapproval"], 1)
 
     def test_record_round_rejects_missing_review_evidence(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         self.seed_candidate()
         reviewed = [{"slug": "demo", "outcome": "awaiting_external_evidence",
@@ -231,7 +231,7 @@ class RunControllerTest(unittest.TestCase):
                             candidates_reviewed=reviewed)
 
     def test_record_round_rejects_unknown_reviewed_slug(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         self.seed_candidate()
         reviewed = [{"slug": "ghost", "outcome": "not_due", "reason": "不存在的候选"}]
@@ -241,7 +241,7 @@ class RunControllerTest(unittest.TestCase):
 
     def test_record_round_rejects_unbalanced_funnel_via_manifest_contract(self):
         """record_round 不再自校验;漏斗加总等契约由 validate_manifest 一处把关。"""
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         with self.refused():
             RC.record_round(self.root, run["run_id"],
@@ -263,7 +263,7 @@ class RunControllerTest(unittest.TestCase):
             RM.record_single(self.root, run_date="2026-08-31", skill="xinci-track")
 
     def test_trigger_funnel_is_derived_from_pool_events(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         pending = TP.add(self.root, observed_date="2026-08-31", title="Pending trigger",
                          source_url="https://agency.example/pending", source_family="agency",
@@ -286,7 +286,7 @@ class RunControllerTest(unittest.TestCase):
         del pending
 
     def test_new_round_rejects_legacy_pooled_sink(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         with self.refused():
             RC.record_round(self.root, run["run_id"],
@@ -294,19 +294,19 @@ class RunControllerTest(unittest.TestCase):
 
     def test_funnel_pooled_is_optional_for_legacy_manifests(self):
         """新轮次不需要 pooled 字段。"""
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         self.assertEqual(RC.load_session(self.root, run["run_id"])["rounds_completed"], 1)
 
     def test_only_one_active_session(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         self.assertEqual(RC.list_sessions(self.root)["active"], [run["run_id"]])
         with self.assertRaises(RC.RunControllerError):
-            RC.start(self.root)
+            RC.start(self.root, schema_version=3)
 
     def test_chinese_status_alias_and_human_rendering(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         RC.record_round(self.root, run["run_id"], funnel={
             "extracted": 0, "rejected_zero_cost": 0, "rejected_g1": 0,
@@ -333,14 +333,14 @@ class RunControllerTest(unittest.TestCase):
         self.assertNotIn("max_rounds", rendered)
 
     def test_round_budget_is_enforced(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"])
         RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         with self.assertRaises(RC.RunControllerError):
             RC.begin_round(self.root, run["run_id"])
 
     def test_ten_discovery_rounds_force_completed_calibration(self):
-        run = RC.start(self.root, max_rounds=2)
+        run = RC.start(self.root, schema_version=3, max_rounds=2)
         original = RC._discovery_rounds_since_calibration
         try:
             RC._discovery_rounds_since_calibration = lambda _: 10
@@ -351,13 +351,13 @@ class RunControllerTest(unittest.TestCase):
             RC._discovery_rounds_since_calibration = original
 
     def test_calibration_round_requires_evidenced_audit(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"], round_type="calibration")
         with self.assertRaisesRegex(RC.RunControllerError, "false_negative_audit"):
             RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
 
     def test_calibration_round_records_evidenced_audit_and_metrics(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"], round_type="calibration")
         evidence = self.root / "证据" / "calibration.json"
         evidence.parent.mkdir(parents=True)
@@ -377,7 +377,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(manifest["rounds"][0]["round_type"], "calibration")
 
     def test_completed_calibration_rejects_short_sample_and_wrong_untested_gates(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"], round_type="calibration")
         evidence = self.root / "证据" / "calibration.json"
         evidence.parent.mkdir(parents=True)
@@ -390,7 +390,7 @@ class RunControllerTest(unittest.TestCase):
                             false_negative_audit=audit)
 
     def test_confirmation_is_write_once(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, run["run_id"])
         self.seed_candidate(gates={"G3": "veto_window_bet"})
         RC.confirm_window_bet(self.root, run["run_id"], "demo")
@@ -400,7 +400,7 @@ class RunControllerTest(unittest.TestCase):
             RC.confirm_window_bet(self.root, run["run_id"], "demo")
 
     def test_confirmation_cannot_be_precreated(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         with self.refused():
             RC.confirm_window_bet(self.root, run["run_id"], "ghost")
         self.seed_candidate(gates={"G3": "pass"})
@@ -408,7 +408,7 @@ class RunControllerTest(unittest.TestCase):
             RC.confirm_window_bet(self.root, run["run_id"], "demo")
 
     def test_go_finish_requires_candidate_produced_by_this_run(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         self.seed_manifest(run["run_id"])
         with self.refused():
             RC.finish(self.root, run["run_id"], "go", "声称成功")
@@ -427,7 +427,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(done["go_candidates"], ["demo"])
 
     def test_finish_rejects_non_sequential_manifest_rounds(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, run["run_id"])
         result = RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         path = Path(result["manifest"])
@@ -438,7 +438,7 @@ class RunControllerTest(unittest.TestCase):
             RC.finish(self.root, run["run_id"], "cancelled", "测试")
 
     def test_finish_rejects_candidate_missing_from_manifest(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         self.seed_candidate(history=[{
             "at": "2026-08-20T00:00:00+00:00", "from": None,
             "to": "captured", "by": "xinci-run", "run_id": run["run_id"],
@@ -448,7 +448,7 @@ class RunControllerTest(unittest.TestCase):
             RC.finish(self.root, run["run_id"], "cancelled", "测试")
 
     def test_finish_rejects_manifest_schema_drift(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         self.seed_manifest(run["run_id"])
         path = self.root / "运行" / "2026-08-20-xinci-run.json"
         manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -460,7 +460,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(RC.load_session(self.root, run["run_id"])["status"], "active")
 
     def test_record_round_derives_candidates_and_aggregates_manifest(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, run["run_id"])
         self.seed_candidate(history=[{
             "at": "2026-08-20T00:00:00+00:00", "from": None, "to": "captured",
@@ -479,7 +479,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(RC.load_session(self.root, run["run_id"])["rounds_completed"], 1)
 
     def test_record_round_retries_after_session_write_failure(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, run["run_id"])
         with patch.object(RC, "_save", side_effect=OSError("模拟 session 写入中断")):
             with self.assertRaises(OSError):
@@ -490,7 +490,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(len(manifest["rounds"]), 1)
 
     def test_finish_retries_after_session_write_failure(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         with patch.object(RC, "_save", side_effect=OSError("模拟 session 写入中断")):
             with self.assertRaises(OSError):
                 RC.finish(self.root, run["run_id"], "cancelled", "测试重试")
@@ -499,7 +499,7 @@ class RunControllerTest(unittest.TestCase):
         self.assertEqual(done["status"], "cancelled")
 
     def test_structurally_corrupt_session_fails_on_load(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         path = self.root / RC.SESSION_DIR / f"{run['run_id']}.json"
         body = json.loads(path.read_text(encoding="utf-8"))
         body["rounds_completed"] = body["max_rounds"] + 1
@@ -508,7 +508,7 @@ class RunControllerTest(unittest.TestCase):
             RC.load_session(self.root, run["run_id"])
 
     def test_record_round_rejects_unpersisted_queued_claim(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, run["run_id"])
         self.seed_candidate(history=[{
             "at": "2026-08-20T00:00:00+00:00", "from": None, "to": "captured",
@@ -519,7 +519,7 @@ class RunControllerTest(unittest.TestCase):
             RC.record_round(self.root, run["run_id"], funnel=funnel)
 
     def test_candidate_touched_again_is_recorded_in_later_round(self):
-        run = RC.start(self.root, max_rounds=2)
+        run = RC.start(self.root, schema_version=3, max_rounds=2)
         RC.begin_round(self.root, run["run_id"])
         self.seed_candidate(gates={"G0": "pass"}, history=[{
             "at": "2026-08-20T00:00:00+00:00", "from": None, "to": "captured",
@@ -549,7 +549,7 @@ class RunControllerTest(unittest.TestCase):
 
     def test_begin_round_echoes_preflight_verdict(self):
         """开轮的中文回显要直接说本轮预检是否满足 G1 前置,不必再跑 run_policy 才知道。"""
-        run = RC.start(self.root, max_rounds=2)
+        run = RC.start(self.root, schema_version=3, max_rounds=2)
         ok = RC.begin_round(self.root, run["run_id"], executor_id="e1",
                             preflight={"controllable": True, "desktop": True,
                                        "region": "us", "logged_out": True})
@@ -560,7 +560,7 @@ class RunControllerTest(unittest.TestCase):
 
     def test_begin_round_echo_names_failing_preflight_items(self):
         """不达标时要点名是哪几项,否则执行者得自己回去比对四个参数。"""
-        run = RC.start(self.root, max_rounds=2)
+        run = RC.start(self.root, schema_version=3, max_rounds=2)
         bad = RC.begin_round(self.root, run["run_id"], executor_id="e1",
                              preflight={"controllable": True, "desktop": False,
                                         "region": "other", "logged_out": True})
@@ -573,7 +573,7 @@ class RunControllerTest(unittest.TestCase):
 
     def test_begin_round_without_preflight_echoes_absence(self):
         """库级调用可省预检;回显要说明本轮没有预检,而不是沉默。"""
-        run = RC.start(self.root, max_rounds=2)
+        run = RC.start(self.root, schema_version=3, max_rounds=2)
         obj = RC.begin_round(self.root, run["run_id"], executor_id="e1")
         text = RC.render_human_result("begin-round", obj)
         self.assertIn("浏览器预检", text)
@@ -581,7 +581,7 @@ class RunControllerTest(unittest.TestCase):
 
     def test_correct_note_appends_without_touching_existing_record(self):
         """清单是审计轨迹:更正只能追加,原备注与轮次数据一字不动。"""
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"], executor_id="e1")
         RC.record_round(self.root, run["run_id"], notes=["原始判断(后被证明有误)"],
                         funnel=dict(self.ZEROS))
@@ -603,7 +603,7 @@ class RunControllerTest(unittest.TestCase):
             RM.correct_note(self.root, "run-20260820T000000Z-deadbeef", "无处可追加")
 
     def test_correct_note_rejects_blank_text(self):
-        run = RC.start(self.root, max_rounds=1)
+        run = RC.start(self.root, schema_version=3, max_rounds=1)
         RC.begin_round(self.root, run["run_id"], executor_id="e1")
         RC.record_round(self.root, run["run_id"], funnel=dict(self.ZEROS))
         RC.finish(self.root, run["run_id"], status="budget_reached", reason="预算命中")

@@ -86,6 +86,19 @@ class EvidenceIndexTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "没有候选"):
             E.build(self.root, "unknown")
 
+    def test_new_unknowns_require_g3_review_without_erasing_history(self):
+        scan = self.obs("old-scan", "scan", "2026-08-01T00:00:00+00:00", gates={"G3": "pass"})
+        track = self.obs("new-track", "track", "2026-09-08T00:00:00+00:00", 3,
+                         g6_tentative_lines={"subscription": "tentative_inconclusive"})
+        self.register([scan, track])
+        result = E.build(self.root, "report")
+        self.assertEqual(result["review_required_gates"], {"G3": track})
+        self.assertEqual(result["unknown_income_lines"], {"subscription": track})
+        qualified = self.obs("new-qualify", "qualify", "2026-09-09T00:00:00+00:00", 3,
+                             gates={"G3": "pass"}, g6_lines={"subscription": "pass"})
+        self.register([scan, track, qualified])
+        self.assertEqual(E.build(self.root, "report")["review_required_gates"], {})
+
     def test_legacy_observations_in_candidate_subdirectories_remain_readable(self):
         flat = self.obs("old-scan", "scan", "2026-08-01T00:00:00+00:00")
         ref = "证据/report/archive/2026-08-01-scan.json"

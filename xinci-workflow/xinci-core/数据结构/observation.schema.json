@@ -55,6 +55,21 @@
       "description": "G6 深算前的结构事实，不是正式 gates.G6。repeat_paid_task 只约束 subscription；official_count_class 是保留可读的历史字段，新计数缺口写 points 并将受影响线路记未知；二者不能单独否决整候选。self_serve_legal_effect 仅在所有声称交付均依赖法律签字且全部依法无效时使用，表示整候选全局否决；只影响部分盈利线时不得填写该 criterion，应在 g6_tentative_lines 逐线判定。"
     },
     "naming_status": {"type": "string", "enum": ["unstable", "stabilized"], "description": "仅用于 track：当前搜索叫法是否已经定型"},
+    "formation_evidence": {
+      "type": "array",
+      "description": "新形成确认必须有任务或产品级证据；历史缺失仍可读。signal 与 formation_signals 对应，source_url 必须本次打开；task_match 解释同一用户与任务的匹配。",
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["signal", "scope", "query", "source_url", "task_match"],
+        "properties": {
+          "signal": {"enum": ["autocomplete", "semrush_rows", "sustained_discussion", "repeated_independent_queries"]},
+          "scope": {"enum": ["topic", "task", "product"]},
+          "query": {"type": "string", "minLength": 1},
+          "source_url": {"type": "string", "format": "uri"},
+          "task_match": {"type": "string", "minLength": 1}
+        }
+      }
+    },
     "formation_signals": {
       "type": "array",
       "uniqueItems": true,

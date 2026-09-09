@@ -484,7 +484,7 @@ class ValidateRunsTest(unittest.TestCase):
         self.assertEqual(V.validate_runs(empty), [])
 
     def test_completed_session_requires_manifest(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         # 受控 writer 会为零轮次运行自动创建空 manifest，不再要求调用者手写。
         RC.finish(self.root, run["run_id"], "cancelled", "测试取消")
         self.assertEqual(V.validate_runs(self.root), [])
@@ -495,7 +495,7 @@ class ValidateRunsTest(unittest.TestCase):
         self.assertErrorMatching("从 1 开始连续")
 
     def test_duplicate_manifests_for_one_run_are_rejected(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         common = {"date": "2026-08-20", "skill": "xinci-run",
                   "run_id": run["run_id"], "rounds": []}
         for name in ("2026-08-20-xinci-run.json", "2026-08-20-1200-xinci-run.json"):
@@ -504,7 +504,7 @@ class ValidateRunsTest(unittest.TestCase):
         self.assertErrorMatching("必须恰好对应一份")
 
     def test_manifest_must_list_candidates_written_by_run(self):
-        run = RC.start(self.root)
+        run = RC.start(self.root, schema_version=3)
         ledger_dir = self.root / "账本"
         ledger_dir.mkdir(parents=True)
         (ledger_dir / "候选账本.json").write_text(json.dumps({

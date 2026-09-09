@@ -19,7 +19,8 @@ RUN_FIELDS = {"date", "skill", "run_id", "sources_opened", "sources_blocked",
               "rounds", "funnel", "trigger_funnel", "termination"}
 RUN_ROUND_FIELDS = {"round", "sources_opened", "sources_blocked", "candidates_touched",
                     "candidates_reviewed", "billable_calls", "notes", "funnel", "trigger_funnel",
-                    "round_type", "false_negative_audit", "browser_preflight"}
+                    "round_type", "false_negative_audit", "browser_preflight",
+                    "preflight_evidence", "work_package", "work_results", "round_started_at"}
 # 已停写的遥测字段(全仓无读取方):历史清单里仍有,读取时容忍、不校验内容;新清单不再写。
 LEGACY_RUN_FIELDS = {"metrics_summary"}
 LEGACY_ROUND_FIELDS = {"metrics"}
@@ -368,6 +369,16 @@ def validate_manifest(obj, path=None, session=None, run_candidates=None):
         _check_funnel(rnd, rw, errors)
         _check_trigger_funnel(rnd, rw, errors)
         _check_reviews(rnd, rw, errors, root)
+        if session and session.get("schema_version", 1) >= 4:
+            try:
+                from run_evidence import verify_pinned, work_package, work_results
+                package = work_package(rnd.get("work_package"), rnd.get("round_type"))
+                if root is not None:
+                    verify_pinned(root, rnd["preflight_evidence"])
+                    if not work_results(root, package, rnd.get("work_results"), rnd["round_started_at"]):
+                        raise ValueError("无实际工作，不能计轮")
+            except (ValueError, OSError, TypeError, KeyError) as exc:
+                errors.append(f"{rw} v4 证据/工作包不合法: {exc}")
         if session and session.get("schema_version", 1) >= 3:
             if rnd.get("round_type") not in ROUND_TYPES:
                 errors.append(f"{rw} schema v3 必须填写 round_type={sorted(ROUND_TYPES)}")

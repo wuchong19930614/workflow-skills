@@ -18,7 +18,7 @@ def build(root, slug):
     rec = json.loads(raw)["candidates"].get(slug)
     if not isinstance(rec, dict):
         raise ValueError(f"账本中没有候选 {slug}")
-    rows, errors, latest, seen = [], [], {}, set()
+    rows, errors, latest, seen, observed = [], [], {}, set(), []
     for ref in rec.get("evidence_refs", []):
         if isinstance(ref, str) and ref in seen:
             continue
@@ -40,6 +40,7 @@ def build(root, slug):
             if stage not in {"scan", "track", "qualify", "decide"}:
                 raise ValueError("观察阶段非法")
             when = parse_aware_timestamp(obs.get("observed_at"), "观察时间", ValueError)
+            observed.append((when, ref, obs))
             rows.append({"ref": ref, "stage": stage, "observed_at": obs["observed_at"],
                          "schema_version": obs.get("schema_version", 1)})
             if stage not in latest or when > latest[stage][0]:
@@ -52,7 +53,21 @@ def build(root, slug):
     # 最近登记的不一定是最新观察；补录旧日证据也必须可见。
     if rows and rows[-1]["ref"] not in start:
         start.append(rows[-1]["ref"])
+    review_gates, unknown_lines, review_times = {}, {}, {}
+    for when, ref, obs in sorted(observed, key=lambda row: (row[0], row[1])):
+        if obs["stage"] in {"scan", "track"} and "g6_tentative_lines" in obs:
+            unknown_lines = {k: ref for k, v in obs["g6_tentative_lines"].items()
+                             if v == "tentative_inconclusive"}
+            if unknown_lines and "G3" not in obs.get("gates", {}):
+                review_gates["G3"] = ref
+                review_times["G3"] = when
+        if obs["stage"] == "qualify" and "g6_lines" in obs:
+            unknown_lines = {k: ref for k, v in obs["g6_lines"].items() if v == "inconclusive"}
+        for gate in obs.get("gates", {}):
+            if gate in review_times and when > review_times[gate]:
+                review_gates.pop(gate, None)
     return {"slug": slug, "lane": rec.get("lane", "new"), "state": rec.get("state"),
+            "review_required_gates": review_gates, "unknown_income_lines": unknown_lines,
             "ledger_sha256": hashlib.sha256(raw).hexdigest(), "gates": rec.get("gates", {}),
             "qualify_pending": rec.get("qualify_pending"),
             "latest_history": rec.get("history", [])[-1:] or [],

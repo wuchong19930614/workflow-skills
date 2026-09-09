@@ -83,8 +83,8 @@ def render_text(report, *, all_candidates=False) -> str:
         if r["formation_eligible_date"]:
             left = r["formation_eligible_days_left"]
             formation = (f" | 形成跨度 {r['formation_span_days']}/{MIN_TRACK_SPAN_DAYS} 天"
-                         + (f"，可推进（自 {r['formation_eligible_date']}）" if left <= 0
-                            else f"，{r['formation_eligible_date']} 起可推进（余 {left} 天）"))
+                         + (f"，时间达标，可复核形成证据（自 {r['formation_eligible_date']}）" if left <= 0
+                            else f"，{r['formation_eligible_date']} 起时间达标（余 {left} 天）"))
         pending = r.get("qualify_pending")
         if pending:
             left = (date.fromisoformat(pending["pending_until"]) - today).days

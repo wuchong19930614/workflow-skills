@@ -5,12 +5,12 @@ description: '新词工作流的一体入口与连续运行驱动器。当消息
 
 # xinci-run 连续运行驱动器
 
-先读 `xinci-workflow/xinci-core/通用约定.md`，再按需读取生命周期契约的「连续运行模式」「窗口赌注的挂起与出闸」「会话与轮次收尾」「schema v3」。不要在开局加载全部闸门、陷阱、采集指南或历史校准；进入某个阶段时读对应 SKILL.md，由阶段 Skill 指向当下需要的契约章节。
+先读 `xinci-workflow/xinci-core/通用约定.md`；新运行还须读[运行证据契约](../xinci-core/运行证据契约.md)。再按需读取生命周期契约的「连续运行模式」「窗口赌注的挂起与出闸」「会话与轮次收尾」「schema v3」。不要在开局加载全部闸门、陷阱、采集指南或历史校准；进入某个阶段时读对应 SKILL.md，由阶段 Skill 指向当下需要的契约章节。
 
 ## 启动与授权
 
 - `xinci_run`、`/xinci-run` 或“启动新词工作流”等调用即开始，不重复确认。预算为 `max_rounds=N`、`max_hours=H`；未给 `max_rounds` 时默认 6，两项并存取先命中者。
-- 预检没过的降级轮不消耗预算，但连续 3 轮即被控制器拒绝再开：修通道，或以「执行受阻」收尾。
+- 完成实质工作的降级轮不消耗预算，但连续 3 轮即被控制器拒绝再开。仅预检重试用 abort-round 留痕，不计轮；禁止靠空轮凑受阻条件。
 - 启动即授权既定路径上的 registrar 转移，统一使用 `--by xinci-run --run-id <run_id>`；闸门、证据和分数线不降低。唯一例外是 `G3=veto_window_bet` 的出闸，仍须候选级明确确认。
 - 每一轮只派一个轮次子代理；它以稳定 `executor_id` 亲自预检浏览器并完成整轮。同一轮不得按阶段更换子代理，未 `record-round` 不得再次开轮。没有 Agent 机制时，主上下文就是唯一执行者。
 
@@ -21,12 +21,15 @@ python3 xinci-workflow/xinci-core/scripts/run_controller.py list
 python3 xinci-workflow/xinci-core/scripts/run_controller.py start [--max-rounds N] [--max-hours H]  # 仅无 active 时
 python3 xinci-workflow/xinci-core/scripts/run_controller.py begin-round --run-id <run_id> --executor-id <executor_id> \
   --round-type <discovery|progression|tracking|calibration> \
-  --browser-controllable yes|no --browser-desktop yes|no --browser-region us|other|unknown --browser-logged-out yes|no
+  --browser-controllable yes|no --browser-desktop yes|no --browser-region us|other|unknown --browser-logged-out yes|no \
+  --preflight-evidence <数据区相对预检JSON> --work-package '<targets与completion JSON>'
 python3 xinci-workflow/xinci-core/scripts/run_policy.py --run-id <run_id>
 python3 xinci-workflow/xinci-core/scripts/report_status.py
 ```
 
 有 active 就恢复，不重启。浏览器四项必须由本轮执行者现场核对；不能借用父任务、上一轮或另一执行者的预检。
+
+先读 run_policy 的 candidate_actions，按可执行动作确定本轮工作包；不要把没有复查提醒解释为没有形成复核动作。未处理的候选不得记为 not_due。
 
 ## 每轮路由
 
@@ -43,7 +46,7 @@ python3 xinci-workflow/xinci-core/scripts/report_status.py
 python3 xinci-workflow/xinci-core/scripts/run_controller.py record-round --run-id <run_id> \
   [--source-opened <URL>] [--source-blocked '<URL>(拦截现象)'] [--billable-calls <N>] [--note '<事实>'] \
   [--candidate-reviewed '{"slug":"<slug>","outcome":"not_due","reason":"<事实>","evidence_refs":[]}'] \
-  [--false-negative-audit '<校准轮 JSON>'] \
+  [--false-negative-audit '<校准轮 JSON>'] --work-results '<逐项结果 JSON 数组>' \
   --funnel '{"extracted":0,"rejected_zero_cost":0,"rejected_g1":0,"deep_audited":0,"queued":0,"carryover_audited":0}'
 ```
 

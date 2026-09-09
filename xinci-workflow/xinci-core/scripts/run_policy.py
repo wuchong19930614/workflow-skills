@@ -12,6 +12,7 @@ from _constants import MIN_TRACK_SPAN_DAYS
 from run_manifest import find_run_manifest
 from run_state import load_session
 from trigger_pool import TriggerPoolError, source_rotation_status, stats as trigger_stats
+from candidate_actions import build as candidate_actions
 
 
 BACKLOG_HARD_LIMIT = 20
@@ -105,8 +106,9 @@ def reachable_ceiling(root, mode, today=None):
                        "formation_confirmed,或窗口以天计的 screened)"}
     if formation_ready:
         return {"state": "go", "enablers": sorted(formation_ready), "evidence_review_due": sorted(evidence_review_due),
-                "why": f"追踪中候选的最早 -track 观察已满 {MIN_TRACK_SPAN_DAYS} 天,"
-                       "本次复查即可凑齐形成跨度,之后可一路走到 go"}
+                "conditional": True,
+                "why": f"追踪中候选的最早 -track 观察已满 {MIN_TRACK_SPAN_DAYS} 天；"
+                       "仅时间条件就绪。go 是条件性路径上限，仍需本次 G1、任务级形成信号及全部认定证据"}
     return {"state": "tracking", "enablers": [], "evidence_review_due": sorted(evidence_review_due),
             "why": f"存量里没有能满足 {MIN_TRACK_SPAN_DAYS} 天形成跨度的候选,"
                    "存量侧本次最远只能推进到 tracking;新扫出窗口以天计的候选仍可走快道到 go"}
@@ -166,6 +168,7 @@ def evaluate(root, run_id):
         mode = "full"
     return {
         "run_id": run_id, "rounds_completed": session["rounds_completed"], "mode": mode,
+        "candidate_actions": candidate_actions(root),
         "formal_admission": mode == "full",
         "trigger_harvest": (mode in {"full", "trigger_only"}
                             and tstats["pending"] < TRIGGER_PENDING_LIMIT),

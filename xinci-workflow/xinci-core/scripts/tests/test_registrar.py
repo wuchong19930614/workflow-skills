@@ -40,6 +40,11 @@ def mk_evidence(root: Path, cand_slug: str, name: str, **overrides) -> str:
     if stage == "track":
         obs.setdefault("naming_status", "stabilized")
         obs.setdefault("formation_signals", ["sustained_discussion"])
+        obs.setdefault("source_urls", ["https://e.com/source"])
+        obs.setdefault("formation_evidence", [
+            {"signal": signal, "scope": "task", "query": "test task query",
+             "source_url": obs["source_urls"][0], "task_match": "同一用户与逐对象任务"}
+            for signal in obs["formation_signals"]])
     if ("g6_tentative_lines" not in overrides and stage in {"scan", "track"}
             and "G3" in obs.get("gates", {})):
         if obs["gates"]["G3"] == "pass":
@@ -227,7 +232,7 @@ class RegistrarTest(unittest.TestCase):
                    source_url="https://e.com/t", task="t", evidence=[ev2],
                    lane="mature", by="user")
 
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         run_id = session["run_id"]
         RC.begin_round(self.root, run_id)
         ev = mk_evidence(self.root, "mature-run-register", "2026-08-23-scan.json")
@@ -329,7 +334,7 @@ class RegistrarTest(unittest.TestCase):
 
     def test_xinci_run_g1_write_requires_current_round_preflight(self):
         slug = self.register("executor-bound-g1")
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         # 有执行者但 begin-round 时没自报预检:拒收 G1 结论
         RC.begin_round(self.root, session["run_id"], executor_id="round-worker")
         ev = mk_evidence(self.root, slug, "2026-08-31-scan.json", gates={"G1": "veto"})
@@ -341,7 +346,7 @@ class RegistrarTest(unittest.TestCase):
 
     def test_xinci_run_g1_write_requires_g1_ready_preflight(self):
         slug = self.register("region-bound-g1")
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, session["run_id"], executor_id="round-worker",
                        preflight={"controllable": True, "desktop": True, "region": "other",
                                   "logged_out": True})
@@ -353,7 +358,7 @@ class RegistrarTest(unittest.TestCase):
 
     def test_xinci_run_g1_write_accepted_with_ready_preflight(self):
         slug = self.register("ready-g1")
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, session["run_id"], executor_id="round-worker",
                        preflight={"controllable": True, "desktop": True, "region": "us", "logged_out": True})
         ev = mk_evidence(self.root, slug, "2026-08-31-scan.json", gates={"G1": "veto"})
@@ -563,6 +568,19 @@ class RegistrarTest(unittest.TestCase):
         with self.assertRaisesRegex(R.RegistrarError, "formation_signals"):
             R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
                          gates={"G1": "pass"}, evidence=[no_signal])
+
+    def test_topic_signal_cannot_advance_formation(self):
+        slug = self.register("topic-only")
+        self.to_screened(slug)
+        self.to_tracking(slug)
+        R.checked(self.root, slug, evidence=[mk_evidence(self.root, slug, "2026-08-20-track.json")])
+        topic = mk_evidence(self.root, slug, "2026-08-28-track.json", gates={"G1": "pass"},
+            formation_signals=["autocomplete"], formation_evidence=[{
+                "signal": "autocomplete", "scope": "topic", "query": "heat pump regulations",
+                "source_url": "https://e.com/source", "task_match": "只是主题，不证明制造商投放判定需求"}])
+        with self.refused(slug):
+            R.transition(self.root, slug, to="formation_confirmed", by="xinci-track",
+                         gates={"G1": "pass"}, evidence=[topic])
 
     def test_v3_generated_score_is_checked_before_ledger_write(self):
         from test_qualification import observation
@@ -877,7 +895,7 @@ class RegistrarTest(unittest.TestCase):
         with self.refused(mature_slug):
             R.reopen(self.root, mature_slug, by="xinci-track", reason="跨 lane", evidence=[mature_ref])
 
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, session["run_id"])
         with self.refused(mature_slug):
             R.reopen(self.root, mature_slug, by="xinci-run", run_id=session["run_id"],
@@ -1209,7 +1227,7 @@ class RegistrarTest(unittest.TestCase):
 
     def test_window_bet_continuous_mode_requires_recorded_confirmation(self):
         slug = self.register()
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         run_id = session["run_id"]
         RC.begin_round(self.root, run_id)
         with self.refused(slug):
@@ -1231,7 +1249,7 @@ class RegistrarTest(unittest.TestCase):
 
     def test_window_confirmation_cannot_be_rearmed_after_transition(self):
         slug = self.register()
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         run_id = session["run_id"]
         RC.begin_round(self.root, run_id)
         R.amend(self.root, slug, by="xinci-run", run_id=run_id,
@@ -1247,7 +1265,7 @@ class RegistrarTest(unittest.TestCase):
     def test_window_confirmation_is_consumed_once_via_history(self):
         """同一条确认不能支撑第二次出闸:history 里已有引用它的出闸记录即视为已消费。"""
         slug = self.register()
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         run_id = session["run_id"]
         RC.begin_round(self.root, run_id)
         gates = dict(GATES_SCREEN, G3=R.G3_WINDOW_BET)
@@ -1269,7 +1287,7 @@ class RegistrarTest(unittest.TestCase):
     def test_window_bet_ledger_write_failure_leaves_confirmation_reusable(self):
         """账本写入中断时什么都没发生:候选仍在 captured,确认未被消费,重试即可成功。"""
         slug = self.register()
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         run_id = session["run_id"]
         RC.begin_round(self.root, run_id)
         gates = dict(GATES_SCREEN, G3=R.G3_WINDOW_BET)
@@ -1333,7 +1351,7 @@ class RegistrarTest(unittest.TestCase):
                        evidence=[mk_evidence(self.root, second, "2026-08-17-scan.json")])
 
     def test_single_step_write_is_blocked_during_active_run(self):
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, session["run_id"])
         slug = "single-during-run"
         ev = mk_evidence(self.root, slug, "2026-08-17-scan.json")
@@ -1385,7 +1403,7 @@ class RegistrarTest(unittest.TestCase):
         self.to_tracking(slug)
         depth = len(self.load(slug)["history"])
         ref = mk_evidence(self.root, slug, "2026-08-20-track.json")
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, session["run_id"])
         R.checked(self.root, slug, evidence=[ref], by="xinci-run", run_id=session["run_id"])
         hist = self.load(slug)["history"]
@@ -1488,7 +1506,7 @@ class RegistrarTest(unittest.TestCase):
                    task="t", evidence=[ev],
                    gates=initial_gates,
                    expiry="2026-08-25")
-        session = RC.start(self.root)
+        session = RC.start(self.root, schema_version=3)
         RC.begin_round(self.root, session["run_id"])
         R.amend(self.root, slug, by="xinci-run", gates={"G3": R.G3_WINDOW_BET},
                 reason="还债深审:数到 4 个免费实现,收录时差实测 4 天",

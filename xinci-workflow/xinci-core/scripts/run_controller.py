@@ -78,7 +78,7 @@ def list_sessions(data_root):
             "sessions": rows}
 
 
-def start(data_root, max_rounds=6, max_hours=None):
+def start(data_root, max_rounds=6, max_hours=None, *, schema_version=4):
     if not isinstance(max_rounds, int) or max_rounds < 1:
         raise RunControllerError("max_rounds 必须是正整数")
     if max_hours is not None and max_hours <= 0:
@@ -90,7 +90,7 @@ def start(data_root, max_rounds=6, max_hours=None):
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
         run_id = f"run-{stamp}-{secrets.token_hex(4)}"
         obj = {
-            "schema_version": 3,
+            "schema_version": schema_version,
             "run_id": run_id,
             "mode": "continuous",
             "status": "active",
@@ -107,6 +107,9 @@ def start(data_root, max_rounds=6, max_hours=None):
             "confirmations": {},
             "finish_reason": None,
         }
+        if schema_version >= 4:
+            obj.update(current_preflight_evidence=None, current_work_package=None,
+                       round_started_at=None, aborted_attempts=[])
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
         return obj
@@ -155,7 +158,8 @@ def _trailing_degraded_rounds(data_root, run_id) -> int:
     return count
 
 
-def begin_round(data_root, run_id, executor_id=None, round_type="discovery", preflight=None):
+def begin_round(data_root, run_id, executor_id=None, round_type="discovery", preflight=None,
+                preflight_ref=None, package=None):
     """开始新一轮。preflight 是执行者自报的 G1 浏览器前置四项
     {controllable, desktop, region, logged_out};CLI 强制提供,库级调用可省略
     (省略即本轮无预检,run_policy 判 trigger_only、registrar 拒收 xinci-run 的 G1 结论)。"""
@@ -170,6 +174,23 @@ def begin_round(data_root, run_id, executor_id=None, round_type="discovery", pre
             raise RunControllerError(f"运行会话当前不是运行中，而是：{session_status_label(obj.get('status'))}")
         if obj.get("current_round") is not None:
             raise RunControllerError(f"第 {obj['current_round']} 轮尚未结束")
+        if obj.get("schema_version", 1) >= 4:
+            from run_evidence import preflight_evidence, work_package
+            try:
+                pinned = preflight_evidence(data_root, preflight_ref, run_id, executor_id,
+                                             preflight, obj["started_at"])
+                package = work_package(package, round_type)
+                _, prior = find_run_manifest(data_root, run_id)
+                previous = [r.get("preflight_evidence", {}) for r in (prior or {}).get("rounds", [])]
+                previous += [r.get("preflight_evidence", {}) for r in obj["aborted_attempts"]]
+                if any(p.get("ref") == pinned["ref"] or
+                       (_is_degraded(preflight) and p.get("capture_sha256") == pinned["capture_sha256"])
+                       for p in previous):
+                    raise ValueError("不能重复使用相同预检快照开新轮；先修复通道并现场重验")
+            except (ValueError, OSError, TypeError, KeyError) as exc:
+                raise RunControllerError(str(exc)) from exc
+            obj.update(current_preflight_evidence=pinned, current_work_package=package,
+                       round_started_at=_now())
         if round_type not in ROUND_TYPES:
             raise RunControllerError(f"round_type 必须属于 {sorted(ROUND_TYPES)}")
         if (obj.get("schema_version", 1) >= 3 and round_type == "discovery"
@@ -202,7 +223,7 @@ def begin_round(data_root, run_id, executor_id=None, round_type="discovery", pre
 
 def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None,
                  billable_calls=0, notes=None, funnel=None, candidates_reviewed=None,
-                 false_negative_audit=None):
+                 false_negative_audit=None, results=None):
     """结束当前轮:组装轮记录并原子追加到运行清单。
 
     本函数只负责组装;字段契约(funnel 加总、reviewed 的 slug/outcome/证据、校准轮的
@@ -252,6 +273,31 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
         }
         if false_negative_audit is not None:
             round_record["false_negative_audit"] = false_negative_audit
+        if obj.get("schema_version", 1) >= 4:
+            from run_evidence import verify_pinned, work_results
+            try:
+                verify_pinned(data_root, obj["current_preflight_evidence"])
+                if not work_results(data_root, obj["current_work_package"], results, obj["round_started_at"]):
+                    raise ValueError("未完成任何实际工作不能计轮；无写入时使用 abort-round 留痕")
+                from candidate_actions import build as actions
+                routes = {r["slug"]: r for r in actions(data_root)}
+                reviewed = {r.get("slug") for r in candidates_reviewed or []}
+                preflight_refs = {obj["current_preflight_evidence"]["ref"],
+                                  obj["current_preflight_evidence"]["capture_ref"]}
+                for result in results:
+                    if result["outcome"] == "completed":
+                        if not set(result["evidence_refs"]) - preflight_refs:
+                            raise ValueError("仅预检证据不能充当已完成工作")
+                        if result["target"] in routes and result["target"] not in set(touched) | reviewed:
+                            raise ValueError("候选工作未登记 checked/transition 或 candidate-reviewed")
+                for review in candidates_reviewed or []:
+                    if review.get("outcome") == "not_due" and not routes.get(review.get("slug"), {}).get("not_due_allowed"):
+                        raise ValueError("not_due 与当前候选时间/动作条件不符")
+            except (ValueError, OSError, KeyError, TypeError) as exc:
+                raise RunControllerError(str(exc)) from exc
+            round_record.update(preflight_evidence=obj["current_preflight_evidence"],
+                                work_package=obj["current_work_package"], work_results=results,
+                                round_started_at=obj["round_started_at"])
         try:
             manifest_path, _ = append_round(data_root, obj, round_record)
         except RunManifestError as e:
@@ -263,10 +309,43 @@ def record_round(data_root, run_id, *, sources_opened=None, sources_blocked=None
         obj["round_executor_id"] = None
         obj["current_round_type"] = None
         obj["current_round_preflight"] = None
+        if obj.get("schema_version", 1) >= 4:
+            obj.update(current_preflight_evidence=None, current_work_package=None, round_started_at=None)
         obj["updated_at"] = _now()
         validate_session(obj, run_id)
         _save(_path(data_root, run_id), obj)
         return {"session": obj, "manifest": str(manifest_path), "round": round_record}
+
+
+def abort_round(data_root, run_id, reason, evidence_ref):
+    """未开展工作的尝试不计轮；已有候选或触发池写入必须正常收尾。"""
+    from run_evidence import read_ref
+    from trigger_pool import round_funnel
+    with _locked(data_root):
+        obj = load_session(data_root, run_id)
+        current = obj.get("current_round")
+        if obj.get("schema_version", 1) < 4 or obj["status"] != "active" or current is None:
+            raise RunControllerError("abort-round 要求 v4 活动轮")
+        _, manifest = find_run_manifest(data_root, run_id)
+        if (candidates_by_round(data_root).get((run_id, current))
+                or any(round_funnel(data_root, run_id, current).values())
+                or len((manifest or {}).get("rounds", [])) >= current):
+            raise RunControllerError("本轮已有写入，必须 record-round，不得撤销计数")
+        if not reason or not reason.strip():
+            raise RunControllerError("必须填写停止尝试的事实原因")
+        try:
+            read_ref(data_root, evidence_ref)
+        except (ValueError, OSError) as exc:
+            raise RunControllerError(str(exc)) from exc
+        obj["aborted_attempts"].append({"at": _now(), "reason": reason, "evidence_ref": evidence_ref,
+                                        "preflight_evidence": obj["current_preflight_evidence"],
+                                        "work_package": obj["current_work_package"]})
+        obj.update(current_round=None, round_executor_id=None, current_round_type=None,
+                   current_round_preflight=None, current_preflight_evidence=None,
+                   current_work_package=None, round_started_at=None, updated_at=_now())
+        validate_session(obj, run_id)
+        _save(_path(data_root, run_id), obj)
+        return obj
 
 
 def confirm_window_bet(data_root, run_id, slug):
@@ -329,6 +408,8 @@ def finish(data_root, run_id, status, reason, evidence_refs=None):
             raise RunControllerError(f"运行会话已经结束：{session_status_label(obj.get('status'))}")
         if obj.get("current_round") is not None:
             raise RunControllerError("当前轮次尚未 record-round")
+        if obj.get("schema_version", 1) >= 4 and status == "blocked" and not evidence_refs:
+            raise RunControllerError("执行受阻必须引用现场故障及可行路径核对记录，不能仅靠轮次或文字推断")
         try:
             manifest_path, manifest = find_run_manifest(data_root, run_id)
             if manifest_path is None:
@@ -519,6 +600,8 @@ def main(argv=None):
         p = sub.add_parser(name)
         p.add_argument("--run-id", required=True)
         if name == "begin-round":
+            p.add_argument("--preflight-evidence", help="v4 必填：现场预检 JSON 的数据区相对路径")
+            p.add_argument("--work-package", type=json.loads, help="v4 必填：targets/completion JSON")
             p.add_argument("--executor-id", required=True)
             p.add_argument("--round-type", choices=sorted(ROUND_TYPES), default="discovery",
                            help="本轮类型：发现/推进/跟踪/校准")
@@ -532,6 +615,7 @@ def main(argv=None):
             p.add_argument("--browser-logged-out", type=_yes_no, required=True,
                            help="是否未登录 Google 账号 yes|no")
     p = sub.add_parser("record-round", help="原子追加运行清单并结束当前轮")
+    p.add_argument("--work-results", type=json.loads, help="v4 必填：逐项工作结果 JSON 数组")
     p.add_argument("--run-id", required=True)
     p.add_argument("--source-opened", action="append", default=[])
     p.add_argument("--source-blocked", action="append", default=[])
@@ -542,6 +626,10 @@ def main(argv=None):
                    help="只读复核 JSON 对象，可重复；不冒充 candidates_touched")
     p.add_argument("--false-negative-audit",
                    help="校准轮必填的结构化假阴性审计 JSON")
+    p = sub.add_parser("abort-round", help="无实质工作/写入的尝试留痕，不计轮")
+    p.add_argument("--run-id", required=True)
+    p.add_argument("--reason", required=True)
+    p.add_argument("--evidence-ref", required=True)
     p = sub.add_parser("confirm-window-bet")
     p.add_argument("--run-id", required=True)
     p.add_argument("--slug", required=True)
@@ -561,12 +649,15 @@ def main(argv=None):
             obj = start(a.data_root, a.max_rounds, a.max_hours)
         elif a.cmd == "list":
             obj = list_sessions(a.data_root)
+        elif a.cmd == "abort-round":
+            obj = abort_round(a.data_root, a.run_id, a.reason, a.evidence_ref)
         elif a.cmd == "begin-round":
             obj = begin_round(a.data_root, a.run_id, a.executor_id, a.round_type,
                               preflight={"controllable": a.browser_controllable,
                                          "desktop": a.browser_desktop,
                                          "region": a.browser_region,
-                                         "logged_out": a.browser_logged_out})
+                                         "logged_out": a.browser_logged_out},
+                              preflight_ref=a.preflight_evidence, package=a.work_package)
         elif a.cmd == "record-round":
             try:
                 funnel = json.loads(a.funnel)
@@ -587,7 +678,7 @@ def main(argv=None):
                                billable_calls=a.billable_calls,
                                notes=a.note, funnel=funnel,
                                candidates_reviewed=reviewed,
-                               false_negative_audit=false_negative_audit)
+                               false_negative_audit=false_negative_audit, results=a.work_results)
         elif a.cmd == "confirm-window-bet":
             obj = confirm_window_bet(a.data_root, a.run_id, a.slug)
         elif a.cmd == "finish":

@@ -31,6 +31,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py reopen \
 3. **看命名定型。** 回访来源社区:叫法统一了还是分裂了?aliases 有没有胜出者?
 4. **看需求形成信号。** 自动补全、首批 Semrush 行、讨论增长。Semrush 探针仅限 `tracking` 状态(按状态判不按年龄)、仅限能改变决策的查询;查了改变不了提议的,不查。
    观察必写 `naming_status=unstable|stabilized` 与 `formation_signals`,合法取值 `autocomplete / semrush_rows / sustained_discussion / repeated_independent_queries`,无信号写空数组,不得用叙述性乐观判断替代。
+   新形成确认还须 `formation_evidence`：逐项记录 signal、scope（topic/task/product）、query、source_url、task_match。至少一个任务或产品级信号须与候选的用户及任务匹配；主题级自动补全只能支持继续追踪。来源必须在本次 source_urls 内。
    新 G6 事实按闸门契约逐线记录；计数缺口记 points 与未知，不写历史 official_count_class 入口否决。其他结构事实的出口见生命周期契约。
 5. **对照 expiry 与失效条件。** 命中或已过 → 如实报告,不许沉默跳过。
 6. **写观察文件并登记复查。** `证据/<slug>/<日期>-track.json`,`schema_version: 3`。`gates` 只列本次实际重跑且证据合规的门(G1=`veto` 时须带 `cluster_counterfactual=atomic_only`);`g6_tentative_lines` 写本次逐线暂定结论;`source_urls` 列实际打开的页面。
@@ -49,7 +50,7 @@ python3 xinci-workflow/xinci-core/scripts/registrar.py amend \
   [--expiry YYYY-MM-DD] [--add-alias <胜出的叫法>] [--add-invalidation "<新失效条件>"]
 ```
 
-   - `formation_confirmed`:累计 ≥2 次 `-track` 观察且跨度达标(按自然日,口径与最早可推进日见生命周期契约「时间字段」;`report_status.py` 直接给出 `formation_eligible_date`)、`naming_status=stabilized`、`formation_signals` ≥1 项、本次 G1=pass;
+   - `formation_confirmed`:累计 ≥2 次 `-track` 观察且跨度达标(按自然日,口径与最早可推进日见生命周期契约「时间字段」;`report_status.py` 直接给出 `formation_eligible_date`)，同一份本次观察中 naming_status=stabilized、G1=pass 且至少一项 formation_evidence 为 task/product 级；日期达标不代替需求证据；
    - `expired`:expiry 已过用 `--expiry-trigger date`,失效条件命中用 `--expiry-trigger invalidation`;
    - `rejected`:第 1 步 G0/G1 翻转;第 2 步占位否决生效或六条适用线全部 `tentative_veto`;第 4 步 `self_serve_legal_effect` 证明全部声称交付依法无效。
 8. **用户确认后**执行对应 transition(字段见生命周期契约「每转移的证据要求」，参数见「CLI 入口」),再按通用约定写运行清单(`--skill xinci-track`)。

@@ -14,7 +14,8 @@ STATUSES = {"active"} | FINAL_STATUSES
 FIELDS = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
           "finished_at", "max_rounds", "max_hours", "rounds_completed", "current_round",
           "round_executor_id", "current_round_type", "current_round_preflight",
-          "confirmations", "finish_reason", "go_candidates", "degraded_rounds"}
+          "confirmations", "finish_reason", "go_candidates", "degraded_rounds",
+          "current_preflight_evidence", "current_work_package", "round_started_at", "aborted_attempts"}
 REQUIRED = {"schema_version", "run_id", "mode", "status", "started_at", "updated_at",
             "max_rounds", "max_hours", "rounds_completed", "current_round",
             "confirmations", "finish_reason"}
@@ -75,7 +76,7 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     if unknown or missing:
         raise RunStateError(f"{where} 字段非法: unknown={unknown}, missing={missing}")
     version = obj.get("schema_version")
-    if version not in {1, 2, 3} or obj.get("mode") != "continuous":
+    if version not in {1, 2, 3, 4} or obj.get("mode") != "continuous":
         raise RunStateError(f"{where} schema_version/mode 非法")
     if version >= 3 and "current_round_type" not in obj:
         raise RunStateError(f"{where} schema v3 缺 current_round_type")
@@ -95,6 +96,19 @@ def validate_session(obj, expected_run_id=None, where="运行会话"):
     executor_id = obj.get("round_executor_id")
     round_type = obj.get("current_round_type")
     preflight = obj.get("current_round_preflight")
+    if version >= 4:
+        required = {"current_preflight_evidence", "current_work_package", "round_started_at", "aborted_attempts"}
+        if not required <= set(obj) or not isinstance(obj["aborted_attempts"], list):
+            raise RunStateError("schema v4 缺少工作包/证据/尝试记录")
+        for key in required - {"aborted_attempts"}:
+            if (current is None) != (obj[key] is None):
+                raise RunStateError(f"{key} 必须与当前轮同时存在或同时为空")
+        if current is not None:
+            from run_evidence import work_package
+            work_package(obj["current_work_package"], round_type)
+            _timestamp(obj["round_started_at"], "轮开始时间")
+            if not executor_id or preflight is None or not isinstance(obj["current_preflight_evidence"], dict):
+                raise RunStateError("schema v4 当前轮缺执行者或预检证据")
     if preflight is not None:
         _preflight(preflight, f"{where}.current_round_preflight")
     if executor_id is not None and (not isinstance(executor_id, str) or not executor_id.strip()):

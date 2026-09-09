@@ -231,6 +231,12 @@ def _check_run_g1_preflight(data_root: Path, by: str, run_id, gates) -> None:
              "xinci-run 提交 G1 要求当前轮次的浏览器预检:begin-round 时未提交 --browser-* 四项")
     _require(preflight.get("g1_ready") is True,
              "xinci-run 提交 G1 要求浏览器预检满足可控/桌面/美区/未登录")
+    if session.get("schema_version", 1) >= 4:
+        from run_evidence import verify_pinned
+        try:
+            verify_pinned(data_root, session["current_preflight_evidence"])
+        except (ValueError, OSError, KeyError) as exc:
+            raise RegistrarError(f"G1 预检证据失效: {exc}") from exc
 
 
 def _check_url(value: str, field: str) -> None:
@@ -254,7 +260,7 @@ def _check_evidence(data_root: Path, refs, slug=None) -> list:
 
 OBS_FIELDS = {"schema_version", "slug", "observed_at", "stage", "source_urls", "points", "gates",
               "g6_lines", "g6_tentative_lines", "g6_entry_veto", "income_score", "window_bet",
-              "naming_status", "formation_signals", "cluster_counterfactual", "assessment"}
+              "naming_status", "formation_signals", "formation_evidence", "cluster_counterfactual", "assessment"}
 WINDOW_BET_FIELDS = {"implementation_urls", "lag_sample_url", "lag_days", "rationale"}
 
 
@@ -376,6 +382,12 @@ def _check_observation(path: Path, ref: str, slug) -> None:
         _require(obs["stage"] == "track" and naming_status in {"unstable", "stabilized"},
                  f"观察文件 naming_status 只适用于 track 且必须为 unstable/stabilized: {ref}")
     formation_signals = obs.get("formation_signals")
+    if "formation_evidence" in obs:
+        from formation_evidence import validate
+        try:
+            validate(obs)
+        except ValueError as exc:
+            raise RegistrarError(f"形成证据非法: {ref}: {exc}") from exc
     if formation_signals is not None:
         allowed_signals = {"autocomplete", "semrush_rows", "sustained_discussion",
                            "repeated_independent_queries"}
@@ -1042,6 +1054,9 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
                  "tracking→formation_confirmed 要求本次 track 观察明确 naming_status=stabilized")
         _require(any(bool(obs.get("formation_signals")) for obs in current_track),
                  "tracking→formation_confirmed 要求本次 track 观察至少记录 1 项 formation_signals")
+        from formation_evidence import task_signal
+        _require(any(task_signal(obs) for obs in current_track),
+                 "形成确认要求同一份本次观察含 G1=pass、稳定命名及 task/product 级形成证据；主题级信号仅支持追踪")
     elif to == "expired":
         _require(bool(reason),
                  "expired 要求 reason(失效日已到 / 失效条件命中 / 快道窗口关闭)")
@@ -1084,6 +1099,14 @@ def _transition_locked(data_root, slug, to, by, gates, window_estimate, expiry,
         _require(len(refs) >= 1, "formation_confirmed→qualified 要求本次至少 1 个证据")
         observations = [_load_observation(data_root, ref) for ref in refs
                         if Path(ref).suffix == ".json"]
+        from evidence_index import build as evidence_index
+        stale = evidence_index(data_root, slug)
+        _require(not stale["errors"], "历史证据读取异常，先核实缺失/损坏文件")
+        for gate, old_ref in stale["review_required_gates"].items():
+            old = _load_observation(data_root, old_ref)
+            _require(any(obs.get("stage") == "qualify" and obs.get("gates", {}).get(gate) == "pass"
+                         and datetime.fromisoformat(obs["observed_at"]) > datetime.fromisoformat(old["observed_at"])
+                         for obs in observations), f"{gate} 有新证据缺口，认定须提交晚于 {old_ref} 的重核结论")
         qualify_obs = [obs for obs in observations
                        if obs.get("stage") == "qualify"
                        and obs.get("gates", {}).get("G6") == "pass"]
