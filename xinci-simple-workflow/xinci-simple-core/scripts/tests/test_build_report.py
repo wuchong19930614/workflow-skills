@@ -28,14 +28,14 @@ def verified(root, slug="heic-to-jpg-converter", volume=182000):
 class BuildReportTest(unittest.TestCase):
     def test_nine_sections_and_values(self):
         with TmpRoot() as root:
-            slug = verified(root)
+            slug = verified(root, volume=120000)  # < 150,000 → single_domain
             path = B.build(root, slug)
             self.assertEqual(path, root / "报告" / f"{slug}.md")
             text = path.read_text(encoding="utf-8")
             for s in SECTIONS:
                 self.assertIn(s, text)
             self.assertIn("heic to jpg converter", text)
-            self.assertIn("182,000", text)
+            self.assertIn("120,000", text)
             self.assertIn("cloudconvert.com", text)
             self.assertIn("640", text)
             self.assertIn("142,000", text)
