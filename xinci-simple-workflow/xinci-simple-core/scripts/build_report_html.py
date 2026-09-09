@@ -5,7 +5,7 @@
 两套工作流的报告结构不同(这边有「为什么是这个词」的叙述节与可折叠的现场要点),
 互相 import 会让任一边改版都牵动另一边。
 
-md 是唯一事实来源;html 永不手写、永不手改——改 md 后重跑本脚本。
+md 是唯一事实来源;html 永不手写、永不手改——由 build_report.py 重建 md 后重跑本脚本。
 只覆盖机会报告实际用到的 Markdown 子集:h1/h2/h3、表格、有序与无序列表、
 粗体、行内代码、链接、水平线。渲染保持确定性:锚点按标题顺序编号,不含时间戳。
 
@@ -208,7 +208,7 @@ def render(md_path: Path) -> str:
             f"<title>{title}</title>\n<style>{STYLE}</style>\n</head>\n<body>\n"
             f"<div class=\"wrap\">\n{header}<main>\n{body}\n"
             f"<footer>本页由 build_report_html.py 生成自 {html_mod.escape(md_path.name)}"
-            "（md 是唯一事实来源）；勿手改本文件，改 md 后重新生成。</footer>\n"
+            "（md 是唯一事实来源）；勿手改本文件，由报告脚本重建 md 后重新生成。</footer>\n"
             "</main>\n</div>\n</body>\n</html>\n")
 
 

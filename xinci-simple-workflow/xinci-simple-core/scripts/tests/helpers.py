@@ -26,6 +26,7 @@ def write_obs(root, slug, name, **fields) -> str:
     """写一份观察文件,返回数据区相对路径。"""
     obs = {"slug": slug, "observed_at": "2026-09-10T05:40:00+00:00", "stage": "scan",
            "source_urls": ["https://www.semrush.com/analytics/keywordmagic/"], "points": ["x"]}
+    obs["semrush_preview"] = {"queried_at": "2026-09-10", "filters": "US phrase KD<=49 exclude nav/adult", "note": "test preview"}
     obs.update(fields)
     p = root / "证据" / slug / name
     p.parent.mkdir(parents=True, exist_ok=True)
@@ -33,9 +34,9 @@ def write_obs(root, slug, name, **fields) -> str:
     return f"证据/{slug}/{name}"
 
 
-CLUSTER = {"total_volume": 182000,
-           "keywords": [{"term": "heic to jpg", "volume": 90500, "kd": 38},
-                        {"term": "heic to jpg converter", "volume": 40500, "kd": 41}]}
+CLUSTER = {"total_volume": 600000,
+           "keywords": [{"term": "heic to jpg", "volume": 300000, "kd": 38},
+                        {"term": "heic to jpg converter", "volume": 200000, "kd": 41}]}
 SEED = {"type": "root", "value": "Converter", "queried_at": "2026-09-10T03:12:00+00:00"}
 PROXY = {"kd": 38, "low_dr_count": 4, "ugc_count": 2, "content_age_median_days": 540}
 VERIFY_OBS = {
@@ -56,3 +57,42 @@ VERIFY_OBS = {
 }
 REVENUE = {"downside": 320, "base": 640, "upside": 960, "volume_needed_for_threshold": 56875,
            "threshold": 200, "assumptions_version": "2026-09-09.2"}
+
+# v2 complete observation; intentionally incomplete observations are constructed explicitly in tests.
+VERIFY_OBS.update(
+    schema_version=2,
+    direct_answer={'featured_snippet_completes_task': False, 'native_widget_completes_task': False, 'evidence': '首屏无完整直答'},
+    serp_structure={'blocked': False, 'evidence': '内页、小站与论坛分布'},
+    trends={'status': 'nonseasonal', 'evidence': '12 个月持续有量，无三个月集中峰值', 'source_url': 'https://trends.google.com/trends/explore?geo=US'},
+    scope_evidence='图像文件转换；不涉及安全或需实测的产品评价',
+    task_group={'id': 'convert', 'keywords': ['heic to jpg', 'heic to jpg converter'],
+                'representative_keyword': 'heic to jpg converter', 'form': 'tool', 'niche': 'tech',
+                'coverage_reason': '两种措辞都要求上传同类文件执行转换'})
+for row in VERIFY_OBS['serp_top10']:
+    row.update(url='https://' + row['domain'] + '/example', fresh=True, format_match=True)
+for pos in range(3, 11):
+    VERIFY_OBS['serp_top10'].append({'pos': pos, 'domain': f'example{pos}.com', 'url': f'https://example{pos}.com/',
+                                   'dr': 20, 'type': 'article', 'completes_task': False})
+
+
+def revenue_for(root, slug, evidence):
+    import ledger as L
+    import qualification as Q
+    return Q.assess(root, L.load(root)['candidates'][slug], evidence)[1]
+
+
+def register_candidate(root, slug='heic-to-jpg-converter', volume=600000):
+    import ledger as L
+    ev = write_obs(root, slug, '2026-09-10-scan.json')
+    L.register(root, slug=slug, primary_keyword=slug.replace('-', ' '), cluster=dict(CLUSTER, total_volume=volume),
+               seed=SEED, proxy=PROXY, evidence=[ev], by='test', reason='准入')
+    return slug
+
+
+def verified_candidate(root, slug='heic-to-jpg-converter'):
+    import ledger as L
+    register_candidate(root, slug)
+    ev = write_obs(root, slug, '2026-09-11-verify.json', **VERIFY_OBS)
+    L.transition(root, slug, to='verified', evidence=[ev], by='test', reason='已核验',
+                 form='tool', revenue=revenue_for(root, slug, [ev]))
+    return slug

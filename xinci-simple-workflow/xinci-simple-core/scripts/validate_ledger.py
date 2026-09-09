@@ -7,6 +7,7 @@ import sys
 from pathlib import Path
 
 import ledger as L
+import qualification as Q
 
 
 def validate(root):
@@ -28,6 +29,11 @@ def validate(root):
         elif hist[-1].get("to") != st:
             errors.append(f"{slug}: history 末项 {hist[-1].get('to')} != state {st}")
         if st == "verified":
+            bound_refs = []
+            try:
+                bound_refs = Q.check_bound(root, rec)
+            except (Q.QualificationError, KeyError, TypeError, ValueError) as exc:
+                errors.append(f'{slug}: {exc}')
             if rec.get("form") not in L.FORMS:
                 errors.append(f"{slug}: verified 缺 form")
             rev = rec.get("revenue") or {}
@@ -36,11 +42,19 @@ def validate(root):
             md_rel, html_rel = f"报告/{slug}.md", f"报告/{slug}.html"
             md_path, html_path = root / md_rel, root / html_rel
             if not md_path.is_file():
-                warnings.append(f"{slug}: 报告缺失 {md_rel}")
+                errors.append(f"{slug}: 报告缺失 {md_rel}")
             elif not html_path.is_file():
                 # md 在而 html 不在是错误:go 态要求双格式(照 xinci 的规矩)
                 errors.append(f"{slug}: 报告缺 html —— {html_rel} 不存在,重跑 build_report_html.py")
             else:
+                if bound_refs:
+                    import build_report as B
+                    try:
+                        observations = [Q.read_observation(root, ref, slug)[0] for ref in bound_refs]
+                        if md_path.read_text(encoding='utf-8') != B.render_groups(rec, observations):
+                            errors.append(f'{slug}: md 与绑定数据生成内容不一致，禁止手改报告')
+                    except (Q.QualificationError, KeyError, TypeError):
+                        pass  # 资格错误已在上方报告
                 want = hashlib.sha256(md_path.read_bytes()).hexdigest()
                 m = re.search(r'name="xinci-simple-source-sha256" content="([0-9a-f]{64})"',
                               html_path.read_text(encoding="utf-8"))

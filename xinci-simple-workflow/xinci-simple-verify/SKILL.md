@@ -1,85 +1,21 @@
 ---
 name: xinci-simple-verify
-description: '流量型选词的现场核验层:对 found 候选按排序取前 N,在美区未登录浏览器做 G1 Google 直答、G2 首页结构、G3 可打败性、季节性与范围复核,跑收入模型,通过的出机会报告。当用户说 simple verify、核验前几个、验一下 X、出报告时使用。English triggers: simple verify, verify traffic candidates, opportunity report. 这是 xinci-simple-workflow(流量型),不是 xinci 新词工作流;发现用 xinci-simple-scan。'
+description: '核验流量型主题簇：对排序前 N 或指定候选检查任务组 SERP、直答、竞争、季节性及收入，生成机会报告。用于 simple verify、核验前几个、验某词；不发现新词。'
 ---
 
-# xinci-simple-verify 现场核验
+# 现场核验
 
-对 `found` 候选做 G1 / G2 / G3 / 季节性 / 范围复核，跑收入模型，通过的出机会报告。终点是 `verified` + `报告/<slug>.md`，或 `rejected` / `parked` 加写清楚的 reason。
+行动前读 `xinci-simple-workflow/xinci-simple-core/选词契约.md` §1–2、§5–9，`数据采集.md` §1、§3–5、§7；写观察/清单与通过命令见 core 的 `命令与观察.md`。脚本均在 core/scripts。
 
-行动前必读：`xinci-simple-workflow/xinci-simple-core/选词契约.md` §5、§6、§7、§8；`xinci-simple-workflow/xinci-simple-core/数据采集.md` §1、§3、§4、§5。判据全部以契约为准。
+1. `report_status.py` 确认数据区；缺配置才问路径。`run_log.py --plan` 核对恢复位置，写 started 清单。指定 slug 则用指定的，否则 `rank.py --no-write --top N`，默认 5；parked 可由用户指定补核。
+2. 对候选先复核范围。明确命中就追加 verify 观察并 `transition --to rejected --gate scope`，无需为被排除项查询。
+3. 收入上限预筛：按原始总量运行 `revenue_model.py --upper-bound`。形态/垂类未知不限定选项；限定须有依据。上限不足门槛时保存完整输出到观察的 prescreen.result，写 basis，`--gate revenue_prescreen` 拒绝；不得记作已做现场核验。
+4. 其余候选按任务分组，必要时补采逐词表（`refresh-cluster`）。每组一个代表查询；不同意图、SERP 形态或直答风险须拆组。计入收入的词必须来自 cluster.keywords；不能计整批 phrase-match 总量。
+5. 内置面板做四项预检。失败重试一次；仍不合规 → 不写 G1–G3、候选保留原状态，清单 blocked 后停。合规后逐组读满自然结果与第二页，核 G1/G2/G3、Trends 与范围复核。缺证据写 parked；不能把没看到数字判为全年平稳。
+6. 每组用 `write_observation.py` 追加一份 schema_version=2 的 verify；字段包括 task_group、预检、AIO、摘要/组件、首页结构、逐结果 URL/AS/新鲜/格式、第二页、季节性与范围依据。观察不可覆盖，AS 不凭域名猜测。
+7. 任一组被硬否决：若该组是候选核心任务，拒绝该候选并写 `--gate G1|G2|G3|scope`；若能独立剔除该任务组，说明缩小范围的依据，该组词不计收入，继续核剩余任务组。不能仍用原始总量算收益。
+8. `qualification.py --slug <slug> --evidence <组1观察> --evidence <组2观察> ...` 重算已核验组的收入。证据不完整先补或 parked；完整但 base 不足则 `--gate revenue` 拒绝；通过则 `transition --to verified --form <输出form> --revenue-file <输出文件>`，传同一组观察引用。
+9. `build_report.py --slug <slug>` 同批生成 md/html，再 `validate_ledger.py`。恢复时已通过但缺报告先补生成；证据绑定报错则如实报错，不能用新观察替换旧裁决。
+10. 写 completed 清单；报告逐候选结论与决定性依据，分别计收入预筛、现场拒绝、parked 和 verified。运行清单只计本条新增的 Semrush 调用数。
 
-## 第 0 步：确认数据区
-
-```bash
-python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
-```
-
-退出码 2 → 问用户数据区放哪，`init_workspace.py --data-root <路径>`；正常则往下走。
-
-## 工作流
-
-1. **取目标。** 用户指定 slug 则用指定的；否则 `rank.py --no-write --top N`（默认 N=5）。
-2. **预检。** 内置面板打开一次美区查询，按 `数据采集.md §4` 核四项，写进本轮每份 verify 观察的 `browser_preflight`。任一不合规 → 本轮不写 G1–G3 结论，只在 `points` 记原因，候选留 `found`，如实报告后停。
-3. **逐候选现场核验**（按 `数据采集.md §3` 读整页）：
-   - G1 直答（契约 §5.1）→ 做完了 → `rejected`
-   - G2 首页结构（§5.2）→ 霸榜 → `rejected`；**不看前三条就下结论是违规**
-   - G3 可打败性（§5.3）：数"完整完成 + DR ≥ 50 + 新鲜格式对"的 K；DR 取 scan 观察记的 SERP overview，缺则本次到 Semrush 补一次并计费 → K ≥ 3 → `rejected`
-   - 季节性（§5.4）→ 集中 ≤ 3 个月 → `parked`
-   - 范围排除复核（§5.5）→ 命中 → `rejected`
-   - 写 verify 观察 `证据/<slug>/<日期>-verify.json`（字段见 `数据结构/observation.schema.json`：`browser_preflight` / `query_url` / `ai_overview` / `serp_top10` / `page2_note` / `trends_12m` / `scope_recheck` / `source_urls` / `points`）
-4. **判形态** `form`（契约 §5.6），跑收入模型：
-   ```bash
-   python3 xinci-simple-workflow/xinci-simple-core/scripts/revenue_model.py \
-     --form tool --cluster-volume 1600000 --niche tech --aio-present --strong-complete-count 1
-   ```
-   `--aio-present` 只在 AIO 存在且未做完时传；`--strong-complete-count` 传 G3 的 K（0/1/2）。
-5. **出口**（契约 §6.4）：
-   - 硬门否决 → `transition --to rejected`，reason 写"哪道门 + 现场看到什么"
-   - 季节性 → `transition --to parked`，reason 写月份分布
-   - `base ≥ 200`（当前门槛，见契约 §6.4）→ `transition --to verified --form <form> --revenue-json '<模型输出去掉 passes>'`，随后 `build_report.py --slug <slug>`（md 与 html 同批产出）
-   - `base < 200` → `transition --to rejected`，reason 写"收入不足：base $X，差 $Y"
-6. **写运行清单**：`run_log.py`，Google 与 Semrush 打开的 URL 都记进 `--source-opened`；`--billable-calls` 只计 Semrush。
-7. **向用户报告**：每个候选一行——slug / 结论 / 决定性的门或 base / 报告路径。零通过如实说零。
-
-## 硬规则
-
-- 不得用 Chrome 读 Google SERP；`get_page_text` 不能用于判 G1（会跳过 AI Overview）。
-- 不看满首页 + 第二页不下 G2 / G3 结论。
-- 代理指标（KD / AS / KGR）不能单独否决；否决只出自 G1 / G2 / G3 / 季节性 / 排除 / 收入五处。
-- 没通过就写 `rejected` 并给数字，不留 maybe、不留 `found` 等下次。
-- 报告只由 `build_report.py` 生成（它会同批调 `build_report_html.py` 出 html），md 与 html 都不手写、不手改。改了 md 要重跑 `build_report_html.py <md 路径>`，否则 `validate_ledger.py` 会因源 SHA 不一致报错。
-- 报告开篇的「为什么是这个词」由 `narrative.py` 从结构化字段派生，每节第一句是加粗的大白话结论（契约 §8.2）。不要手写那段话；想让结论更准更有力，就把 `serp_top10` 的 `dr`、`cluster.keywords` 的 `kd` 填全——`dr` 缺了就判不出硬对手数，「打得过吗」那句会退化成「有机会」。
-- 门槛与假设表只能由用户变更。运行中发现门槛不合现实时，提交实测证据与提案，不自行改（判据变更后的翻案走 `ledger.py requalify`）。
-
-## 命令模板
-
-```bash
-python3 xinci-simple-workflow/xinci-simple-core/scripts/rank.py --no-write --top 5
-
-python3 xinci-simple-workflow/xinci-simple-core/scripts/revenue_model.py \
-  --form tool --cluster-volume 1600000 --niche tech --aio-present --strong-complete-count 1
-# → base $672(1.6M × CTR 0.10 × 0.6 × 0.7 ÷ 1000 × RPM $10)。当前门槛 $200:同样折减下 tool+tech 需簇量 476,190、tool+home 需 264,550
-
-python3 xinci-simple-workflow/xinci-simple-core/scripts/ledger.py transition \
-  --slug heic-to-jpg-converter --to verified \
-  --evidence "证据/heic-to-jpg-converter/2026-09-11-verify.json" --by xinci-simple-verify \
-  --reason "G1 pass(AIO 只罗列工具名未做转换),G2 pass(首页 6 条小站内页),G3 K=1(cloudconvert),base $672" \
-  --form tool \
-  --revenue-json '{"downside":336.0,"base":672.0,"upside":1008.0,"volume_needed_for_threshold":476190,"threshold":200,"assumptions_version":"2026-09-09.2","inputs":{"form":"tool","cluster_volume":1600000,"niche":"tech","aio_present":true,"strong_complete_count":1}}'
-
-python3 xinci-simple-workflow/xinci-simple-core/scripts/build_report.py --slug heic-to-jpg-converter
-# 只重出 html(md 手改过或样式改过时):
-python3 xinci-simple-workflow/xinci-simple-core/scripts/build_report_html.py "<数据区>/报告/heic-to-jpg-converter.md"
-
-python3 xinci-simple-workflow/xinci-simple-core/scripts/ledger.py transition \
-  --slug some-term --to rejected \
-  --evidence "证据/some-term/2026-09-11-verify.json" --by xinci-simple-verify \
-  --reason "G1 直答:AIO 给出完整换算表并附示例,用户不必点任何结果"
-
-python3 xinci-simple-workflow/xinci-simple-core/scripts/run_log.py --date 2026-09-11 --skill xinci-simple-verify \
-  --source-opened "https://www.google.com/search?q=heic+to+jpg+converter&gl=us&hl=en&pws=0" \
-  --source-opened "https://trends.google.com/trends/explore?geo=US&date=today%2012-m&q=heic%20to%20jpg" \
-  --candidate-touched heic-to-jpg-converter --billable-calls 0 \
-  --note "核验 5 个:1 verified / 3 rejected(G1×2,收入×1) / 1 parked"
-```
+历史 verified 复核：不因旧状态直接重出报告。证据不足用 `invalidate --to parked --gate evidence`；范围命中用 `invalidate --to rejected --gate scope`，须追加说明旧材料来源的审计观察，明确未重新采集现场。原报告自动归档。判据变更翻案仅走 requalify，并提供用户批准的变更依据、完整新核验与收入。

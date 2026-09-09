@@ -1,51 +1,34 @@
 ---
 name: xinci-simple-run
-description: '流量型选词的连续运行驱动器。当消息中出现启动暗号 xinci_simple_run（可带 max_rounds=N,默认 3）、通过 /xinci-simple-run 或 Skill 工具调用、或用户说"连续跑几轮 simple"时使用。一轮 = 一次 xinci-simple-scan + verify 排序前 5;跑满预算才停,中途出 verified 不停。English triggers: xinci_simple_run, run simple workflow N rounds. 这是 xinci-simple-workflow,不是 xinci 新词工作流的 xinci-run。'
+description: '流量型选词连续运行：xinci_simple_run（可带 max_rounds=N，默认3）、/xinci-simple-run 或连续跑几轮 simple。每轮补足待核验后 verify 前5，预算内出 verified 不停；不是 xinci 新词工作流。'
 ---
 
-# xinci-simple-run 连续运行驱动器
+# 连续运行
 
-把 `xinci-simple-scan` 与 `xinci-simple-verify` 串成 N 轮连跑。本 skill 不含任何判据、不新增脚本、不写 session 文件；判据看 `xinci-simple-workflow/xinci-simple-core/选词契约.md`，步骤看两个阶段 skill 的 SKILL.md。
+串联 scan 与 verify，不复制判据。行动前读 core/选词契约.md §2、§7–9，阶段步骤读对应 Skill。启动暗号即授权既定观察、账本和清单写入，不重复确认。
 
-## 启动
+## 启动与恢复
 
-- `xinci_simple_run`、`/xinci-simple-run` 或"连续跑几轮 simple"即开始，不重复确认。
-- 预算 `max_rounds=N`，未给默认 **3**。一轮约 1–2 小时、Semrush 约 3–5 次计费查询，按此估预算。
-- 启动即授权既定路径上的全部 `ledger.py` 写入（register / transition）；闸门、准入阈值、收入门槛不因连续运行降低。
+1. `report_status.py` 确认数据区；未配置才问路径。
+2. `run_log.py --plan` 核对恢复位置。存在 resume 时继续同一 run_id、round、max_rounds，不重启。读取最新清单与账本核对已落盘动作；已完成转移不重复，缺报告先补。旧文本清单保留可读，不能猜作新格式进度。
+3. 没有未完运行才建立唯一 run_id（字母数字连字符），预算用户指定，否则 3。每阶段 started 和结束都用结构化清单；命令见 core/命令与观察.md。
 
-第 0 步数据区同两个阶段 skill：`report_status.py` 正常即已配置；退出码 2 则问用户后 `init_workspace.py --data-root <路径>`。
+## 每轮
 
-## 一轮
-
-1. **scan**：按 `xinci-simple-workflow/xinci-simple-scan/SKILL.md` 完整跑一次。来源按轮换自动选（读上一轮清单 note 决定下一个来源）；用户在启动命令里指定了来源或词根就按指定的。
-2. **verify**：按 `xinci-simple-workflow/xinci-simple-verify/SKILL.md` 核 `rank.py --no-write --top 5`。
-3. **运行清单**：scan 与 verify 各一份，`run_log.py --suffix r<轮号>`，`--note` 首条写 `xinci_simple_run 第 k/N 轮`。同日多次启动轮号从 1 重数，suffix 冲突则改 `r<k>-HHMM`。
+- found ≥5：scan 记 skipped；不足5：完整执行 scan 补一批。跳过不推进来源/词根游标。
+- verify 重新排序前5；不足5核全部。零候选可结束 verify 阶段，但 scan 必须有实际搜索，不能空动作凑轮。
+- 每阶段的清单包含 run_id、round、max_rounds、source_kind、seed_value、outcome、next_step。started/blocked 的 next_step 为本阶段；scan completed/skipped 后为 verify；verify completed 后为 scan，最后一轮为 done。
+- 计费数只记本条新增调用量；不在最终清单重复累计之前已登记的调用。复核账本与清单、报告完整性后才算一轮完成。
 
 ## 执行者
 
-- 每轮派一个子代理，`executor_id` 形如 `run-<HHMM>-r<k>`，由它亲自做浏览器预检（`数据采集.md §4`）并跑完整轮；同一轮不按阶段换执行者。主上下文只编排、核对清单、汇总。
-- 没有 Agent 机制时主上下文就是执行者。
-- 子代理返回后主上下文核对：本轮两份运行清单存在、`ledger.py list` 状态变化与子代理汇报一致；不一致按清单为准。
+有 Agent 机制时每轮派一个子代理，亲自预检并完成整轮，不按阶段换人；主上下文编排与核对。没有则主上下文执行。每轮返回时核对清单、账本变化、双格式报告和 validator；不一致先修复，不凭口头汇报继续。
 
 ## 停机
 
-只有三种，先完成当前原子动作（写完观察、写完清单）再停：
+- 完成 N 轮：汇总实际搜索范围与结果。
+- Semrush 登录失效/验证码/额度提示，或浏览器预检重试仍失败：写 blocked 清单，保留恢复位置，报告现象。
 
-| 条件 | 判法 | 收尾 |
-| --- | --- | --- |
-| 预算满 | 已完成 N 轮 | 正常汇总 |
-| blocker | Semrush 登录失效 / 验证码 / 额度提示；浏览器四项预检不合规且重试一次仍不合规 | 报 blocker，写明现象与发生在第几轮 |
-| 来源枯竭 | 连续两轮 scan 零注册 **且** `found` 池为空 | 报来源枯竭，列已跑过的来源 |
+两轮零注册不代表来源穷尽。零产出轮正常推进来源，在预算内继续；出 verified 也继续。不要估称固定每轮 3–5 次查询或 1–2 小时，计费和耗时按实测汇报。
 
-中途出 `verified` **不停**。空轮、"看起来找不到"、运行时间长都不是停机理由。
-
-## 收尾汇总
-
-一段中文，含：跑了 k/N 轮；共注册多少 `found`、核了多少；`verified` 列表（主词 / base / 报告路径）；`rejected` 按门分布（G1 / G2 / G3 / 排除 / 收入不足）与 `parked` 数；Semrush 总计费调用数（各轮清单 `billable_calls` 之和）；下轮该轮到的来源。零产出如实说零。
-
-## 硬规则
-
-- 不复制 scan / verify 的步骤到本文件；两个阶段 skill 改了，本 skill 自动跟着。
-- 不为凑轮数放宽准入或收入门槛；不用空轮凑停机条件。
-- 不用 Chrome 读 Google SERP，不登录内置面板——两条通道纪律见 `数据采集.md §1`。
-- 汇总只陈述事实，建站与否是用户的决定。
+收尾：k/N 轮、注册/核验数、收入预筛数、按门拒绝数、parked 数、verified 的主词/base/报告路径、Semrush 累计调用数与下次来源。发现历史待复核项单独披露，不计入本次成功产出。建站与否由用户决定。

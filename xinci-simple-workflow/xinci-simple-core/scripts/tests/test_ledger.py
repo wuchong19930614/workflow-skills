@@ -1,161 +1,118 @@
-# ledger:4 态合法表、证据存在、reason 非空、verified 需 form+revenue、history 只追加、原子写。
-import json
-import sys
+import helpers  # initializes script import path
+import copy
 import unittest
-from pathlib import Path
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 import ledger as L
-import revenue_model as M
-from helpers import TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE
-
-
-def reg(root, slug="heic-to-jpg-converter"):
-    ev = write_obs(root, slug, "2026-09-10-scan.json")
-    L.register(root, slug=slug, primary_keyword=slug.replace("-", " "), cluster=CLUSTER,
-               seed=SEED, proxy=PROXY, evidence=[ev], by="xinci-simple-scan", reason="准入:簇量 182K")
-    return slug
+import qualification as Q
+from helpers import TmpRoot, write_obs, VERIFY_OBS, revenue_for, register_candidate, verified_candidate
 
 
 class LedgerTest(unittest.TestCase):
-    def test_register_creates_found(self):
+    def test_register_and_duplicate(self):
         with TmpRoot() as root:
-            slug = reg(root)
-            rec = L.load(root)["candidates"][slug]
-            self.assertEqual(rec["state"], "found")
-            self.assertIsNone(rec["form"])
-            self.assertIsNone(rec["revenue"])
-            self.assertEqual(len(rec["history"]), 1)
-            self.assertEqual(rec["history"][0]["to"], "found")
-            self.assertIsNone(rec["history"][0]["from"])
-
-    def test_register_requires_existing_evidence(self):
-        with TmpRoot() as root:
+            slug = register_candidate(root)
+            self.assertEqual(L.load(root)['candidates'][slug]['state'], 'found')
             with self.assertRaises(L.LedgerError):
-                L.register(root, slug="x", primary_keyword="x", cluster=CLUSTER, seed=SEED,
-                           proxy=PROXY, evidence=["证据/x/none.json"], by="xinci-simple-scan", reason="r")
+                register_candidate(root)
 
-    def test_register_duplicate_rejected(self):
+    def test_pass_binds_and_recomputes(self):
         with TmpRoot() as root:
-            reg(root)
+            slug = verified_candidate(root)
+            rec = L.load(root)['candidates'][slug]
+            self.assertEqual(rec['revenue']['base'], 210)
+            self.assertEqual(rec['qualification']['qualified_volume'], 500000)
+            self.assertEqual(len(rec['qualification']['bindings']), 2)
+            Q.check_bound(root, rec)
             with self.assertRaises(L.LedgerError):
-                reg(root)
+                L.transition(root, slug, to='found', evidence=rec['evidence_refs'], by='t', reason='x')
 
-    def test_illegal_transition_rejected(self):
+    def test_tampered_income_and_incomplete_evidence_refused(self):
         with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
-            L.transition(root, slug, to="rejected", evidence=[ev], by="xinci-simple-verify", reason="G1 直答")
+            slug = register_candidate(root)
+            ev = write_obs(root, slug, 'v-verify.json', **VERIFY_OBS)
+            revenue = revenue_for(root, slug, [ev])
+            for patch in ({'base': 9999}, {'threshold': 1}, {'assumptions_version': 'old'}):
+                with self.subTest(patch=patch), self.assertRaises(L.LedgerError):
+                    L.transition(root, slug, to='verified', evidence=[ev], by='t', reason='x', form='tool', revenue=dict(revenue, **patch))
+            broken = copy.deepcopy(VERIFY_OBS)
+            broken['trends']['status'] = 'unknown'
+            bad = write_obs(root, slug, 'bad-verify.json', **broken)
+            with self.assertRaisesRegex(L.LedgerError, '季节性'):
+                L.transition(root, slug, to='verified', evidence=[bad], by='t', reason='x', form='tool', revenue=revenue)
+            self.assertEqual(L.load(root)['candidates'][slug]['state'], 'found')
+
+    def test_parked_can_be_completed(self):
+        with TmpRoot() as root:
+            slug = register_candidate(root)
+            ev = write_obs(root, slug, 'v-verify.json', **VERIFY_OBS)
+            L.transition(root, slug, to='parked', evidence=[ev], by='t', reason='待补采')
+            L.transition(root, slug, to='verified', evidence=[ev], by='t', reason='完整', form='tool', revenue=revenue_for(root, slug, [ev]))
+            self.assertEqual([h['to'] for h in L.load(root)['candidates'][slug]['history']], ['found','parked','verified'])
+
+    def test_requalify_requires_eligible_rejection_and_change(self):
+        for gate in ('revenue', 'G1', 'G2', 'G3'):
+            with self.subTest(gate=gate), TmpRoot() as root:
+                slug = register_candidate(root)
+                ev = write_obs(root, slug, 'v-verify.json', **VERIFY_OBS)
+                L.transition(root, slug, to='rejected', evidence=[ev], by='t', reason='旧裁决', gate=gate)
+                kwargs = dict(evidence=[ev], by='t', reason='重审', form='tool', revenue=revenue_for(root, slug, [ev]))
+                with self.assertRaises(L.LedgerError):
+                    L.requalify(root, slug, **kwargs)
+                if gate == 'revenue':
+                    rec = L.requalify(root, slug, **kwargs, change_basis='用户批准门槛变更')
+                    self.assertEqual(rec['state'], 'verified')
+                else:
+                    with self.assertRaises(L.LedgerError):
+                        L.requalify(root, slug, **kwargs, change_basis='降低收入门槛')
+
+    def test_rejection_requires_gate_reason_and_verify(self):
+        with TmpRoot() as root:
+            slug = register_candidate(root)
+            ev = write_obs(root, slug, 'v-verify.json', **VERIFY_OBS)
+            for extra in ({'reason': '', 'gate':'G1'}, {'reason':'x'}):
+                with self.assertRaises(L.LedgerError):
+                    L.transition(root, slug, to='rejected', evidence=[ev], by='t', **extra)
+            L.transition(root, slug, to='rejected', evidence=[ev], by='t', reason='G1 实测直答', gate='G1')
+            self.assertEqual(L.list_candidates(root, 'rejected')[0]['slug'], slug)
+
+class AuditTest(unittest.TestCase):
+    def test_invalidate_preserves_history_and_archives_report(self):
+        import build_report as B
+        with TmpRoot() as root:
+            slug = verified_candidate(root)
+            md = B.build(root, slug)
+            original = md.read_bytes()
+            before = L.load(root)['candidates'][slug]['history']
+            ev = write_obs(root, slug, 'audit-verify.json', stage='verify', audit_basis='基于旧材料重审范围', scope_recheck={'ymyl':True})
+            rec = L.invalidate(root, slug, to='rejected', evidence=[ev], gate='scope', by='t', reason='任务涉及人身安全')
+            self.assertEqual(rec['history'][:-1], before)
+            self.assertEqual(rec['state'], 'rejected')
+            self.assertFalse(md.exists())
+            archived = rec['history'][-1]['archived_reports']
+            self.assertEqual(len(archived), 2)
+            self.assertEqual((root / archived[0]).read_bytes(), original)
+
+    def test_invalidate_refuses_unsubstantiated_scope_claim(self):
+        with TmpRoot() as root:
+            slug = verified_candidate(root)
+            ev = write_obs(root, slug, 'audit-verify.json', stage='verify', audit_basis='audit')
             with self.assertRaises(L.LedgerError):
-                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
-                             form="tool", revenue=REVENUE)
+                L.invalidate(root, slug, to='rejected', evidence=[ev], gate='scope', by='t', reason='x')
+            self.assertEqual(L.load(root)['candidates'][slug]['state'], 'verified')
 
-    def test_reason_required(self):
+    def test_refresh_adds_evidence_and_preserves_old_cluster(self):
+        from helpers import CLUSTER
         with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
+            slug = register_candidate(root)
+            ev = write_obs(root, slug, 'new-scan.json')
+            rec = L.refresh_cluster(root, slug, cluster=dict(CLUSTER, total_volume=700000), evidence=[ev], by='t', reason='补采')
+            self.assertEqual(rec['history'][-1]['previous_cluster']['total_volume'], 600000)
+            self.assertEqual(rec['cluster']['total_volume'], 700000)
+            self.assertEqual(rec['state'], 'found')
+
+    def test_prescreen_cannot_fake_income_or_use_qualified_subset(self):
+        import revenue_model as M
+        with TmpRoot() as root:
+            slug = register_candidate(root)
+            ev = write_obs(root, slug, 'pre-verify.json', stage='verify', prescreen={'basis':'tool tech', 'result':M.upper_bound(1000, ['tool'], ['tech'])})
             with self.assertRaises(L.LedgerError):
-                L.transition(root, slug, to="rejected", evidence=[ev], by="x", reason="")
-
-    def test_verified_requires_form_and_revenue(self):
-        with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
-            with self.assertRaises(L.LedgerError):
-                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r")
-            with self.assertRaises(L.LedgerError):
-                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r", form="tool")
-            L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="base 640",
-                         form="tool", revenue=REVENUE)
-            rec = L.load(root)["candidates"][slug]
-            self.assertEqual(rec["state"], "verified")
-            self.assertEqual(rec["form"], "tool")
-            self.assertEqual(rec["revenue"]["base"], 640)
-
-    def test_parked_then_verified(self):
-        with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
-            L.transition(root, slug, to="parked", evidence=[ev], by="x", reason="季节性")
-            L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
-                         form="info", revenue=REVENUE)
-            rec = L.load(root)["candidates"][slug]
-            self.assertEqual([h["to"] for h in rec["history"]], ["found", "parked", "verified"])
-
-    def test_verified_rejects_base_below_threshold(self):
-        with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
-            low = dict(REVENUE, base=M.THRESHOLD - 1)
-            with self.assertRaises(L.LedgerError):
-                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
-                             form="tool", revenue=low)
-
-    def test_verified_rejects_tampered_threshold(self):
-        """不许把记录里的 threshold 改小来绕过当前门槛。"""
-        with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
-            tampered = dict(REVENUE, base=10, threshold=1)
-            with self.assertRaises(L.LedgerError):
-                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
-                             form="tool", revenue=tampered)
-
-    def test_requalify_reopens_rejected_under_new_threshold(self):
-        """判据变更后的受控翻案:只走 requalify,transition 仍拒。"""
-        with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
-            L.transition(root, slug, to="rejected", evidence=[ev], by="x",
-                         reason="收入不足:base 234.59,差 265.41")
-            # 普通 transition 不给翻案
-            with self.assertRaises(L.LedgerError):
-                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
-                             form="tool", revenue=dict(REVENUE, base=234.59))
-            rec = L.requalify(root, slug, evidence=[ev], by="x",
-                              reason="判据变更重审:门槛 500→200,base 234.59 过线",
-                              form="tool", revenue=dict(REVENUE, base=234.59))
-            self.assertEqual(rec["state"], "verified")
-            self.assertEqual([h["to"] for h in rec["history"]], ["found", "rejected", "verified"])
-            self.assertIn("判据变更", rec["history"][-1]["reason"])
-
-    def test_requalify_only_from_rejected_and_needs_threshold(self):
-        with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
-            # found 不能 requalify
-            with self.assertRaises(L.LedgerError):
-                L.requalify(root, slug, evidence=[ev], by="x", reason="r",
-                            form="tool", revenue=REVENUE)
-            L.transition(root, slug, to="rejected", evidence=[ev], by="x", reason="G1")
-            # base 仍不达新门槛的不能翻
-            with self.assertRaises(L.LedgerError):
-                L.requalify(root, slug, evidence=[ev], by="x", reason="r",
-                            form="tool", revenue=dict(REVENUE, base=M.THRESHOLD - 1))
-
-    def test_invalid_form_rejected(self):
-        with TmpRoot() as root:
-            slug = reg(root)
-            ev = write_obs(root, slug, "2026-09-10-verify.json", stage="verify")
-            with self.assertRaises(L.LedgerError):
-                L.transition(root, slug, to="verified", evidence=[ev], by="x", reason="r",
-                             form="saas", revenue=REVENUE)
-
-    def test_no_tmp_left_behind(self):
-        with TmpRoot() as root:
-            reg(root)
-            self.assertEqual([p.name for p in (root / "账本").iterdir()], ["候选账本.json"])
-
-    def test_list_by_state(self):
-        with TmpRoot() as root:
-            a = reg(root, "a-term")
-            b = reg(root, "b-term")
-            ev = write_obs(root, b, "2026-09-10-verify.json", stage="verify")
-            L.transition(root, b, to="rejected", evidence=[ev], by="x", reason="G2")
-            self.assertEqual([r["slug"] for r in L.list_candidates(root, state="found")], [a])
-            self.assertEqual(len(L.list_candidates(root)), 2)
-
-
-if __name__ == "__main__":
-    unittest.main()
+                L.transition(root, slug, to='rejected', evidence=[ev], gate='revenue_prescreen', by='t', reason='不足')

@@ -42,6 +42,58 @@ class RunLogTest(unittest.TestCase):
                 R.record(root, date="2026-09-10", skill="xinci-simple-verify", sources_opened=[],
                          candidates_touched=[], billable_calls=-1, notes=[])
 
+class ProgressTest(unittest.TestCase):
+    def record(self, root, skill='xinci-simple-scan', **overrides):
+        progress = dict(run_id='test-run', round=1, max_rounds=2, source_kind='root', seed_value='Generator', outcome='completed', next_step='verify')
+        progress.update(overrides)
+        return R.record(root, date='2026-09-10', skill=skill, sources_opened=[], candidates_touched=[], billable_calls=0, notes=[], progress=progress)
+
+    def test_resume_after_scan_and_after_verify(self):
+        with TmpRoot() as root:
+            self.record(root)
+            self.assertEqual(R.plan(root)['resume']['round'], 1)
+            self.assertEqual(R.plan(root)['action'], 'verify')
+            self.record(root, skill='xinci-simple-verify', next_step='scan')
+            self.assertEqual(R.plan(root)['resume']['round'], 2)
+            self.assertEqual(R.plan(root)['next_source'], 'small_site')
+            self.assertEqual(R.plan(root)['last_completed_root'], 'Generator')
+
+    def test_budget_and_duplicate_completion_guard(self):
+        with TmpRoot() as root:
+            self.record(root)
+            with self.assertRaises(R.RunLogError):
+                self.record(root)
+            with self.assertRaises(R.RunLogError):
+                self.record(root, round=2, max_rounds=3)
+            with self.assertRaises(R.RunLogError):
+                self.record(root, round=3)
+
+    def test_blocker_retains_phase(self):
+        with TmpRoot() as root:
+            self.record(root, outcome='blocked', next_step='scan')
+            self.assertEqual(R.plan(root)['action'], 'scan')
+            self.assertEqual(R.plan(root)['resume']['run_id'], 'test-run')
+
+    def test_last_round_finishes_and_skip_does_not_rotate(self):
+        with TmpRoot() as root:
+            self.record(root, outcome='skipped', max_rounds=1)
+            self.assertEqual(R.plan(root)['next_source'], 'root')
+            self.assertIsNone(R.plan(root)['last_completed_root'])
+            self.record(root, skill='xinci-simple-verify', max_rounds=1, next_step='done')
+            self.assertIsNone(R.plan(root)['resume'])
+
+    def test_backlog_prefers_verify_without_scanning(self):
+        from helpers import register_candidate
+        with TmpRoot() as root:
+            for i in range(5):
+                register_candidate(root, 'term-' + str(i))
+            self.assertEqual(R.plan(root)['action'], 'verify')
+
+    def test_invalid_next_step_cannot_finish_early(self):
+        with TmpRoot() as root:
+            with self.assertRaises(R.RunLogError):
+                self.record(root, skill='xinci-simple-verify', next_step='done')
+
 
 if __name__ == "__main__":
     unittest.main()

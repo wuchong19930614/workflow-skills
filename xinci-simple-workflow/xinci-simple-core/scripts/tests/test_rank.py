@@ -12,7 +12,7 @@ from helpers import TmpRoot, write_obs, CLUSTER, SEED
 
 def mk(root, slug, kd, vol, low_dr, ugc, age):
     ev = write_obs(root, slug, "2026-09-10-scan.json")
-    cluster = dict(CLUSTER, total_volume=vol)
+    cluster = {"total_volume": vol, "keywords": [{"term": slug, "volume": vol, "kd": kd}]}
     proxy = {"kd": kd, "low_dr_count": low_dr, "ugc_count": ugc, "content_age_median_days": age}
     L.register(root, slug=slug, primary_keyword=slug, cluster=cluster, seed=SEED, proxy=proxy,
                evidence=[ev], by="t", reason="r")
@@ -36,7 +36,7 @@ class RankTest(unittest.TestCase):
             mk(root, "a", kd=30, vol=100000, low_dr=3, ugc=2, age=400)
             mk(root, "b", kd=10, vol=300000, low_dr=6, ugc=5, age=900)
             ev = write_obs(root, "c", "2026-09-10-scan.json")
-            L.register(root, slug="c", primary_keyword="c", cluster=dict(CLUSTER, total_volume=200000),
+            L.register(root, slug="c", primary_keyword="c", cluster={"total_volume": 200000, "keywords": [{"term":"c", "volume":200000}]},
                        seed=SEED, proxy={"kd": 20}, evidence=[ev], by="t", reason="r")
             scores = K.rank_all(root)
             self.assertTrue(0 <= scores["c"] <= 1)
@@ -46,7 +46,7 @@ class RankTest(unittest.TestCase):
             mk(root, "a", kd=30, vol=100000, low_dr=3, ugc=2, age=400)
             mk(root, "b", kd=10, vol=300000, low_dr=6, ugc=5, age=900)
             ev = write_obs(root, "b", "2026-09-10-verify.json", stage="verify")
-            L.transition(root, "b", to="rejected", evidence=[ev], by="t", reason="G1")
+            L.transition(root, "b", to="rejected", evidence=[ev], by="t", reason="G1", gate="G1")
             scores = K.rank_all(root, write=True)
             self.assertIn("a", scores)
             self.assertNotIn("b", scores)

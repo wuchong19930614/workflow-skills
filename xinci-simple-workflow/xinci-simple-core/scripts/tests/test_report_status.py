@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import ledger as L
 import report_status as S
-from helpers import TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE
+from helpers import revenue_for, VERIFY_OBS, TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE
 
 
 def reg(root, slug, rank=None):
@@ -33,7 +33,7 @@ class ReportStatusTest(unittest.TestCase):
     def test_parked_days_and_stale_flag(self):
         with TmpRoot() as root:
             reg(root, "p")
-            ev = write_obs(root, "p", "2026-09-10-verify.json", stage="verify")
+            ev = write_obs(root, "p", "2026-09-10-verify.json", **VERIFY_OBS)
             L.transition(root, "p", to="parked", evidence=[ev], by="t", reason="季节性")
             ledger = L.load(root)
             old = (datetime.now(timezone.utc) - timedelta(days=95)).isoformat(timespec="seconds")
@@ -47,9 +47,9 @@ class ReportStatusTest(unittest.TestCase):
     def test_verified_lists_report_path(self):
         with TmpRoot() as root:
             reg(root, "v")
-            ev = write_obs(root, "v", "2026-09-10-verify.json", stage="verify")
+            ev = write_obs(root, "v", "2026-09-10-verify.json", **VERIFY_OBS)
             L.transition(root, "v", to="verified", evidence=[ev], by="t", reason="r",
-                         form="tool", revenue=REVENUE)
+                         form="tool", revenue=revenue_for(root, "v", [ev]))
             rep = S.build_report(root)
             self.assertEqual(rep["verified"][0]["report"], "报告/v.md")
             self.assertFalse(rep["verified"][0]["report_exists"])

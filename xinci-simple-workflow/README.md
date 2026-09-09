@@ -1,74 +1,37 @@
 # xinci-simple-workflow（流量型选词）
 
-从**已有真实搜索量**的英文词里，找出 SERP 守得弱、AI Overview 吃不掉、base case 月收入 ≥ $200 的主题簇（门槛 2026-09-09 由 $500 下调，依据见契约 §6.0），产出一份机会报告。建站方式不预设，报告就是交付物。
-
-## 与 xinci 新词工作流的关系
-
-- 零运行时依赖：不 import 它的脚本、不引用它的契约。
-- 数据区独立：`<数据区>/xinci-simple/`，与 `新词工作流/` 零交集。
-- xinci 原样冻结。这套工作流是 2026-09-09 结构诊断后的方向切换（见 [设计稿](../docs/superpowers/specs/2026-09-09-xinci-simple-workflow-design.md)）。
-
-## 单元清单
+从已有搜索量的 US 英文主题簇中，找首屏未完成任务、竞争可争取、base 月收入 ≥ $200 的机会，输出 md/html 报告。与 xinci 新词工作流零运行时依赖。
 
 | 单元 | 职责 |
 | --- | --- |
-| [xinci-simple-scan](xinci-simple-scan/SKILL.md) | 发现：Semrush 词根轮换 / 小站反推 / 论坛问题 → 零成本排除 → 注册 `found` → 代理排序 |
-| [xinci-simple-verify](xinci-simple-verify/SKILL.md) | 现场核验：G1 直答 / G2 首页结构 / G3 可打败性 / 季节性 / 范围复核 → 收入模型 → 机会报告 |
-| [xinci-simple-status](xinci-simple-status/SKILL.md) | 只读看板 |
-| [xinci-simple-run](xinci-simple-run/SKILL.md) | 连续运行驱动器，暗号 `xinci_simple_run max_rounds=N`：一轮 = scan 一批 + verify 前 5，跑满才停 |
-| [xinci-simple-core](xinci-simple-core/) | 契约（[选词契约](xinci-simple-core/选词契约.md)、[数据采集](xinci-simple-core/数据采集.md)）、schema、脚本、测试 |
+| [scan](xinci-simple-scan/SKILL.md) | 词根/小站/论坛发现，补足下一批待核验候选 |
+| [verify](xinci-simple-verify/SKILL.md) | 收入上限预筛、任务组现场核验、逐组收入与报告 |
+| [run](xinci-simple-run/SKILL.md) | `xinci_simple_run max_rounds=N`，默认3轮，可恢复，发现与核验按池量配合 |
+| [status](xinci-simple-status/SKILL.md) | 只读看板，披露历史 verified 的完整性缺口 |
+| [选词契约](xinci-simple-core/选词契约.md) | 唯一判据；[数据采集](xinci-simple-core/数据采集.md)管通道；[命令与观察](xinci-simple-core/命令与观察.md)管调用 |
 
-## 四层漏斗
+## 当前口径
 
-1. **发现**（Semrush，Chrome 通道）：簇量 ≥ 50,000 或主词 ≥ 5,000，过四条排除（YMYL / 需亲身体验 / 品牌导航 / 新闻热点）→ `found`
-2. **代理排序**（脚本）：KD、簇量、低 DR 数、UGC 数、内容年龄 → `rank_score`，只排序不否决
-3. **现场核验**（内置浏览器，美区未登录）：G1 Google 直答硬否决；G2 首页结构；G3"完整 + DR ≥ 50 + 新鲜"结果数 ≥ 3 否决；季节性 → `parked`
-4. **收入模型**（脚本）：按形态套假设表，三情景；`base ≥ $200` → `verified` + 报告（md 给 AI、html 给人，开篇用人话说清为什么选它）
+四态保持 found / parked / verified / rejected，门槛及 CTR/RPM/佣金假设不变。资格 v2 区分原始总量与已核验逐词量，各任务组分别核验、计算后求和。证据不足不能自动通过。
 
-## 状态机
+通过时绑定观察路径与 SHA-256；收入由脚本重算。报告读取当次绑定观察，新增观察不会改变旧报告。既有 verified 缺 v2 证据时可读但标待复核，不能重建正式报告。
 
-```
-found ──核验 + 收入通过──→ verified（报告已出）
-  ├──硬门否决 / 收入不足──→ rejected
-  └──季节性 / 证据不足──→ parked ──→ verified | rejected
-```
-
-账本只能由 `ledger.py` 写。
-
-## 第一次使用：先定数据区
+## 首次使用
 
 ```bash
-python3 xinci-simple-workflow/xinci-simple-core/scripts/init_workspace.py --data-root <数据区路径>
+python3 xinci-simple-workflow/xinci-simple-core/scripts/init_workspace.py --data-root <用户指定数据区>
 ```
 
-幂等；路径记进仓库根 `.xinci-simple-data-root`（不入库）。解析顺序：`--data-root` > 环境变量 `XINCI_SIMPLE_DATA_ROOT` > 配置文件 > 拒绝执行。
+解析：命令参数 > XINCI_SIMPLE_DATA_ROOT > 仓库 `.xinci-simple-data-root` > 拒绝猜测。
 
-## 双环境接入（symlink，不入库）
+本地接入可将四个 Skill 目录链接到所用环境的 skills 目录；不重复安装 core，也不修改其他工作流。
 
-```bash
-for s in xinci-simple-scan xinci-simple-verify xinci-simple-status; do
-  ln -sfn "$(pwd)/xinci-simple-workflow/$s" ~/.codex/skills/$s
-  ln -sfn "$(pwd)/xinci-simple-workflow/$s" ~/.claude/skills/$s
-done
-```
-
-## 测试
+## 检查
 
 ```bash
-python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q
+python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -q
 python3 xinci-simple-workflow/xinci-simple-core/scripts/validate_ledger.py
+python3 xinci-simple-workflow/xinci-simple-core/scripts/run_log.py --plan
 ```
 
-## 脚本
-
-| 脚本 | 用途 |
-| --- | --- |
-| `data_root.py` / `init_workspace.py` | 数据区解析与初始化 |
-| `ledger.py` | `register` / `transition` / `list` |
-| `rank.py` | 代理排序，回写 `rank_score` |
-| `revenue_model.py` | 三情景收入模型 + `volume_needed_for_500` |
-| `run_log.py` | 运行清单 |
-| `build_report.py` | 机会报告 md（开篇「为什么是这个词」+ 九节数据），同批出 html |
-| `build_report_html.py` | 从 md 单向生成 html（内嵌源 SHA-256，永不手改） |
-| `narrative.py` | 「为什么是这个词」的人话叙述，全部从结构化字段派生 |
-| `report_status.py` / `validate_ledger.py` | 看板 / 不变式校验 |
+`validate_ledger.py` 非零意味着实际账本需要处理，不能以单元测试通过代替业务完整性。历史纠错与重新核验的入口见命令文档。

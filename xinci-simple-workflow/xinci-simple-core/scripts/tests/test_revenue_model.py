@@ -78,6 +78,27 @@ class RevenueModelTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             M.model("info", 100000, strong_complete_count=3)
 
+class UpperBoundTest(unittest.TestCase):
+    def test_unknown_form_does_not_prematurely_reject(self):
+        self.assertFalse(M.upper_bound(71150)['can_reject'])  # commercial still possible
+        self.assertTrue(M.upper_bound(71150, ['tool'], ['home'])['can_reject'])
+        self.assertEqual(M.upper_bound(71150, ['tool'], ['home'])['upper_bound'], 128.07)
+
+    def test_upper_bound_dominates_allowed_forms(self):
+        upper = M.upper_bound(100000)
+        for form in M.FORMS:
+            for niche in M.RPM:
+                self.assertGreaterEqual(upper['upper_bound'], M.model(form, 100000, niche, True, 2)['base'])
+
+    def test_nonfinite_bool_and_empty_options_rejected(self):
+        for value in (float('nan'), float('inf'), True, -1):
+            with self.subTest(value=value), self.assertRaises(ValueError):
+                M.model('tool', value)
+        with self.assertRaises(ValueError):
+            M.upper_bound(100000, [], ['home'])
+        with self.assertRaises(ValueError):
+            M.model('tool', 100000, aio_present='false')
+
 
 if __name__ == "__main__":
     unittest.main()

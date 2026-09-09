@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import ledger as L
 import validate_ledger as V
-from helpers import TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE
+from helpers import revenue_for, VERIFY_OBS, TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE
 
 
 def reg(root, slug):
@@ -54,7 +54,7 @@ class ValidateLedgerTest(unittest.TestCase):
             from helpers import VERIFY_OBS
             vev = write_obs(root, slug, "2026-09-11-verify.json", **VERIFY_OBS)
             L.transition(root, slug, to="verified", evidence=[vev], by="t", reason="r",
-                         form="tool", revenue=REVENUE)
+                         form="tool", revenue=revenue_for(root, slug, [vev]))
             B.build(root, slug)
             self.assertEqual(V.validate(root), ([], []))
             # 删掉 html → 报错
@@ -68,22 +68,21 @@ class ValidateLedgerTest(unittest.TestCase):
             errors, _ = V.validate(root)
             self.assertTrue(any("SHA" in e for e in errors))
 
-    def test_verified_without_report_is_warning(self):
+    def test_verified_without_report_is_error(self):
         with TmpRoot() as root:
             reg(root, "v")
-            ev = write_obs(root, "v", "2026-09-10-verify.json", stage="verify")
+            ev = write_obs(root, "v", "2026-09-10-verify.json", **VERIFY_OBS)
             L.transition(root, "v", to="verified", evidence=[ev], by="t", reason="r",
-                         form="tool", revenue=REVENUE)
+                         form="tool", revenue=revenue_for(root, "v", [ev]))
             errors, warnings = V.validate(root)
-            self.assertEqual(errors, [])
-            self.assertTrue(any("报告/v.md" in w for w in warnings))
+            self.assertTrue(any("报告/v.md" in e for e in errors))
 
     def test_verified_missing_form_is_error(self):
         with TmpRoot() as root:
             reg(root, "v")
-            ev = write_obs(root, "v", "2026-09-10-verify.json", stage="verify")
+            ev = write_obs(root, "v", "2026-09-10-verify.json", **VERIFY_OBS)
             L.transition(root, "v", to="verified", evidence=[ev], by="t", reason="r",
-                         form="tool", revenue=REVENUE)
+                         form="tool", revenue=revenue_for(root, "v", [ev]))
             ledger = L.load(root)
             ledger["candidates"]["v"]["form"] = None
             L.save(root, ledger)

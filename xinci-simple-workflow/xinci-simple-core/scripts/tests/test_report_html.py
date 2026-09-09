@@ -10,10 +10,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build_report as B
 import build_report_html as H
 import ledger as L
-from helpers import TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE, VERIFY_OBS
+from helpers import revenue_for, VERIFY_OBS, TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE, VERIFY_OBS
 
 
-def verified_md(root, slug="wire-size", volume=310300):
+def verified_md(root, slug="wire-size", volume=600000):
     ev = write_obs(root, slug, "2026-09-10-scan.json", semrush_preview={
         "queried_at": "2026-09-10", "filters": "US, phrase", "note": "前 50 行"})
     L.register(root, slug=slug, primary_keyword="wire size",
@@ -21,7 +21,7 @@ def verified_md(root, slug="wire-size", volume=310300):
                proxy=dict(PROXY, rank_score=0.71), evidence=[ev], by="t", reason="r")
     vev = write_obs(root, slug, "2026-09-11-verify.json", **VERIFY_OBS)
     L.transition(root, slug, to="verified", evidence=[vev], by="t", reason="r",
-                 form="tool", revenue=dict(REVENUE, base=640))
+                 form="tool", revenue=revenue_for(root, slug, [vev]))
     return B.build(root, slug)
 
 
