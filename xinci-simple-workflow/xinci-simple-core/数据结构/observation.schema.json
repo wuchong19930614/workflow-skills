@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci-simple 观察文件（只记录不裁决）",
+  "type": "object",
+  "required": ["slug", "observed_at", "stage", "source_urls", "points"],
+  "properties": {
+    "slug": {"type": "string"},
+    "observed_at": {"type": "string", "description": "带时区 ISO"},
+    "stage": {"enum": ["scan", "verify"]},
+    "semrush_preview": {"type": "object", "description": "scan 用：queried_at / filters / note",
+      "properties": {"queried_at": {"type": "string"}, "filters": {"type": "string"}, "note": {"type": "string"}}},
+    "browser_preflight": {"type": "object", "description": "verify 必填",
+      "required": ["controllable", "desktop", "region", "logged_out", "evidence"],
+      "properties": {"controllable": {"type": "boolean"}, "desktop": {"type": "boolean"},
+                     "region": {"enum": ["us", "other", "unknown"]}, "logged_out": {"type": "boolean"},
+                     "evidence": {"type": "string"}}},
+    "query_url": {"type": "string"},
+    "ai_overview": {"type": "object", "required": ["present"],
+      "properties": {"present": {"type": "boolean"}, "completes_task": {"type": "boolean"}, "excerpt": {"type": "string"}}},
+    "serp_top10": {"type": "array", "items": {"type": "object", "required": ["pos", "domain", "type", "completes_task"],
+      "properties": {"pos": {"type": "integer"}, "domain": {"type": "string"}, "dr": {"type": ["number", "null"]},
+                     "type": {"enum": ["tool", "article", "forum", "video", "official", "brand", "other"]},
+                     "completes_task": {"type": "boolean"}, "dated": {"type": ["string", "null"]}}}},
+    "page2_note": {"type": "string"},
+    "trends_12m": {"type": "string"},
+    "scope_recheck": {"type": "object", "required": ["ymyl", "firsthand", "brand_nav", "news"],
+      "properties": {"ymyl": {"type": "boolean"}, "firsthand": {"type": "boolean"},
+                     "brand_nav": {"type": "boolean"}, "news": {"type": "boolean"}}},
+    "source_urls": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "points": {"type": "array", "items": {"type": "string"}}
+  }
+}

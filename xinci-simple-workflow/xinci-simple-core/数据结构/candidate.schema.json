@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci-simple 候选记录",
+  "type": "object",
+  "required": ["slug", "primary_keyword", "cluster", "seed", "state", "proxy", "form", "revenue", "evidence_refs", "history"],
+  "additionalProperties": false,
+  "properties": {
+    "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
+    "primary_keyword": {"type": "string", "minLength": 1},
+    "cluster": {
+      "type": "object", "required": ["total_volume", "keywords"], "additionalProperties": false,
+      "properties": {
+        "total_volume": {"type": "integer", "minimum": 0},
+        "keywords": {"type": "array", "items": {"type": "object", "required": ["term", "volume"],
+          "properties": {"term": {"type": "string"}, "volume": {"type": "integer"}, "kd": {"type": ["number", "null"]}}}}
+      }
+    },
+    "seed": {
+      "type": "object", "required": ["type", "value"], "additionalProperties": false,
+      "properties": {"type": {"enum": ["root", "small_site", "forum"]}, "value": {"type": "string"},
+                     "queried_at": {"type": "string"}}
+    },
+    "state": {"enum": ["found", "parked", "verified", "rejected"]},
+    "proxy": {
+      "type": "object", "required": ["kd"],
+      "properties": {"kd": {"type": "number"}, "low_dr_count": {"type": ["integer", "null"]},
+                     "ugc_count": {"type": ["integer", "null"]}, "content_age_median_days": {"type": ["integer", "null"]},
+                     "rank_score": {"type": ["number", "null"], "minimum": 0, "maximum": 1}}
+    },
+    "form": {"enum": ["info", "lookup", "tool", "commercial", "mixed", null]},
+    "revenue": {
+      "type": ["object", "null"],
+      "required": ["downside", "base", "upside", "volume_needed_for_500", "assumptions_version"],
+      "properties": {"downside": {"type": "number"}, "base": {"type": "number"}, "upside": {"type": "number"},
+                     "volume_needed_for_500": {"type": "integer"}, "assumptions_version": {"type": "string"},
+                     "inputs": {"type": "object"}}
+    },
+    "evidence_refs": {"type": "array", "items": {"type": "string"}, "minItems": 1},
+    "history": {"type": "array", "minItems": 1, "items": {"type": "object",
+      "required": ["at", "from", "to", "by", "reason"],
+      "properties": {"at": {"type": "string"}, "from": {"type": ["string", "null"]}, "to": {"type": "string"},
+                     "by": {"type": "string"}, "reason": {"type": "string", "minLength": 1}}}}
+  }
+}
