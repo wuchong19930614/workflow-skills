@@ -42,6 +42,32 @@ class ValidateLedgerTest(unittest.TestCase):
             self.assertIn("history 末项", joined)
             self.assertTrue(any("orphan" in w for w in warnings))
 
+    def test_verified_requires_both_md_and_html(self):
+        """照 xinci 的规矩:go 态要求 md+html 双文件,且 html 内源 SHA 与当前 md 一致。"""
+        import build_report as B
+        import build_report_html as H
+        with TmpRoot() as root:
+            slug = "dual"
+            ev = write_obs(root, slug, "2026-09-10-scan.json")
+            L.register(root, slug=slug, primary_keyword="dual fmt", cluster=CLUSTER, seed=SEED,
+                       proxy=PROXY, evidence=[ev], by="t", reason="r")
+            from helpers import VERIFY_OBS
+            vev = write_obs(root, slug, "2026-09-11-verify.json", **VERIFY_OBS)
+            L.transition(root, slug, to="verified", evidence=[vev], by="t", reason="r",
+                         form="tool", revenue=REVENUE)
+            B.build(root, slug)
+            self.assertEqual(V.validate(root), ([], []))
+            # 删掉 html → 报错
+            (root / "报告" / f"{slug}.html").unlink()
+            errors, _ = V.validate(root)
+            self.assertTrue(any("html" in e for e in errors))
+            # html 回来但 md 变了 → SHA 不一致,报错
+            H.build(root / "报告" / f"{slug}.md")
+            md = root / "报告" / f"{slug}.md"
+            md.write_text(md.read_text(encoding="utf-8") + "\n改了一个字\n", encoding="utf-8")
+            errors, _ = V.validate(root)
+            self.assertTrue(any("SHA" in e for e in errors))
+
     def test_verified_without_report_is_warning(self):
         with TmpRoot() as root:
             reg(root, "v")

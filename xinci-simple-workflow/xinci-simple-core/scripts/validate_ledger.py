@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """账本不变式校验。错误非零退出;警告只打印。"""
 import argparse
+import hashlib
+import re
 import sys
 from pathlib import Path
 
@@ -31,9 +33,22 @@ def validate(root):
             rev = rec.get("revenue") or {}
             if not all(k in rev for k in L.REVENUE_KEYS):
                 errors.append(f"{slug}: verified 缺 revenue 字段")
-            rel = f"报告/{slug}.md"
-            if not (root / rel).is_file():
-                warnings.append(f"{slug}: 报告缺失 {rel}")
+            md_rel, html_rel = f"报告/{slug}.md", f"报告/{slug}.html"
+            md_path, html_path = root / md_rel, root / html_rel
+            if not md_path.is_file():
+                warnings.append(f"{slug}: 报告缺失 {md_rel}")
+            elif not html_path.is_file():
+                # md 在而 html 不在是错误:go 态要求双格式(照 xinci 的规矩)
+                errors.append(f"{slug}: 报告缺 html —— {html_rel} 不存在,重跑 build_report_html.py")
+            else:
+                want = hashlib.sha256(md_path.read_bytes()).hexdigest()
+                m = re.search(r'name="xinci-simple-source-sha256" content="([0-9a-f]{64})"',
+                              html_path.read_text(encoding="utf-8"))
+                if not m:
+                    errors.append(f"{slug}: {html_rel} 内缺源 SHA-256 标记,不是脚本生成的")
+                elif m.group(1) != want:
+                    errors.append(f"{slug}: {html_rel} 的源 SHA-256 与当前 md 不一致"
+                                  f"(md 改过但 html 未重新生成),重跑 build_report_html.py")
     ev_dir = root / "证据"
     if ev_dir.is_dir():
         for d in ev_dir.iterdir():

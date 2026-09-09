@@ -37,7 +37,7 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
 5. **出口**（契约 §6.4）：
    - 硬门否决 → `transition --to rejected`，reason 写"哪道门 + 现场看到什么"
    - 季节性 → `transition --to parked`，reason 写月份分布
-   - `base ≥ 200`（当前门槛，见契约 §6.4）→ `transition --to verified --form <form> --revenue-json '<模型输出去掉 passes>'`，随后 `build_report.py --slug <slug>`
+   - `base ≥ 200`（当前门槛，见契约 §6.4）→ `transition --to verified --form <form> --revenue-json '<模型输出去掉 passes>'`，随后 `build_report.py --slug <slug>`（md 与 html 同批产出）
    - `base < 200` → `transition --to rejected`，reason 写"收入不足：base $X，差 $Y"
 6. **写运行清单**：`run_log.py`，Google 与 Semrush 打开的 URL 都记进 `--source-opened`；`--billable-calls` 只计 Semrush。
 7. **向用户报告**：每个候选一行——slug / 结论 / 决定性的门或 base / 报告路径。零通过如实说零。
@@ -48,7 +48,8 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
 - 不看满首页 + 第二页不下 G2 / G3 结论。
 - 代理指标（KD / AS / KGR）不能单独否决；否决只出自 G1 / G2 / G3 / 季节性 / 排除 / 收入五处。
 - 没通过就写 `rejected` 并给数字，不留 maybe、不留 `found` 等下次。
-- 报告只由 `build_report.py` 生成，不手写、不手改。
+- 报告只由 `build_report.py` 生成（它会同批调 `build_report_html.py` 出 html），md 与 html 都不手写、不手改。改了 md 要重跑 `build_report_html.py <md 路径>`，否则 `validate_ledger.py` 会因源 SHA 不一致报错。
+- 报告开篇的「为什么是这个词」由 `narrative.py` 从结构化字段派生，不要手写那段话；想让它更有说服力，就把 `serp_top10` 的 `dr`、`cluster.keywords` 的 `kd` 这些字段填全。
 - 门槛与假设表只能由用户变更。运行中发现门槛不合现实时，提交实测证据与提案，不自行改（判据变更后的翻案走 `ledger.py requalify`）。
 
 ## 命令模板
@@ -68,6 +69,8 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/ledger.py transition \
   --revenue-json '{"downside":336.0,"base":672.0,"upside":1008.0,"volume_needed_for_threshold":476190,"threshold":200,"assumptions_version":"2026-09-09.2","inputs":{"form":"tool","cluster_volume":1600000,"niche":"tech","aio_present":true,"strong_complete_count":1}}'
 
 python3 xinci-simple-workflow/xinci-simple-core/scripts/build_report.py --slug heic-to-jpg-converter
+# 只重出 html(md 手改过或样式改过时):
+python3 xinci-simple-workflow/xinci-simple-core/scripts/build_report_html.py "<数据区>/报告/heic-to-jpg-converter.md"
 
 python3 xinci-simple-workflow/xinci-simple-core/scripts/ledger.py transition \
   --slug some-term --to rejected \

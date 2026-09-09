@@ -23,7 +23,7 @@
 1. **发现**（Semrush，Chrome 通道）：簇量 ≥ 50,000 或主词 ≥ 5,000，过四条排除（YMYL / 需亲身体验 / 品牌导航 / 新闻热点）→ `found`
 2. **代理排序**（脚本）：KD、簇量、低 DR 数、UGC 数、内容年龄 → `rank_score`，只排序不否决
 3. **现场核验**（内置浏览器，美区未登录）：G1 Google 直答硬否决；G2 首页结构；G3"完整 + DR ≥ 50 + 新鲜"结果数 ≥ 3 否决；季节性 → `parked`
-4. **收入模型**（脚本）：按形态套假设表，三情景；`base ≥ $200` → `verified` + 报告
+4. **收入模型**（脚本）：按形态套假设表，三情景；`base ≥ $200` → `verified` + 报告（md 给 AI、html 给人，开篇用人话说清为什么选它）
 
 ## 状态机
 
@@ -68,5 +68,7 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/validate_ledger.py
 | `rank.py` | 代理排序，回写 `rank_score` |
 | `revenue_model.py` | 三情景收入模型 + `volume_needed_for_500` |
 | `run_log.py` | 运行清单 |
-| `build_report.py` | 9 节机会报告 |
+| `build_report.py` | 机会报告 md（开篇「为什么是这个词」+ 九节数据），同批出 html |
+| `build_report_html.py` | 从 md 单向生成 html（内嵌源 SHA-256，永不手改） |
+| `narrative.py` | 「为什么是这个词」的人话叙述，全部从结构化字段派生 |
 | `report_status.py` / `validate_ledger.py` | 看板 / 不变式校验 |

@@ -4,7 +4,9 @@ import argparse
 import sys
 from pathlib import Path
 
+import build_report_html
 import ledger as L
+import narrative
 from _common import load_json
 
 PLAY_SINGLE_MAX = 150000
@@ -43,7 +45,8 @@ def render(rec, scan_obs, verify_obs) -> str:
     play = "single_domain" if cluster["total_volume"] < PLAY_SINGLE_MAX else "cluster_expansion"
     lines = [f"# 机会报告：{rec['primary_keyword']}", "",
              f"- slug：`{slug}`", f"- 状态：{rec['state']}", f"- 生成依据：{verify_obs.get('observed_at')} 的 verify 观察", ""]
-    lines += ["## 1. 主关键词与簇", "",
+    lines += [narrative.build(rec, verify_obs), "---", "",
+              "## 1. 主关键词与簇", "",
               f"- 主关键词：**{rec['primary_keyword']}**",
               f"- 簇量（phrase-match 合计月量）：**{_fmt(cluster['total_volume'])}**",
               f"- 来源：{rec['seed']['type']} — {rec['seed']['value']}（查询于 {rec['seed'].get('queried_at')}）", "",
@@ -116,6 +119,8 @@ def build(root, slug) -> Path:
     out = root / "报告" / f"{slug}.md"
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(render(rec, scan_obs, verify_obs), encoding="utf-8")
+    # md 与 html 同批产出:不留只有 md 的中间态(html 由脚本单向生成,永不手改)
+    build_report_html.build(out)
     return out
 
 
@@ -127,7 +132,9 @@ def main(argv=None):
     a = ap.parse_args(argv)
     root = data_root.resolve_or_exit(a.data_root)
     try:
-        print(f"已写 {build(root, a.slug)}")
+        md = build(root, a.slug)
+        print(f"已写 {md}")
+        print(f"已写 {md.with_suffix('.html')}")
     except ReportError as e:
         print(f"拒绝: {e}", file=sys.stderr)
         return 1
