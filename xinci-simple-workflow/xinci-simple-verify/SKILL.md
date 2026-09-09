@@ -49,7 +49,7 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
 - 代理指标（KD / AS / KGR）不能单独否决；否决只出自 G1 / G2 / G3 / 季节性 / 排除 / 收入五处。
 - 没通过就写 `rejected` 并给数字，不留 maybe、不留 `found` 等下次。
 - 报告只由 `build_report.py` 生成（它会同批调 `build_report_html.py` 出 html），md 与 html 都不手写、不手改。改了 md 要重跑 `build_report_html.py <md 路径>`，否则 `validate_ledger.py` 会因源 SHA 不一致报错。
-- 报告开篇的「为什么是这个词」由 `narrative.py` 从结构化字段派生，不要手写那段话；想让它更有说服力，就把 `serp_top10` 的 `dr`、`cluster.keywords` 的 `kd` 这些字段填全。
+- 报告开篇的「为什么是这个词」由 `narrative.py` 从结构化字段派生，每节第一句是加粗的大白话结论（契约 §8.2）。不要手写那段话；想让结论更准更有力，就把 `serp_top10` 的 `dr`、`cluster.keywords` 的 `kd` 填全——`dr` 缺了就判不出硬对手数，「打得过吗」那句会退化成「有机会」。
 - 门槛与假设表只能由用户变更。运行中发现门槛不合现实时，提交实测证据与提案，不自行改（判据变更后的翻案走 `ledger.py requalify`）。
 
 ## 命令模板
