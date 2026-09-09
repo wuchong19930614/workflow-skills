@@ -17,6 +17,17 @@
 
 工作流怎么运转见 **[xinci-workflow/README.md](xinci-workflow/README.md)**。
 
+## xinci-simple-workflow（流量型选词）
+
+2026-09-09 起新增的第二套工作流：从已有真实搜索量的英文词里找守得弱、AI Overview 吃不掉、base case ≥ $500/月 的主题簇，产出机会报告。与 xinci 新词工作流零运行时依赖、数据区独立。入口见 [xinci-simple-workflow/README.md](xinci-simple-workflow/README.md)。
+
+| 单元 | 职责 |
+| --- | --- |
+| [xinci-simple-scan](xinci-simple-workflow/xinci-simple-scan/SKILL.md) | 发现：Semrush 取簇，零成本排除，注册 `found`，代理排序 |
+| [xinci-simple-verify](xinci-simple-workflow/xinci-simple-verify/SKILL.md) | 现场核验 + 收入模型 + 机会报告 |
+| [xinci-simple-status](xinci-simple-workflow/xinci-simple-status/SKILL.md) | 只读看板 |
+| [xinci-simple-core](xinci-simple-workflow/xinci-simple-core/) | 契约、schema、脚本 |
+
 ## 仓库边界
 
 **本仓库只放 skill 与契约,不放执行产出。** 账本、证据、决策书、运行清单、运行状态、淘汰方向索引、去重裁决一律住在用户配置的数据区。当前 checkout 可以配置到同级仓库 `keywords-macdownds` 的 `数据/新词工作流/`,但这只是一个实例,不是规范默认值。契约里的 `账本/`、`证据/`、`运行/`、`决策书/` 等相对路径都从实际配置的数据区起算。
