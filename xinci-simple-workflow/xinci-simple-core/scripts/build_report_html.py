@@ -8,6 +8,9 @@
 md 是唯一事实来源;html 永不手写、永不手改——改 md 后重跑本脚本。
 只覆盖机会报告实际用到的 Markdown 子集:h1/h2/h3、表格、有序与无序列表、
 粗体、行内代码、链接、水平线。渲染保持确定性:锚点按标题顺序编号,不含时间戳。
+
+排版目标是"打开就是一页人话":单栏窄版、无侧边目录(叙述节只有五个小标题,一屏能看完),
+九节数据表格与现场要点都折进 details,要反查再点开。
 """
 import argparse
 import hashlib
@@ -33,8 +36,7 @@ body{margin:0;background:var(--bg);color:var(--text);
  font:17px/1.75 -apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC",
  "Hiragino Sans GB","Microsoft YaHei","Helvetica Neue",Arial,sans-serif;
  -webkit-font-smoothing:antialiased}
-.wrap{display:grid;grid-template-columns:1fr;gap:2.25rem;max-width:74rem;
- margin:0 auto;padding:2.5rem 1.5rem 5rem}
+.wrap{max-width:46rem;margin:0 auto;padding:2.5rem 1.5rem 5rem}
 main{min-width:0} .doc-h{grid-column:1/-1} .doc-h h1{margin-bottom:0}
 p,li{max-width:44rem}
 h1{font-size:1.85rem;line-height:1.25;letter-spacing:-.01em;color:var(--heading);
@@ -67,21 +69,8 @@ details{margin:1.4rem 0;border:1px solid var(--border);border-radius:6px;
  background:var(--surface);padding:.4rem .9rem}
 details summary{cursor:pointer;font-weight:650;color:var(--heading);padding:.5rem 0}
 details[open] summary{border-bottom:1px solid var(--border);margin-bottom:.6rem}
-nav.toc{background:var(--surface);border:1px solid var(--border);border-radius:8px;
- padding:1rem 1.2rem;font-size:.93rem}
-nav.toc h2{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;
- color:var(--muted);margin:0 0 .6rem;border:0;padding:0}
-nav.toc ol{list-style:none;padding:0;margin:0}
-nav.toc li{margin:.3rem 0} nav.toc .l3{padding-left:1rem;font-size:.9em}
-nav.toc a{text-decoration:none;color:var(--text)}
-nav.toc a:hover{color:var(--accent)}
 footer{margin-top:4rem;padding-top:1.2rem;border-top:1px solid var(--border);
  color:var(--muted);font-size:.85rem;max-width:44rem}
-@media (min-width:1024px){
-  .wrap{grid-template-columns:minmax(0,1fr) 15rem}
-  nav.toc{position:sticky;top:2.5rem;align-self:start;order:2}
-  main{order:1}
-}
 """
 
 _STASH = "\x00"
@@ -170,28 +159,34 @@ def md_to_html_body(md: str):
     return "\n".join(out), headings
 
 
-def _toc(headings: list) -> str:
-    if not headings:
-        return ""
-    items = "".join(
-        f'<li class="l{lvl}"><a href="#{aid}">{html_mod.escape(re.sub(r"[*`]", "", txt))}</a></li>'
-        for lvl, txt, aid in headings)
-    return f'<nav class="toc"><h2>目录</h2><ol>{items}</ol></nav>'
-
-
 def _decorate(body: str) -> str:
-    """两处只在 html 里做的排版:开篇结论加底色、现场要点折起来。"""
-    body = re.sub(
-        r"(<h2>为什么是这个词</h2>)\s*(<p>一句话：.*?</p>)",
-        lambda m: f'{m.group(1)}<div class="lede">{m.group(2)}</div>', body, count=1, flags=re.S)
-    m = re.search(r'<span class="a" id="s(\d+)"></span><h2>附：现场要点</h2>', body)
+    """html 独有的三处排版,目的是"打开就是一页人话":
+
+    1. 开篇那句结论加底色,读者第一眼只看它;
+    2. 「附:现场要点」折起来——它是机器化的采集记录;
+    3. 九节数据表格整体折起来——叙述节已经把结论说完,数据是给人反查的,
+       不该占正文视线。md 里保持平铺(它是给 AI 与审计读的)。
+    """
+    body = re.sub(r"(<h2>为什么是这个词</h2>)\s*(<p>一句话：.*?</p>)",
+                  lambda m: f'{m.group(1)}<div class="lede">{m.group(2)}</div>',
+                  body, count=1, flags=re.S)
+    # 先折现场要点(它在最后),再折数据节,顺序反了会把 details 嵌错
+    m = re.search(r'<span class="a" id="s\d+"></span><h2>附：现场要点</h2>', body)
     if m:
-        head_end = m.end()
-        rest = body[head_end:]
-        return (body[:m.start()]
-                + '<details><summary>附：现场要点（采集与判定的原始记录，点开看）</summary>'
-                + rest + "</details>")
-    return body
+        body = (body[:m.start()]
+                + '<details><summary>附：现场要点（采集与判定的原始记录）</summary>'
+                + body[m.end():] + "</details>")
+    # 数据节从第 1 节开始,到现场要点的 details 之前(或文末)
+    m = re.search(r'<hr>\s*(<span class="a" id="s\d+"></span><h2>1\. )', body)
+    if not m:
+        return body
+    start = m.start(1)
+    tail = body.find('<details><summary>附：现场要点', start)
+    if tail < 0:
+        tail = len(body)
+    return (body[:start]
+            + '<details><summary>完整数据与证据（九节，每个数字的出处）</summary>'
+            + body[start:tail] + "</details>" + body[tail:])
 
 
 def render(md_path: Path) -> str:
@@ -200,7 +195,7 @@ def render(md_path: Path) -> str:
     source_sha256 = hashlib.sha256(raw).hexdigest()
     m = re.search(r"^#\s+(.+)$", md, re.MULTILINE)
     title = html_mod.escape(m.group(1).strip()) if m else md_path.stem
-    body, headings = md_to_html_body(md)
+    body, _ = md_to_html_body(md)
     header = ""
     if body.startswith("<h1>"):
         cut = body.find("</h1>") + len("</h1>")
@@ -211,7 +206,7 @@ def render(md_path: Path) -> str:
             "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n"
             f"<meta name=\"xinci-simple-source-sha256\" content=\"{source_sha256}\">\n"
             f"<title>{title}</title>\n<style>{STYLE}</style>\n</head>\n<body>\n"
-            f"<div class=\"wrap\">\n{header}{_toc(headings)}\n<main>\n{body}\n"
+            f"<div class=\"wrap\">\n{header}<main>\n{body}\n"
             f"<footer>本页由 build_report_html.py 生成自 {html_mod.escape(md_path.name)}"
             "（md 是唯一事实来源）；勿手改本文件，改 md 后重新生成。</footer>\n"
             "</main>\n</div>\n</body>\n</html>\n")

@@ -42,6 +42,45 @@ def obs(**over):
 
 
 class NarrativeTest(unittest.TestCase):
+    def test_every_question_opens_with_a_plain_verdict(self):
+        """每个小节的第一句必须是加粗的大白话结论,不能只有分析。"""
+        text = N.build(BASE, obs())
+        import re as _re
+        for h in ("有人在搜吗", "Google 会不会自己答完", "打得过吗", "能赚多少", "最大的风险"):
+            body = text.split(f"### {h}", 1)[1].lstrip("\n")
+            first = body.split("\n", 1)[0].strip()
+            self.assertTrue(first.startswith("**") and first.rstrip().endswith("**"),
+                            f"「{h}」的第一句不是加粗结论: {first!r}")
+            self.assertLessEqual(len(first), 90, f"「{h}」的结论句太长: {first!r}")
+
+    def test_verdicts_answer_yes_or_no(self):
+        text = N.build(BASE, obs())
+        self.assertIn("**有", text.split("### 有人在搜吗", 1)[1][:40])
+        self.assertIn("**不会。", text.split("### Google 会不会自己答完", 1)[1][:40])
+        self.assertIn("**打得过。", text.split("### 打得过吗", 1)[1][:40])
+
+    def test_verdict_flips_with_data(self):
+        # 量小 → 不说"量很足"
+        small = dict(BASE, cluster=dict(BASE["cluster"], total_volume=60000))
+        self.assertIn("量偏小", N.build(small, obs()).split("### 有人在搜吗", 1)[1][:60])
+        # 无 AIO → 另一种说法
+        self.assertIn("连 AI 摘要都没有",
+                      N.build(BASE, obs(ai_overview={"present": False})).split("### Google", 1)[1][:80])
+        # 硬对手多 → 不说打得过
+        many = [dict(r, dr=80, completes_task=True) for r in SERP]
+        self.assertIn("难打", N.build(BASE, obs(serp_top10=many)).split("### 打得过吗", 1)[1][:60])
+        # 收入未过线
+        low = dict(BASE, revenue=dict(BASE["revenue"], base=150.0))
+        self.assertIn("差 $50", N.build(low, obs()).split("### 能赚多少", 1)[1][:80])
+
+    def test_each_section_is_short(self):
+        """结论 + 两三句证据,不要长段。"""
+        text = N.build(BASE, obs())
+        for h in ("有人在搜吗", "Google 会不会自己答完", "打得过吗", "能赚多少"):
+            body = text.split(f"### {h}", 1)[1].split("###", 1)[0]
+            paras = [x for x in body.split("\n") if x.strip()]
+            self.assertLessEqual(len(paras), 4, f"「{h}」段落过多: {len(paras)}")
+
     def test_has_four_questions_and_verdict(self):
         text = N.build(BASE, obs())
         for h in ("### 有人在搜吗", "### Google 会不会自己答完", "### 打得过吗", "### 能赚多少", "### 最大的风险"):
@@ -59,7 +98,7 @@ class NarrativeTest(unittest.TestCase):
 
     def test_aio_absent_wording(self):
         text = N.build(BASE, obs(ai_overview={"present": False}))
-        self.assertIn("没有出现 AI 摘要", text)
+        self.assertIn("连 AI 摘要都没有", text)
         self.assertNotIn("只答了一半", text)
 
     def test_aio_incomplete_does_not_dump_raw_excerpt(self):
@@ -73,7 +112,7 @@ class NarrativeTest(unittest.TestCase):
         """说了几个就得列几个,不能说 5 个只列 4 个。"""
         text = N.build(BASE, obs())
         import re as _re
-        m = _re.search(r"其中 (\d+) 个问法的关键词难度只有 ([\d、]+)", text)
+        m = _re.search(r"其中 (\d+) 个问法的难度只有 ([\d、]+)", text)
         self.assertIsNotNone(m)
         self.assertEqual(int(m.group(1)), len(m.group(2).split("、")))
 

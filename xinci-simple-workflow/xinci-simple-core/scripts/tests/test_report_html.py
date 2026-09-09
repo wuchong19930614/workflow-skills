@@ -57,12 +57,22 @@ class ReportHtmlTest(unittest.TestCase):
             self.assertNotIn("| --- |", doc)     # 表格分隔行不得漏进正文
             self.assertNotIn("**", doc)          # 粗体标记必须被消化
 
-    def test_html_has_toc_of_all_levels(self):
+    def test_data_sections_are_folded_away(self):
+        """打开就是一页人话:九节数据表格折进 details,不占正文视线。"""
         with TmpRoot() as root:
             doc = H.build(verified_md(root)).read_text(encoding="utf-8")
-            self.assertIn("为什么是这个词", doc)
-            self.assertIn("有人在搜吗", doc)     # h3 也要进目录
-            self.assertRegex(doc, r'href="#s\d+"')
+            self.assertIn("完整数据与证据", doc)
+            # 叙述节的小标题必须在正文里直接可见
+            self.assertIn("<h3>有人在搜吗</h3>", doc)
+            # 数据节的标题必须落在 details 之后
+            self.assertLess(doc.index("完整数据与证据"), doc.index("主关键词与簇"))
+            self.assertGreaterEqual(doc.count("<details"), 2)
+
+    def test_no_sidebar_toc(self):
+        """内容短了就不需要侧边目录,单栏更清晰。"""
+        with TmpRoot() as root:
+            doc = H.build(verified_md(root)).read_text(encoding="utf-8")
+            self.assertNotIn('class="toc"', doc)
 
     def test_field_notes_collapsed(self):
         """机器化的现场要点折起来,不占正文视线。"""
