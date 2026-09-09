@@ -31,7 +31,7 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
 4. **判形态** `form`（契约 §5.6），跑收入模型：
    ```bash
    python3 xinci-simple-workflow/xinci-simple-core/scripts/revenue_model.py \
-     --form tool --cluster-volume 182000 --niche tech --aio-present --strong-complete-count 1
+     --form tool --cluster-volume 1600000 --niche tech --aio-present --strong-complete-count 1
    ```
    `--aio-present` 只在 AIO 存在且未做完时传；`--strong-complete-count` 传 G3 的 K（0/1/2）。
 5. **出口**（契约 §6.4）：
@@ -56,14 +56,15 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
 python3 xinci-simple-workflow/xinci-simple-core/scripts/rank.py --no-write --top 5
 
 python3 xinci-simple-workflow/xinci-simple-core/scripts/revenue_model.py \
-  --form tool --cluster-volume 182000 --niche tech --aio-present --strong-complete-count 1
+  --form tool --cluster-volume 1600000 --niche tech --aio-present --strong-complete-count 1
+# → base $672(1.6M × CTR 0.10 × 0.6 × 0.7 ÷ 1000 × RPM $10);182K 的簇在同样折减下只有 $76,过不了线
 
 python3 xinci-simple-workflow/xinci-simple-core/scripts/ledger.py transition \
   --slug heic-to-jpg-converter --to verified \
   --evidence "证据/heic-to-jpg-converter/2026-09-11-verify.json" --by xinci-simple-verify \
-  --reason "G1 pass(AIO 只罗列工具名未做转换),G2 pass(首页 6 条小站内页),G3 K=1(cloudconvert),base $640" \
+  --reason "G1 pass(AIO 只罗列工具名未做转换),G2 pass(首页 6 条小站内页),G3 K=1(cloudconvert),base $672" \
   --form tool \
-  --revenue-json '{"downside":320.0,"base":640.0,"upside":960.0,"volume_needed_for_500":142188,"assumptions_version":"2026-09-09","inputs":{"form":"tool","cluster_volume":182000,"niche":"tech","aio_present":true,"strong_complete_count":1}}'
+  --revenue-json '{"downside":336.0,"base":672.0,"upside":1008.0,"volume_needed_for_500":1190476,"assumptions_version":"2026-09-09","inputs":{"form":"tool","cluster_volume":1600000,"niche":"tech","aio_present":true,"strong_complete_count":1}}'
 
 python3 xinci-simple-workflow/xinci-simple-core/scripts/build_report.py --slug heic-to-jpg-converter
 

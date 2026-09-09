@@ -71,7 +71,7 @@ python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/
 - Create: `xinci-simple-workflow/xinci-simple-core/scripts/tests/helpers.py`
 - Test: `xinci-simple-workflow/xinci-simple-core/scripts/tests/test_data_root.py`
 
-- [ ] **Step 1: 建目录并加 gitignore**
+- [x] **Step 1: 建目录并加 gitignore**
 
 ```bash
 mkdir -p xinci-simple-workflow/xinci-simple-core/scripts/tests xinci-simple-workflow/xinci-simple-core/数据结构 xinci-simple-workflow/xinci-simple-scan xinci-simple-workflow/xinci-simple-verify xinci-simple-workflow/xinci-simple-status
@@ -79,7 +79,7 @@ touch xinci-simple-workflow/xinci-simple-core/scripts/tests/__init__.py
 printf '\n# xinci-simple 的数据区配置同样是本地选择,不入库\n.xinci-simple-data-root\n' >> .gitignore
 ```
 
-- [ ] **Step 2: 写失败测试 test_data_root.py**
+- [x] **Step 2: 写失败测试 test_data_root.py**
 
 ```python
 # 数据区解析:显式 > 环境变量 > 仓库配置 > 拒绝。不猜位置。
@@ -138,12 +138,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 3: 跑测试确认失败**
+- [x] **Step 3: 跑测试确认失败**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `ImportError: No module named 'data_root'` 或 ModuleNotFoundError
 
-- [ ] **Step 4: 写 _common.py**
+- [x] **Step 4: 写 _common.py**
 
 ```python
 #!/usr/bin/env python3
@@ -186,7 +186,7 @@ def load_json(path) -> dict:
     return json.loads(Path(path).read_text(encoding="utf-8"))
 ```
 
-- [ ] **Step 5: 写 data_root.py**
+- [x] **Step 5: 写 data_root.py**
 
 ```python
 #!/usr/bin/env python3
@@ -268,7 +268,7 @@ if __name__ == "__main__":
     raise SystemExit(main())
 ```
 
-- [ ] **Step 6: 写 init_workspace.py**
+- [x] **Step 6: 写 init_workspace.py**
 
 ```python
 #!/usr/bin/env python3
@@ -317,7 +317,7 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 7: 写 tests/helpers.py（后续所有测试共用）**
+- [x] **Step 7: 写 tests/helpers.py（后续所有测试共用）**
 
 ```python
 """测试共用:临时数据区、造候选、造观察文件。"""
@@ -380,12 +380,12 @@ REVENUE = {"downside": 320, "base": 640, "upside": 960, "volume_needed_for_500":
            "assumptions_version": "2026-09-09"}
 ```
 
-- [ ] **Step 8: 跑测试确认通过**
+- [x] **Step 8: 跑测试确认通过**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `Ran 5 tests ... OK`
 
-- [ ] **Step 9: 提交**
+- [x] **Step 9: 提交**
 
 ```bash
 git add .gitignore xinci-simple-workflow/
@@ -400,7 +400,7 @@ git commit -m "xinci-simple:基建——数据区解析、初始化、共用原�
 - Create: `xinci-simple-workflow/xinci-simple-core/scripts/ledger.py`
 - Test: `xinci-simple-workflow/xinci-simple-core/scripts/tests/test_ledger.py`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 # ledger:4 态合法表、证据存在、reason 非空、verified 需 form+revenue、history 只追加、原子写。
@@ -514,12 +514,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `ModuleNotFoundError: No module named 'ledger'`
 
-- [ ] **Step 3: 写 ledger.py**
+- [x] **Step 3: 写 ledger.py**
 
 ```python
 #!/usr/bin/env python3
@@ -686,12 +686,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `Ran 15 tests ... OK`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -706,7 +706,7 @@ git commit -m "xinci-simple:ledger 4 态账本与合法转移表"
 - Create: `xinci-simple-workflow/xinci-simple-core/scripts/rank.py`
 - Test: `xinci-simple-workflow/xinci-simple-core/scripts/tests/test_rank.py`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 # rank:五项在 found 池内归一化(KD 反向),等权平均;缺失取 0.5;不否决。
@@ -773,12 +773,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `ModuleNotFoundError: No module named 'rank'`
 
-- [ ] **Step 3: 写 rank.py**
+- [x] **Step 3: 写 rank.py**
 
 ```python
 #!/usr/bin/env python3
@@ -848,12 +848,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `Ran 19 tests ... OK`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -877,7 +877,7 @@ git commit -m "xinci-simple:rank 代理排序(归一化等权,只排序不否决
 - downside：CTR × 0.5；upside：CTR × 1.5
 - `volume_needed_for_500`：base 公式反推
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 # revenue_model:四形态、两条折减、$500 边界、反推与正算一致、非法输入报错。
@@ -950,12 +950,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `ModuleNotFoundError: No module named 'revenue_model'`
 
-- [ ] **Step 3: 写 revenue_model.py**
+- [x] **Step 3: 写 revenue_model.py**
 
 ```python
 #!/usr/bin/env python3
@@ -1059,12 +1059,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `Ran 29 tests ... OK`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -1079,7 +1079,7 @@ git commit -m "xinci-simple:revenue_model 三情景收入模型与 500 门"
 - Create: `xinci-simple-workflow/xinci-simple-core/scripts/run_log.py`
 - Test: `xinci-simple-workflow/xinci-simple-core/scripts/tests/test_run_log.py`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 # run_log:写 运行/<日期>-<skill>[-HHMM].json;同名拒绝覆盖;字段齐全。
@@ -1131,12 +1131,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `ModuleNotFoundError: No module named 'run_log'`
 
-- [ ] **Step 3: 写 run_log.py**
+- [x] **Step 3: 写 run_log.py**
 
 ```python
 #!/usr/bin/env python3
@@ -1210,12 +1210,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `Ran 32 tests ... OK`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -1232,7 +1232,7 @@ git commit -m "xinci-simple:run_log 运行清单"
 - Test: `xinci-simple-workflow/xinci-simple-core/scripts/tests/test_report_status.py`
 - Test: `xinci-simple-workflow/xinci-simple-core/scripts/tests/test_validate_ledger.py`
 
-- [ ] **Step 1: 写失败测试 test_report_status.py**
+- [x] **Step 1: 写失败测试 test_report_status.py**
 
 ```python
 # report_status:各状态计数、found 按 rank 排序、parked 停留天数与 90 天提醒、verified 报告路径。
@@ -1305,7 +1305,7 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: 写失败测试 test_validate_ledger.py**
+- [x] **Step 2: 写失败测试 test_validate_ledger.py**
 
 ```python
 # validate_ledger:状态词汇、证据存在、history 末项==state、verified 有 form/revenue 且报告存在(警告)、孤儿证据目录(警告)。
@@ -1388,12 +1388,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 3: 跑测试确认失败**
+- [x] **Step 3: 跑测试确认失败**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: 两个 `ModuleNotFoundError`
 
-- [ ] **Step 4: 写 report_status.py**
+- [x] **Step 4: 写 report_status.py**
 
 ```python
 #!/usr/bin/env python3
@@ -1486,7 +1486,7 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 5: 写 validate_ledger.py**
+- [x] **Step 5: 写 validate_ledger.py**
 
 ```python
 #!/usr/bin/env python3
@@ -1552,12 +1552,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 6: 跑测试确认通过**
+- [x] **Step 6: 跑测试确认通过**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `Ran 41 tests ... OK`
 
-- [ ] **Step 7: 提交**
+- [x] **Step 7: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -1572,7 +1572,7 @@ git commit -m "xinci-simple:report_status 看板与 validate_ledger 校验"
 - Create: `xinci-simple-workflow/xinci-simple-core/scripts/build_report.py`
 - Test: `xinci-simple-workflow/xinci-simple-core/scripts/tests/test_build_report.py`
 
-- [ ] **Step 1: 写失败测试**
+- [x] **Step 1: 写失败测试**
 
 ```python
 # build_report:9 节齐全、数值来自输入、缺 verify 观察报错、缺 revenue 报错、写到 报告/<slug>.md。
@@ -1653,12 +1653,12 @@ if __name__ == "__main__":
     unittest.main()
 ```
 
-- [ ] **Step 2: 跑测试确认失败**
+- [x] **Step 2: 跑测试确认失败**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `ModuleNotFoundError: No module named 'build_report'`
 
-- [ ] **Step 3: 写 build_report.py**
+- [x] **Step 3: 写 build_report.py**
 
 ```python
 #!/usr/bin/env python3
@@ -1794,12 +1794,12 @@ if __name__ == "__main__":
     sys.exit(main())
 ```
 
-- [ ] **Step 4: 跑测试确认通过**
+- [x] **Step 4: 跑测试确认通过**
 
 Run: `python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q`
 Expected: `Ran 46 tests ... OK`
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -1814,7 +1814,7 @@ git commit -m "xinci-simple:build_report 九节机会报告"
 - Create: `xinci-simple-workflow/xinci-simple-core/数据结构/candidate.schema.json`
 - Create: `xinci-simple-workflow/xinci-simple-core/数据结构/observation.schema.json`
 
-- [ ] **Step 1: 写 candidate.schema.json**
+- [x] **Step 1: 写 candidate.schema.json**
 
 ```json
 {
@@ -1863,7 +1863,7 @@ git commit -m "xinci-simple:build_report 九节机会报告"
 }
 ```
 
-- [ ] **Step 2: 写 observation.schema.json**
+- [x] **Step 2: 写 observation.schema.json**
 
 ```json
 {
@@ -1900,12 +1900,12 @@ git commit -m "xinci-simple:build_report 九节机会报告"
 }
 ```
 
-- [ ] **Step 3: 校验合法 JSON**
+- [x] **Step 3: 校验合法 JSON**
 
 Run: `python3 -c "import json;[json.load(open(p,encoding='utf-8')) for p in ['xinci-simple-workflow/xinci-simple-core/数据结构/candidate.schema.json','xinci-simple-workflow/xinci-simple-core/数据结构/observation.schema.json']];print('ok')"`
 Expected: `ok`
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -1922,7 +1922,7 @@ git commit -m "xinci-simple:候选与观察 schema"
 
 **内容源约定：** 下面标注"内容源：设计稿 §N"的节，以 [设计稿](../specs/2026-09-09-xinci-simple-workflow-design.md) 该节为准展开成文，可补措辞但不得改规则语义；数值（阈值、假设表）必须与 Task 4 `revenue_model.py` 常量、Task 7 `PLAY_SINGLE_MAX` 逐字一致。设计稿与本计划同仓、路径固定，这不是占位符。
 
-- [ ] **Step 1: 写 选词契约.md**，章节与内容源：
+- [x] **Step 1: 写 选词契约.md**，章节与内容源：
 
 ```
 # 选词契约（xinci-simple）
@@ -1950,7 +1950,7 @@ git commit -m "xinci-simple:候选与观察 schema"
 ## 9. 错误处理                               内容源：§9
 ```
 
-- [ ] **Step 2: 写 数据采集.md**，章节与内容源：
+- [x] **Step 2: 写 数据采集.md**，章节与内容源：
 
 ```
 # 数据采集（xinci-simple）
@@ -1976,13 +1976,13 @@ git commit -m "xinci-simple:候选与观察 schema"
    - 凭据 DATAFORSEO_LOGIN / DATAFORSEO_PASSWORD 环境变量；接入后用于批量取 shortlist 首页域名 rank
 ```
 
-- [ ] **Step 3: 自查两份契约**
+- [x] **Step 3: 自查两份契约**
 
 Run: `grep -c "" xinci-simple-workflow/xinci-simple-core/选词契约.md` → ≤ 300
 Run: `grep -n "50,000\|5,000\|150,000\|0.07\|0.10\|0.6\|0.7\|2026-09-09" xinci-simple-workflow/xinci-simple-core/选词契约.md | wc -l` → ≥ 8（关键数值都在）
 Run: `grep -n "xinci-workflow/\|xinci-core/" xinci-simple-workflow/xinci-simple-core/*.md` → 无输出（零引用 xinci 文件）
 
-- [ ] **Step 4: 提交**
+- [x] **Step 4: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -2000,7 +2000,7 @@ git commit -m "xinci-simple:选词契约与数据采集两份契约"
 
 统一骨架（沿 xinci）：frontmatter（`name` + description，中文为主附英文触发词，明确"与 xinci 新词工作流不同"）→ 一句话定位 → 行动前必读（core 两份契约的仓库相对路径）→ 第 0 步数据区（`report_status.py` 正常即已配置；退出码 2 则问用户后 `init_workspace.py --data-root`）→ 工作流步骤 → 硬规则 → 命令模板。判据不写在 SKILL.md。
 
-- [ ] **Step 1: 写 xinci-simple-scan/SKILL.md**
+- [x] **Step 1: 写 xinci-simple-scan/SKILL.md**
 
 frontmatter：
 
@@ -2039,7 +2039,7 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/run_log.py --date 2026-0
   --billable-calls 3 --note "词根 Converter,预览 50 行,注册 7 个"
 ```
 
-- [ ] **Step 2: 写 xinci-simple-verify/SKILL.md**
+- [x] **Step 2: 写 xinci-simple-verify/SKILL.md**
 
 frontmatter：
 
@@ -2075,7 +2075,7 @@ python3 xinci-simple-workflow/xinci-simple-core/scripts/ledger.py transition --s
   --evidence "证据/some-term/2026-09-11-verify.json" --by xinci-simple-verify --reason "G1 直答:AIO 给出完整换算表,用户不必点结果"
 ```
 
-- [ ] **Step 3: 写 xinci-simple-status/SKILL.md**
+- [x] **Step 3: 写 xinci-simple-status/SKILL.md**
 
 frontmatter：
 
@@ -2088,13 +2088,13 @@ description: '流量型选词工作流的只读看板:各状态计数、待核�
 
 正文：第 0 步数据区 → `report_status.py` → 如实转述（先计数，后三段明细）→ 异常或用户要求时 `validate_ledger.py`。只陈述事实，不加驱动性措辞。
 
-- [ ] **Step 4: 自查三个 SKILL.md**
+- [x] **Step 4: 自查三个 SKILL.md**
 
 Run: `for f in xinci-simple-workflow/xinci-simple-*/SKILL.md; do python3 -c "import sys,re;t=open('$f',encoding='utf-8').read();m=re.match(r'^---\nname: (\S+)\ndescription: .+\n---\n',t,re.S);print('$f', 'ok' if m else 'BAD frontmatter')"; done`
 Expected: 三行 ok
 Run: `grep -n "xinci-workflow/xinci-core\|--by xinci-scan\|--by xinci-track" xinci-simple-workflow/xinci-simple-*/SKILL.md` → 无输出
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add xinci-simple-workflow/
@@ -2109,11 +2109,11 @@ git commit -m "xinci-simple:scan / verify / status 三个 skill"
 - Create: `xinci-simple-workflow/README.md`
 - Modify: `README.md`（仓库根，加一节指向）
 
-- [ ] **Step 1: 写 xinci-simple-workflow/README.md**
+- [x] **Step 1: 写 xinci-simple-workflow/README.md**
 
 内容：一句话定位（设计稿 §2.1）→ 与 xinci 的关系（冻结、零依赖、独立数据区）→ 单元清单表（3 skill + core）→ 四层漏斗一段（§3）→ 状态机图（§4.1）→ 数据区与首次使用（`init_workspace.py --data-root`）→ symlink 命令 → 测试命令 → 指向设计稿与两份契约。
 
-- [ ] **Step 2: 仓库根 README.md 加一节**
+- [x] **Step 2: 仓库根 README.md 加一节**
 
 在"## 单元清单"之后插入：
 
@@ -2123,7 +2123,7 @@ git commit -m "xinci-simple:scan / verify / status 三个 skill"
 2026-09-09 起新增的第二套工作流：从已有真实搜索量的英文词里找守得弱、AI Overview 吃不掉、base case ≥ $500/月 的主题簇，产出机会报告。与 xinci 新词工作流零运行时依赖、数据区独立。入口见 [xinci-simple-workflow/README.md](xinci-simple-workflow/README.md)。
 ```
 
-- [ ] **Step 3: 初始化数据区并接入 symlink**
+- [x] **Step 3: 初始化数据区并接入 symlink**
 
 ```bash
 python3 xinci-simple-workflow/xinci-simple-core/scripts/init_workspace.py --data-root /Users/vito.wu/IdeaProjects/keywords-macdownds/数据/xinci-simple
@@ -2136,7 +2136,7 @@ readlink ~/.claude/skills/xinci-simple-scan ~/.codex/skills/xinci-simple-scan
 
 Expected: 两行同一路径；数据区四目录 + 空账本已建；`.xinci-simple-data-root` 已写且 `git status` 不显示它。
 
-- [ ] **Step 4: 验收**
+- [x] **Step 4: 验收**
 
 ```bash
 python3 -m unittest discover -s xinci-simple-workflow/xinci-simple-core/scripts/tests -t xinci-simple-workflow/xinci-simple-core/scripts/tests -q
@@ -2148,7 +2148,7 @@ git diff --check
 
 Expected：全部测试 OK；`校验完成:0 个错误,0 个警告`；看板四段全"（无）"；revenue base ≈ 500 且 `passes: true`；`git diff --check` 无输出。
 
-- [ ] **Step 5: 提交**
+- [x] **Step 5: 提交**
 
 ```bash
 git add README.md xinci-simple-workflow/
