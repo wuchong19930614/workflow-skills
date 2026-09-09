@@ -15,6 +15,7 @@
 | [xinci-simple-scan](xinci-simple-scan/SKILL.md) | 发现：Semrush 词根轮换 / 小站反推 / 论坛问题 → 零成本排除 → 注册 `found` → 代理排序 |
 | [xinci-simple-verify](xinci-simple-verify/SKILL.md) | 现场核验：G1 直答 / G2 首页结构 / G3 可打败性 / 季节性 / 范围复核 → 收入模型 → 机会报告 |
 | [xinci-simple-status](xinci-simple-status/SKILL.md) | 只读看板 |
+| [xinci-simple-run](xinci-simple-run/SKILL.md) | 连续运行驱动器，暗号 `xinci_simple_run max_rounds=N`：一轮 = scan 一批 + verify 前 5，跑满才停 |
 | [xinci-simple-core](xinci-simple-core/) | 契约（[选词契约](xinci-simple-core/选词契约.md)、[数据采集](xinci-simple-core/数据采集.md)）、schema、脚本、测试 |
 
 ## 四层漏斗

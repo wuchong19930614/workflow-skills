@@ -26,6 +26,7 @@
 | [xinci-simple-scan](xinci-simple-workflow/xinci-simple-scan/SKILL.md) | 发现：Semrush 取簇，零成本排除，注册 `found`，代理排序 |
 | [xinci-simple-verify](xinci-simple-workflow/xinci-simple-verify/SKILL.md) | 现场核验 + 收入模型 + 机会报告 |
 | [xinci-simple-status](xinci-simple-workflow/xinci-simple-status/SKILL.md) | 只读看板 |
+| [xinci-simple-run](xinci-simple-workflow/xinci-simple-run/SKILL.md) | 连续运行驱动器，暗号 `xinci_simple_run max_rounds=N` |
 | [xinci-simple-core](xinci-simple-workflow/xinci-simple-core/) | 契约、schema、脚本 |
 
 ## 仓库边界
