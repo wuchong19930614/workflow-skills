@@ -3,7 +3,7 @@
 
 五项:kd(反向)、cluster.total_volume、low_dr_count、ugc_count、content_age_median_days。
 每项在当前 found 池内 min-max 归一化到 0–1,缺失取 0.5,等权平均。
-池内只有一个候选或某项全相等时该项取 0.5。权重等权是初始口径,首批 verify 后可调。
+池内只有一个候选或某项全相等时该项取 0.5。排序口径见选词契约 §4。
 """
 import argparse
 import sys
