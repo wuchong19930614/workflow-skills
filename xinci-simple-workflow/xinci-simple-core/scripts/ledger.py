@@ -48,6 +48,24 @@ def save(root, ledger) -> None:
     atomic_save(ledger_path(root), ledger)
 
 
+def set_investment(root, slug, *, plan, by):
+    """冻结原始投入预测，不改变研究四态；同一输入可恢复报告，禁止覆盖基线。"""
+    import investment as I
+    data = load(root)
+    _require(slug in data['candidates'], '候选不存在')
+    rec = data['candidates'][slug]
+    if 'investment' in rec:
+        I.check_baseline(rec['investment'])
+        _require(rec['investment']['plan'] == plan, '原始投入基线已冻结，不可覆盖；调整写反馈建议或只读 estimate')
+        return rec
+    _require(rec['state'] in ('verified', 'rejected'), '完成研究裁决后登记投入基线')
+    if rec['state'] == 'verified':
+        Q.check_bound(root, rec)
+    rec['investment'] = I.baseline(rec, plan, by)
+    save(root, data)
+    return rec
+
+
 def register(root, *, slug, primary_keyword, cluster, seed, proxy, evidence, by, reason) -> dict:
     _require(isinstance(slug, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]*", slug), "slug 须小写连字符")
     _require(primary_keyword and primary_keyword.strip(), "primary_keyword 必填")

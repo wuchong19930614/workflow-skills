@@ -8,6 +8,8 @@ from pathlib import Path
 
 import ledger as L
 import qualification as Q
+import investment as I
+import json
 
 
 def validate(root):
@@ -28,6 +30,14 @@ def validate(root):
             errors.append(f"{slug}: history 为空")
         elif hist[-1].get("to") != st:
             errors.append(f"{slug}: history 末项 {hist[-1].get('to')} != state {st}")
+        try:
+            if 'investment' in rec:
+                I.check_baseline(rec['investment'])
+            feedback = I.feedback_path(root, slug)
+            if feedback.exists():
+                I.validate_feedback(root, rec, json.loads(feedback.read_text()))
+        except (Q.QualificationError, KeyError, TypeError, ValueError, OSError) as exc:
+            errors.append(f'{slug}: 投入/反馈校验失败：{exc}')
         if st == "verified":
             bound_refs = []
             try:

@@ -39,6 +39,8 @@ def build_report(root) -> dict:
             rel = f"报告/{r['slug']}.md"
             integrity_error = '；'.join(e for e in integrity_errors if e.startswith(r['slug'] + ':')) or None
             verified.append({"slug": r["slug"], "form": r["form"], "base": (r["revenue"] or {}).get("base"),
+                             "investment_recorded": 'investment' in r,
+                             "feedback_recorded": (root / '反馈' / f"{r['slug']}.json").is_file(),
                              "integrity_error": integrity_error, "report": rel, "report_exists": (root / rel).is_file()})
     return {
         "counts": counts,
@@ -71,6 +73,8 @@ def render_text(rep) -> str:
         exists = "" if r["report_exists"] else "（报告缺失）"
         if r.get("integrity_error"):
             exists += "（待复核：" + r["integrity_error"] + "）"
+        exists += '（投入基线已登记）' if r.get('investment_recorded') else '（投入未估算）'
+        exists += '（已有实际反馈）' if r.get('feedback_recorded') else '（尚无实际反馈）'
         out.append(f"{r['slug']} | {r['form']} | base ${r['base']} | {r['report']}{exists}")
     if not rep["verified"]:
         out.append("（无）")

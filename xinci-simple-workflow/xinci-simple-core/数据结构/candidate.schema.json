@@ -408,6 +408,44 @@
           }
         }
       }
+    },
+    "investment": {
+      "type": "object",
+      "required": [
+        "version",
+        "created_at",
+        "by",
+        "plan",
+        "research_snapshot",
+        "estimate",
+        "sha256"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "const": 1
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "plan": {
+          "type": "object"
+        },
+        "research_snapshot": {
+          "type": "object"
+        },
+        "estimate": {
+          "type": "object"
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
     }
   }
 }

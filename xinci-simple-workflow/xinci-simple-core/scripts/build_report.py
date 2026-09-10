@@ -8,6 +8,7 @@ import build_report_html
 import ledger as L
 import narrative
 import qualification as Q
+import investment
 
 PLAY_SINGLE_MAX = 150000
 
@@ -22,7 +23,7 @@ def render_groups(rec, observations):
     volume = rev['inputs']['cluster_volume']
     play = 'single_domain' if volume < PLAY_SINGLE_MAX else 'cluster_expansion'
     lines = [f"# 机会报告：{rec['primary_keyword']}", '', f"- slug：`{rec['slug']}`", '',
-             narrative.build_groups(rec, observations), "---", "",
+             narrative.build_groups(rec, observations), investment.render(rec), "---", "",
              '## 1. 主关键词与簇', '',
              f"- 原始 phrase-match 月量：{rec['cluster']['total_volume']:,}",
              f"- 已核验去重月量：{volume:,}", '',
