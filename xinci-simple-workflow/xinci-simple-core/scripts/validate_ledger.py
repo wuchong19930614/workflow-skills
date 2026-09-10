@@ -31,6 +31,9 @@ def validate(root):
         elif hist[-1].get("to") != st:
             errors.append(f"{slug}: history 末项 {hist[-1].get('to')} != state {st}")
         try:
+            if 'entry_plan' in rec:
+                import opportunity as O
+                O.check_entry(root, rec)
             if 'investment' in rec:
                 I.check_baseline(rec['investment'])
             feedback = I.feedback_path(root, slug)

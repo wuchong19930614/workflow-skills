@@ -211,6 +211,9 @@ def assess(root, rec, refs):
         require(term not in keywords, '候选支撑词重复')
         require(type(row.get('volume')) is int and row['volume'] >= 0, '支撑词量须为非负整数')
         keywords[term] = row['volume']
+    if rec.get('workflow_version', 2) >= 3:
+        import opportunity as O
+        O.check_entry(root, rec, require_ready=True)
     planned = validate_task_plan(rec.get('task_plan'), rec)
     groups, bindings, seen, ids, excluded = [], [], set(), set(), []
     for ref in refs:
@@ -259,7 +262,8 @@ def assess(root, rec, refs):
                volume_needed_for_threshold=math.ceil(M.THRESHOLD * volume / rev['base']) if rev['base'] else None,
                inputs={'form': form, 'cluster_volume': volume, 'raw_cluster_volume': rec['cluster']['total_volume'],
                        'groups': groups})
-    return form, rev, {'version': VERSION, 'bindings': bindings, 'qualified_volume': volume, 'task_plan': rec['task_plan'], 'excluded_groups': excluded}
+    entry_binding = {'entry_plan_sha256': rec['entry_plan']['sha256']} if rec.get('entry_plan') else {}
+    return form, rev, {**entry_binding, 'version': VERSION, 'bindings': bindings, 'qualified_volume': volume, 'task_plan': rec['task_plan'], 'excluded_groups': excluded}
 
 
 def check_bound(root, rec):
@@ -273,6 +277,7 @@ def check_bound(root, rec):
             refs.append(old['ref'])
     require(q.get("task_plan") == rec.get("task_plan") and q.get("task_plan"), "缺绑定任务计划，须补核")
     form, rev, expected = assess(root, rec, refs)
+    require(q.get('entry_plan_sha256') == expected.get('entry_plan_sha256'), '裁决绑定的进入预检已变化')
     require(form == rec.get('form') and rev == rec.get('revenue'), '收入/形态与绑定观察重算不一致')
     require(rev['base'] >= M.THRESHOLD, '重算收入不足当前门槛')
     require(any(b['stage'] == 'scan' for b in q['bindings']), '缺绑定 scan 证据')

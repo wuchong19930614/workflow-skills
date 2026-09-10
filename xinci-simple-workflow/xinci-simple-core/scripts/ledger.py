@@ -66,6 +66,30 @@ def set_investment(root, slug, *, plan, by):
     return rec
 
 
+def set_entry_plan(root, slug, *, plan, by, reason):
+    import opportunity as O
+    data = load(root)
+    _require(slug in data['candidates'], '候选不存在')
+    rec = data['candidates'][slug]
+    _require(rec['state'] in ('found', 'parked'), '进入预检仅用于非终态候选')
+    _require(Q.nonempty(by) and Q.nonempty(reason), '预检须执行者与依据')
+    O.validate_entry(plan)
+    if rec.get('entry_plan'):
+        O.check_entry(root, rec)
+        if rec['entry_plan']['plan'] == plan:
+            return rec
+    _require(not rec.get('task_plan'), '任务组已冻结，不可事后修改进入预检')
+    bindings = [Q.read_observation(root, ref, slug)[1] for ref in plan['evidence_refs']]
+    body = {'plan': plan, 'bindings': bindings, 'by': by, 'created_at': now()}
+    rec['entry_plan'] = dict(body, sha256=O.digest(body))
+    rec['history'].append({'at': now(), 'from': rec['state'], 'to': rec['state'],
+                           'by': by, 'reason': reason, 'action': 'set_entry_plan',
+                           'entry_plan': rec['entry_plan']})
+    rec['evidence_refs'] = list(dict.fromkeys(rec['evidence_refs'] + plan['evidence_refs']))
+    save(root, data)
+    return rec
+
+
 def register(root, *, slug, primary_keyword, cluster, seed, proxy, evidence, by, reason) -> dict:
     _require(isinstance(slug, str) and re.fullmatch(r"[a-z0-9][a-z0-9-]*", slug), "slug 须小写连字符")
     _require(primary_keyword and primary_keyword.strip(), "primary_keyword 必填")
@@ -90,6 +114,7 @@ def register(root, *, slug, primary_keyword, cluster, seed, proxy, evidence, by,
     _require(slug not in ledger["candidates"], f"slug 已存在: {slug}")
     rec = {
         "slug": slug, "primary_keyword": primary_keyword, "cluster": cluster, "seed": seed,
+        "workflow_version": 3,
         "state": "found", "proxy": dict(proxy), "form": None, "revenue": None,
         "evidence_refs": list(evidence),
         "history": [{"at": now(), "from": None, "to": "found", "by": by, "reason": reason, "evidence_refs": list(evidence)}],
@@ -223,6 +248,9 @@ def set_task_plan(root, slug, *, plan, by, reason):
     rec = data['candidates'][slug]
     _require(rec['state'] in ('found','parked'), '任务计划只可用于 found/parked')
     _require(Q.nonempty(by) and Q.nonempty(reason), '计划须执行者与依据')
+    if rec.get("workflow_version", 2) >= 3:
+        import opportunity as O
+        O.check_entry(root, rec, require_ready=True)
     Q.validate_task_plan(plan, rec)
     if rec.get('task_plan'):
         _require(rec['task_plan'] == plan, '任务清单已冻结；不能在看到核验结果后改核心组或删组')
@@ -324,6 +352,11 @@ def main(argv=None):
     tp.add_argument('--plan-file', required=True)
     tp.add_argument('--by', required=True)
     tp.add_argument('--reason', required=True)
+    ep = sub.add_parser('set-entry-plan', help='完整核验前记录用户卡点、方案、优势与交付依据')
+    ep.add_argument('--slug', required=True)
+    ep.add_argument('--plan-file', required=True)
+    ep.add_argument('--by', required=True)
+    ep.add_argument('--reason', required=True)
     inv = sub.add_parser('invalidate', help='审计撤销既有 verified，并归档原报告')
     inv.add_argument('--slug', required=True)
     inv.add_argument('--to', required=True, choices=('parked','rejected'))
@@ -358,6 +391,9 @@ def main(argv=None):
             rec = requalify(root, a.slug, evidence=a.evidence, by=a.by, reason=a.reason,
                             form=a.form, revenue=_revenue_arg(a), change_basis=a.change_basis)
             print(f"{rec['slug']}:rejected → {rec['state']}(判据变更重审)")
+        elif a.cmd == 'set-entry-plan':
+            set_entry_plan(root, a.slug, plan=_json_arg(Path(a.plan_file).read_text(), 'entry plan'), by=a.by, reason=a.reason)
+            print(f'{a.slug}: 进入优势预检已登记')
         elif a.cmd == 'set-task-plan':
             set_task_plan(root, a.slug, plan=_json_arg(Path(a.plan_file).read_text(encoding='utf-8'), 'task plan'), by=a.by, reason=a.reason)
             print(f'{a.slug}: 任务清单已登记')

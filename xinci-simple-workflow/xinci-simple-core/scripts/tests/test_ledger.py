@@ -46,7 +46,7 @@ class LedgerTest(unittest.TestCase):
             ev = write_obs(root, slug, 'v-verify.json', **VERIFY_OBS)
             L.transition(root, slug, to='parked', evidence=[ev], by='t', reason='待补采')
             L.transition(root, slug, to='verified', evidence=[ev], by='t', reason='完整', form='tool', revenue=revenue_for(root, slug, [ev]))
-            self.assertEqual([h['to'] for h in L.load(root)['candidates'][slug]['history']], ['found','found','parked','verified'])
+            self.assertEqual([h['to'] for h in L.load(root)['candidates'][slug]['history']], ['found','found','found','parked','verified'])
 
     def test_requalify_requires_eligible_rejection_and_change(self):
         for gate in ('revenue', 'G1', 'G2', 'G3'):

@@ -86,6 +86,7 @@ def register_candidate(root, slug='heic-to-jpg-converter', volume=600000, plan=T
     ev = write_obs(root, slug, '2026-09-10-scan.json')
     L.register(root, slug=slug, primary_keyword=slug.replace('-', ' '), cluster=dict(CLUSTER, total_volume=volume),
                seed=SEED, proxy=PROXY, evidence=[ev], by='test', reason='准入')
+    entry_candidate(root, slug)
     if plan:
         plan_candidate(root, slug)
     return slug
@@ -104,4 +105,17 @@ def plan_candidate(root, slug, groups=None):
     import ledger as L
     plan = {'core_reason':'图像格式转换为核心任务', 'groups': groups or [
         {'id':'convert','role':'core','keywords':['heic to jpg','heic to jpg converter']}]}
+    entry_candidate(root, slug)
     return L.set_task_plan(root, slug, plan=plan, by='test', reason='核验前计划')
+
+
+def entry_candidate(root, slug):
+    import ledger as L
+    rec = L.load(root)['candidates'][slug]
+    if rec.get('entry_plan'):
+        return rec
+    return L.set_entry_plan(root, slug, plan={
+        'status': 'ready', 'user_gap': '批量转换步骤多', 'solution': '浏览器本地批量转换',
+        'advantage': '减少上传和重复操作', 'delivery_basis': '测试库样例可运行',
+        'biggest_unknown': '大文件内存', 'evidence_refs': rec['evidence_refs'][:1]
+    }, by='test', reason='测试进入预检')

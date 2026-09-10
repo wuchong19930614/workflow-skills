@@ -124,14 +124,18 @@ def plan(root, run_id=None):
     found = sum(r['state'] == 'found' for r in load_ledger(root)['candidates'].values())
     scans = [r for r in structured if r['skill'] == 'xinci-simple-scan' and r['progress']['outcome'] == 'completed']
     roots = [r for r in scans if r['progress']['source_kind'] == 'root']
-    rotation = {'root':'small_site', 'small_site':'forum', 'forum':'root'}
-    source = rotation[scans[-1]['progress']['source_kind']] if scans else 'root'
+    import discovery_feedback
+    feedback = discovery_feedback.summarize(root, rows)
+    source = feedback['next_source']
     resume, action = None, 'scan'
     if selected:
         cursor = next_position(selected)
         if cursor:
             resume = dict(selected['progress'], round=cursor['round'], next_step=cursor['stage'])
             action = cursor['stage']
+            if action == 'scan' and selected['skill'] == 'xinci-simple-scan':
+                source = selected['progress']['source_kind']
+                feedback['selection_reason'] = '恢复已开始的发现阶段，保持原来源与 seed_value'
         else:
             action = 'done'
     if conflict:
@@ -139,7 +143,7 @@ def plan(root, run_id=None):
     # A skipped scan is still a real log action, never silently jump to verify.
     return {'found_count': found, 'action': action, 'scan_outcome': 'skipped' if action == 'scan' and found >= 5 else None,
             'resume': resume, 'conflict': conflict, 'active_run_ids': sorted(active),
-            'next_source': source, 'last_completed_root': roots[-1]['progress']['seed_value'] if roots else None,
+            'next_source': source, 'source_reason': feedback['selection_reason'], 'last_completed_root': roots[-1]['progress']['seed_value'] if roots else None,
             'latest_log': selected['_path'] if selected else None,
             'legacy_logs_present': any(not r.get('progress') for r in rows)}
 

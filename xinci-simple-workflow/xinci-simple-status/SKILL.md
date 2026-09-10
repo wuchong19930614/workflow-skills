@@ -14,7 +14,7 @@ description: '流量型选词工作流的只读看板:各状态计数、待核�
    python3 xinci-simple-workflow/xinci-simple-core/scripts/report_status.py
    ```
    退出码 2 提示"数据区未配置" → 停下问用户数据区放哪，不替用户选；拿到路径后 `init_workspace.py --data-root <路径>`。
-2. 如实转述：先各状态计数，再三段明细——待核验（按排序分）、已搁置（停留天数，超 90 天的行有提醒）、已验证（form / base / 报告路径、投入基线是否登记、是否有实际反馈；报告缺失会标出）。既有 verified 有 integrity_error 时明确标“待复核”，不能当作当前有效机会；只陈述事实，不加"建议尽快核验"之类的驱动性措辞；下一步做什么是用户的决定。
+2. 如实转述：先各状态计数，再三段明细——待核验（按排序分）、已搁置（停留天数，超 90 天的行有提醒）、已验证（form / base / 报告路径、原始投入建议及原因、投入基线是否登记、是否有实际反馈；报告缺失会标出）。既有 verified 有 integrity_error 时明确标“待复核”，不能当作当前有效机会；只陈述事实，不加"建议尽快核验"之类的驱动性措辞；下一步做什么是用户的决定。
 3. 用户要求或输出异常时补完整性检查：
    ```bash
    python3 xinci-simple-workflow/xinci-simple-core/scripts/validate_ledger.py

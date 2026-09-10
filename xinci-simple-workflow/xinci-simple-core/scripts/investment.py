@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """投入预测与累计反馈。预测冻结；反馈不改变研究状态、不执行试验。金额 USD。"""
 import argparse
+import copy
 import hashlib
 import json
 import sys
@@ -40,6 +41,9 @@ def validate_plan(p):
     for value in ramp:
         Q.require((value is None and Q.nonempty(unknowns.get('monthly_revenue_fraction'))) or
                   (Q.number(value) and 0 <= value <= 1), '爬坡须 0–1，未知 null 须原因；不是成功概率')
+    if 'monetization' in p:
+        import opportunity as O
+        O.validate_monetization(p['monetization'])
     e = p.get('experiment')
     Q.require(isinstance(e, dict) and e.get('type') in METRICS, 'experiment.type 无效')
     Q.require(e.get('metric') == METRICS[e['type']], 'metric 须匹配试验类型')
@@ -89,8 +93,8 @@ def estimate(p, revenue):
 def baseline(rec, plan, by):
     Q.require(Q.nonempty(by), 'by 必填')
     validate_plan(plan)
-    snapshot = {'state': rec['state'], 'revenue': rec.get('revenue'),
-                'qualification': rec.get('qualification'), 'history': rec['history']}
+    snapshot = copy.deepcopy({'state': rec['state'], 'revenue': rec.get('revenue'),
+                              'qualification': rec.get('qualification'), 'history': rec['history']})
     body = {'version': 1, 'created_at': now(), 'by': by, 'plan': plan,
             'research_snapshot': snapshot, 'estimate': estimate(plan, snapshot['revenue'])}
     return dict(body, sha256=digest(body))
@@ -222,7 +226,7 @@ def main(argv=None):
     import data_root
     import ledger as L
     ap = argparse.ArgumentParser(description=__doc__)
-    ap.add_argument('action', choices=('plan', 'estimate', 'feedback', 'review'))
+    ap.add_argument('action', choices=('plan', 'estimate', 'feedback', 'review', 'recommend'))
     ap.add_argument('--data-root')
     ap.add_argument('--slug', required=True)
     ap.add_argument('--file', help='plan/estimate 输入计划；feedback 输入累计快照')
@@ -245,6 +249,11 @@ def main(argv=None):
             result = result['investment']
         elif a.action == 'estimate':
             result = estimate(payload, rec.get('revenue'))
+        elif a.action == 'recommend':
+            import opportunity as O
+            if rec['state'] == 'verified':
+                Q.check_bound(root, rec)
+            result = O.recommendation(rec)
         elif a.action == 'feedback':
             result = record_feedback(root, rec, payload)
         else:

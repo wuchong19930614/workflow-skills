@@ -1,0 +1,166 @@
+{
+  "sample_count": 14,
+  "candidates": [
+    {
+      "slug": "video-converter",
+      "state": "rejected",
+      "raw_volume": 562660,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "pdf-converter",
+      "state": "rejected",
+      "raw_volume": 1815690,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "image-converter",
+      "state": "rejected",
+      "raw_volume": 141530,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "unit-converter",
+      "state": "rejected",
+      "raw_volume": 180280,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "shoe-size-conversion",
+      "state": "rejected",
+      "raw_volume": 177890,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "wire-size",
+      "state": "rejected",
+      "raw_volume": 310300,
+      "measured_keywords_volume": 37900,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": {
+        "downside": 117.29,
+        "base": 234.59,
+        "upside": 351.88,
+        "volume_needed_for_threshold": 264550,
+        "threshold": 200,
+        "assumptions_version": "2026-09-09.2",
+        "inputs": {
+          "form": "tool",
+          "cluster_volume": 310300,
+          "niche": "home",
+          "aio_present": true,
+          "strong_complete_count": 1
+        }
+      },
+      "investment_present": false
+    },
+    {
+      "slug": "roof-pitch",
+      "state": "rejected",
+      "raw_volume": 183680,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "insulation-r-value",
+      "state": "rejected",
+      "raw_volume": 206100,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "btu",
+      "state": "rejected",
+      "raw_volume": 480990,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "voltage-drop",
+      "state": "rejected",
+      "raw_volume": 115700,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "conduit-fill",
+      "state": "rejected",
+      "raw_volume": 82890,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "tire-size",
+      "state": "rejected",
+      "raw_volume": 460260,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "torque-specs",
+      "state": "rejected",
+      "raw_volume": 208040,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    },
+    {
+      "slug": "battery-group-size",
+      "state": "rejected",
+      "raw_volume": 71150,
+      "measured_keywords_volume": 0,
+      "current_admission": true,
+      "volume_priority_only_admission": true,
+      "revenue": null,
+      "investment_present": false
+    }
+  ],
+  "newly_admitted_in_observed_sample": [],
+  "decision": "retain_current_thresholds",
+  "limitations": [
+    "账本只含既有准入后的候选，无法估计此前被过滤的小量机会；不把零新增当成无漏选。",
+    "没有真实同口径流量/收入反馈时，不据模型自身输出校准 CTR、RPM、佣金。",
+    "需另收集低量任务样本及真实反馈，再决定准入与收入假设变更。"
+  ]
+}
