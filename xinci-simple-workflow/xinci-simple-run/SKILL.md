@@ -10,14 +10,15 @@ description: '流量型选词连续运行：xinci_simple_run（可带 max_rounds
 ## 启动与恢复
 
 1. `report_status.py` 确认数据区；未配置才问路径。
-2. `run_log.py --plan` 核对恢复位置。存在 resume 时继续同一 run_id、round、max_rounds，不重启。读取最新清单与账本核对已落盘动作；已完成转移不重复，缺报告先补。旧文本清单保留可读，不能猜作新格式进度。
+2. `run_log.py --plan` 核对恢复位置。先汇总所有运行：一个未完则返回 resume；多个则返回 conflict 与 active_run_ids，必须显式选定 --run-id。存在 resume 时继续同一 ID、轮号和预算，不重启；新 ID 写入也会拒绝绕过未完运行。读取最新清单与账本核对已落盘动作；已完成转移不重复，缺报告先补。旧文本清单保留可读，不能猜作新格式进度。
 3. 没有未完运行才建立唯一 run_id（字母数字连字符），预算用户指定，否则 3。每阶段 started 和结束都用结构化清单；命令见 core/命令与观察.md。
 
 ## 每轮
 
-- found ≥5：scan 记 skipped；不足5：完整执行 scan 补一批。跳过不推进来源/词根游标。
+- 遵循 --plan 的 action；found ≥5 时仍为 scan，并返回 scan_outcome=skipped，先记 scan started 再 finish skipped，之后 verify；不足5：完整执行 scan 补一批。跳过不推进来源/词根游标。
 - verify 重新排序前5；不足5核全部。零候选可结束 verify 阶段，但 scan 必须有实际搜索，不能空动作凑轮。
 - 每阶段的清单包含 run_id、round、max_rounds、source_kind、seed_value、outcome、next_step。started/blocked 的 next_step 为本阶段；scan completed/skipped 后为 verify；verify completed 后为 scan，最后一轮为 done。
+- 阶段结束默认使用 `run_log.py --finish --run-id <ID> --outcome completed|blocked|skipped`，只填实际结果和新增计费，脚本推导轮次与下一步；已完成阶段不能重复 finish。
 - 计费数只记本条新增调用量；不在最终清单重复累计之前已登记的调用。复核账本与清单、报告完整性后才算一轮完成。
 
 ## 执行者

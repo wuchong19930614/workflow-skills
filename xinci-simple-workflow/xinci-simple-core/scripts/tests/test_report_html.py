@@ -10,7 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import build_report as B
 import build_report_html as H
 import ledger as L
-from helpers import revenue_for, VERIFY_OBS, TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE, VERIFY_OBS
+from helpers import plan_candidate, revenue_for, VERIFY_OBS, TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE, VERIFY_OBS
 
 
 def verified_md(root, slug="wire-size", volume=600000):
@@ -19,6 +19,7 @@ def verified_md(root, slug="wire-size", volume=600000):
     L.register(root, slug=slug, primary_keyword="wire size",
                cluster=dict(CLUSTER, total_volume=volume), seed=SEED,
                proxy=dict(PROXY, rank_score=0.71), evidence=[ev], by="t", reason="r")
+    plan_candidate(root, slug)
     vev = write_obs(root, slug, "2026-09-11-verify.json", **VERIFY_OBS)
     L.transition(root, slug, to="verified", evidence=[vev], by="t", reason="r",
                  form="tool", revenue=revenue_for(root, slug, [vev]))

@@ -309,6 +309,10 @@
         "coverage_reason": {
           "type": "string",
           "minLength": 1
+        },
+        "exclusion_reason": {
+          "type": "string",
+          "minLength": 1
         }
       },
       "required": [
@@ -365,18 +369,10 @@
       "then": {
         "required": [
           "schema_version",
-          "browser_preflight",
-          "query_url",
-          "ai_overview",
-          "direct_answer",
-          "serp_structure",
-          "serp_top10",
-          "page2_note",
-          "trends",
-          "scope_recheck",
-          "scope_evidence"
+          "query_url"
         ]
       }
     }
-  ]
+  ],
+  "$comment": "允许早期拒绝/支撑组剔除的部分观察；正式通过所需完整字段由 qualification.py 按用途强制检查。"
 }

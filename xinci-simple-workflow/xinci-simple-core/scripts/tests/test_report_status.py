@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import ledger as L
 import report_status as S
-from helpers import revenue_for, VERIFY_OBS, TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE
+from helpers import plan_candidate, revenue_for, VERIFY_OBS, TmpRoot, write_obs, CLUSTER, SEED, PROXY, REVENUE
 
 
 def reg(root, slug, rank=None):
@@ -18,6 +18,7 @@ def reg(root, slug, rank=None):
         proxy["rank_score"] = rank
     L.register(root, slug=slug, primary_keyword=slug, cluster=CLUSTER, seed=SEED, proxy=proxy,
                evidence=[ev], by="t", reason="r")
+    plan_candidate(root, slug)
 
 
 class ReportStatusTest(unittest.TestCase):

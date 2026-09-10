@@ -34,6 +34,8 @@ def render_groups(rec, observations):
         inp = g['revenue']['inputs']
         lines.append(f"| {g['id']} | {inp['form']} | {inp['cluster_volume']:,} | {o['task_group']['representative_keyword']} |")
         lines += ['', o['task_group']['coverage_reason'], '']
+    for group in rec['qualification'].get('excluded_groups', []):
+        lines += [f"- 未计入的支撑组 {group['id']}：{group['reason']}（观察 `{group['evidence_ref']}`）", '']
     lines += ['## 3. 量级证据', '', '裁决固定引用以下观察；新增观察不会改变本报告依据。', '']
     for b in rec['qualification']['bindings']:
         lines.append(f"- `{b['ref']}` SHA-256 `{b['sha256']}`")

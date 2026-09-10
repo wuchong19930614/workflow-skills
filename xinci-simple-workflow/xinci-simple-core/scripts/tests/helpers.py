@@ -81,11 +81,13 @@ def revenue_for(root, slug, evidence):
     return Q.assess(root, L.load(root)['candidates'][slug], evidence)[1]
 
 
-def register_candidate(root, slug='heic-to-jpg-converter', volume=600000):
+def register_candidate(root, slug='heic-to-jpg-converter', volume=600000, plan=True):
     import ledger as L
     ev = write_obs(root, slug, '2026-09-10-scan.json')
     L.register(root, slug=slug, primary_keyword=slug.replace('-', ' '), cluster=dict(CLUSTER, total_volume=volume),
                seed=SEED, proxy=PROXY, evidence=[ev], by='test', reason='准入')
+    if plan:
+        plan_candidate(root, slug)
     return slug
 
 
@@ -96,3 +98,10 @@ def verified_candidate(root, slug='heic-to-jpg-converter'):
     L.transition(root, slug, to='verified', evidence=[ev], by='test', reason='已核验',
                  form='tool', revenue=revenue_for(root, slug, [ev]))
     return slug
+
+
+def plan_candidate(root, slug, groups=None):
+    import ledger as L
+    plan = {'core_reason':'图像格式转换为核心任务', 'groups': groups or [
+        {'id':'convert','role':'core','keywords':['heic to jpg','heic to jpg converter']}]}
+    return L.set_task_plan(root, slug, plan=plan, by='test', reason='核验前计划')

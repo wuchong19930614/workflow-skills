@@ -46,14 +46,18 @@ class LedgerTest(unittest.TestCase):
             ev = write_obs(root, slug, 'v-verify.json', **VERIFY_OBS)
             L.transition(root, slug, to='parked', evidence=[ev], by='t', reason='待补采')
             L.transition(root, slug, to='verified', evidence=[ev], by='t', reason='完整', form='tool', revenue=revenue_for(root, slug, [ev]))
-            self.assertEqual([h['to'] for h in L.load(root)['candidates'][slug]['history']], ['found','parked','verified'])
+            self.assertEqual([h['to'] for h in L.load(root)['candidates'][slug]['history']], ['found','found','parked','verified'])
 
     def test_requalify_requires_eligible_rejection_and_change(self):
         for gate in ('revenue', 'G1', 'G2', 'G3'):
             with self.subTest(gate=gate), TmpRoot() as root:
                 slug = register_candidate(root)
                 ev = write_obs(root, slug, 'v-verify.json', **VERIFY_OBS)
-                L.transition(root, slug, to='rejected', evidence=[ev], by='t', reason='旧裁决', gate=gate)
+                # Historical records may predate strict rejection validation.
+                data = L.load(root)
+                data['candidates'][slug]['state'] = 'rejected'
+                data['candidates'][slug]['history'].append({'at':'2026-09-09T00:00:00+00:00','from':'found','to':'rejected','by':'old','reason':'旧裁决','gate':gate})
+                L.save(root, data)
                 kwargs = dict(evidence=[ev], by='t', reason='重审', form='tool', revenue=revenue_for(root, slug, [ev]))
                 with self.assertRaises(L.LedgerError):
                     L.requalify(root, slug, **kwargs)
@@ -71,6 +75,9 @@ class LedgerTest(unittest.TestCase):
             for extra in ({'reason': '', 'gate':'G1'}, {'reason':'x'}):
                 with self.assertRaises(L.LedgerError):
                     L.transition(root, slug, to='rejected', evidence=[ev], by='t', **extra)
+            fail = copy.deepcopy(VERIFY_OBS)
+            fail['ai_overview']['completes_task'] = True
+            ev = write_obs(root, slug, 'failed-verify.json', **fail)
             L.transition(root, slug, to='rejected', evidence=[ev], by='t', reason='G1 实测直答', gate='G1')
             self.assertEqual(L.list_candidates(root, 'rejected')[0]['slug'], slug)
 

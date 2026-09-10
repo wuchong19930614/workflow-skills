@@ -141,12 +141,8 @@ def transition(root, slug, *, to, evidence, by, reason, form=None, revenue=None,
     for ref in evidence:
         obs, _ = Q.read_observation(root, ref, slug)
         _require(obs['stage'] == 'verify', '状态转移须 verify 观察')
-        if gate == 'revenue_prescreen':
-            pre = obs.get('prescreen') or {}
-            _require(Q.nonempty(pre.get('basis')), '收入预筛须说明可能形态与垂类的依据')
-            result = pre.get('result') or {}
-            actual = revenue_model.upper_bound(rec['cluster']['total_volume'], result.get('possible_forms'), result.get('possible_niches'))
-            _require(result == actual and actual['can_reject'], '收入预筛须使用原始总量重算，且所有合理形态上限不足门槛')
+    if to == 'rejected':
+        Q.check_rejection(root, rec, evidence, gate)
     if to == "verified":
         _require(form in FORMS, f"verified 要求 form ∈ {FORMS}")
         _require(isinstance(revenue, dict) and all(k in revenue for k in REVENUE_KEYS),
@@ -203,6 +199,23 @@ def invalidate(root, slug, *, to, evidence, by, reason, gate):
     return rec
 
 
+def set_task_plan(root, slug, *, plan, by, reason):
+    data = load(root)
+    _require(slug in data['candidates'], '候选不存在')
+    rec = data['candidates'][slug]
+    _require(rec['state'] in ('found','parked'), '任务计划只可用于 found/parked')
+    _require(Q.nonempty(by) and Q.nonempty(reason), '计划须执行者与依据')
+    Q.validate_task_plan(plan, rec)
+    if rec.get('task_plan'):
+        _require(rec['task_plan'] == plan, '任务清单已冻结；不能在看到核验结果后改核心组或删组')
+        return rec
+    rec['task_plan'] = plan
+    rec['history'].append({'at':now(), 'from':rec['state'], 'to':rec['state'], 'by':by, 'reason':reason,
+                           'action':'set_task_plan', 'task_plan':plan})
+    save(root, data)
+    return rec
+
+
 def refresh_cluster(root, slug, *, cluster, evidence, by, reason):
     """补采词表只更新非终态；留存旧量级，旧观察不覆盖。"""
     data = load(root)
@@ -219,6 +232,8 @@ def refresh_cluster(root, slug, *, cluster, evidence, by, reason):
     _require(isinstance(rows, list) and rows and all(Q.nonempty(r.get('term')) and type(r.get('volume')) is int and r['volume'] >= 0 for r in rows), '词表无效')
     _require(len({Q.normalize(r['term']) for r in rows}) == len(rows), '词表重复')
     _require(sum(r['volume'] for r in rows) <= cluster['total_volume'], '词表量超过原始总量')
+    if rec.get('task_plan'):
+        Q.validate_task_plan(rec['task_plan'], dict(rec, cluster=cluster))
     previous = rec['cluster']
     rec['cluster'] = cluster
     rec['evidence_refs'] = list(dict.fromkeys(rec['evidence_refs'] + evidence))
@@ -286,6 +301,11 @@ def main(argv=None):
     rg.add_argument("--revenue-json")
     rg.add_argument("--revenue-file")
     rq.add_argument("--change-basis", required=True)
+    tp = sub.add_parser('set-task-plan', help='核验前登记并冻结核心/支撑任务组')
+    tp.add_argument('--slug', required=True)
+    tp.add_argument('--plan-file', required=True)
+    tp.add_argument('--by', required=True)
+    tp.add_argument('--reason', required=True)
     inv = sub.add_parser('invalidate', help='审计撤销既有 verified，并归档原报告')
     inv.add_argument('--slug', required=True)
     inv.add_argument('--to', required=True, choices=('parked','rejected'))
@@ -320,6 +340,9 @@ def main(argv=None):
             rec = requalify(root, a.slug, evidence=a.evidence, by=a.by, reason=a.reason,
                             form=a.form, revenue=_revenue_arg(a), change_basis=a.change_basis)
             print(f"{rec['slug']}:rejected → {rec['state']}(判据变更重审)")
+        elif a.cmd == 'set-task-plan':
+            set_task_plan(root, a.slug, plan=_json_arg(Path(a.plan_file).read_text(encoding='utf-8'), 'task plan'), by=a.by, reason=a.reason)
+            print(f'{a.slug}: 任务清单已登记')
         elif a.cmd == 'invalidate':
             rec = invalidate(root, a.slug, to=a.to, gate=a.gate, evidence=a.evidence, by=a.by, reason=a.reason)
             print(f"{a.slug}:verified → {rec['state']}（审计纠错）")

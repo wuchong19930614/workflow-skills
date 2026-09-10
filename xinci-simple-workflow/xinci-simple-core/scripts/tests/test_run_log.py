@@ -87,7 +87,8 @@ class ProgressTest(unittest.TestCase):
         with TmpRoot() as root:
             for i in range(5):
                 register_candidate(root, 'term-' + str(i))
-            self.assertEqual(R.plan(root)['action'], 'verify')
+            self.assertEqual(R.plan(root)['action'], 'scan')
+            self.assertEqual(R.plan(root)['scan_outcome'], 'skipped')
 
     def test_invalid_next_step_cannot_finish_early(self):
         with TmpRoot() as root:

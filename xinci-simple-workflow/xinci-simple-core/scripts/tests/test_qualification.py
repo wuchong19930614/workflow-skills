@@ -3,7 +3,7 @@ import copy
 import unittest
 import ledger as L
 import qualification as Q
-from helpers import TmpRoot, register_candidate, write_obs, VERIFY_OBS
+from helpers import plan_candidate, TmpRoot, register_candidate, write_obs, VERIFY_OBS
 
 
 class QualificationTest(unittest.TestCase):
@@ -54,7 +54,8 @@ class QualificationTest(unittest.TestCase):
 
     def test_multiple_forms_sum_and_do_not_double_count(self):
         with TmpRoot() as root:
-            slug = register_candidate(root)
+            slug = register_candidate(root, plan=False)
+            plan_candidate(root, slug, [{'id':'convert','role':'core','keywords':['heic to jpg converter']}, {'id':'lookup','role':'support','keywords':['heic to jpg']}])
             a, b = copy.deepcopy(VERIFY_OBS), copy.deepcopy(VERIFY_OBS)
             a['task_group']['keywords'] = ['heic to jpg converter']
             b['task_group'].update(id='lookup', keywords=['heic to jpg'], representative_keyword='heic to jpg', form='lookup')

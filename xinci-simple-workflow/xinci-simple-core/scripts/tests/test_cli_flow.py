@@ -35,3 +35,33 @@ class CliFlowTest(unittest.TestCase):
             plan = subprocess.run(args + ['--plan'],capture_output=True,text=True)
             self.assertEqual(plan.returncode, 0, plan.stderr)
             self.assertEqual(json.loads(plan.stdout)['resume']['run_id'], 'cli-run')
+
+class SimplifiedCliTest(unittest.TestCase):
+    def test_plan_and_settlement_commands(self):
+        with TmpRoot() as root:
+            slug = register_candidate(root, plan=False)
+            manifest = root/'plan.json'
+            manifest.write_text(json.dumps({'core_reason':'转换为核心','groups':[{'id':'convert','role':'core','keywords':['heic to jpg','heic to jpg converter']}]}))
+            def run(script, *args):
+                p = subprocess.run([sys.executable, str(SCRIPTS/script), '--data-root', str(root), *args],capture_output=True,text=True)
+                self.assertEqual(p.returncode, 0, p.stdout+p.stderr)
+                return p.stdout
+            run('ledger.py','set-task-plan','--slug',slug,'--plan-file',str(manifest),'--by','t','--reason','计划')
+            ref = write_obs(root, slug, 'cli-verify.json', **VERIFY_OBS)
+            args = ('--slug',slug,'--evidence',ref,'--by','t','--reason','完整核验')
+            result = json.loads(run('settle_candidate.py', *args))
+            self.assertEqual(result['state'],'verified')
+            import ledger as L
+            history = L.load(root)['candidates'][slug]['history']
+            run('settle_candidate.py', *args)
+            self.assertEqual(history, L.load(root)['candidates'][slug]['history'])
+
+    def test_finish_command_derives_next_step(self):
+        with TmpRoot() as root:
+            args = [sys.executable,str(SCRIPTS/'run_log.py'),'--data-root',str(root)]
+            start = subprocess.run(args + ['--date','2026-09-10','--run-id','cli-finish','--round','1','--max-rounds','1','--skill','xinci-simple-scan','--source-kind','root','--seed-value','Generator','--outcome','started','--next-step','scan'],capture_output=True,text=True)
+            self.assertEqual(start.returncode,0,start.stderr)
+            finish = subprocess.run(args + ['--finish','--run-id','cli-finish','--outcome','completed','--billable-calls','2'],capture_output=True,text=True)
+            self.assertEqual(finish.returncode,0,finish.stderr)
+            plan = subprocess.run(args+['--plan'],capture_output=True,text=True)
+            self.assertEqual(json.loads(plan.stdout)['action'],'verify')

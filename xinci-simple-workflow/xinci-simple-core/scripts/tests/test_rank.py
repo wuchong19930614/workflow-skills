@@ -45,8 +45,8 @@ class RankTest(unittest.TestCase):
         with TmpRoot() as root:
             mk(root, "a", kd=30, vol=100000, low_dr=3, ugc=2, age=400)
             mk(root, "b", kd=10, vol=300000, low_dr=6, ugc=5, age=900)
-            ev = write_obs(root, "b", "2026-09-10-verify.json", stage="verify")
-            L.transition(root, "b", to="rejected", evidence=[ev], by="t", reason="G1", gate="G1")
+            ev = write_obs(root, "b", "2026-09-10-verify.json", stage="verify", scope_recheck={"ymyl":True}, scope_evidence="安全相关任务")
+            L.transition(root, "b", to="rejected", evidence=[ev], by="t", reason="范围排除", gate="scope")
             scores = K.rank_all(root, write=True)
             self.assertIn("a", scores)
             self.assertNotIn("b", scores)
