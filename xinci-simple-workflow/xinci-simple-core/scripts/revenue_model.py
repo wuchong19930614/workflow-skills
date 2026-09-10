@@ -2,13 +2,13 @@
 """三情景收入模型。纯函数 + CLI。假设表版本化,改假设先改 VERSION。
 
 base 公式(选词契约 §收入模型):
-  info/lookup: 簇量 × CTR 0.07 / 1000 × RPM[niche]
-  tool:        簇量 × CTR 0.10 / 1000 × RPM[niche]
-  commercial:  簇量 × CTR 0.07 × 0.15 × 0.03 × 30
-  mixed:       min(info, commercial)
+  info/lookup: 任务组量 × CTR 0.07 / 1000 × RPM[niche]
+  tool:        任务组量 × CTR 0.10 / 1000 × RPM[niche]
+  commercial:  任务组量 × CTR 0.07 × 0.15 × 0.03 × 30
+  mixed:       组内 min(info, commercial);多组聚合由 qualification.py 完成。
 折减(乘在 CTR 上):AIO 存在未完成 ×0.6;强完整结果 1–2 个 ×0.7。
 downside = CTR ×0.5;upside = CTR ×1.5。
-门槛 THRESHOLD 由用户拍板,改它必须同时改 VERSION(见 选词契约.md §6.4 变更记录)。
+门槛 THRESHOLD 由用户决定,变更须同时更新 VERSION(见 选词契约.md §6)。
 """
 import argparse
 import json
@@ -16,7 +16,7 @@ import math
 import sys
 
 VERSION = "2026-09-09.2"
-THRESHOLD = 200  # 2026-09-09 用户拍板由 500 降为 200(依据:首跑 6 个候选实测,见 §6.5)
+THRESHOLD = 200
 FORMS = ("info", "lookup", "tool", "commercial", "mixed")
 RPM = {"tech": 10, "home": 18, "hobby": 12}
 CTR = {"info": 0.07, "lookup": 0.07, "tool": 0.10, "commercial": 0.07}

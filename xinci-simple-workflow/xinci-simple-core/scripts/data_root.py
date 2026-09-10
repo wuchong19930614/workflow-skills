@@ -3,7 +3,6 @@
 
 解析顺序:1. 显式 --data-root  2. 环境变量 XINCI_SIMPLE_DATA_ROOT
 3. 仓库根配置 .xinci-simple-data-root  4. 抛 DataRootNotConfigured。
-理由同 xinci:数据区放哪是用户的决定,脚本宁可拒绝执行也不猜。
 """
 import os
 from pathlib import Path

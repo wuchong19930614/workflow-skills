@@ -1,4 +1,4 @@
-# revenue_model:四形态、两条折减、$500 边界、反推与正算一致、非法输入报错。
+# revenue_model:形态、折减、当前门槛边界、反推与正算一致、非法输入报错。
 import sys
 import unittest
 from pathlib import Path
@@ -18,7 +18,7 @@ class RevenueModelTest(unittest.TestCase):
         self.assertEqual(r["threshold"], M.THRESHOLD)
 
     def test_threshold_is_200(self):
-        """2026-09-09 用户拍板:门槛由 500 降为 200。"""
+        """固定当前批准的门槛和假设版本。"""
         self.assertEqual(M.THRESHOLD, 200)
         self.assertEqual(M.VERSION, "2026-09-09.2")
 
@@ -53,16 +53,14 @@ class RevenueModelTest(unittest.TestCase):
     def test_threshold_boundary(self):
         self.assertFalse(M.passes({"base": M.THRESHOLD - 0.01}))
         self.assertTrue(M.passes({"base": M.THRESHOLD}))
-        # 旧门槛下过不了、新门槛下过得了的真实候选:wire size(base 234.59)
-        self.assertTrue(M.passes({"base": 234.59}))
 
     def test_volume_needed_roundtrip(self):
         r = M.model("info", 100000, aio_present=True, strong_complete_count=1)
         again = M.model("info", r["volume_needed_for_threshold"], aio_present=True, strong_complete_count=1)
         self.assertAlmostEqual(again["base"], M.THRESHOLD, delta=1)
 
-    def test_wire_size_case_passes_under_new_threshold(self):
-        """首跑实测:wire size 310,300 / tool / home / AIO 折减 / K=1 → base 234.59,新门槛下过线。"""
+    def test_tool_home_with_stacked_haircuts(self):
+        """工具组叠加折减后的收入与反推量；仅检验模型，不代表通过范围核验。"""
         r = M.model("tool", 310300, niche="home", aio_present=True, strong_complete_count=1)
         self.assertAlmostEqual(r["base"], 234.59, delta=0.5)
         self.assertTrue(r["base"] >= M.THRESHOLD)

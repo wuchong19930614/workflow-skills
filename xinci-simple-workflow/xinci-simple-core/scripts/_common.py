@@ -32,7 +32,3 @@ def load_ledger(data_root) -> dict:
     if not p.is_file():
         raise FileNotFoundError(f"账本不存在: {p}(先运行 init_workspace.py)")
     return json.loads(p.read_text(encoding="utf-8"))
-
-
-def load_json(path) -> dict:
-    return json.loads(Path(path).read_text(encoding="utf-8"))

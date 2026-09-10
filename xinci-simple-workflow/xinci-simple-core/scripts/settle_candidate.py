@@ -1,7 +1,6 @@
 """候选结算：重算/转移/报告/校验；重复调用只恢复已提交结果，不重复历史。"""
 import argparse
 import json
-from pathlib import Path
 
 import build_report as B
 import data_root

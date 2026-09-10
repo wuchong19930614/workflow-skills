@@ -5,7 +5,7 @@ description: '核验流量型主题簇：对排序前 N 或指定候选检查任
 
 # 现场核验
 
-行动前读 `xinci-simple-workflow/xinci-simple-core/选词契约.md` §1–2、§5–10，`数据采集.md` §1、§3–5、§7；写观察/清单与通过命令见 core 的 `命令与观察.md`。脚本均在 core/scripts。
+行动前读 `xinci-simple-workflow/xinci-simple-core/选词契约.md` §1–2、§5–10，`数据采集.md` §1、§3–6；写观察/清单与通过命令见 core 的 `命令与观察.md`。脚本均在 core/scripts。
 
 1. `report_status.py` 确认数据区；缺配置才问路径。`run_log.py --plan` 核对恢复位置：多个未完运行会显式报 conflict，先确定 run_id；写 started 清单。指定 slug 则用指定的，否则 `rank.py --no-write --top N`，默认 5；parked 可由用户指定补核。
 2. 对候选先复核范围。明确命中就追加 verify 观察并 `transition --to rejected --gate scope`，无需为被排除项查询。
