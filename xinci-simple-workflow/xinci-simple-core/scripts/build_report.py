@@ -35,7 +35,11 @@ def render_groups(rec, observations):
     for o, g in zip(observations, rev['inputs']['groups']):
         inp = g['revenue']['inputs']
         lines.append(f"| {g['id']} | {inp['form']} | {inp['cluster_volume']:,} | {o['task_group']['representative_keyword']} |")
-        lines += ['', o['task_group']['coverage_reason'], '']
+    lines.append('')
+    # 说明文字统一放到表格之后,每组一段并冠以组 id;
+    # 不能夹在表格行之间,否则第 2 组起会变成没有表头的孤立表格行。
+    for o, g in zip(observations, rev['inputs']['groups']):
+        lines += [f"{g['id']}：{o['task_group']['coverage_reason']}", '']
     for group in rec['qualification'].get('excluded_groups', []):
         lines += [f"- 未计入的支撑组 {group['id']}：{group['reason']}（观察 `{group['evidence_ref']}`）", '']
     lines += ['## 3. 量级证据', '', '裁决固定引用以下观察；新增观察不会改变本报告依据。', '']
@@ -56,11 +60,13 @@ def render_groups(rec, observations):
     for o in observations:
         lines += [f"- {o['task_group']['id']}：{o['trends']['evidence']}（{o['trends']['source_url']}）"]
     lines += ['', '## 7. 收入三情景', '', f"- 假设版本：`{rev['assumptions_version']}`；门槛 ${rev['threshold']}/月", '',
-              '| 任务组 | downside | base | upside |', '| --- | ---: | ---: | ---: |']
+              '| 任务组 | near me ×0.2 | downside | base | upside |', '| --- | --- | ---: | ---: | ---: |']
     for g in rev['inputs']['groups']:
         r = g['revenue']
-        lines.append(f"| {g['id']} | ${r['downside']:,.2f} | ${r['base']:,.2f} | ${r['upside']:,.2f} |")
-    lines += [f"| 合计 | ${rev['downside']:,.2f} | ${rev['base']:,.2f} | ${rev['upside']:,.2f} |", '',
+        near = '是' if r['inputs'].get('near_me') else '否'
+        lines.append(f"| {g['id']} | {near} | ${r['downside']:,.2f} | ${r['base']:,.2f} | ${r['upside']:,.2f} |")
+    lines += [f"| 合计 | | ${rev['downside']:,.2f} | ${rev['base']:,.2f} | ${rev['upside']:,.2f} |", '',
+              '- near me 组:代表查询含定位措辞,真实用户首屏被本地地图包占据,CTR 另乘 0.2(假设表 2026-10-02.1 起)。',
               f"- 维持当前任务组比例及假设时，门槛所需词量：{rev['volume_needed_for_threshold']:,}", '',
               '## 8. 范围排除复核', '']
     for o in observations:

@@ -246,7 +246,8 @@ def assess(root, rec, refs):
         k, aio = check_serp(obs)
         volume = sum(keywords[t] for t in terms)
         try:
-            rev = M.model(group.get('form'), volume, group.get('niche'), aio, k)
+            # near me 组按代表查询的定位措辞自动判定,不由执行者填报(选词契约 §6)
+            rev = M.model(group.get('form'), volume, group.get('niche'), aio, k, M.is_near_me(representative))
         except ValueError as exc:
             raise QualificationError(str(exc)) from exc
         groups.append({'id': group['id'], 'keywords': terms, 'evidence_ref': ref, 'revenue': rev})

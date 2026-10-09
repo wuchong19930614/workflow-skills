@@ -20,7 +20,7 @@ class RevenueModelTest(unittest.TestCase):
     def test_threshold_is_200(self):
         """固定当前批准的门槛和假设版本。"""
         self.assertEqual(M.THRESHOLD, 200)
-        self.assertEqual(M.VERSION, "2026-09-09.2")
+        self.assertEqual(M.VERSION, "2026-10-02.1")
 
     def test_lookup_home_rpm(self):
         r = M.model("lookup", 100000, niche="home")
@@ -49,6 +49,25 @@ class RevenueModelTest(unittest.TestCase):
         self.assertAlmostEqual(M.model("info", 100000, strong_complete_count=2)["base"], plain * 0.7, places=2)
         self.assertAlmostEqual(M.model("info", 100000, aio_present=True, strong_complete_count=2)["base"],
                                plain * 0.6 * 0.7, places=2)
+
+    def test_near_me_haircut_stacks(self):
+        plain = M.model("tool", 100000, niche="hobby")["base"]
+        self.assertAlmostEqual(M.model("tool", 100000, niche="hobby", near_me=True)["base"], plain * 0.2, places=2)
+        self.assertAlmostEqual(M.model("tool", 100000, niche="hobby", aio_present=True, strong_complete_count=1,
+                                       near_me=True)["base"], plain * 0.6 * 0.7 * 0.2, places=2)
+        self.assertTrue(M.model("tool", 100000, near_me=True)["inputs"]["near_me"])
+        self.assertFalse(M.model("tool", 100000)["inputs"]["near_me"])
+        with self.assertRaises(ValueError):
+            M.model("tool", 100000, near_me="yes")
+
+    def test_near_me_detection(self):
+        for q in ("dog park near me", "rest stop near.me", "Nearest  Rest Area", "dog parks nearby",
+                  "trash pickup in my area", "closest truck stop to me", "rest area near my location"):
+            with self.subTest(q=q):
+                self.assertTrue(M.is_near_me(q))
+        for q in ("dog park", "guilford county gis", "denver trash pickup schedule", "fence near meadow", None):
+            with self.subTest(q=q):
+                self.assertFalse(M.is_near_me(q))
 
     def test_threshold_boundary(self):
         self.assertFalse(M.passes({"base": M.THRESHOLD - 0.01}))
@@ -81,6 +100,10 @@ class UpperBoundTest(unittest.TestCase):
         self.assertFalse(M.upper_bound(71150)['can_reject'])  # commercial still possible
         self.assertTrue(M.upper_bound(71150, ['tool'], ['home'])['can_reject'])
         self.assertEqual(M.upper_bound(71150, ['tool'], ['home'])['upper_bound'], 128.07)
+
+    def test_upper_bound_ignores_near_me_haircut(self):
+        """预筛是无折减上限,near me 折减只在完整核验后按代表查询判定。"""
+        self.assertEqual(M.upper_bound(100000, ['tool'], ['hobby'])['upper_bound'], M.model('tool', 100000, 'hobby')['base'])
 
     def test_upper_bound_dominates_allowed_forms(self):
         upper = M.upper_bound(100000)

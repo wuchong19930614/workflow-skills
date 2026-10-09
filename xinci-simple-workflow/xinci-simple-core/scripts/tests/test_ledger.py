@@ -68,6 +68,32 @@ class LedgerTest(unittest.TestCase):
                     with self.assertRaises(L.LedgerError):
                         L.requalify(root, slug, **kwargs, change_basis='降低收入门槛')
 
+    def test_reopen_only_competition_gate_with_audit_and_change(self):
+        for gate in ('G3', 'revenue', 'scope'):
+            with self.subTest(gate=gate), TmpRoot() as root:
+                slug = register_candidate(root)
+                plan = L.load(root)['candidates'][slug].get('task_plan')
+                ev = write_obs(root, slug, 'v-verify.json', **VERIFY_OBS)
+                audit = write_obs(root, slug, 'a-verify.json', **VERIFY_OBS, audit_basis='沿用原观察,按用户批准口径改判')
+                data = L.load(root)
+                data['candidates'][slug]['state'] = 'rejected'
+                data['candidates'][slug]['history'].append({'at':'2026-09-09T00:00:00+00:00','from':'found','to':'rejected','by':'old','reason':'旧裁决','gate':gate})
+                L.save(root, data)
+                if gate != 'G3':
+                    with self.assertRaises(L.LedgerError):
+                        L.reopen(root, slug, evidence=[audit], by='t', reason='重开', change_basis='用户批准')
+                    continue
+                with self.assertRaises(L.LedgerError):
+                    L.reopen(root, slug, evidence=[audit], by='t', reason='重开')
+                with self.assertRaises(L.LedgerError):
+                    L.reopen(root, slug, evidence=[ev], by='t', reason='重开', change_basis='用户批准')
+                rec = L.reopen(root, slug, evidence=[audit], by='t', reason='重开', change_basis='用户批准')
+                self.assertEqual(rec['state'], 'found')
+                self.assertEqual(rec['history'][-1]['reopened_gate'], 'G3')
+                self.assertEqual(rec.get('task_plan'), plan)
+                L.transition(root, slug, to='verified', evidence=[ev], by='t', reason='完整', form='tool', revenue=revenue_for(root, slug, [ev]))
+                self.assertEqual(L.load(root)['candidates'][slug]['state'], 'verified')
+
     def test_rejection_requires_gate_reason_and_verify(self):
         with TmpRoot() as root:
             slug = register_candidate(root)
@@ -123,3 +149,62 @@ class AuditTest(unittest.TestCase):
             ev = write_obs(root, slug, 'pre-verify.json', stage='verify', prescreen={'basis':'tool tech', 'result':M.upper_bound(1000, ['tool'], ['tech'])})
             with self.assertRaises(L.LedgerError):
                 L.transition(root, slug, to='rejected', evidence=[ev], gate='revenue_prescreen', by='t', reason='不足')
+
+
+class RebaseTest(unittest.TestCase):
+    """假设表改版后,既有 verified 按已绑定观察重算。"""
+
+    def test_rebase_updates_version_and_keeps_unaffected_income(self):
+        from unittest import mock
+        import revenue_model as M
+        with TmpRoot() as root:
+            with mock.patch.object(M, 'VERSION', '2026-09-09.2'):
+                slug = verified_candidate(root)
+            before = L.load(root)['candidates'][slug]
+            with self.assertRaises(Q.QualificationError):
+                Q.check_bound(root, before)  # 旧版本收入在新假设表下不能直接通过校验
+            rec = L.rebase(root, slug, by='t', reason='假设表升版', change_basis='用户批准 near me ×0.2')
+            self.assertEqual(rec['state'], 'verified')
+            self.assertEqual(rec['revenue']['assumptions_version'], M.VERSION)
+            self.assertEqual(rec['revenue']['base'], before['revenue']['base'])
+            self.assertEqual(rec['history'][:-1], before['history'])
+            last = rec['history'][-1]
+            self.assertEqual((last['action'], last['to']), ('rebase', 'verified'))
+            self.assertEqual(last['previous_revenue']['assumptions_version'], '2026-09-09.2')
+            Q.check_bound(root, rec)
+            with self.assertRaisesRegex(Q.QualificationError, '无需 rebase'):
+                L.rebase(root, slug, by='t', reason='重复', change_basis='同上')
+
+    def test_rebase_rejects_near_me_candidate_and_archives_report(self):
+        from unittest import mock
+        import revenue_model as M
+        import build_report as B
+        from test_qualification import near_me_candidate, near_me_observations
+        with TmpRoot() as root:
+            with mock.patch.object(M, 'VERSION', '2026-09-09.2'), mock.patch.object(M, 'HAIRCUT_NEAR_ME', 1.0):
+                slug = near_me_candidate(root)
+                refs = near_me_observations(root, slug, groups=('nearme',))
+                plan = {'core_reason': '找狗公园', 'groups': [{'id': 'nearme', 'role': 'core', 'keywords': ['dog park near me']}]}
+                data = L.load(root); data['candidates'][slug]['task_plan'] = plan; L.save(root, data)
+                rec = L.load(root)['candidates'][slug]
+                form, revenue, _ = Q.assess(root, rec, refs)
+                self.assertEqual(revenue['base'], 210)
+                L.transition(root, slug, to='verified', evidence=refs, by='t', reason='旧假设通过', form=form, revenue=revenue)
+                B.build(root, slug)
+            rec = L.rebase(root, slug, by='t', reason='near me 折减后重算', change_basis='用户批准 near me ×0.2')
+            self.assertEqual(rec['state'], 'rejected')
+            self.assertEqual(rec['history'][-1]['gate'], 'revenue')
+            self.assertEqual(rec['revenue']['base'], 42)
+            self.assertFalse((root / '报告' / f'{slug}.md').exists())
+            self.assertEqual(len(rec['history'][-1]['archived_reports']), 2)
+            Q.check_rejection(root, rec, refs, 'revenue')
+
+    def test_rebase_refuses_non_verified_and_missing_basis(self):
+        with TmpRoot() as root:
+            slug = register_candidate(root)
+            with self.assertRaisesRegex(Q.QualificationError, '只用于既有 verified'):
+                L.rebase(root, slug, by='t', reason='x', change_basis='y')
+            slug = verified_candidate(root, 'other-slug')
+            with self.assertRaisesRegex(Q.QualificationError, 'change-basis'):
+                L.rebase(root, slug, by='t', reason='x', change_basis=' ')
+

@@ -205,6 +205,33 @@ def transition(root, slug, *, to, evidence, by, reason, form=None, revenue=None,
     return rec
 
 
+def reopen(root, slug, *, evidence, by, reason, change_basis=None) -> dict:
+    """竞争门判定口径经用户拍板变更后的受控重开:rejected → found。
+
+    只对 G1/G2/G3 拒绝开放(收入/范围翻案走 requalify);不改旧历史与旧观察,
+    保留已冻结的进入预检与任务计划,重开后按正常核验补齐证据再结算。
+    """
+    data = load(root)
+    _require(slug in data['candidates'], f"候选不存在: {slug}")
+    rec = data['candidates'][slug]
+    _require(rec['state'] == 'rejected', f"reopen 只对 rejected 开放,当前 {rec['state']}")
+    _require(Q.nonempty(by) and Q.nonempty(reason), 'by 与 reason 必填')
+    gate = rec['history'][-1].get('gate')
+    _require(gate in ('G1', 'G2', 'G3'), '只有竞争门(G1/G2/G3)拒绝可因判定口径变更重开;收入/范围走 requalify')
+    _require(Q.nonempty(change_basis), 'reopen 须 --change-basis 写明用户批准的判定口径变更')
+    _check_evidence(root, evidence)
+    for ref in evidence:
+        obs, _ = Q.read_observation(root, ref, slug)
+        _require(obs['stage'] == 'verify' and Q.nonempty(obs.get('audit_basis')), '重开须 verify 审计观察与 audit_basis')
+    rec['state'] = 'found'
+    rec['evidence_refs'] = list(dict.fromkeys(rec['evidence_refs'] + evidence))
+    rec['history'].append({'at': now(), 'from': 'rejected', 'to': 'found', 'by': by, 'reason': reason,
+                           'action': 'reopen', 'reopened_gate': gate, 'change_basis': change_basis,
+                           'evidence_refs': list(evidence)})
+    save(root, data)
+    return rec
+
+
 def invalidate(root, slug, *, to, evidence, by, reason, gate):
     """审计纠错专用：撤销既有 verified；保留旧记录并归档原报告。"""
     data = load(root)
@@ -219,6 +246,22 @@ def invalidate(root, slug, *, to, evidence, by, reason, gate):
         _require(obs['stage'] == 'verify' and Q.nonempty(obs.get('audit_basis')), '纠错须 verify 审计观察与 audit_basis')
         if gate == 'scope':
             _require(any((obs.get('scope_recheck') or {}).get(k) is True for k in Q.SCOPE), '范围纠错须明确命中项')
+    archived = _archive_reports(root, slug)
+    try:
+        rec['state'] = to
+        rec['evidence_refs'] = list(dict.fromkeys(rec['evidence_refs'] + evidence))
+        rec['history'].append({'at': now(), 'from':'verified', 'to':to, 'by':by, 'reason':reason,
+                               'action':'invalidate', 'gate':gate, 'evidence_refs':list(evidence),
+                               'archived_reports':[str(dst.relative_to(root)) for _, dst in archived]})
+        save(root, data)
+    except Exception:
+        _restore_reports(archived)
+        raise
+    return rec
+
+
+def _archive_reports(root, slug):
+    """把 报告/<slug>.{md,html} 移入 报告/历史/;返回 (原路径, 归档路径) 供失败回滚。"""
     archived = []
     token = uuid.uuid4().hex[:12]
     try:
@@ -229,15 +272,56 @@ def invalidate(root, slug, *, to, evidence, by, reason, gate):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 source.rename(target)
                 archived.append((source, target))
-        rec['state'] = to
-        rec['evidence_refs'] = list(dict.fromkeys(rec['evidence_refs'] + evidence))
-        rec['history'].append({'at': now(), 'from':'verified', 'to':to, 'by':by, 'reason':reason,
-                               'action':'invalidate', 'gate':gate, 'evidence_refs':list(evidence),
-                               'archived_reports':[str(dst.relative_to(root)) for _, dst in archived]})
+    except Exception:
+        _restore_reports(archived)
+        raise
+    return archived
+
+
+def _restore_reports(archived):
+    for source, target in archived:
+        target.rename(source)
+
+
+def rebase(root, slug, *, by, reason, change_basis):
+    """假设表经用户批准改版后,用已绑定的同一批观察对既有 verified 按现行假设重算。
+
+    不新采现场、不改旧观察与旧历史。过线则更新收入与资格(报告由调用方重出);
+    不过线则按收入转为 rejected(gate=revenue)并归档原报告。
+    """
+    data = load(root)
+    _require(slug in data['candidates'], f"候选不存在: {slug}")
+    rec = data['candidates'][slug]
+    _require(rec['state'] == 'verified', f"rebase 只用于既有 verified,当前 {rec['state']}")
+    _require(Q.nonempty(by) and Q.nonempty(reason), 'by 与 reason 必填')
+    _require(Q.nonempty(change_basis), 'rebase 须 --change-basis 写明用户批准的假设表变更')
+    old = rec.get('revenue') or {}
+    _require(old.get('assumptions_version') != revenue_model.VERSION, '收入已按现行假设表计算,无需 rebase')
+    q = rec.get('qualification') or {}
+    _require(q.get('version') == Q.VERSION and q.get('bindings'), '历史 verified 未绑定 v2 完整核验,须重新核验')
+    _require(q.get('task_plan') == rec.get('task_plan') and q.get('task_plan'), '缺绑定任务计划或计划已变化,须补核')
+    for binding in q['bindings']:
+        _, current = Q.read_observation(root, binding['ref'], slug)
+        _require(current == binding, f"裁决证据 SHA 不一致: {binding['ref']}")
+    refs = [b['ref'] for b in q['bindings'] if b['stage'] == 'verify']
+    form, revenue, qualification = Q.assess(root, rec, refs)
+    qualification['bindings'] += [b for b in q['bindings'] if b['stage'] == 'scan']
+    entry = {'at': now(), 'from': 'verified', 'by': by, 'reason': reason, 'action': 'rebase',
+             'change_basis': change_basis, 'evidence_refs': refs,
+             'previous_revenue': {k: old.get(k) for k in ('downside', 'base', 'upside', 'assumptions_version')}}
+    rec.update(form=form, revenue=revenue, qualification=qualification)
+    if revenue['base'] >= revenue_model.THRESHOLD:
+        rec['history'].append(dict(entry, to='verified'))
+        save(root, data)
+        return rec
+    archived = _archive_reports(root, slug)
+    try:
+        rec['state'] = 'rejected'
+        rec['history'].append(dict(entry, to='rejected', gate='revenue',
+                                   archived_reports=[str(dst.relative_to(root)) for _, dst in archived]))
         save(root, data)
     except Exception:
-        for source, target in archived:
-            target.rename(source)
+        _restore_reports(archived)
         raise
     return rec
 
@@ -357,16 +441,24 @@ def main(argv=None):
     ep.add_argument('--plan-file', required=True)
     ep.add_argument('--by', required=True)
     ep.add_argument('--reason', required=True)
+    ro = sub.add_parser('reopen', help='竞争门判定口径变更后的受控重开:rejected → found')
+    ro.add_argument('--slug', required=True)
+    ro.add_argument('--change-basis', required=True)
     inv = sub.add_parser('invalidate', help='审计撤销既有 verified，并归档原报告')
     inv.add_argument('--slug', required=True)
     inv.add_argument('--to', required=True, choices=('parked','rejected'))
     inv.add_argument('--gate', required=True, choices=('evidence','scope'))
+    rb = sub.add_parser('rebase', help='假设表改版后按已绑定观察重算既有 verified;不过线转 rejected')
+    rb.add_argument('--slug', required=True)
+    rb.add_argument('--by', required=True)
+    rb.add_argument('--reason', required=True)
+    rb.add_argument('--change-basis', required=True)
     refresh = sub.add_parser('refresh-cluster', help='补采 found/parked 的词表')
     refresh.add_argument('--slug', required=True)
     fg = refresh.add_mutually_exclusive_group(required=True)
     fg.add_argument('--cluster-json')
     fg.add_argument('--cluster-file')
-    for parser in (inv, refresh):
+    for parser in (inv, refresh, ro):
         parser.add_argument('--evidence', action='append', required=True)
         parser.add_argument('--by', required=True)
         parser.add_argument('--reason', required=True)
@@ -397,9 +489,23 @@ def main(argv=None):
         elif a.cmd == 'set-task-plan':
             set_task_plan(root, a.slug, plan=_json_arg(Path(a.plan_file).read_text(encoding='utf-8'), 'task plan'), by=a.by, reason=a.reason)
             print(f'{a.slug}: 任务清单已登记')
+        elif a.cmd == 'reopen':
+            reopen(root, a.slug, evidence=a.evidence, by=a.by, reason=a.reason, change_basis=a.change_basis)
+            print(f'{a.slug}:rejected → found(判定口径变更重开)')
         elif a.cmd == 'invalidate':
             rec = invalidate(root, a.slug, to=a.to, gate=a.gate, evidence=a.evidence, by=a.by, reason=a.reason)
             print(f"{a.slug}:verified → {rec['state']}（审计纠错）")
+        elif a.cmd == 'rebase':
+            rec = rebase(root, a.slug, by=a.by, reason=a.reason, change_basis=a.change_basis)
+            prev = rec['history'][-1]['previous_revenue']
+            if rec['state'] == 'verified':
+                import build_report
+                try:
+                    build_report.build(root, a.slug)
+                except build_report.ReportError as exc:
+                    raise Q.QualificationError(f'收入已按新假设提交,报告未完成;用 build_report.py --slug {a.slug} 恢复:{exc}') from exc
+            print(f"{a.slug}:verified → {rec['state']}(假设表 {prev['assumptions_version']} → {rec['revenue']['assumptions_version']},"
+                  f"base ${prev['base']} → ${rec['revenue']['base']})")
         elif a.cmd == 'refresh-cluster':
             refresh_cluster(root, a.slug, cluster=_json_arg(Path(a.cluster_file).read_text() if a.cluster_file else a.cluster_json, 'cluster'), evidence=a.evidence, by=a.by, reason=a.reason)
             print(f'{a.slug}: 已追加量级补采')

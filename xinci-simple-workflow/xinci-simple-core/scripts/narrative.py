@@ -9,6 +9,9 @@ def build_groups(rec, observations):
     raw = rec['cluster']['total_volume']
     counts = [len(Q.strong_results(o)[0]) for o in observations]
     aio_count = sum(o['ai_overview']['present'] for o in observations)
+    near = [g['id'] for g in rev['inputs']['groups'] if g['revenue']['inputs'].get('near_me')]
+    near_line = (f"其中 {'、'.join(near)} 为 near me 查询，真实用户首屏被本地地图包占据，CTR 另乘 0.2。"
+                 if near else '没有 near me 查询组。')
     return '\n'.join([
         '## 为什么是这个词', '', '### 有人在搜吗', '',
         f'**有。已核验任务组覆盖月搜索量 {volume:,}。**', '',
@@ -19,7 +22,7 @@ def build_groups(rec, observations):
         '### 打得过吗', '', '**有机会，仍需实际争取排名。**', '',
         f'各组满足完整任务、AS ≥ 50、新鲜且格式正确的强对手数为 {"、".join(map(str, counts))}；不是排名保证。', '',
         '### 能赚多少', '', f"**当前假设下 base 为 ${rev['base']:,.2f}/月，门槛 ${rev['threshold']}/月。**", '',
-        f"downside ${rev['downside']:,.2f}，upside ${rev['upside']:,.2f}。每组按自身形态、垂类与折减计算后相加。", '',
+        f"downside ${rev['downside']:,.2f}，upside ${rev['upside']:,.2f}。每组按自身形态、垂类与折减计算后相加；{near_line}", '',
         '### 最大的风险', '', '**收入是模型估算，未覆盖词量和实际排名仍有不确定性。**', '',
         '证据是一次现场快照；三情景仅改变 CTR，不能代替对佣金、RPM 和代表查询覆盖范围的复核。', ''
     ])

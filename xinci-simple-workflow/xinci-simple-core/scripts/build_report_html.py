@@ -149,8 +149,12 @@ def md_to_html_body(md: str):
                 r"^(#{1,3}\s|\||- |\d+\.\s|-{3,}$)", lines[i].strip()):
             para.append(lines[i].strip())
             i += 1
-        if para:
-            out.append(f"<p>{_inline(' '.join(para))}</p>")
+        if not para:
+            # 该行以块级符号开头却没被任何分支消费(如缺表头的孤立表格行),
+            # 当普通段落输出并强制前进,避免 i 原地不动导致死循环。
+            para.append(lines[i].strip())
+            i += 1
+        out.append(f"<p>{_inline(' '.join(para))}</p>")
     return "\n".join(out), headings
 
 

@@ -79,3 +79,44 @@ class QualificationTest(unittest.TestCase):
                     row.update(completes_task=True, dr=dr, fresh=True, format_match=True)
                 with self.subTest(dr=dr), self.assertRaisesRegex(Q.QualificationError, 'G3'):
                     self.assess(root, slug, obs)
+
+
+class NearMeQualificationTest(unittest.TestCase):
+    def test_near_me_group_detected_from_representative_query(self):
+        with TmpRoot() as root:
+            slug = near_me_candidate(root)
+            refs = near_me_observations(root, slug)
+            _, rev, _ = Q.assess(root, L.load(root)['candidates'][slug], refs)
+            groups = {g['id']: g['revenue'] for g in rev['inputs']['groups']}
+            self.assertTrue(groups['nearme']['inputs']['near_me'])
+            self.assertFalse(groups['generic']['inputs']['near_me'])
+            # 两组同为 tool/tech、AIO 未完成、K=1;near me 组再乘 0.2
+            self.assertEqual(groups['nearme']['base'], round(500000 * 0.10 / 1000 * 10 * 0.6 * 0.7 * 0.2, 2))
+            self.assertEqual(groups['generic']['base'], round(100000 * 0.10 / 1000 * 10 * 0.6 * 0.7, 2))
+
+
+def near_me_candidate(root, slug='dog-park-near-me'):
+    from helpers import SEED, PROXY, entry_candidate
+    ev = write_obs(root, slug, 'scan.json')
+    L.register(root, slug=slug, primary_keyword='dog park near me',
+               cluster={'total_volume': 900000, 'keywords': [{'term': 'dog park near me', 'volume': 500000, 'kd': 40},
+                                                            {'term': 'dog park', 'volume': 100000, 'kd': 30}]},
+               seed=SEED, proxy=PROXY, evidence=[ev], by='test', reason='准入')
+    entry_candidate(root, slug)
+    plan_candidate(root, slug, [{'id': 'nearme', 'role': 'core', 'keywords': ['dog park near me']},
+                                {'id': 'generic', 'role': 'support', 'keywords': ['dog park']}])
+    return slug
+
+
+def near_me_observations(root, slug, groups=('nearme', 'generic')):
+    refs = []
+    for gid, term in (('nearme', 'dog park near me'), ('generic', 'dog park')):
+        if gid not in groups:
+            continue
+        obs = copy.deepcopy(VERIFY_OBS)
+        obs['task_group'].update(id=gid, keywords=[term], representative_keyword=term,
+                                 coverage_reason='同一找狗公园任务')
+        obs['query_url'] = 'https://www.google.com/search?q=' + term.replace(' ', '+') + '&gl=us&hl=en&pws=0'
+        refs.append(write_obs(root, slug, f'{gid}-verify.json', **obs))
+    return refs
+
