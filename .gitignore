@@ -9,3 +9,6 @@ __pycache__/
 
 # xinci-simple 的数据区配置同样是本地选择,不入库
 .xinci-simple-data-root
+
+# xinci-bench 的数据区配置同样是本地选择,不入库
+.xinci-bench-data-root
