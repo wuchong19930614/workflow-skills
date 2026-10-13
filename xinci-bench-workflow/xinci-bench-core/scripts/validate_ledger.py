@@ -42,12 +42,17 @@ def check_direction(root, slug, rec) -> list:
         except BenchError as exc:
             errs.append(f"{slug}: 观察不可用 {ref}: {exc}")
     if rec["state"] == "found":
+        if rec.get("decision") is not None or rec.get("bindings") is not None:
+            errs.append(f"{slug}: found 不应带 decision/bindings,说明结算未完成;用同一条 settle.py 命令重跑")
         return errs
     dec = rec.get("decision") or {}
     if dec.get("verdict") != rec["state"]:
         errs.append(f"{slug}: decision.verdict 与状态不一致")
     if not L.docs_consistent(root, slug):
         errs.append(f"{slug}: 决策书 md/html 缺失,或 html 内嵌的源 SHA 与 md 不符")
+    elif sha256_file(L.doc_paths(root, slug)[0]) != dec.get("doc_sha256"):
+        errs.append(f"{slug}: 决策书 md 与账本不一致(md 的 SHA 不等于结算时记录的 doc_sha256,疑似被手改);"
+                    "事实没变时用同一条 settle.py 命令重跑重建")
     for f in (rec.get("bindings") or {}).get("files", []):
         p = Path(root) / f["ref"]
         if not p.is_file() or sha256_file(p) != f["sha256"]:

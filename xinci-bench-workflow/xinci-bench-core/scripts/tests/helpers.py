@@ -133,7 +133,7 @@ def deep(obj):
     return copy.deepcopy(obj)
 
 
-def setup_direction(root, slug="example-county", us_organic_m12=20000, stale=False):
+def setup_direction(root, slug="example-county", us_organic_m12=20000, stale=False, with_brief=True):
     """登记 + 写齐六类观察 + 补数,返回 (slug, 引用列表)。us_organic_m12=20000 时基准恰好 1 万访问(过线)。
 
     每个方向用自己的标杆域名 <slug>.example.com,避免触发"同标杆须写理由"。
@@ -143,9 +143,12 @@ def setup_direction(root, slug="example-county", us_organic_m12=20000, stale=Fal
     domain = f"{slug}.example.com"
     scan_ref = W.write(root, scan_obs(domain))
     ledger.register(root, slug, "按地址查所属县", "tool", domain, scan_ref, "初核全过")
-    refs = [W.write(root, o) for o in (benchmark_obs(slug, domain, us_organic_m12=us_organic_m12), demand_obs(slug),
-                                        serp_obs(slug), diff_obs(slug), delivery_obs(slug), brief_obs(slug))]
     measured = "2026-01-01" if stale else "2026-10-13"
+    demand = demand_obs(slug)
+    demand["readings"]["clusters"][0]["measured_at"] = measured
+    obs = [benchmark_obs(slug, domain, us_organic_m12=us_organic_m12), demand, serp_obs(slug), diff_obs(slug),
+           delivery_obs(slug)] + ([brief_obs(slug)] if with_brief else [])
+    refs = [W.write(root, o) for o in obs]
     ledger.update(root, slug, {"benchmarks": [benchmark_record(domain, us_organic_m12=us_organic_m12)],
                                "clusters": [cluster_record(measured_at=measured)], "crowding": 2}, refs)
     return slug, [scan_ref] + refs

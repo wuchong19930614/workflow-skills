@@ -737,3 +737,4 @@ xinci-bench-workflow/
 6. B1–B3 的数值门槛由 `write_observation.py` 强制：标"通过"但数字不达标的 scan 观察直接拒收。
 7. 旧数据导入实测条数：标杆种子 68 个（设计稿写"约 71"，其中 pinterest、play.google、scribd 三个平台被黑名单去掉），同类站种子 13 个。
 8. 手工种子可带 `role`（默认 `benchmark`）：geocodify.com（AS 38）与 dittobase.com（AS 35）不满足 B2，标 `sibling` 只用来查同类站；否则它们会在初核被淘汰，且淘汰后无法再登记进种子池。
+9. 整体审查后加严（2026-10-13）：`settle.py` 先跑全部证据复核（`ledger.precheck`），不通过就拒、什么都不写，中途失败把账本与决策书恢复原样；go 与收入否决逐项核对账本数字与最新 benchmark/demand 观察，干净标杆的 `covered_demand` 不能小于"标杆已做"的簇量合计；go 时每个计入需求的簇都要有 serp 观察，serp 说已答完的簇不能计入；结算时把决策书 md 的 SHA 记进 `decision.doc_sha256`，`validate_ledger.py` 用它发现手改，并报告带着 decision/bindings 的 found（结算未完成）。

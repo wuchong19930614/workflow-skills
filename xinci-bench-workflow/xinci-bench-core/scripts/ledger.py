@@ -22,6 +22,9 @@ BENCH_KEYS = ("domain", "registered_at", "aged_domain", "traffic_start", "author
 CLUSTER_KEYS = ("id", "seed_term", "volume", "measured_at", "coverage", "near_me", "answered", "counted")
 PATCHABLE = ("title", "site_type", "benchmarks", "clusters", "crowding", "paid")
 FRESH_DAYS = 90
+# 账本里决定收入的字段必须等于绑定观察的读数(结算时核对)
+BENCH_OBS_FIELDS = ("traffic_start", "us_organic_now", "us_organic_m12", "link_driven", "algo_risk")
+CLUSTER_OBS_FIELDS = ("seed_term", "volume", "measured_at", "coverage", "near_me")
 
 
 def _observations(root, refs):
@@ -173,28 +176,58 @@ def docs_consistent(root, slug) -> bool:
     return f'content="{sha256_file(md)}"' in html.read_text(encoding="utf-8")
 
 
-def _require_evidence(root, rec, to, gate, on):
+def _latest(obs, kind, key=None, value=None):
+    rows = [o for _, o in obs if o["kind"] == kind and (key is None or o["readings"].get(key) == value)]
+    return rows[-1] if rows else None
+
+
+def _check_against_observations(rec, obs):
+    """账本里的标杆读数、簇量、拥挤度必须等于最新的对应观察;覆盖需求不能小于"标杆已做"的簇量合计。"""
+    floor = sum(c["volume"] for c in rec["clusters"] if c["coverage"] == "benchmark")
+    for b in rec["benchmarks"]:
+        if b.get("clean") is not True:
+            continue
+        o = _latest(obs, "benchmark", "domain", b["domain"])
+        require(o, f"干净标杆 {b['domain']} 没有 benchmark 观察")
+        diff = [k for k in BENCH_OBS_FIELDS if b.get(k) != o["readings"][k]]
+        require(not diff, f"标杆 {b['domain']} 的 {diff} 与最新 benchmark 观察不一致")
+        require(isinstance(b.get("covered_demand"), (int, float)) and b["covered_demand"] >= floor,
+                f"标杆 {b['domain']} 的 covered_demand 小于\"标杆已做\"的簇量合计 {floor}(分母偏小会抬高份额率)")
+    d = _latest(obs, "demand")
+    require(d, "缺 demand 观察")
+    by_id = {c["id"]: c for c in d["readings"]["clusters"]}
+    for c in rec["clusters"]:
+        oc = by_id.get(c["id"])
+        require(oc, f"簇 {c['id']} 不在最新 demand 观察里")
+        diff = [k for k in CLUSTER_OBS_FIELDS if c[k] != oc[k]]
+        require(not diff, f"簇 {c['id']} 的 {diff} 与最新 demand 观察不一致")
+    require(rec.get("crowding") == d["readings"]["crowding"], "crowding 与最新 demand 观察不一致")
+
+
+def precheck(root, rec, to, gate, on, scope_hit=None):
+    """不依赖结算产物的证据复核;settle 在写任何东西之前先跑它,转移时再跑一遍。"""
     obs = _observations(root, rec["evidence_refs"])
     kinds = {o["kind"] for _, o in obs}
-    dec = rec.get("decision") or {}
-    require(dec.get("verdict") == to and dec.get("gate") == gate,
-            "账本里的 decision 与本次转移不一致;请用 settle.py 结算")
-    require(docs_consistent(root, rec["slug"]), "决策书 md/html 缺失或不一致;请用 settle.py 结算")
     if to == "parked":
         return
-    if to == "go" or gate == "revenue":
-        model = bench_model.compute(rec)
-        require(rec.get("model") == model, "账本里的模型结果与现场重算不一致")
-        require(model["passes"] is (to == "go"), "模型结论与转移方向不符")
     if to == "go":
         need = {"benchmark", "demand", "serp", "differentiation", "delivery", "brief"}
         require(need <= kinds, f"go 缺观察: {sorted(need - kinds)}")
-        delivery = [o for _, o in obs if o["kind"] == "delivery"][-1]
-        require(delivery["readings"]["feasible"] is True, "交付依据不成立(最新 delivery.feasible=false)")
+        require(_latest(obs, "delivery")["readings"]["feasible"] is True,
+                "交付依据不成立(最新 delivery.feasible=false)")
         stale = [c["id"] for c in rec["clusters"] if c["counted"]
                  and (date.fromisoformat(on) - date.fromisoformat(c["measured_at"])).days > FRESH_DAYS]
         require(not stale, f"计入需求的簇测量超过 {FRESH_DAYS} 天: {stale}")
-        require(rec.get("bindings"), "go 须有绑定")
+        serps = [o["readings"] for _, o in obs if o["kind"] == "serp"]
+        for c in rec["clusters"]:
+            if not c["counted"] or c["answered"]:
+                continue
+            mine = [s for s in serps if s["cluster_id"] == c["id"]]
+            require(mine, f"计入需求的簇 {c['id']} 没有 serp 观察")
+            require(not any(s["answered"] for s in mine), f"簇 {c['id']} 在 serp 观察里已被首屏答完,不能计入需求")
+    if to == "go" or gate == "revenue":
+        _check_against_observations(rec, obs)
+        require(bench_model.compute(rec)["passes"] is (to == "go"), "模型结论与转移方向不符")
     elif gate == "benchmark":
         require("benchmark" in kinds, "benchmark 否决须有起量手段观察")
     elif gate == "answered":
@@ -205,7 +238,19 @@ def _require_evidence(root, rec, to, gate, on):
         missing = [c["id"] for c in rec["clusters"] if c["id"] not in answered_ids]
         require(not missing, f"这些簇没有首屏答完的 serp 观察: {missing}")
     elif gate == "scope":
-        require(dec.get("scope_hit") in SCOPE_ITEMS, f"scope 否决须写命中项 {SCOPE_ITEMS}")
+        require(scope_hit in SCOPE_ITEMS, f"scope 否决须写命中项 {SCOPE_ITEMS}")
+
+
+def _require_evidence(root, rec, to, gate, on):
+    dec = rec.get("decision") or {}
+    require(dec.get("verdict") == to and dec.get("gate") == gate,
+            "账本里的 decision 与本次转移不一致;请用 settle.py 结算")
+    require(docs_consistent(root, rec["slug"]), "决策书 md/html 缺失或不一致;请用 settle.py 结算")
+    precheck(root, rec, to, gate, on, dec.get("scope_hit"))
+    if to == "go" or gate == "revenue":
+        require(rec.get("model") == bench_model.compute(rec), "账本里的模型结果与现场重算不一致")
+    if to == "go":
+        require(rec.get("bindings"), "go 须有绑定")
 
 
 def transition(root, slug, to, gate=None, reason="", by="xinci-bench-assess", on=None) -> dict:
