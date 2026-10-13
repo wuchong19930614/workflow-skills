@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci-bench 种子池与淘汰索引",
+  "description": "说明性 schema;强制校验在 seeds.py 与 validate_ledger.py。",
+  "definitions": {
+    "seed_pool": {"required": ["schema_version", "seeds"], "properties": {"seeds": {"additionalProperties": {
+      "required": ["source", "source_ref", "role", "added_at", "status"],
+      "properties": {"source": {"enum": ["legacy", "sibling", "serp", "geo", "community"]},
+                     "role": {"enum": ["benchmark", "sibling"]},
+                     "status": {"enum": ["pending", "checked"]}}}}}},
+    "rejects": {"required": ["schema_version", "domains"], "properties": {"domains": {"additionalProperties": {
+      "required": ["failed", "readings", "at", "recheck_after", "observation"],
+      "properties": {"failed": {"type": "array", "items": {"enum": ["B1", "B2", "B3", "B4", "B5"]}},
+                     "recheck_after": {"type": ["string", "null"], "description": "只有单独 B3 不过才设,为 at + 90 天"}}}}}},
+    "manual_seeds": {"required": ["schema_version", "seeds"], "properties": {"seeds": {"type": "array",
+      "items": {"required": ["domain"], "properties": {"role": {"enum": ["benchmark", "sibling"], "default": "benchmark"},
+                                                        "note": {"type": "string"}}}}}}
+  }
+}
