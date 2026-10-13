@@ -64,5 +64,16 @@ class SchemaTest(unittest.TestCase):
         self.assertEqual(tuple(s["properties"]["site_type"]["enum"]), L.SITE_TYPES)
 
 
+
+class SkillTest(unittest.TestCase):
+    def test_skills_named_and_point_to_contract(self):
+        for name in ("xinci-bench-scan", "xinci-bench-assess", "xinci-bench-status", "xinci-bench-run"):
+            body = (WORKFLOW / name / "SKILL.md").read_text(encoding="utf-8")
+            m = re.match(r"---\nname: (\S+)\ndescription: '(.+)'\n---\n", body)
+            self.assertIsNotNone(m, name)
+            self.assertEqual(m.group(1), name)
+            if name != "xinci-bench-status":
+                self.assertIn("选站契约.md", body)
+
 if __name__ == "__main__":
     unittest.main()

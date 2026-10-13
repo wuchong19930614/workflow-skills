@@ -21,6 +21,8 @@
 
 2026-09-09 起新增的第二套工作流：从已有真实搜索量的英文词里找守得弱、AI Overview 吃不掉、base case ≥ $200/月 的主题簇，产出机会报告。与 xinci 新词工作流零运行时依赖、数据区独立。入口见 [xinci-simple-workflow/README.md](xinci-simple-workflow/README.md)。
 
+**2026-10-13 起冻结**：不删、不再跑，脚本与契约不再修改；它的数据区由 xinci-bench 只读引用。
+
 | 单元 | 职责 |
 | --- | --- |
 | [xinci-simple-scan](xinci-simple-workflow/xinci-simple-scan/SKILL.md) | 发现：Semrush 取簇，零成本排除，注册 `found`，代理排序 |
@@ -28,6 +30,18 @@
 | [xinci-simple-status](xinci-simple-workflow/xinci-simple-status/SKILL.md) | 只读看板 |
 | [xinci-simple-run](xinci-simple-workflow/xinci-simple-run/SKILL.md) | 连续运行驱动器，暗号 `xinci_simple_run max_rounds=N` |
 | [xinci-simple-core](xinci-simple-workflow/xinci-simple-core/) | 契约、schema、脚本 |
+
+## xinci-bench-workflow（标杆倒推选站）
+
+2026-10-13 起的第三套工作流：从近 24 个月起量的低权重小站倒推建站方向，判断"上线后 12 个月内单站做到 $100/月"的把握，产出决策书，go 时附建站简报。与另外两套零运行时依赖、数据区独立。入口见 [xinci-bench-workflow/README.md](xinci-bench-workflow/README.md)。
+
+| 单元 | 职责 |
+| --- | --- |
+| [xinci-bench-scan](xinci-bench-workflow/xinci-bench-scan/SKILL.md) | 找标杆：取种子域名初核 B1–B5，合格的登记为方向 |
+| [xinci-bench-assess](xinci-bench-workflow/xinci-bench-assess/SKILL.md) | 六步深核、标杆份额法测算、结算并生成决策书与建站简报 |
+| [xinci-bench-status](xinci-bench-workflow/xinci-bench-status/SKILL.md) | 只读看板 |
+| [xinci-bench-run](xinci-bench-workflow/xinci-bench-run/SKILL.md) | 连续运行驱动器，暗号 `xinci_bench_run max_rounds=N` |
+| [xinci-bench-core](xinci-bench-workflow/xinci-bench-core/) | 选站契约、数据采集、命令与观察、schema、脚本 |
 
 ## 仓库边界
 

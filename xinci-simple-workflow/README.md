@@ -1,5 +1,7 @@
 # xinci-simple-workflow（流量型选词）
 
+> **2026-10-13 起冻结**：不删、不再跑，脚本与契约不再修改；数据区由 xinci-bench 只读引用。新的选站工作流见 [xinci-bench-workflow](../xinci-bench-workflow/README.md)。
+
 从已有搜索量的 US 英文主题簇中，找首屏未完成任务、竞争可争取、base 月收入 ≥ $200 的机会，输出 md/html 报告。与 xinci 新词工作流零运行时依赖。
 
 | 单元 | 职责 |
