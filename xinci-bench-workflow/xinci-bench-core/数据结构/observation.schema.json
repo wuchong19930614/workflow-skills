@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "xinci-bench 观察文件",
+  "description": "说明性 schema;强制校验在 write_observation.py。kind=scan 时 stage=scan、slug=null,其余 stage=assess。",
+  "type": "object",
+  "required": ["slug", "observed_at", "stage", "kind", "source_urls", "semrush_calls", "points", "readings"],
+  "properties": {
+    "slug": {"type": ["string", "null"]},
+    "observed_at": {"type": "string", "description": "ISO 时间,写之前先取系统时间"},
+    "stage": {"enum": ["scan", "assess"]},
+    "kind": {"enum": ["scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief"]},
+    "source_urls": {"type": "array", "minItems": 1, "items": {"type": "string"}},
+    "semrush_calls": {"type": "integer", "minimum": 0},
+    "points": {"type": "array", "items": {"type": "string"}},
+    "browser_preflight": {"description": "kind=serp 时必填且四项通过",
+      "required": ["controllable", "desktop", "region", "logged_out", "evidence"]},
+    "readings": {"type": "object"}
+  },
+  "readings_required": {
+    "scan": ["domains"],
+    "benchmark": ["domain", "traffic_start", "us_organic_now", "us_organic_m12", "curve", "referring_domains",
+                  "anchor_summary", "link_driven", "algo_risk", "update_readings", "ads_txt", "pricing"],
+    "demand": ["clusters", "competitor_traffic", "crowding", "new_sites"],
+    "serp": ["query", "cluster_id", "answered", "answered_basis", "ai_overview", "benchmark_position", "top10"],
+    "differentiation": ["copy_only", "gaps"],
+    "delivery": ["data_sources", "license", "hours", "cash_first_year", "monthly_hours", "feasible", "basis"],
+    "brief": ["positioning", "pages", "tech_hosting", "monetization_plan", "seo_notes", "geo_notes", "risks"]
+  }
+}
