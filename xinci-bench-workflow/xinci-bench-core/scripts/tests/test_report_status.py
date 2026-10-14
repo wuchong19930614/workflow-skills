@@ -17,7 +17,7 @@ class ReportStatusTest(unittest.TestCase):
             setup_direction(root, slug="later")
             settle.settle(root, "later", "parked", None, "曲线读不出", "u", on="2026-10-20")
             st = RS.status(root, on="2027-02-01")
-            self.assertEqual(st["counts"], {"found": 0, "go": 1, "rejected": 0, "parked": 1})
+            self.assertEqual(st["counts"], {"found": 0, "go": 1, "rejected": 0, "parked": 1, "watching": 0})
             self.assertEqual(st["go"][0]["base_total"], 160.0)
             self.assertTrue(st["parked"][0]["overdue"])
 

@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-"""方向账本:四态合法转移、登记、补数、排序、转移前的最小证据复核。账本只由本脚本写。"""
+"""方向账本:两条道(标杆道 bench、新词快道 quick)的登记、补数、排序、转移前的最小证据复核。
+
+账本只由本脚本写;状态只经 settle.py 转移。快道比标杆道多一个 watching(观察中)状态。
+"""
 import argparse
 import json
 import sys
@@ -8,12 +11,26 @@ from pathlib import Path
 
 import bench_model
 import data_root
+import quick_model as QM
+import quick_pool
 import write_observation as W
 from _common import SLUG_RE, BenchError, load_json, load_ledger, now, require, save_ledger, sha256_file, today
 
-STATES = ("found", "go", "rejected", "parked")
-LEGAL = {"found": {"go", "rejected", "parked"}, "parked": {"go", "rejected"}}
+STATES = ("found", "go", "rejected", "parked", "watching")
+LANES = ("bench", "quick")
+LEGAL_BY_LANE = {
+    "bench": {"found": {"go", "rejected", "parked"}, "parked": {"go", "rejected"}},
+    "quick": {"found": {"go", "rejected", "parked", "watching"}, "watching": {"go", "rejected"},
+              "parked": {"go", "rejected"}},
+}
+LEGAL = LEGAL_BY_LANE["bench"]
 GATES = ("scope", "benchmark", "answered", "revenue")
+QUICK_GATES = quick_pool.QUICK_GATES
+GATES_BY_LANE = {"bench": GATES, "quick": QUICK_GATES}
+# 快道否决门 → 速判观察里必须不过的那一条
+QUICK_GATE_CHECK = {"not_new": "Q1", "oneoff": "Q3", "scope": "Q4", "occupied": "Q5", "answered": "Q6"}
+QUICK_PATCHABLE = ("title", "site_type", "terms")
+FOLLOW_UP_STATUSES = ("pending", "started", "launched", "abandoned")
 SITE_TYPES = ("tool", "content", "game", "mixed")
 SCOPE_ITEMS = ("ymyl", "brand_nav", "news", "adult_gambling", "infringement")
 BENCH_KEYS = ("domain", "registered_at", "aged_domain", "traffic_start", "authority_score",
@@ -59,7 +76,7 @@ def register(root, slug, title, site_type, domain, scan_ref, reason, by="xinci-b
     require(not same or (confirm_distinct or "").strip(),
             f"标杆 {domain} 已用于方向 {same};确属不同方向请用 --confirm-distinct 写理由")
     rec = {
-        "slug": slug, "title": title.strip(), "site_type": site_type, "state": "found",
+        "slug": slug, "title": title.strip(), "site_type": site_type, "lane": "bench", "state": "found",
         "benchmarks": [{"domain": domain, "registered_at": item.get("registered_at"),
                         "aged_domain": bool(item.get("aged_domain", False)), "traffic_start": None,
                         "authority_score": item.get("authority_score"),
@@ -102,13 +119,16 @@ def _check_clusters(clusters):
 
 
 def update(root, slug, patch: dict, refs=()) -> dict:
-    """补数:只对 found/parked;改了输入就清掉旧模型结果(避免陈旧数字)。"""
+    """补数:标杆道只对 found/parked,改了输入就清掉旧模型结果;快道只能补标题、站型、说法与引用。"""
     ledger = load_ledger(root)
     rec = ledger["directions"].get(slug)
     require(rec, f"没有方向 {slug}")
-    require(rec["state"] in ("found", "parked"), f"{slug} 已是 {rec['state']},不能补数")
-    bad = [k for k in patch if k not in PATCHABLE]
-    require(not bad, f"不可补的字段: {bad}(可补: {PATCHABLE})")
+    lane = rec.get("lane", "bench")
+    open_states = ("found", "parked") if lane == "bench" else ("found", "parked", "watching")
+    require(rec["state"] in open_states, f"{slug} 已是 {rec['state']},不能补数")
+    allowed = PATCHABLE if lane == "bench" else QUICK_PATCHABLE
+    bad = [k for k in patch if k not in allowed]
+    require(not bad, f"不可补的字段: {bad}(可补: {allowed})")
     new_refs = list(rec["evidence_refs"])
     for ref in refs:
         obs = W.read(root, ref)
@@ -117,6 +137,8 @@ def update(root, slug, patch: dict, refs=()) -> dict:
             new_refs.append(ref)
     if "site_type" in patch:
         require(patch["site_type"] in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
+    if "terms" in patch:
+        _check_terms(patch["terms"])
     if "benchmarks" in patch:
         _check_benchmarks(root, new_refs, patch["benchmarks"])
     if "clusters" in patch:
@@ -132,7 +154,8 @@ def update(root, slug, patch: dict, refs=()) -> dict:
                     "付费适用时须有正数 price_month 与有用户的 evidence")
     rec.update(patch)
     rec["evidence_refs"] = new_refs
-    rec["model"] = None
+    if lane == "bench":
+        rec["model"] = None
     save_ledger(root, ledger)
     return rec
 
@@ -148,7 +171,7 @@ def rank(root, on=None) -> list:
     on = on or today()
     rows = []
     for slug, rec in load_ledger(root)["directions"].items():
-        if rec["state"] != "found":
+        if rec["state"] != "found" or rec.get("lane", "bench") != "bench":
             continue
         best = None
         for b in rec["benchmarks"]:
@@ -205,7 +228,13 @@ def _check_against_observations(rec, obs):
 
 
 def precheck(root, rec, to, gate, on, scope_hit=None):
-    """不依赖结算产物的证据复核;settle 在写任何东西之前先跑它,转移时再跑一遍。"""
+    """不依赖结算产物的证据复核;settle 在写任何东西之前先跑它,转移时再跑一遍。按道分派。"""
+    if rec.get("lane", "bench") == "quick":
+        return _precheck_quick(root, rec, to, gate, on, scope_hit)
+    return _precheck_bench(root, rec, to, gate, on, scope_hit)
+
+
+def _precheck_bench(root, rec, to, gate, on, scope_hit=None):
     obs = _observations(root, rec["evidence_refs"])
     kinds = {o["kind"] for _, o in obs}
     if to == "parked":
@@ -247,10 +276,198 @@ def _require_evidence(root, rec, to, gate, on):
             "账本里的 decision 与本次转移不一致;请用 settle.py 结算")
     require(docs_consistent(root, rec["slug"]), "决策书 md/html 缺失或不一致;请用 settle.py 结算")
     precheck(root, rec, to, gate, on, dec.get("scope_hit"))
-    if to == "go" or gate == "revenue":
+    if rec.get("lane", "bench") == "quick":
+        if to in ("go", "watching") or gate == "volume":
+            derived = derive_quick(root, rec)
+            require(rec.get("volume") == derived["volume"] and rec.get("serp") == derived["serp"],
+                    "账本里的量级与首屏读数须等于最新观察")
+            require(rec.get("model") == QM.compute(rec), "账本里的模型结果与现场重算不一致")
+        if to == "go":
+            require((rec.get("follow_up") or {}).get("status") == "pending", "快道 go 须初始化建站跟进")
+    elif to == "go" or gate == "revenue":
         require(rec.get("model") == bench_model.compute(rec), "账本里的模型结果与现场重算不一致")
     if to == "go":
         require(rec.get("bindings"), "go 须有绑定")
+
+
+# ---------------------------------------------------------------- 新词快道
+
+_DATE_RE = W._DATE
+
+
+def _check_terms(terms):
+    require(isinstance(terms, list) and terms, "terms 须为非空列表")
+    for t in terms:
+        require(isinstance(t.get("term"), str) and t["term"].strip(), "terms[].term 缺失")
+        require(t.get("source") in W.QUICK_SOURCES, f"terms[].source 须为 {W.QUICK_SOURCES}")
+        require(_DATE_RE.fullmatch(str(t.get("first_seen"))), "terms[].first_seen 须为 YYYY-MM-DD")
+
+
+def _screen_all_pass(obs):
+    return all(obs["readings"]["checks"][k]["pass"] is True for k in W.QUICK_CHECKS)
+
+
+def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason, by="xinci-bench-quick") -> dict:
+    """登记快道方向:须有本方向 Q1–Q6 全过的速判观察;对象首次公开须在 90 天内。"""
+    require(isinstance(slug, str) and SLUG_RE.fullmatch(slug), "slug 须为小写字母数字连字符")
+    require(isinstance(title, str) and title.strip(), "title 须写方向一句话")
+    require(site_type in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
+    require(isinstance(reason, str) and reason.strip(), "reason 不能为空")
+    require(isinstance(obj, dict) and isinstance(obj.get("name"), str) and obj["name"].strip()
+            and _DATE_RE.fullmatch(str(obj.get("first_public")))
+            and isinstance(obj.get("date_source"), str) and obj["date_source"].strip(),
+            "object 须含 name、first_public(YYYY-MM-DD)、date_source")
+    _check_terms(terms)
+    mine = {quick_pool.normalize_term(t["term"]) for t in terms}
+    screen = W.read(root, screen_ref)
+    require(screen["kind"] == "quick_screen" and screen["slug"] == slug, f"{screen_ref} 不是本方向的速判观察")
+    require(quick_pool.normalize_term(screen["readings"]["term"]) in mine,
+            f"速判的词 {screen['readings']['term']!r} 不在登记的说法里")
+    require(_screen_all_pass(screen), "速判六条没有全过,不登记,应进快道淘汰记录")
+    age = (date.fromisoformat(screen["observed_at"][:10]) - date.fromisoformat(obj["first_public"])).days
+    require(0 <= age <= QM.QUICK_ASSUMPTIONS["new_days"],
+            f"对象首次公开距速判 {age} 天,超出 {QM.QUICK_ASSUMPTIONS['new_days']} 天(或日期在未来)")
+    ledger = load_ledger(root)
+    require(slug not in ledger["directions"], f"方向已存在: {slug}")
+    for other, r in ledger["directions"].items():
+        clash = mine & {quick_pool.normalize_term(t["term"]) for t in r.get("terms") or []}
+        require(not clash, f"说法 {sorted(clash)} 已属于方向 {other}")
+    rec = {
+        "slug": slug, "title": title.strip(), "site_type": site_type, "lane": "quick", "state": "found",
+        "object": {k: obj[k] for k in ("name", "first_public", "date_source")}, "terms": terms,
+        "volume": None, "serp": None, "watch": None, "follow_up": None,
+        "model": None, "decision": None, "evidence_refs": [screen_ref], "bindings": None,
+        "history": [{"at": now(), "from": None, "to": "found", "by": by, "reason": reason.strip()}],
+    }
+    ledger["directions"][slug] = rec
+    save_ledger(root, ledger)
+    return rec
+
+
+def derive_quick(root, rec) -> dict:
+    """从最新的量级观察与速判观察推导 volume、serp;结算时写进账本。"""
+    obs = _observations(root, rec["evidence_refs"])
+    v, s = _latest(obs, "quick_volume"), _latest(obs, "quick_screen")
+    volume = None
+    if v:
+        r = v["readings"]
+        volume = {"estimate_7d": r["estimate_7d"], "estimate_30d": r["estimate_30d"],
+                  "anchor_term": r["anchor_term"], "anchor_volume": r["anchor_volume"],
+                  "anchor_source": r["anchor_source"], "anchor_measured_at": r["anchor_measured_at"],
+                  "ratio_7d": r["ratio_7d"], "trend": QM.trend(r["series_30d"])}
+    serp = None
+    if s:
+        r = s["readings"]
+        serp = {"aio_present": bool(r["ai_overview"]["present"]),
+                "aio_completes": bool(r["ai_overview"]["completes_task"]), "occupied_by": r["occupied_by"]}
+    return {"volume": volume, "serp": serp}
+
+
+def _quick_model(root, rec):
+    return QM.compute(dict(rec, **derive_quick(root, rec)))
+
+
+def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
+    obs = _observations(root, rec["evidence_refs"])
+    if to == "parked":
+        return
+    screen = _latest(obs, "quick_screen")
+    require(screen, "缺速判观察 quick_screen")
+    checks = screen["readings"]["checks"]
+    vol = _latest(obs, "quick_volume")
+    if to in ("go", "watching"):
+        require(_screen_all_pass(screen), "最新速判观察六条须全过")
+        require(vol, "缺量级观察 quick_volume")
+        fresh = (date.fromisoformat(on) - date.fromisoformat(vol["readings"]["anchor_measured_at"])).days
+        require(fresh <= QM.QUICK_ASSUMPTIONS["anchor_fresh_days"], f"锚词测量已过 {fresh} 天,须在 90 天内")
+        model = _quick_model(root, rec)
+        trend = QM.trend(vol["readings"]["series_30d"])
+        require(not trend["spike_decay"], "曲线冲高回落,应按 oneoff 否决")
+        if to == "go":
+            brief = _latest(obs, "quick_brief")
+            require(brief, "go 缺最小简报素材 quick_brief")
+            require(brief["readings"]["data_available"] is True and brief["readings"]["build_days"] <= 3,
+                    "最小版本须 3 天内能做出、数据拿得到")
+            require(model["passes"], "基准预计不到 1 万访问,不能判 go")
+        else:
+            require(not model["passes"], "基准已过 1 万,应判 go")
+            require(trend["non_declining"], "趋势在降,不能进观察中(应按 volume 否决)")
+    elif to == "rejected" and gate not in QUICK_GATES:
+        require(False, f"快道否决门须为 {QUICK_GATES}")
+    elif gate in QUICK_GATE_CHECK:
+        q = QUICK_GATE_CHECK[gate]
+        spike = gate == "oneoff" and vol and QM.trend(vol["readings"]["series_30d"])["spike_decay"]
+        require(checks[q]["pass"] is False or spike, f"{gate} 否决须有 {q} 不过的速判观察")
+        if gate == "scope":
+            require(scope_hit in SCOPE_ITEMS, f"scope 否决须写命中项 {SCOPE_ITEMS}")
+    elif gate == "volume":
+        require(vol, "volume 否决须有量级观察")
+        model = _quick_model(root, rec)
+        require(not model["passes"], "基准已过 1 万,不能按 volume 否决")
+        watch = rec.get("watch") or {}
+        expired = bool(watch) and on >= watch["expires_at"]
+        declining = not QM.trend(vol["readings"]["series_30d"])["non_declining"]
+        require(expired or declining, "volume 否决须观察到期,或趋势在降")
+
+
+def watch_check(root, slug, refs=(), on=None) -> dict:
+    """复查观察中的方向:加入新观察,算一次,记一条复查;只给建议,转移仍走 settle.py。"""
+    on = on or today()
+    ledger = load_ledger(root)
+    rec = ledger["directions"].get(slug)
+    require(rec and rec.get("lane") == "quick" and rec["state"] == "watching", f"{slug} 不是观察中的快道方向")
+    for ref in refs:
+        obs = W.read(root, ref)
+        require(obs["slug"] == slug, f"{ref} 属于别的方向")
+        if ref not in rec["evidence_refs"]:
+            rec["evidence_refs"].append(ref)
+    obs = _observations(root, rec["evidence_refs"])
+    screen, vol = _latest(obs, "quick_screen"), _latest(obs, "quick_volume")
+    model = _quick_model(root, rec)
+    trend = QM.trend(vol["readings"]["series_30d"])
+    if screen["readings"]["checks"]["Q5"]["pass"] is False:
+        suggestion = "rejected:occupied"
+    elif model["passes"]:
+        suggestion = "go"
+    elif on >= rec["watch"]["expires_at"] or not trend["non_declining"]:
+        suggestion = "rejected:volume"
+    else:
+        suggestion = "watching"
+    check = {"at": on, "estimate_7d": vol["readings"]["estimate_7d"],
+             "base_visits": model["scenarios"]["base"]["visits"], "non_declining": trend["non_declining"],
+             "suggestion": suggestion}
+    rec["watch"]["checks"].append(check)
+    save_ledger(root, ledger)
+    return {"slug": slug, "expires_at": rec["watch"]["expires_at"], **check}
+
+
+def follow_up(root, slug, status, domain=None, on=None, reason=None) -> dict:
+    """建站跟进:pending → started → launched 只能前进,任何时候可 abandoned;不改 state。"""
+    require(status in FOLLOW_UP_STATUSES[1:], "status 须为 started/launched/abandoned")
+    on = on or today()
+    require(isinstance(on, str) and _DATE_RE.fullmatch(on), f"日期须为 YYYY-MM-DD(收到 {on!r})")
+    ledger = load_ledger(root)
+    rec = ledger["directions"].get(slug)
+    require(rec and rec.get("lane") == "quick" and rec["state"] == "go" and rec.get("follow_up"),
+            f"{slug} 不是快道 go,没有建站跟进")
+    fu = rec["follow_up"]
+    order = {"pending": 0, "started": 1, "launched": 2}
+    require(fu["status"] != "abandoned", "已放弃的方向不能再改跟进")
+    if status == "abandoned":
+        require(isinstance(reason, str) and reason.strip(), "放弃须写理由")
+        fu.update(status="abandoned", reason=reason.strip())
+    else:
+        require(order[status] == order[fu["status"]] + 1, f"跟进只能按 pending → started → launched 前进(当前 {fu['status']})")
+        if status == "started":
+            require(isinstance(domain, str) and domain.strip(), "已开建须写域名")
+            require(on >= fu["go_at"], f"开建日期 {on} 早于判 go 日期 {fu['go_at']}")
+            fu.update(status="started", domain=domain.strip(), started_at=on)
+        else:
+            require(on >= fu["started_at"], f"上线日期 {on} 早于开建日期 {fu['started_at']}")
+            fu.update(status="launched", launched_at=on)
+    fu["updated_at"] = now()
+    save_ledger(root, ledger)
+    return fu
 
 
 def transition(root, slug, to, gate=None, reason="", by="xinci-bench-assess", on=None) -> dict:
@@ -258,10 +475,11 @@ def transition(root, slug, to, gate=None, reason="", by="xinci-bench-assess", on
     ledger = load_ledger(root)
     rec = ledger["directions"].get(slug)
     require(rec, f"没有方向 {slug}")
-    frm = rec["state"]
-    require(to in LEGAL.get(frm, set()), f"非法转移 {frm} → {to}")
-    require((gate in GATES) if to == "rejected" else gate is None,
-            f"rejected 须带 gate {GATES};go/parked 不带 gate")
+    frm, lane = rec["state"], rec.get("lane", "bench")
+    require(to in LEGAL_BY_LANE[lane].get(frm, set()), f"非法转移 {frm} → {to}({lane})")
+    gates = GATES_BY_LANE[lane]
+    require((gate in gates) if to == "rejected" else gate is None,
+            f"rejected 须带 gate {gates};go/parked/watching 不带 gate")
     require(isinstance(reason, str) and reason.strip(), "reason 不能为空")
     _require_evidence(root, rec, to, gate, on)
     rec["state"] = to
@@ -291,6 +509,19 @@ def main(argv=None):
     sub.add_parser("rank")
     s = sub.add_parser("show")
     s.add_argument("--slug", required=True)
+    rq = sub.add_parser("register-quick")
+    rq.add_argument("--input", required=True, help="JSON:slug、title、site_type、object、terms、screen、reason")
+    pv = sub.add_parser("quick-preview")
+    pv.add_argument("--slug", required=True)
+    wc = sub.add_parser("watch-check")
+    wc.add_argument("--slug", required=True)
+    wc.add_argument("--ref", action="append", default=[])
+    fu = sub.add_parser("follow-up")
+    fu.add_argument("--slug", required=True)
+    fu.add_argument("--status", required=True, choices=FOLLOW_UP_STATUSES[1:])
+    fu.add_argument("--domain")
+    fu.add_argument("--date")
+    fu.add_argument("--reason")
     a = ap.parse_args(argv)
     root = data_root.resolve_or_exit(a.data_root)
     try:
@@ -300,10 +531,22 @@ def main(argv=None):
             out = update(root, a.slug, load_json(Path(a.patch)), a.ref)
         elif a.cmd == "rank":
             out = rank(root)
+        elif a.cmd == "register-quick":
+            d = load_json(Path(a.input))
+            out = register_quick(root, d["slug"], d["title"], d["site_type"], d["object"], d["terms"],
+                                 d["screen"], d["reason"], d.get("by", "xinci-bench-quick"))
+        elif a.cmd == "quick-preview":
+            rec = load_ledger(root)["directions"].get(a.slug)
+            require(rec and rec.get("lane") == "quick", f"没有快道方向 {a.slug}")
+            out = {**derive_quick(root, rec), "model": _quick_model(root, rec)}
+        elif a.cmd == "watch-check":
+            out = watch_check(root, a.slug, a.ref)
+        elif a.cmd == "follow-up":
+            out = follow_up(root, a.slug, a.status, a.domain, a.date, a.reason)
         else:
             out = load_ledger(root)["directions"].get(a.slug)
             require(out, f"没有方向 {a.slug}")
-    except (BenchError, OSError, ValueError) as exc:
+    except (BenchError, OSError, ValueError, KeyError) as exc:
         print(f"拒收: {exc}", file=sys.stderr)
         return 1
     print(json.dumps(out, ensure_ascii=False, indent=2))
