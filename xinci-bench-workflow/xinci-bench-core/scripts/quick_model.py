@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
 """新词快道测算:锚词换算、趋势判断、上线 90 天内单月访问三档。纯函数 + CLI。
 
+当前月搜索量 = 英文区 6 国各自按 Trends 锚词换算后相加(读不出的国家记 0)。
 预计月访问 = floor(当前月搜索量 × 首发份额 × AI 概览系数);按当前量,不外推增长。
+收入按国家分:美国访问 × 美国每千访问收入 + 其他英文国家访问 × 其他每千访问收入。
 假设表只由用户改(改时升版本)。
 """
 import argparse
@@ -15,12 +17,14 @@ import data_root
 from _common import BenchError, load_json, load_ledger, require
 
 QUICK_ASSUMPTIONS = {
-    "version": "2026-10-13.q1",
+    "version": "2026-10-14.q2",
+    "countries": ("US", "GB", "CA", "AU", "NZ", "IE"),     # 英文区:美、英、加、澳、新、爱
     "share": {"low": 0.10, "base": 0.20, "high": 0.30},
     "aio_factor": 0.6,
-    "threshold_visits": 10000,
-    "single_site_visits": 25000,
-    "rpm_adsense": 4.0,
+    "threshold_visits": 10000,                            # 英文区合计
+    "single_site_revenue": 100.0,
+    "rpm_adsense": 4.0,                                   # 美国
+    "rpm_other_en": 2.0,                                  # 美国以外的英文国家
     "new_days": 90,
     "watch_days": 30,
     "oneoff_ratio": 0.3,
@@ -79,16 +83,24 @@ def searches_needed(factor, a=QUICK_ASSUMPTIONS) -> int:
 
 
 def compute(record: dict, a=QUICK_ASSUMPTIONS) -> dict:
-    """record 须有 volume(estimate_7d、trend)与 serp(aio_present、aio_completes)。"""
+    """record 须有 volume(estimate_7d、by_geo、trend)与 serp(aio_present、aio_completes)。"""
     vol, serp = record.get("volume") or {}, record.get("serp") or {}
     require(isinstance(vol.get("estimate_7d"), (int, float)) and vol["estimate_7d"] >= 0, "缺当前月搜索量 estimate_7d")
+    by_geo = vol.get("by_geo")
+    require(isinstance(by_geo, dict) and by_geo and set(by_geo) <= set(a["countries"])
+            and all(isinstance(x, (int, float)) and x >= 0 for x in by_geo.values())
+            and sum(by_geo.values()) == vol["estimate_7d"],
+            f"by_geo 须只含英文区 {a['countries']} 且合计等于 estimate_7d")
     require("aio_present" in serp, "缺首屏读数 serp.aio_present")
     require(not serp.get("aio_completes"), "AI 概览已答完,不能测算(应按 answered 否决)")
     factor = aio_factor(serp, a)
-    scenarios = {}
+    total, us = vol["estimate_7d"], by_geo.get("US", 0)
+    scenarios, raw = {}, {}
     for s in SCENARIOS:
-        v = math.floor(vol["estimate_7d"] * a["share"][s] * factor)
-        scenarios[s] = {"share": a["share"][s], "visits": v, "revenue": round(v * a["rpm_adsense"] / 1000, 2)}
+        v = math.floor(total * a["share"][s] * factor)
+        us_v = v * us // total if total else 0          # 访问按各国搜索量的比例分
+        raw[s] = (us_v * a["rpm_adsense"] + (v - us_v) * a["rpm_other_en"]) / 1000
+        scenarios[s] = {"share": a["share"][s], "visits": v, "us_visits": us_v, "revenue": round(raw[s], 2)}
     base = scenarios["base"]["visits"]
     tr = vol.get("trend") or {}
     passes = base >= a["threshold_visits"]
@@ -100,8 +112,9 @@ def compute(record: dict, a=QUICK_ASSUMPTIONS) -> dict:
         suggestion = "watching"
     else:
         suggestion = "rejected:volume"
-    return {"assumptions_version": a["version"], "searches": vol["estimate_7d"], "aio_factor": factor,
-            "scenarios": scenarios, "passes": passes, "single_site_100": base >= a["single_site_visits"],
+    return {"assumptions_version": a["version"], "searches": total, "us_share": round(us / total, 4) if total else 0.0,
+            "aio_factor": factor, "scenarios": scenarios, "passes": passes,
+            "single_site_100": raw["base"] >= a["single_site_revenue"],     # 用四舍五入前的收入判
             "threshold_visits": a["threshold_visits"], "searches_needed": searches_needed(factor, a),
             "suggestion": suggestion}
 

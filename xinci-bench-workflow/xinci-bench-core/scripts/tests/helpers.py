@@ -191,17 +191,36 @@ def rising_series():
     return list(range(20, 50))          # 30 个点,最近 7 天均值 46 ≥ 前 7 天 39 × 0.8,峰值 49 无回落
 
 
-def quick_volume_obs(slug, anchor_volume=60000, new_mean=50.0, anchor_mean=60.0, series=None, measured="2026-10-08"):
-    """默认 60000 × 50/60 = 50000 月搜索量 → 基准 1 万访问(恰好过线)。"""
+EN_GEOS = ("US", "GB", "CA", "AU", "NZ", "IE")
+
+
+def country_reading(geo, anchor_volume, new_mean, anchor_mean, measured="2026-10-08", source=None):
     ratio = new_mean / anchor_mean
+    est = round(anchor_volume * ratio)
+    return {"geo": geo, "readable": True, "basis": f"{geo} 同一次 Trends 查询",
+            "anchor_term": "anchor term", "anchor_volume": anchor_volume,
+            "anchor_source": source or ("lexicon" if geo == "US" else "semrush"), "anchor_measured_at": measured,
+            "new_mean_7d": new_mean, "anchor_mean_7d": anchor_mean, "new_mean_30d": new_mean,
+            "anchor_mean_30d": anchor_mean, "ratio_7d": round(ratio, 4), "estimate_7d": est, "estimate_30d": est}
+
+
+def quick_volume_obs(slug, anchor_volume=60000, new_mean=50.0, anchor_mean=60.0, series=None, measured="2026-10-08",
+                     others=None):
+    """美国一行用前几个参数;others={"GB": (锚词月量, 新词均值, 锚词均值)} 让别的国家可读,其余国家读不出记 0。
+
+    默认只有美国 60000 × 50/60 = 50000 月搜索量 → 基准 1 万访问(恰好过线)、全按美国收入算。
+    """
+    rows = {"US": country_reading("US", anchor_volume, new_mean, anchor_mean, measured)}
+    for geo, (av, nm, am) in (others or {}).items():
+        rows[geo] = country_reading(geo, av, nm, am, measured)
+    countries = [rows.get(g) or {"geo": g, "readable": False, "basis": "Trends 全为 0,读不出"} for g in EN_GEOS]
+    readable = [c for c in countries if c["readable"]]
     return {**QUICK_BASE, "slug": slug, "kind": "quick_volume",
             "source_urls": ["https://trends.google.com/trends/explore?geo=US&q=grow"],
-            "readings": {"anchor_term": "anchor term", "anchor_volume": anchor_volume, "anchor_source": "lexicon",
-                         "anchor_measured_at": measured, "window_days": 7,
-                         "new_mean_7d": new_mean, "anchor_mean_7d": anchor_mean,
-                         "new_mean_30d": new_mean, "anchor_mean_30d": anchor_mean,
-                         "ratio_7d": round(ratio, 4), "estimate_7d": round(anchor_volume * ratio),
-                         "estimate_30d": round(anchor_volume * ratio),
+            "readings": {"window_days": 7, "countries": countries,
+                         "trend_geo": max(readable, key=lambda c: c["estimate_7d"])["geo"],
+                         "estimate_7d": sum(c["estimate_7d"] for c in readable),
+                         "estimate_30d": sum(c["estimate_30d"] for c in readable),
                          "series_30d": series if series is not None else rising_series()}}
 
 

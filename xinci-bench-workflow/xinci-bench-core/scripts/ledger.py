@@ -369,16 +369,25 @@ def derive_quick(root, rec) -> dict:
     volume = None
     if v:
         r = v["readings"]
+        readable = [c for c in r["countries"] if c["readable"]]
         volume = {"estimate_7d": r["estimate_7d"], "estimate_30d": r["estimate_30d"],
-                  "anchor_term": r["anchor_term"], "anchor_volume": r["anchor_volume"],
-                  "anchor_source": r["anchor_source"], "anchor_measured_at": r["anchor_measured_at"],
-                  "ratio_7d": r["ratio_7d"], "trend": QM.trend(r["series_30d"])}
+                  "by_geo": {c["geo"]: c["estimate_7d"] for c in readable},
+                  "anchors": {c["geo"]: {"term": c["anchor_term"], "volume": c["anchor_volume"],
+                                         "source": c["anchor_source"], "measured_at": c["anchor_measured_at"],
+                                         "ratio_7d": c["ratio_7d"]} for c in readable},
+                  "anchor_measured_at": _oldest_anchor(r), "trend_geo": r["trend_geo"],
+                  "trend": QM.trend(r["series_30d"])}
     serp = None
     if s:
         r = s["readings"]
         serp = {"aio_present": bool(r["ai_overview"]["present"]),
                 "aio_completes": bool(r["ai_overview"]["completes_task"]), "occupied_by": r["occupied_by"]}
     return {"volume": volume, "serp": serp}
+
+
+def _oldest_anchor(readings) -> str:
+    """各国锚词里最早的测量日;新鲜度按最旧的那个算。"""
+    return min(c["anchor_measured_at"] for c in readings["countries"] if c["readable"])
 
 
 def _quick_model(root, rec):
@@ -397,7 +406,7 @@ def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
     if to in ("go", "watching"):
         require(_screen_all_pass(screen), "最新速判观察六条须全过")
         require(vol, "缺量级观察 quick_volume")
-        fresh = (date.fromisoformat(on) - date.fromisoformat(vol["readings"]["anchor_measured_at"])).days
+        fresh = (date.fromisoformat(on) - date.fromisoformat(_oldest_anchor(vol["readings"]))).days
         require(fresh <= QM.QUICK_ASSUMPTIONS["anchor_fresh_days"], f"锚词测量已过 {fresh} 天,须在 90 天内")
         model = _quick_model(root, rec)
         trend = QM.trend(vol["readings"]["series_30d"])

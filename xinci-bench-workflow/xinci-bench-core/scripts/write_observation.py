@@ -37,12 +37,13 @@ REQUIRED = {
               "geo_notes", "risks"),
     "quick_signal": ("items",),
     "quick_screen": ("term", "checks", "ai_overview", "top10", "occupied_by"),
-    "quick_volume": ("anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "window_days",
-                     "new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "ratio_7d",
-                     "estimate_7d", "estimate_30d", "series_30d"),
+    "quick_volume": ("window_days", "countries", "trend_geo", "estimate_7d", "estimate_30d", "series_30d"),
     "quick_brief": ("positioning", "pages", "data_sources", "license", "update_frequency", "build_days",
                     "data_available", "hosting", "risks"),
 }
+# quick_volume 里每个读得出的国家必须有的字段
+COUNTRY_FIELDS = ("anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "new_mean_7d",
+                  "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "ratio_7d", "estimate_7d", "estimate_30d")
 _YM = re.compile(r"\d{4}-\d{2}")
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
@@ -212,19 +213,45 @@ def _check_quick_screen(r):
         require(isinstance(r["occupied_by"], str) and r["occupied_by"].strip(), "Q5 不过时 occupied_by 须写完整做了任务的页面域名")
 
 
-def _check_quick_volume(r):
-    require(isinstance(r["anchor_term"], str) and r["anchor_term"].strip(), "anchor_term 缺失")
-    require(_num(r["anchor_volume"]) and r["anchor_volume"] > 0, "anchor_volume 须为正数")
-    require(r["anchor_source"] in ("lexicon", "semrush"), "anchor_source 须为 lexicon/semrush")
-    require(is_date(r["anchor_measured_at"]), "anchor_measured_at 须为日历上存在的 YYYY-MM-DD")
-    require(r["window_days"] == 7, "window_days 固定为 7(同时报 30 天对照)")
+def _check_country(c):
+    geo = c.get("geo")
+    require(isinstance(c.get("readable"), bool), f"{geo}: readable 须为布尔")
+    require(isinstance(c.get("basis"), str) and c["basis"].strip(), f"{geo}: basis 须写怎么取的,或为什么读不出")
+    if not c["readable"]:
+        return
+    missing = [k for k in COUNTRY_FIELDS if k not in c]
+    require(not missing, f"{geo}: 读得出的国家缺字段 {missing}")
+    require(isinstance(c["anchor_term"], str) and c["anchor_term"].strip(), f"{geo}: anchor_term 缺失")
+    require(_num(c["anchor_volume"]) and c["anchor_volume"] > 0, f"{geo}: anchor_volume 须为正数")
+    require(c["anchor_source"] in ("lexicon", "semrush"), f"{geo}: anchor_source 须为 lexicon/semrush")
+    require(geo == "US" or c["anchor_source"] == "semrush", f"{geo}: 旧词库只有美国的量,美国以外的锚词月量须用 Semrush 查")
+    require(is_date(c["anchor_measured_at"]), f"{geo}: anchor_measured_at 须为日历上存在的 YYYY-MM-DD")
     for k in ("new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "estimate_7d", "estimate_30d"):
-        require(_num(r[k]), f"{k} 须为非负数")
-    require(r["anchor_mean_7d"] > 0 and r["anchor_mean_30d"] > 0, "锚词热度为 0,换一个锚词")
-    ratio = r["new_mean_7d"] / r["anchor_mean_7d"]
-    require(abs(ratio - r["ratio_7d"]) < 0.001, "ratio_7d 须等于 new_mean_7d ÷ anchor_mean_7d")
-    require(QM.ratio_ok(ratio), "锚词与新词热度比须在 0.2–5 之间,换一个量级更接近的锚词")
-    require(abs(r["estimate_7d"] - r["anchor_volume"] * ratio) <= 1, "estimate_7d 须等于 anchor_volume × ratio_7d(取整)")
+        require(_num(c[k]), f"{geo}: {k} 须为非负数")
+    require(c["anchor_mean_7d"] > 0 and c["anchor_mean_30d"] > 0, f"{geo}: 锚词热度为 0,换一个锚词")
+    ratio = c["new_mean_7d"] / c["anchor_mean_7d"]
+    require(abs(ratio - c["ratio_7d"]) < 0.001, f"{geo}: ratio_7d 须等于 new_mean_7d ÷ anchor_mean_7d")
+    require(QM.ratio_ok(ratio), f"{geo}: 锚词与新词热度比须在 0.2–5 之间,换一个量级更接近的锚词")
+    require(abs(c["estimate_7d"] - c["anchor_volume"] * ratio) <= 1, f"{geo}: estimate_7d 须等于 anchor_volume × ratio_7d(取整)")
+
+
+def _check_quick_volume(r):
+    require(r["window_days"] == 7, "window_days 固定为 7(同时报 30 天对照)")
+    geos = QM.QUICK_ASSUMPTIONS["countries"]
+    cs = r["countries"]
+    require(isinstance(cs, list) and all(isinstance(c, dict) for c in cs)
+            and sorted(str(c.get("geo")) for c in cs) == sorted(geos),
+            f"countries 须恰好是英文区 {len(geos)} 国 {geos} 各一行(读不出的写 readable=false)")
+    for c in cs:
+        _check_country(c)
+    readable = [c for c in cs if c["readable"]]
+    require(readable, "至少要有一个国家读得出;全读不出说明 Trends 还没有量,原料留到下次")
+    require(r["estimate_7d"] == sum(c["estimate_7d"] for c in readable),
+            "estimate_7d 须等于各国 estimate_7d 合计(读不出的国家记 0)")
+    require(r["estimate_30d"] == sum(c["estimate_30d"] for c in readable), "estimate_30d 须等于各国 estimate_30d 合计")
+    best = max(c["estimate_7d"] for c in readable)
+    tops = sorted(c["geo"] for c in readable if c["estimate_7d"] == best)
+    require(r["trend_geo"] in tops, f"trend_geo 须是换算量最大的国家 {tops},series_30d 取它的逐日曲线")
     s = r["series_30d"]
     require(isinstance(s, list) and len(s) >= 14 and all(_num(v) for v in s),
             "series_30d 须为至少 14 个非负数(Trends 显示 \"<1\" 的点记 0)")

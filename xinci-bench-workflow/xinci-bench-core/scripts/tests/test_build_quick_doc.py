@@ -20,6 +20,10 @@ class BuildQuickDocTest(unittest.TestCase):
                       "### 6. 验收与止损", "## 附：证据清单"):
                 self.assertIn(h, body)
             self.assertIn("建议最晚 2026-10-27 上线", body)
+            self.assertIn("次英文区访问", body)
+            self.assertNotIn("美区访问", body)
+            self.assertIn("| 国家 | 锚词 | 锚词月量 | 比值 | 换算月搜索量 |", body)
+            self.assertIn("| GB | 读不出 |", body)
             self.assertIn("月点击低于 2,500 就止损", body)
             for block in body.split("\n### ")[1:]:
                 first = [ln for ln in block.split("\n")[1:] if ln.strip()][0]

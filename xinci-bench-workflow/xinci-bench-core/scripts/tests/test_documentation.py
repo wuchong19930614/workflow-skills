@@ -72,8 +72,9 @@ class QuickContractTest(unittest.TestCase):
         s = a["share"]
         lo, hi = a["anchor_ratio"]
         for needle in (f"**{a['version']}**", f"{s['low']:.0%} / {s['base']:.0%} / {s['high']:.0%}",
-                       f"×{a['aio_factor']}", f"{a['threshold_visits']:,} 访问", f"{a['single_site_visits']:,} 访问",
-                       f"${a['rpm_adsense']:.0f}/千访问", f"≤ {a['new_days']} 天", f"| 观察期 | {a['watch_days']} 天 |",
+                       f"×{a['aio_factor']}", f"{a['threshold_visits']:,} 访问", f"基准预计月收入 ≥ ${a['single_site_revenue']:.0f}",
+                       f"美国 ${a['rpm_adsense']:.0f}/千访问", f"其他英文国家 ${a['rpm_other_en']:.0f}/千访问",
+                       "、".join(a["countries"]), f"≤ {a['new_days']} 天", f"| 观察期 | {a['watch_days']} 天 |",
                        f"峰值 × {a['oneoff_ratio']:.0%}", f"前 7 天 × {a['trend_floor']:.0%}", f"{lo}–{hi:g}",
                        f"| 原料保留 | {a['pool_days']} 天 |", f"{a['max_serp_per_run']} 个词", f"判 go 后 {a['launch_days']} 天",
                        " / ".join(str(m) for m in a["milestones"]) + " 天", f"基准预计 × {a['stop_ratio']:.0%}"):

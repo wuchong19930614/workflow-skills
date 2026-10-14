@@ -32,11 +32,12 @@ def _go_block(rec, by_kind):
     first_seen = min(t["first_seen"] for t in rec["terms"])
     lines = ["## 立即建站", "",
              f"**建议最晚 {fu['launch_by']} 上线：首页现在没人完整做这个任务，这个说法 {first_seen} 开始冒出来，"
-             f"基准预计上线 90 天内单月约 {_fmt(base['visits'])} 次美区访问（模型估算）。**", ""]
+             f"基准预计上线 90 天内单月约 {_fmt(base['visits'])} 次英文区访问（模型估算）。**", ""]
     lines += [f"- {SCEN_CN[k]}：约 {_fmt(v['visits'])} 次访问、{_money(v['revenue'])}/月" for k, v in m["scenarios"].items()]
     if m["single_site_100"]:
-        lines.append("- 基准预计 ≥ 2.5 万访问：单站就能到 $100/月")
-    lines.append(f"- 当前月搜索量约 {_fmt(vol['estimate_7d'])}（Trends 换算）")
+        lines.append("- 基准预计收入 ≥ $100/月：单站就能到 $100")
+    lines.append(f"- 当前月搜索量约 {_fmt(vol['estimate_7d'])}（英文区各国 Trends 换算合计，其中美国约 "
+                 f"{_fmt(vol['by_geo'].get('US', 0))}）")
     lines.append("- 最小版本要做的页面：" + "；".join(f"`{p['path']}` {p['target_query']}" for p in brief["pages"]))
     return lines + [""]
 
@@ -50,9 +51,18 @@ def _part_one(rec, by_kind):
     lines += _table(["说法", "来源", "首次看到"], [[t["term"], t["source"], t["first_seen"]] for t in rec["terms"]])
     lines += ["", "### 2. 有人在搜", ""]
     if vol:
-        lines.append(f"**当前月搜索量约 {_fmt(vol['estimate_7d'])}（Trends 换算，锚词 {vol['anchor_term']} "
-                     f"{_fmt(vol['anchor_volume'])}/月，比值 {vol['ratio_7d']}）。**")
-        lines += ["", f"- 按 30 天算约 {_fmt(vol['estimate_30d'])}/月；锚词来自 {vol['anchor_source']}，测于 {vol['anchor_measured_at']}"]
+        geos = QM.QUICK_ASSUMPTIONS["countries"]
+        lines.append(f"**当前月搜索量约 {_fmt(vol['estimate_7d'])}（英文区 {len(geos)} 国各自按 Trends 锚词换算后相加，"
+                     f"其中美国约 {_fmt(vol['by_geo'].get('US', 0))}）。**")
+        lines.append("")
+        rows = []
+        for g in geos:
+            an = vol["anchors"].get(g)
+            rows.append([g, an["term"], _fmt(an["volume"]), an["ratio_7d"], _fmt(vol["by_geo"][g])] if an
+                        else [g, "读不出", "—", "—", "0"])
+        lines += _table(["国家", "锚词", "锚词月量", "比值", "换算月搜索量"], rows)
+        lines += ["", f"- 按 30 天算约 {_fmt(vol['estimate_30d'])}/月；最早的锚词测于 {vol['anchor_measured_at']}；"
+                      f"趋势按 {vol['trend_geo']} 的逐日曲线判断"]
     else:
         lines += ["**本方向没有做到量级换算这一步。**", ""]
     if screen:
@@ -84,12 +94,15 @@ def _part_one(rec, by_kind):
     lines += ["", "### 5. 预计访问与收入", ""]
     if m:
         base = m["scenarios"]["base"]
-        lines.append(f"**基准情景上线 90 天内单月约 {_fmt(base['visits'])} 次美区访问、{_money(base['revenue'])}/月（模型估算），"
+        lines.append(f"**基准情景上线 90 天内单月约 {_fmt(base['visits'])} 次英文区访问、{_money(base['revenue'])}/月（模型估算），"
                      f"{'过' if m['passes'] else '不过'} {_fmt(m['threshold_visits'])} 访问门槛。**")
         lines.append("")
         lines += _table(["情景", "首发份额", "预计月访问", "预计月收入（AdSense）"],
                         [[SCEN_CN[k], f"{v['share']:.0%}", _fmt(v["visits"]), _money(v["revenue"])] for k, v in m["scenarios"].items()])
-        lines += ["", f"- AI 概览系数 {m['aio_factor']}；基准过线需要月搜索量约 {_fmt(m['searches_needed'])}",
+        a = QM.QUICK_ASSUMPTIONS
+        lines += ["", f"- 其中美国访问约 {_fmt(base['us_visits'])}；收入按 AdSense 美国 ${a['rpm_adsense']:.0f}、"
+                      f"其他英文国家 ${a['rpm_other_en']:.0f}/千访问估算",
+                  f"- AI 概览系数 {m['aio_factor']}；基准过线需要英文区月搜索量约 {_fmt(m['searches_needed'])}",
                   f"- 假设表版本 {m['assumptions_version']}；按当前量估算，不外推增长"]
     else:
         lines.append("**本方向没有完成测算。**")
@@ -115,7 +128,8 @@ def _brief(rec, by_kind):
     lines += ["", "### 4. 上线清单", "", "**免费托管上线，当天提交 Search Console 和 sitemap。**", "", f"- 托管：{b['hosting']}"]
     lines += [f"- {x}" for x in build_doc.SEO_RULES + build_doc.GEO_RULES]
     lines += ["", "### 5. 预计访问与收入", "",
-              f"**基准约 {_fmt(base['visits'])} 次访问、{_money(base['revenue'])}/月，按 AdSense $4/千访问估算。**", ""]
+              f"**基准约 {_fmt(base['visits'])} 次英文区访问、{_money(base['revenue'])}/月，按 AdSense 美国 "
+              f"${QM.QUICK_ASSUMPTIONS['rpm_adsense']:.0f}、其他英文国家 ${QM.QUICK_ASSUMPTIONS['rpm_other_en']:.0f}/千访问估算。**", ""]
     lines += ["### 6. 验收与止损", "",
               f"**上线第 30 天月点击低于 {_fmt(QM.stop_line(m))} 就止损（基准预计的 25%）：不再加工时，站留着。**", ""]
     lines += _table(["上线后", "看什么", "结论"],

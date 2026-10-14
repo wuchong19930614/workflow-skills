@@ -51,6 +51,17 @@ class SuggestSnapshotTest(unittest.TestCase):
             self.assertIn("Grow a Garden 2 tier list", f.calls)
             self.assertEqual(slept, [1.0] * len(Q.TASK_WORDS))
 
+    def test_other_country_has_own_snapshot(self):
+        with TmpRoot() as root:
+            us, gb = S.snapshot_path(root, "q"), S.snapshot_path(root, "q", gl="gb")
+            self.assertNotEqual(us, gb)
+            self.assertEqual(us, S.snapshot_path(root, "q", gl="us"))      # 美国的旧快照不受影响
+            url = S.url_for("grow a garden", "gb")
+            self.assertIn("gl=gb", url)
+            self.assertTrue(url.endswith("q=grow%20a%20garden"))
+            S.snapshot(root, "q", fake([["a"]]), gl="gb")
+            self.assertTrue(gb.is_file() and not us.exists())
+
     def test_snapshot_path_stable_and_safe(self):
         with TmpRoot() as root:
             a = S.snapshot_path(root, "Grow  A Garden/2 ")

@@ -21,7 +21,7 @@
     "history": {"type": "array", "minItems": 1},
     "object": {"required": ["name", "first_public", "date_source"], "description": "快道:催生新词的对象"},
     "terms": {"type": "array", "minItems": 1, "items": {"required": ["term", "source", "first_seen"]}},
-    "volume": {"type": ["object", "null"], "description": "快道:结算时由最新 quick_volume 写入(estimate_7d、estimate_30d、锚词信息、trend)"},
+    "volume": {"type": ["object", "null"], "description": "快道:结算时由最新 quick_volume 写入(英文区合计 estimate_7d/30d、各国 by_geo 与 anchors、最早锚词测量日、trend_geo、trend)"},
     "serp": {"type": ["object", "null"], "description": "快道:结算时由最新 quick_screen 写入(aio_present、aio_completes、occupied_by)"},
     "watch": {"type": ["object", "null"], "required": ["since", "expires_at", "checks"]},
     "follow_up": {"type": ["object", "null"], "required": ["status", "go_at", "launch_by", "domain", "started_at", "launched_at", "reason"], "properties": {"status": {"enum": ["pending", "started", "launched", "abandoned"]}}}

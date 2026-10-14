@@ -1,6 +1,6 @@
 ---
 name: xinci-bench-quick
-description: '新词快道：暗号 xinci_bench_quick_run 或 /xinci-bench-quick。抓最近 1 周到 3 个月才冒出来、首页还没人做、会反复被搜的新词（新游戏、新产品、新规则带出的 calculator/codes/tracker 等任务），锚词换算 Trends 量级，预计上线 90 天内单月 ≥1 万美区访问就判 go 并强烈推荐建站。不是 xinci_bench_run（标杆道）。'
+description: '新词快道：暗号 xinci_bench_quick_run 或 /xinci-bench-quick。抓最近 1 周到 3 个月才冒出来、首页还没人做、会反复被搜的新词（新游戏、新产品、新规则带出的 calculator/codes/tracker 等任务），锚词换算 Trends 量级，预计上线 90 天内单月 ≥1 万英文区访问就判 go 并强烈推荐建站。不是 xinci_bench_run（标杆道）。'
 ---
 
 # 新词快道
@@ -12,7 +12,7 @@ description: '新词快道：暗号 xinci_bench_quick_run 或 /xinci-bench-quick
 3. **复查观察中**：每个 watching 方向重测量级（必要时重看首页），写新观察，`ledger.py watch-check --slug <方向> --ref <新观察>`；建议是 go 或否决就用 `settle.py` 结算，建议是 watching 就继续观察。
 4. **扫信号**：`quick_pool.py expire`；按 `数据采集.md` 第 7 节取上游新对象与 Trends 飙升词，对新对象跑 `suggest_snapshot.py --object`；把取回的对象与说法写成一份 `quick_signal` 观察，`quick_pool.py add`。没在本次实际取回的来源不写"已检查"。
 5. **零成本速判** Q1–Q4，再对剩下的用内置浏览器看首页判 Q5、Q6（两次请求间隔 ≥ 60 秒，每次最多 10 个词）。每个词写一份 `quick_screen` 观察；不过的 `quick_pool.py reject`；Q5 不过且占位的是小站，加 `--seed-domain` 同时登记为标杆道种子。
-6. **登记与测算**：六条全过的 `ledger.py register-quick`；挑量级接近的锚词（先 `lexicon.py`，没有再用 Semrush），在 Trends 页面做锚词换算，写 `quick_volume`；预计能过线的写 `quick_brief`；`ledger.py update --ref` 引用后 `ledger.py quick-preview` 看三档。
+6. **登记与测算**：六条全过的 `ledger.py register-quick`；英文区 6 国（US、GB、CA、AU、NZ、IE）各做一次锚词换算：美国的锚词先查 `lexicon.py`，没有再用 Semrush，美国以外的锚词月量一律用 Semrush 查；在 Trends 页面按国家换算，读不出的国家记 0，写一份 `quick_volume`；预计能过线的写 `quick_brief`；`ledger.py update --ref` 引用后 `ledger.py quick-preview` 看三档。
 7. **结算**：按预览建议 `settle.py --verdict go|watching|rejected|parked`，`--reason` 一句理由，`--biggest-unknown` 写最可能让结论翻转的一项；全部结束后 `validate_ledger.py`，再 `run_log.py --finish`。
 8. **出 go 时强烈推荐**（缺一不可）：
    - 调用推送通知工具，内容含方向、基准访问与收入、建议最晚上线日期；

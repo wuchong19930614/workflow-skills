@@ -8,8 +8,9 @@ import quick_model as Q
 from _common import BenchError
 
 
-def rec(estimate, aio=False, series=None):
-    return {"volume": {"estimate_7d": estimate, "trend": Q.trend(series or list(range(20, 50)))},
+def rec(estimate, aio=False, series=None, by_geo=None):
+    return {"volume": {"estimate_7d": estimate, "by_geo": by_geo or {"US": estimate},
+                       "trend": Q.trend(series or list(range(20, 50)))},
             "serp": {"aio_present": aio, "aio_completes": False}}
 
 
@@ -44,9 +45,24 @@ class QuickModelTest(unittest.TestCase):
 
     def test_revenue_and_single_site(self):
         out = Q.compute(rec(125000))
-        self.assertEqual(out["scenarios"]["base"], {"share": 0.2, "visits": 25000, "revenue": 100.0})
+        self.assertEqual(out["scenarios"]["base"], {"share": 0.2, "visits": 25000, "us_visits": 25000, "revenue": 100.0})
         self.assertTrue(out["single_site_100"])
         self.assertFalse(Q.compute(rec(124995))["single_site_100"])
+
+    def test_other_english_countries_count_but_earn_less(self):
+        out = Q.compute(rec(50000, by_geo={"US": 25000, "GB": 15000, "AU": 10000}))
+        base = out["scenarios"]["base"]
+        self.assertEqual((base["visits"], base["us_visits"], base["revenue"]), (10000, 5000, 30.0))  # 5000×$4 + 5000×$2
+        self.assertTrue(out["passes"])                       # 门槛按英文区合计
+        self.assertEqual(out["us_share"], 0.5)
+        half = Q.compute(rec(125000, by_geo={"US": 62500, "GB": 62500}))
+        self.assertFalse(half["single_site_100"])            # 2.5 万访问但一半在英国,只有 $75
+
+    def test_by_geo_must_add_up(self):
+        with self.assertRaisesRegex(BenchError, "by_geo"):
+            Q.compute(rec(50000, by_geo={"US": 20000}))
+        with self.assertRaisesRegex(BenchError, "by_geo"):
+            Q.compute(rec(50000, by_geo={"US": 25000, "IN": 25000}))
 
     def test_answered_refused(self):
         r = rec(50000)

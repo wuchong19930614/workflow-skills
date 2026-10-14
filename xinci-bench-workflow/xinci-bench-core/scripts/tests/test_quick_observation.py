@@ -58,6 +58,36 @@ class QuickObservationTest(unittest.TestCase):
         with self.assertRaisesRegex(BenchError, "seen_at"):
             W.validate(obs)
 
+    def test_volume_needs_all_six_countries(self):
+        obs = quick_volume_obs("q")
+        obs["readings"]["countries"] = obs["readings"]["countries"][:5]
+        with self.assertRaisesRegex(BenchError, "6 国"):
+            W.validate(obs)
+
+    def test_non_us_anchor_needs_semrush(self):
+        obs = quick_volume_obs("q", others={"GB": (8000, 30.0, 40.0)})
+        obs["readings"]["countries"][1]["anchor_source"] = "lexicon"
+        with self.assertRaisesRegex(BenchError, "Semrush"):
+            W.validate(obs)
+
+    def test_total_and_trend_geo_checked(self):
+        obs = quick_volume_obs("q", others={"GB": (8000, 30.0, 40.0)})
+        self.assertEqual(obs["readings"]["estimate_7d"], 56000)
+        W.validate(obs)
+        obs["readings"]["estimate_7d"] = 50000
+        with self.assertRaisesRegex(BenchError, "合计"):
+            W.validate(obs)
+        obs = quick_volume_obs("q", others={"GB": (8000, 30.0, 40.0)})
+        obs["readings"]["trend_geo"] = "GB"
+        with self.assertRaisesRegex(BenchError, "trend_geo"):
+            W.validate(obs)
+
+    def test_nothing_readable_refused(self):
+        obs = quick_volume_obs("q")
+        obs["readings"]["countries"][0] = {"geo": "US", "readable": False, "basis": "全为 0"}
+        with self.assertRaisesRegex(BenchError, "至少"):
+            W.validate(obs)
+
     def test_signal_source_checked(self):
         obs = quick_signal_obs()
         obs["readings"]["items"][0]["source"] = "twitter"
