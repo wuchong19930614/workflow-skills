@@ -143,7 +143,8 @@ def plan(root, run_id=None, lane="bench") -> dict:
     require(run_id is None or run_id in latest, "指定的 run_id 不存在")
     conflict = run_id is None and len(active) > 1
     selected = latest.get(run_id) if run_id else (next(iter(active.values())) if len(active) == 1 else None)
-    found = sum(r["state"] == "found" for r in load_ledger(root)["directions"].values())
+    found = sum(r["state"] == "found" and r.get("lane", "bench") == "bench"
+                for r in load_ledger(root)["directions"].values())
     source, reason = _next_source(root, rows)
     resume, action = None, "scan"
     if selected:

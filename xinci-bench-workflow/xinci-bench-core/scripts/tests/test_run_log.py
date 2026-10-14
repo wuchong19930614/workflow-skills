@@ -104,6 +104,14 @@ def start_quick(root, run_id="quick-a"):
 
 
 class QuickRunLogTest(unittest.TestCase):
+    def test_quick_found_does_not_skip_bench_scan(self):
+        from helpers import setup_quick
+        with TmpRoot() as root:
+            for s in ("q-one", "q-two", "q-three"):
+                setup_quick(root, slug=s)
+            p = R.plan(root)
+            self.assertEqual((p["found_count"], p["scan_outcome"]), (0, None))
+
     def test_quick_lifecycle(self):
         with TmpRoot() as root:
             self.assertEqual(R.plan(root, lane="quick")["action"], "quick")

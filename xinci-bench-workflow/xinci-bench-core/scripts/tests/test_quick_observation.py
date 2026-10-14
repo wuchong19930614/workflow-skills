@@ -50,6 +50,14 @@ class QuickObservationTest(unittest.TestCase):
         with self.assertRaisesRegex(BenchError, "非负数"):
             W.validate(obs)
 
+    def test_anchor_date_must_exist(self):
+        with self.assertRaisesRegex(BenchError, "anchor_measured_at"):
+            W.validate(quick_volume_obs("q", measured="2026-02-30"))
+        obs = quick_signal_obs()
+        obs["readings"]["items"][0]["seen_at"] = "2026-13-01"
+        with self.assertRaisesRegex(BenchError, "seen_at"):
+            W.validate(obs)
+
     def test_signal_source_checked(self):
         obs = quick_signal_obs()
         obs["readings"]["items"][0]["source"] = "twitter"

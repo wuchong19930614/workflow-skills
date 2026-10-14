@@ -54,6 +54,25 @@ class RegisterQuickTest(unittest.TestCase):
             with self.assertRaisesRegex(BenchError, "速判的词"):
                 L.register_quick(root, "b", "t", "tool", dict(OBJ), term("b"), ref, "r")
 
+    def test_update_terms_cannot_clash(self):
+        with TmpRoot() as root:
+            setup_quick(root, slug="a")
+            setup_quick(root, slug="b")
+            with self.assertRaisesRegex(BenchError, "已属于方向 a"):
+                L.update(root, "b", {"terms": term("b") + [{"term": "A term", "source": "autocomplete",
+                                                            "first_seen": "2026-10-13"}]})
+            L.update(root, "b", {"terms": term("b") + [{"term": "b extra", "source": "autocomplete",
+                                                        "first_seen": "2026-10-13"}]})
+
+    def test_register_consumes_pool_items(self):
+        import quick_pool
+        with TmpRoot() as root:
+            item = {"source": "autocomplete", "object": "Grow a Garden 2", "term": "gag2-calculator term",
+                    "url": "https://suggestqueries.google.com/x", "seen_at": "2026-10-13"}
+            quick_pool.add_items(root, [item], "证据/_quick/x-quick_signal.json")
+            setup_quick(root)
+            self.assertEqual(quick_pool.pending(root), [])
+
     def test_rank_and_update_by_lane(self):
         with TmpRoot() as root:
             setup_direction(root, slug="bench-one")

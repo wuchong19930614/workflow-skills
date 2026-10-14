@@ -68,20 +68,25 @@ def add_items(root, items, observation) -> dict:
     """登记一批原料;已在池里、被快道淘汰过、已有方向或旧裁决的跳过,返回新增与跳过原因。"""
     require(isinstance(observation, str) and observation.startswith("证据/_quick/"), "observation 须为 quick_signal 观察路径")
     rows, rejects, known = _read_pool(root), _rejects(root)["terms"], _known_terms(root)
-    seen = {_key(r) for r in rows}
+    live = {_key(r) for r in rows if r["status"] != "expired"}
+    expired = {_key(r): r for r in rows if r["status"] == "expired"}
     added, skipped = [], []
     for it in items:
         k = _key(it)
-        reason = ("已在原料池" if k in seen else
-                  f"快道淘汰过({rejects[k]['gate']})" if k in rejects else known.get(k))
+        reason = (f"快道淘汰过({rejects[k]['gate']})" if k in rejects else
+                  "已在原料池" if k in live else known.get(k))
         if reason:
             skipped.append({"term": k, "reason": reason})
             continue
-        row = {"id": hashlib.sha1(k.encode("utf-8")).hexdigest()[:12], "source": it["source"],
-               "object": it["object"], "term": it.get("term"), "url": it["url"], "seen_at": it["seen_at"],
-               "status": "pending", "observation": observation}
-        rows.append(row)
-        seen.add(k)
+        fresh = {"source": it["source"], "object": it["object"], "term": it.get("term"), "url": it["url"],
+                 "seen_at": it["seen_at"], "status": "pending", "observation": observation}
+        row = expired.pop(k, None)
+        if row is not None:           # 过期后又被来源取回:原行复活,保留 id
+            row.update(fresh, revived_at=now())
+        else:
+            row = {"id": hashlib.sha1(k.encode("utf-8")).hexdigest()[:12], **fresh}
+            rows.append(row)
+        live.add(k)
         added.append(row)
     _write_pool(root, rows)
     return {"added": added, "skipped": skipped}
@@ -102,6 +107,20 @@ def mark(root, ids, status) -> None:
             r["status"] = status
             r["updated_at"] = now()
     _write_pool(root, rows)
+
+
+def consume(root, terms) -> list:
+    """登记或否决之后,把这些说法对应的待看原料标 used,下次不再列出;返回标掉的 id。"""
+    keys = {normalize_term(t) for t in terms}
+    rows, used = _read_pool(root), []
+    for r in rows:
+        if r["status"] == "pending" and _key(r) in keys:
+            r["status"] = "used"
+            r["updated_at"] = now()
+            used.append(r["id"])
+    if used:
+        _write_pool(root, rows)
+    return used
 
 
 def expire(root, on=None) -> list:
@@ -130,7 +149,7 @@ def reject_term(root, term, gate, observation, on=None, seed_domain=None) -> dic
     data = _rejects(root)
     data["terms"][t] = entry
     atomic_save(Path(root) / QUICK_REJECTS_REL, data)
-    return entry
+    return dict(entry, consumed=consume(root, [t]))
 
 
 def main(argv=None):

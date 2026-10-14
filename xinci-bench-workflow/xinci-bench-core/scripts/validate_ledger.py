@@ -10,7 +10,7 @@ import ledger as L
 import quick_model as QM
 import quick_pool
 import write_observation as W
-from _common import REJECTS_REL, SEEDS_REL, BenchError, load_json, load_ledger, sha256_file, today
+from _common import REJECTS_REL, SEEDS_REL, BenchError, is_date, load_json, load_ledger, sha256_file, today
 
 REQUIRED = ("slug", "title", "site_type", "lane", "state", "benchmarks", "clusters", "crowding", "paid",
             "model", "decision", "evidence_refs", "bindings", "history")
@@ -47,8 +47,12 @@ def _quick_errors(slug, rec, on):
             errs.append(f"{slug}: 观察已于 {w['expires_at']} 到期,须按 go 或 volume 否决结算")
     if rec["state"] == "go":
         fu = rec.get("follow_up") or {}
+        bad = [k for k in ("go_at", "launch_by", "started_at", "launched_at")
+               if fu.get(k) is not None and not is_date(fu[k])]
         if fu.get("status") not in L.FOLLOW_UP_STATUSES or not fu.get("launch_by"):
             errs.append(f"{slug}: 快道 go 的建站跟进缺失或状态无效")
+        elif bad:
+            errs.append(f"{slug}: 建站跟进的日期无效 {bad}(须为日历上存在的 YYYY-MM-DD)")
         elif fu["status"] == "launched" and not fu.get("launched_at"):
             errs.append(f"{slug}: 已上线须有上线日期")
     if dec.get("gate") and dec["gate"] not in L.QUICK_GATES:

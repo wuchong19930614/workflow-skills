@@ -74,6 +74,23 @@ class SettleQuickTest(unittest.TestCase):
             self.assertEqual(rec["decision"]["gate"], "volume")
             self.assertEqual(V.check_all(root, on="2026-11-20"), [])
 
+    def test_watch_check_suggests_first_failed_gate(self):
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root, volume=quick_volume_obs("gag2-calculator", **WATCH_VOL))
+            S.settle(root, slug, "watching", None, "r", "u", on=ON)
+            grown = W.write(root, quick_volume_obs(slug))
+            oneoff = W.write(root, quick_screen_obs(slug, term=f"{slug} term", fail={"Q3": False}))
+            self.assertEqual(L.watch_check(root, slug, [grown, oneoff], on="2026-10-27")["suggestion"], "rejected:oneoff")
+
+    def test_watch_check_answered_does_not_crash(self):
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root, volume=quick_volume_obs("gag2-calculator", **WATCH_VOL))
+            S.settle(root, slug, "watching", None, "r", "u", on=ON)
+            obs = quick_screen_obs(slug, term=f"{slug} term", fail={"Q6": False}, aio=True)
+            obs["readings"]["ai_overview"]["completes_task"] = True
+            chk = L.watch_check(root, slug, [W.write(root, obs)], on="2026-10-27")
+            self.assertEqual((chk["suggestion"], chk["base_visits"]), ("rejected:answered", None))
+
     def test_occupied_needs_failed_screen(self):
         with TmpRoot() as root:
             slug, _ = setup_quick(root)
@@ -82,6 +99,17 @@ class SettleQuickTest(unittest.TestCase):
             ref = W.write(root, quick_screen_obs(slug, term=f"{slug} term", fail={"Q5": False}, occupied_by="new-tool.com"))
             L.update(root, slug, {}, [ref])
             self.assertEqual(S.settle(root, slug, "rejected", "occupied", "有人做了", "u", on=ON)["state"], "rejected")
+
+    def test_screen_term_checked_on_update_and_settle(self):
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root)
+            other = W.write(root, quick_screen_obs(slug, term="totally different term"))
+            with self.assertRaisesRegex(BenchError, "速判的词"):
+                L.update(root, slug, {}, [other])
+            L.update(root, slug, {"terms": [{"term": "renamed term", "source": "autocomplete",
+                                             "first_seen": "2026-10-13"}]})
+            with self.assertRaisesRegex(BenchError, "速判的词"):
+                S.settle(root, slug, "go", None, "r", "u", on=ON)
 
     def test_quick_gate_codes_only(self):
         with TmpRoot() as root:
@@ -117,6 +145,25 @@ class FollowUpTest(unittest.TestCase):
             L.follow_up(root, slug, "started", domain="x.com", on="2026-10-22")
             with self.assertRaisesRegex(BenchError, "早于"):
                 L.follow_up(root, slug, "launched", on="2026-10-21")
+
+    def test_impossible_calendar_date_refused(self):
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root)
+            S.settle(root, slug, "go", None, "r", "u", on=ON)
+            L.follow_up(root, slug, "started", domain="x.com", on="2026-10-22")
+            with self.assertRaisesRegex(BenchError, "YYYY-MM-DD"):
+                L.follow_up(root, slug, "launched", on="2026-11-31")
+            self.assertEqual(load_ledger(root)["directions"][slug]["follow_up"]["status"], "started")
+
+    def test_validate_flags_bad_follow_up_date(self):
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root)
+            S.settle(root, slug, "go", None, "r", "u", on=ON)
+            ledger = load_ledger(root)
+            ledger["directions"][slug]["follow_up"].update(status="launched", started_at="2026-10-21",
+                                                           launched_at="2026-11-31")
+            save_ledger(root, ledger)
+            self.assertTrue(any("日期" in e for e in V.check_all(root, on=ON)))
 
     def test_validate_catches_tampered_quick_model(self):
         with TmpRoot() as root:

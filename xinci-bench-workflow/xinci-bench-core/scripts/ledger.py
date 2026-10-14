@@ -14,7 +14,8 @@ import data_root
 import quick_model as QM
 import quick_pool
 import write_observation as W
-from _common import SLUG_RE, BenchError, load_json, load_ledger, now, require, save_ledger, sha256_file, today
+from _common import (SLUG_RE, BenchError, is_date, load_json, load_ledger, now, require, save_ledger, sha256_file,
+                     today)
 
 STATES = ("found", "go", "rejected", "parked", "watching")
 LANES = ("bench", "quick")
@@ -129,16 +130,21 @@ def update(root, slug, patch: dict, refs=()) -> dict:
     allowed = PATCHABLE if lane == "bench" else QUICK_PATCHABLE
     bad = [k for k in patch if k not in allowed]
     require(not bad, f"不可补的字段: {bad}(可补: {allowed})")
-    new_refs = list(rec["evidence_refs"])
+    new_refs, screens = list(rec["evidence_refs"]), []
     for ref in refs:
         obs = W.read(root, ref)
         require(obs["slug"] in (None, slug), f"{ref} 属于别的方向")
+        if obs["kind"] == "quick_screen":
+            screens.append(obs)
         if ref not in new_refs:
             new_refs.append(ref)
     if "site_type" in patch:
         require(patch["site_type"] in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
     if "terms" in patch:
         _check_terms(patch["terms"])
+        _check_term_clash(ledger, slug, patch["terms"])
+    for s in screens:
+        _check_screen_term(patch.get("terms", rec.get("terms")), s)
     if "benchmarks" in patch:
         _check_benchmarks(root, new_refs, patch["benchmarks"])
     if "clusters" in patch:
@@ -292,15 +298,30 @@ def _require_evidence(root, rec, to, gate, on):
 
 # ---------------------------------------------------------------- 新词快道
 
-_DATE_RE = W._DATE
-
-
 def _check_terms(terms):
     require(isinstance(terms, list) and terms, "terms 须为非空列表")
     for t in terms:
         require(isinstance(t.get("term"), str) and t["term"].strip(), "terms[].term 缺失")
         require(t.get("source") in W.QUICK_SOURCES, f"terms[].source 须为 {W.QUICK_SOURCES}")
-        require(_DATE_RE.fullmatch(str(t.get("first_seen"))), "terms[].first_seen 须为 YYYY-MM-DD")
+        require(is_date(t.get("first_seen")), "terms[].first_seen 须为日历上存在的 YYYY-MM-DD")
+
+
+def _term_set(terms) -> set:
+    return {quick_pool.normalize_term(t["term"]) for t in terms or []}
+
+
+def _check_term_clash(ledger, slug, terms):
+    """同一说法(大小写与空格不计)不能属于两个方向。"""
+    mine = _term_set(terms)
+    for other, r in ledger["directions"].items():
+        clash = mine & _term_set(r.get("terms")) if other != slug else set()
+        require(not clash, f"说法 {sorted(clash)} 已属于方向 {other}")
+
+
+def _check_screen_term(terms, screen):
+    """速判观察只能为本方向登记的说法背书。"""
+    require(quick_pool.normalize_term(screen["readings"]["term"]) in _term_set(terms),
+            f"速判的词 {screen['readings']['term']!r} 不在登记的说法里")
 
 
 def _screen_all_pass(obs):
@@ -314,24 +335,20 @@ def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason,
     require(site_type in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
     require(isinstance(reason, str) and reason.strip(), "reason 不能为空")
     require(isinstance(obj, dict) and isinstance(obj.get("name"), str) and obj["name"].strip()
-            and _DATE_RE.fullmatch(str(obj.get("first_public")))
+            and is_date(obj.get("first_public"))
             and isinstance(obj.get("date_source"), str) and obj["date_source"].strip(),
             "object 须含 name、first_public(YYYY-MM-DD)、date_source")
     _check_terms(terms)
-    mine = {quick_pool.normalize_term(t["term"]) for t in terms}
     screen = W.read(root, screen_ref)
     require(screen["kind"] == "quick_screen" and screen["slug"] == slug, f"{screen_ref} 不是本方向的速判观察")
-    require(quick_pool.normalize_term(screen["readings"]["term"]) in mine,
-            f"速判的词 {screen['readings']['term']!r} 不在登记的说法里")
+    _check_screen_term(terms, screen)
     require(_screen_all_pass(screen), "速判六条没有全过,不登记,应进快道淘汰记录")
     age = (date.fromisoformat(screen["observed_at"][:10]) - date.fromisoformat(obj["first_public"])).days
     require(0 <= age <= QM.QUICK_ASSUMPTIONS["new_days"],
             f"对象首次公开距速判 {age} 天,超出 {QM.QUICK_ASSUMPTIONS['new_days']} 天(或日期在未来)")
     ledger = load_ledger(root)
     require(slug not in ledger["directions"], f"方向已存在: {slug}")
-    for other, r in ledger["directions"].items():
-        clash = mine & {quick_pool.normalize_term(t["term"]) for t in r.get("terms") or []}
-        require(not clash, f"说法 {sorted(clash)} 已属于方向 {other}")
+    _check_term_clash(ledger, slug, terms)
     rec = {
         "slug": slug, "title": title.strip(), "site_type": site_type, "lane": "quick", "state": "found",
         "object": {k: obj[k] for k in ("name", "first_public", "date_source")}, "terms": terms,
@@ -341,6 +358,7 @@ def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason,
     }
     ledger["directions"][slug] = rec
     save_ledger(root, ledger)
+    quick_pool.consume(root, [t["term"] for t in terms])
     return rec
 
 
@@ -373,6 +391,7 @@ def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
         return
     screen = _latest(obs, "quick_screen")
     require(screen, "缺速判观察 quick_screen")
+    _check_screen_term(rec["terms"], screen)
     checks = screen["readings"]["checks"]
     vol = _latest(obs, "quick_volume")
     if to in ("go", "watching"):
@@ -419,14 +438,23 @@ def watch_check(root, slug, refs=(), on=None) -> dict:
     for ref in refs:
         obs = W.read(root, ref)
         require(obs["slug"] == slug, f"{ref} 属于别的方向")
+        if obs["kind"] == "quick_screen":
+            _check_screen_term(rec["terms"], obs)
         if ref not in rec["evidence_refs"]:
             rec["evidence_refs"].append(ref)
     obs = _observations(root, rec["evidence_refs"])
     screen, vol = _latest(obs, "quick_screen"), _latest(obs, "quick_volume")
-    model = _quick_model(root, rec)
+    checks = screen["readings"]["checks"]
+    # 先看最新速判:第一条不过的项就是否决门;AI 概览已答完同 answered,此时不再测算
+    failed = next((g for g, q in QUICK_GATE_CHECK.items() if checks[q]["pass"] is False), None)
+    if failed is None and screen["readings"]["ai_overview"]["completes_task"]:
+        failed = "answered"
     trend = QM.trend(vol["readings"]["series_30d"])
-    if screen["readings"]["checks"]["Q5"]["pass"] is False:
-        suggestion = "rejected:occupied"
+    model = None if failed else _quick_model(root, rec)
+    if failed:
+        suggestion = f"rejected:{failed}"
+    elif trend["spike_decay"]:
+        suggestion = "rejected:oneoff"
     elif model["passes"]:
         suggestion = "go"
     elif on >= rec["watch"]["expires_at"] or not trend["non_declining"]:
@@ -434,8 +462,8 @@ def watch_check(root, slug, refs=(), on=None) -> dict:
     else:
         suggestion = "watching"
     check = {"at": on, "estimate_7d": vol["readings"]["estimate_7d"],
-             "base_visits": model["scenarios"]["base"]["visits"], "non_declining": trend["non_declining"],
-             "suggestion": suggestion}
+             "base_visits": model["scenarios"]["base"]["visits"] if model else None,
+             "non_declining": trend["non_declining"], "suggestion": suggestion}
     rec["watch"]["checks"].append(check)
     save_ledger(root, ledger)
     return {"slug": slug, "expires_at": rec["watch"]["expires_at"], **check}
@@ -445,7 +473,7 @@ def follow_up(root, slug, status, domain=None, on=None, reason=None) -> dict:
     """建站跟进:pending → started → launched 只能前进,任何时候可 abandoned;不改 state。"""
     require(status in FOLLOW_UP_STATUSES[1:], "status 须为 started/launched/abandoned")
     on = on or today()
-    require(isinstance(on, str) and _DATE_RE.fullmatch(on), f"日期须为 YYYY-MM-DD(收到 {on!r})")
+    require(is_date(on), f"日期须为日历上存在的 YYYY-MM-DD(收到 {on!r})")
     ledger = load_ledger(root)
     rec = ledger["directions"].get(slug)
     require(rec and rec.get("lane") == "quick" and rec["state"] == "go" and rec.get("follow_up"),

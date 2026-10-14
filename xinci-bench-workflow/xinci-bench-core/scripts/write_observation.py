@@ -10,7 +10,7 @@ from pathlib import Path
 
 import data_root
 import quick_model as QM
-from _common import SLUG_RE, BenchError, load_json, require, stamp
+from _common import SLUG_RE, BenchError, is_date, load_json, require, stamp
 
 QUICK_KINDS = ("quick_signal", "quick_screen", "quick_volume", "quick_brief")
 KINDS = ("scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief") + QUICK_KINDS
@@ -198,7 +198,7 @@ def _check_quick_signal(r):
         require(isinstance(it.get("object"), str) and it["object"].strip(), "原料 object 缺失")
         require(it.get("term") is None or (isinstance(it["term"], str) and it["term"].strip()), "原料 term 须为文字或 null")
         require(isinstance(it.get("url"), str) and it["url"].strip(), "原料 url 缺失(写实际取回的网址)")
-        require(_DATE.fullmatch(str(it.get("seen_at"))), "原料 seen_at 须为 YYYY-MM-DD")
+        require(is_date(it.get("seen_at")), "原料 seen_at 须为日历上存在的 YYYY-MM-DD")
 
 
 def _check_quick_screen(r):
@@ -216,7 +216,7 @@ def _check_quick_volume(r):
     require(isinstance(r["anchor_term"], str) and r["anchor_term"].strip(), "anchor_term 缺失")
     require(_num(r["anchor_volume"]) and r["anchor_volume"] > 0, "anchor_volume 须为正数")
     require(r["anchor_source"] in ("lexicon", "semrush"), "anchor_source 须为 lexicon/semrush")
-    require(_DATE.fullmatch(str(r["anchor_measured_at"])), "anchor_measured_at 须为 YYYY-MM-DD")
+    require(is_date(r["anchor_measured_at"]), "anchor_measured_at 须为日历上存在的 YYYY-MM-DD")
     require(r["window_days"] == 7, "window_days 固定为 7(同时报 30 天对照)")
     for k in ("new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "estimate_7d", "estimate_30d"):
         require(_num(r[k]), f"{k} 须为非负数")

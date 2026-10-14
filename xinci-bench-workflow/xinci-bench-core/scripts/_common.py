@@ -5,7 +5,7 @@ import json
 import os
 import re
 import tempfile
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 LEDGER_REL = "账本/方向账本.json"
@@ -19,6 +19,18 @@ QUICK_REJECTS_REL = "快道/淘汰.json"
 SUGGEST_DIR_REL = "快道/补全快照"
 
 SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
+_DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+
+def is_date(s) -> bool:
+    """YYYY-MM-DD 且日历上真实存在(2026-11-31 这类返回 False)。"""
+    if not (isinstance(s, str) and _DAY_RE.fullmatch(s)):
+        return False
+    try:
+        date.fromisoformat(s)
+    except ValueError:
+        return False
+    return True
 
 
 class BenchError(Exception):

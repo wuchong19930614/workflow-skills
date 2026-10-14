@@ -52,6 +52,22 @@ class QuickPoolTest(unittest.TestCase):
             self.assertEqual(len(P.expire(root, on="2026-10-13")), 1)
             self.assertEqual([r["term"] for r in P.pending(root)], ["b"])
 
+    def test_expired_item_can_come_back(self):
+        with TmpRoot() as root:
+            P.add_items(root, [item("slow riser", seen="2026-10-01")], OBS)
+            P.expire(root, on="2026-10-13")
+            out = P.add_items(root, [item("slow riser", seen="2026-10-20")], OBS)
+            self.assertEqual(len(out["added"]), 1)
+            self.assertEqual([(r["term"], r["seen_at"]) for r in P.pending(root)], [("slow riser", "2026-10-20")])
+
+    def test_reject_consumes_pending_item(self):
+        with TmpRoot() as root:
+            P.add_items(root, [item("gag2 calculator")], OBS)
+            P.reject_term(root, "GAG2  Calculator", "occupied", "证据/q/x.json")
+            self.assertEqual(P.pending(root), [])
+            out = P.add_items(root, [item("gag2 calculator")], OBS)
+            self.assertIn("快道淘汰过", out["skipped"][0]["reason"])
+
     def test_mark(self):
         with TmpRoot() as root:
             row = P.add_items(root, [item("a")], OBS)["added"][0]
