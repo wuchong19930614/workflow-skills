@@ -227,6 +227,10 @@ def _check_quick_signal(r):
         rising = it.get("rising")
         require(rising is None or rising == "breakout" or (_num(rising) and isinstance(rising, int)),
                 "原料 rising 须为 Trends 飙升百分比(非负整数)、\"breakout\" 或不写")
+        require(it.get("playable_at") is None or is_date(it["playable_at"]),
+                "原料 playable_at 须为日历上存在的 YYYY-MM-DD(第一次让大量普通用户用上的日期,可在未来)")
+        require(it.get("stage") is None or (isinstance(it["stage"], str) and it["stage"].strip()),
+                "原料 stage 须为文字(如 closed beta、Early access)或不写")
 
 
 def _check_quick_screen(r):

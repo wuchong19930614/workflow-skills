@@ -75,7 +75,7 @@ class QuickContractTest(unittest.TestCase):
         for needle in (f"**{a['version']}**", f"{s['low']:.0%} / {s['base']:.0%} / {s['high']:.0%}",
                        f"×{a['aio_factor']}", f"{a['threshold_visits']:,} 访问", f"基准预计月收入 ≥ ${a['single_site_revenue']:.0f}",
                        f"美国 ${a['rpm_adsense']:.0f}/千访问", f"其他英文国家 ${a['rpm_other_en']:.0f}/千访问",
-                       "、".join(a["countries"]), f"≤ {a['new_days']} 天", f"| 观察期 | {a['watch_days']} 天 |",
+                       "、".join(a["countries"]), f"≤ {a['new_days']} 天", f"游戏 ≤ {a['new_days_game']} 天", f"| 观察期 | {a['watch_days']} 天 |",
                        f"峰值 × {a['oneoff_ratio']:.0%}", f"前 7 天 × {a['trend_floor']:.0%}", f"{lo}–{hi:g}",
                        f"| 原料保留 | {a['pool_days']} 天 |", f"{a['max_serp_per_run']} 个词", f"判 go 后 {a['launch_days']} 天",
                        " / ".join(str(m) for m in a["milestones"]) + " 天", f"基准预计 × {a['stop_ratio']:.0%}"):
@@ -86,6 +86,17 @@ class QuickContractTest(unittest.TestCase):
         self.assertIn("、".join(QM.TASK_WORDS), c)
         for g in L.QUICK_GATES:
             self.assertIn(f"`{g}`", c)
+
+    def test_object_types_documented(self):
+        s = json.loads(text("数据结构/direction.schema.json"))
+        self.assertEqual(tuple(s["properties"]["object"]["properties"]["type"]["enum"]), L.OBJECT_TYPES)
+        self.assertIn("type", s["properties"]["object"]["required"])
+
+    def test_trends_tools_documented(self):
+        js, doc = text("scripts/trends_fetch.js"), text("命令与观察.md")
+        for fn in ("xinciTrends", "xinciTrendsRising"):
+            self.assertIn(f"async function {fn}(", js)
+            self.assertIn(f"{fn}(", doc)
 
     def test_direction_schema_quick_required(self):
         s = json.loads(text("数据结构/direction.schema.json"))

@@ -29,6 +29,18 @@ class ReportStatusTest(unittest.TestCase):
 
 
 class QuickStatusTest(unittest.TestCase):
+    def test_upcoming_listed_with_run_window(self):
+        import quick_pool
+        with TmpRoot() as root:
+            row = {"source": "wikipedia", "object": "Soon Game", "term": None, "url": "https://en.wikipedia.org/x",
+                   "seen_at": "2026-10-14", "playable_at": "2026-10-20", "stage": "Early access"}
+            quick_pool.add_items(root, [row], "证据/_quick/20261014T080000000000Z-abcd1234-quick_signal.json")
+            q = RS.status(root, on="2026-10-14")["quick"]
+            self.assertEqual(q["pool_pending"], 0)                    # 还没开玩,不算待看
+            self.assertEqual(q["upcoming"], [{"object": "Soon Game", "stage": "Early access", "playable_at": "2026-10-20",
+                                              "run_from": "2026-10-20", "run_to": "2026-10-23"}])
+
+
     def test_pending_go_on_top_and_milestones(self):
         import ledger
         from helpers import setup_quick

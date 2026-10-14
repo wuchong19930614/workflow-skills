@@ -98,6 +98,17 @@ class QuickObservationTest(unittest.TestCase):
         with self.assertRaisesRegex(BenchError, "rising"):
             W.validate(obs)
 
+    def test_signal_playable_at_checked(self):
+        obs = quick_signal_obs()
+        obs["readings"]["items"][0].update(playable_at="2026-11-20", stage="closed beta")   # 未来日期可以
+        W.validate(obs)
+        obs["readings"]["items"][0]["playable_at"] = "2026-11-31"
+        with self.assertRaisesRegex(BenchError, "playable_at"):
+            W.validate(obs)
+        obs["readings"]["items"][0].update(playable_at="2026-11-20", stage="")
+        with self.assertRaisesRegex(BenchError, "stage"):
+            W.validate(obs)
+
     def test_signal_source_checked(self):
         obs = quick_signal_obs()
         obs["readings"]["items"][0]["source"] = "twitter"

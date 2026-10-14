@@ -47,6 +47,37 @@ class QuickPoolTest(unittest.TestCase):
             out = P.add_items(root, [obj, dict(obj, object="NEW  game")], OBS)
             self.assertEqual((len(out["added"]), out["skipped"][0]["reason"]), (1, "已在原料池"))
 
+    def test_upcoming_held_until_playable(self):
+        with TmpRoot() as root:
+            soon = {"source": "wikipedia", "object": "Soon Game", "term": None, "url": "https://en.wikipedia.org/x",
+                    "seen_at": "2026-10-14", "playable_at": "2026-10-20", "stage": "Early access"}
+            far = dict(soon, object="Far Game", playable_at="2026-11-30")
+            P.add_items(root, [soon, far, item("live term", seen="2026-10-14")], OBS)
+            self.assertEqual([r["term"] for r in P.pending(root, on="2026-10-14")], ["live term"])
+            up = P.upcoming(root, on="2026-10-14")
+            self.assertEqual([(r["object"], r["playable_at"], r["stage"]) for r in up],
+                             [("Soon Game", "2026-10-20", "Early access")])      # 14 天以外的不列
+            self.assertEqual([r["object"] for r in P.upcoming(root, on="2026-10-14", days=60)], ["Soon Game", "Far Game"])
+            self.assertIn("Soon Game", [r["object"] for r in P.pending(root, on="2026-10-20")])
+
+    def test_upcoming_expiry_counts_from_playable_at(self):
+        with TmpRoot() as root:
+            row = {"source": "trends_rising", "object": "Beta Game", "term": None, "url": "https://trends.google.com/x",
+                   "seen_at": "2026-10-01", "playable_at": "2026-10-20", "rising": "breakout"}
+            P.add_items(root, [row], OBS)
+            self.assertEqual(P.expire(root, on="2026-10-27"), [])               # 开玩后第 7 天还留着
+            self.assertEqual(len(P.expire(root, on="2026-10-28")), 1)
+
+    def test_new_sighting_updates_playable_at(self):
+        with TmpRoot() as root:
+            row = {"source": "wikipedia", "object": "Delayed Game", "term": None, "url": "https://en.wikipedia.org/x",
+                   "seen_at": "2026-10-13", "playable_at": "2026-10-20", "stage": "Original"}
+            P.add_items(root, [row], OBS)
+            P.add_items(root, [dict(row, source="trends_rising", seen_at="2026-10-14", playable_at="2026-11-03",
+                                    stage="closed beta")], OBS2)
+            up = P.upcoming(root, on="2026-10-14", days=30)
+            self.assertEqual((up[0]["playable_at"], up[0]["stage"]), ("2026-11-03", "closed beta"))   # 以最新看到的为准
+
     def test_pending_priority(self):
         with TmpRoot() as root:
             P.add_items(root, [dict(item(None), object="Only Object"), item("plain term", seen="2026-10-10"),

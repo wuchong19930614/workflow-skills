@@ -17,7 +17,7 @@ import data_root
 from _common import EN_COUNTRIES, BenchError, load_json, load_ledger, require
 
 QUICK_ASSUMPTIONS = {
-    "version": "2026-10-14.q2",
+    "version": "2026-10-14.q3",
     "countries": EN_COUNTRIES,                            # 英文区:美、英、加、澳、新、爱
     "share": {"low": 0.10, "base": 0.20, "high": 0.30},
     "aio_factor": 0.6,
@@ -26,6 +26,7 @@ QUICK_ASSUMPTIONS = {
     "rpm_adsense": 4.0,                                   # 美国
     "rpm_other_en": 2.0,                                  # 美国以外的英文国家
     "new_days": 90,
+    "new_days_game": 14,                                  # 游戏类:开放游玩后 14 天内
     "watch_days": 30,
     "oneoff_ratio": 0.3,
     "trend_floor": 0.8,

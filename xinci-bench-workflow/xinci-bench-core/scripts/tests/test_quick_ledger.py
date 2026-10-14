@@ -26,12 +26,34 @@ class RegisterQuickTest(unittest.TestCase):
     def test_object_must_be_new(self):
         with TmpRoot() as root:
             ref = W.write(root, quick_screen_obs("q", term="q term"))
-            old = dict(OBJ, first_public="2026-06-01")
+            old = dict(OBJ, type="other", first_public="2026-06-01")
             with self.assertRaisesRegex(BenchError, "90 天"):
                 L.register_quick(root, "q", "t", "tool", old, term("q"), ref, "r")
             future = dict(OBJ, first_public="2026-11-01")
             with self.assertRaisesRegex(BenchError, "未来"):
                 L.register_quick(root, "q", "t", "tool", future, term("q"), ref, "r")
+
+    def test_game_window_is_14_days(self):
+        with TmpRoot() as root:                                   # 速判观察日 2026-10-13
+            ref = W.write(root, quick_screen_obs("q", term="q term"))
+            with self.assertRaisesRegex(BenchError, "14 天"):
+                L.register_quick(root, "q", "t", "tool", dict(OBJ, first_public="2026-09-28"), term("q"), ref, "r")
+            app = dict(OBJ, type="other", first_public="2026-09-28")          # 非游戏仍按 90 天
+            rec = L.register_quick(root, "q", "t", "tool", app, term("q"), ref, "r")
+            self.assertEqual(rec["object"]["type"], "other")
+        with TmpRoot() as root:
+            ref = W.write(root, quick_screen_obs("q", term="q term"))
+            rec = L.register_quick(root, "q", "t", "tool", dict(OBJ, first_public="2026-09-29"), term("q"), ref, "r")
+            self.assertEqual(rec["object"]["type"], "game")                   # 第 14 天还算
+
+    def test_object_type_required(self):
+        with TmpRoot() as root:
+            ref = W.write(root, quick_screen_obs("q", term="q term"))
+            bare = {k: v for k, v in OBJ.items() if k != "type"}
+            with self.assertRaisesRegex(BenchError, "type"):
+                L.register_quick(root, "q", "t", "tool", bare, term("q"), ref, "r")
+            with self.assertRaisesRegex(BenchError, "type"):
+                L.register_quick(root, "q", "t", "tool", dict(OBJ, type="movie"), term("q"), ref, "r")
 
     def test_term_cannot_belong_to_two_directions(self):
         with TmpRoot() as root:

@@ -7,7 +7,7 @@
 | [scan](xinci-bench-scan/SKILL.md) | 取一批种子域名，初核 B1–B5，合格的登记为方向 |
 | [assess](xinci-bench-assess/SKILL.md) | 六步深核、标杆份额法测算、结算并生成决策书与建站简报 |
 | [run](xinci-bench-run/SKILL.md) | `xinci_bench_run max_rounds=N`，默认 3 轮；出 go 不停，跑满预算 |
-| [quick](xinci-bench-quick/SKILL.md) | 新词快道，暗号 `xinci_bench_quick_run`：找近 90 天冒出、首页还没人做的任务词，速判 Q1–Q6、锚词换算量级，go 时强推立即建站 |
+| [quick](xinci-bench-quick/SKILL.md) | 新词快道，暗号 `xinci_bench_quick_run`：找刚冒出、首页还没人做的任务词（游戏开放游玩后 14 天内，其他 90 天内），列出即将开玩的游戏，速判 Q1–Q6、锚词换算量级，go 时强推立即建站 |
 | [status](xinci-bench-status/SKILL.md) | 只读看板 |
 | [选站契约](xinci-bench-core/选站契约.md) | 唯一判据；[数据采集](xinci-bench-core/数据采集.md)管通道与坑；[命令与观察](xinci-bench-core/命令与观察.md)管调用 |
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """只读看板:置顶待开建的快道 go;各状态数、待深核排序、观察中剩余天数、搁置天数、go 的文档、
-到期的验收节点、种子池与原料池余量、待复查淘汰、累计 Semrush 调用。"""
+到期的验收节点、即将开玩的对象与建议跑快道的日期、种子池与原料池余量、待复查淘汰、累计 Semrush 调用。"""
 import argparse
 import json
 import sys
-from datetime import date
+from datetime import date, timedelta
 
 import data_root
 import ledger as L
@@ -15,6 +15,7 @@ import seeds
 from _common import BenchError, load_ledger, today
 
 PARKED_WARN_DAYS = 90
+RUN_AFTER_PLAYABLE_DAYS = 3                       # 建议在开玩当天到第 3 天之间跑一次快道
 
 
 def _quick_status(root, dirs, on) -> dict:
@@ -37,8 +38,12 @@ def _quick_status(root, dirs, on) -> dict:
             for m in QM.milestones(fu["launched_at"]):
                 if m["date"] <= on:
                     launched_due.append({"slug": s, "day": m["day"], "date": m["date"]})
+    upcoming = [{"object": r["object"], "stage": r.get("stage"), "playable_at": r["playable_at"],
+                 "run_from": r["playable_at"],
+                 "run_to": (date.fromisoformat(r["playable_at"]) + timedelta(days=RUN_AFTER_PLAYABLE_DAYS)).isoformat()}
+                for r in quick_pool.upcoming(root, on=on)]
     return {"pending_go": pending, "watching": sorted(watching, key=lambda w: w["days_left"]),
-            "milestones_due": launched_due, "pool_pending": len(quick_pool.pending(root))}
+            "milestones_due": launched_due, "pool_pending": len(quick_pool.pending(root, on=on)), "upcoming": upcoming}
 
 
 def status(root, on=None) -> dict:
@@ -101,6 +106,9 @@ def main(argv=None):
     s = st["seeds"]
     print(f"种子池待初核:{s['pending'] or '无'};已初核 {s['checked']};淘汰 {s['rejected']}(到期可复查 {s['recheck_due']})")
     print(f"快道原料池待看:{q['pool_pending']}")
+    for u in q["upcoming"]:
+        print(f"  即将开玩 {u['object']}" + (f"({u['stage']})" if u["stage"] else "")
+              + f":{u['playable_at']},建议 {u['run_from']}~{u['run_to']} 跑一次快道")
     b = st["semrush"]
     print(f"今天 Semrush 已用 {b['semrush_calls_today']}/{b['semrush_daily_limit']} 次"
           + ("(到了停止线,今天别再跑 Semrush)" if b["semrush_stop"] else "") + f";累计 {st['semrush_calls_total']} 次")

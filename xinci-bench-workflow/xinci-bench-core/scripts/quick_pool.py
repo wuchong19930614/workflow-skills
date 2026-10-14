@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""快道原料池与淘汰记录:登记原料(去重)、取待看原料、标记已用或过期、记速判不过的词。"""
+"""快道原料池与淘汰记录:登记原料(去重)、取待看原料、列出即将开玩的对象、标记已用或过期、记速判不过的词。"""
 import argparse
 import hashlib
 import json
 import re
 import sys
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 
 import data_root
@@ -82,10 +82,14 @@ def add_items(root, items, observation) -> dict:
                 row.setdefault("also_seen", []).append({"source": it["source"], "seen_at": it["seen_at"],
                                                         "observation": observation})
                 row["rising"] = _max_rising(row.get("rising"), it.get("rising"))
+                if it.get("playable_at"):  # 开玩日期以最新看到的为准(延期、改测试日期)
+                    row.update(playable_at=it["playable_at"], stage=it.get("stage") or row.get("stage"))
             skipped.append({"term": k, "reason": reason})
             continue
         fresh = {"source": it["source"], "object": it["object"], "term": it.get("term"), "url": it["url"],
                  "seen_at": it["seen_at"], "rising": it.get("rising"), "status": "pending", "observation": observation}
+        if it.get("playable_at"):
+            fresh.update(playable_at=it["playable_at"], stage=it.get("stage"))
         row = expired.pop(k, None)
         if row is not None:           # 过期后又被来源取回:原行复活,保留 id
             row.update(fresh, revived_at=now())
@@ -112,10 +116,23 @@ def priority(row) -> tuple:
     return (row.get("term") is None, -len(sources), -_rising_value(row.get("rising")), row["seen_at"])
 
 
-def pending(root, top=None) -> list:
-    """待看原料按优先级排序;首屏速判每次取前 10 个。"""
-    rows = sorted((r for r in _read_pool(root) if r["status"] == "pending"), key=priority)
+def _not_yet(row, on) -> bool:
+    return bool(row.get("playable_at")) and row["playable_at"] > on
+
+
+def pending(root, top=None, on=None) -> list:
+    """待看原料按优先级排序;首屏速判每次取前 10 个。还没到开玩日的不列(在 upcoming 里)。"""
+    on = on or today()
+    rows = sorted((r for r in _read_pool(root) if r["status"] == "pending" and not _not_yet(r, on)), key=priority)
     return rows[:top] if top else rows
+
+
+def upcoming(root, on=None, days=14) -> list:
+    """即将开玩:待看原料里开玩日期在今天之后 days 天以内的,按日期排。"""
+    on = on or today()
+    until = (date.fromisoformat(on) + timedelta(days=days)).isoformat()
+    rows = [r for r in _read_pool(root) if r["status"] == "pending" and _not_yet(r, on) and r["playable_at"] <= until]
+    return sorted(rows, key=lambda r: (r["playable_at"], r["object"]))
 
 
 def mark(root, ids, status) -> None:
@@ -146,11 +163,12 @@ def consume(root, terms) -> list:
 
 
 def expire(root, on=None) -> list:
-    """待看原料超过 7 天(拿不到"有人在搜"的证据)标 expired。"""
+    """待看原料超过 7 天(拿不到"有人在搜"的证据)标 expired;带开玩日期的从开玩日起算。"""
     on = date.fromisoformat(on or today())
     rows, gone = _read_pool(root), []
     for r in rows:
-        if r["status"] == "pending" and (on - date.fromisoformat(r["seen_at"])).days > QM.QUICK_ASSUMPTIONS["pool_days"]:
+        start = max(r["seen_at"], r.get("playable_at") or r["seen_at"])
+        if r["status"] == "pending" and (on - date.fromisoformat(start)).days > QM.QUICK_ASSUMPTIONS["pool_days"]:
             r["status"] = "expired"
             gone.append(r["id"])
     if gone:
@@ -185,6 +203,8 @@ def main(argv=None):
     m = sub.add_parser("mark")
     m.add_argument("--id", action="append", required=True)
     m.add_argument("--status", required=True, choices=STATUSES)
+    up = sub.add_parser("upcoming")
+    up.add_argument("--days", type=int, default=14, help="列出今天之后多少天内开玩的对象")
     sub.add_parser("expire")
     r = sub.add_parser("reject")
     r.add_argument("--term", required=True)
@@ -200,6 +220,8 @@ def main(argv=None):
             out = add_items(root, obs["readings"]["items"], a.observation)
         elif a.cmd == "pending":
             out = pending(root, a.top)
+        elif a.cmd == "upcoming":
+            out = upcoming(root, days=a.days)
         elif a.cmd == "mark":
             mark(root, a.id, a.status)
             out = {"marked": a.id, "status": a.status}

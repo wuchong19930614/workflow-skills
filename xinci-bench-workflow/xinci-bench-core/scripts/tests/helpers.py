@@ -181,7 +181,7 @@ def write_json(path, obj):
 # ---------------------------------------------------------------- 新词快道
 
 QUICK_BASE = {**BASE, "stage": "quick"}
-OBJ = {"name": "Grow a Garden 2", "first_public": "2026-09-28", "date_source": "https://example.org/launch"}
+OBJ = {"name": "Grow a Garden 2", "type": "game", "first_public": "2026-10-01", "date_source": "https://example.org/launch"}
 
 
 def quick_signal_obs(*terms):

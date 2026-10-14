@@ -28,6 +28,7 @@ LEGAL = LEGAL_BY_LANE["bench"]
 GATES = ("scope", "benchmark", "answered", "revenue")
 QUICK_GATES = quick_pool.QUICK_GATES
 GATES_BY_LANE = {"bench": GATES, "quick": QUICK_GATES}
+OBJECT_TYPES = ("game", "other")                       # 快道对象类型:游戏 14 天、其他 90 天
 # 快道否决门 → 速判观察里必须不过的那一条
 QUICK_GATE_CHECK = {"not_new": "Q1", "oneoff": "Q3", "scope": "Q4", "occupied": "Q5", "answered": "Q6"}
 QUICK_PATCHABLE = ("title", "site_type", "terms")
@@ -332,7 +333,7 @@ def _screen_all_pass(obs):
 
 
 def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason, by="xinci-bench-quick") -> dict:
-    """登记快道方向:须有本方向 Q1–Q6 全过的速判观察;对象首次公开须在 90 天内。"""
+    """登记快道方向:须有本方向 Q1–Q6 全过的速判观察;对象首次公开须在窗口内(游戏 14 天、其他 90 天)。"""
     require(isinstance(slug, str) and SLUG_RE.fullmatch(slug), "slug 须为小写字母数字连字符")
     require(isinstance(title, str) and title.strip(), "title 须写方向一句话")
     require(site_type in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
@@ -341,20 +342,22 @@ def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason,
             and is_date(obj.get("first_public"))
             and isinstance(obj.get("date_source"), str) and obj["date_source"].strip(),
             "object 须含 name、first_public(YYYY-MM-DD)、date_source")
+    require(obj.get("type") in OBJECT_TYPES, f"object.type 须为 {OBJECT_TYPES}(游戏 14 天、其他 90 天)")
     _check_terms(terms)
     screen = W.read(root, screen_ref)
     require(screen["kind"] == "quick_screen" and screen["slug"] == slug, f"{screen_ref} 不是本方向的速判观察")
     _check_screen_term(terms, screen)
     require(_screen_all_pass(screen), "速判六条没有全过,不登记,应进快道淘汰记录")
     age = (date.fromisoformat(screen["observed_at"][:10]) - date.fromisoformat(obj["first_public"])).days
-    require(0 <= age <= QM.QUICK_ASSUMPTIONS["new_days"],
-            f"对象首次公开距速判 {age} 天,超出 {QM.QUICK_ASSUMPTIONS['new_days']} 天(或日期在未来)")
+    limit = QM.QUICK_ASSUMPTIONS["new_days_game" if obj["type"] == "game" else "new_days"]
+    require(0 <= age <= limit,
+            f"对象首次公开距速判 {age} 天,超出{'游戏类' if obj['type'] == 'game' else ''} {limit} 天(或日期在未来)")
     ledger = load_ledger(root)
     require(slug not in ledger["directions"], f"方向已存在: {slug}")
     _check_term_clash(ledger, slug, terms)
     rec = {
         "slug": slug, "title": title.strip(), "site_type": site_type, "lane": "quick", "state": "found",
-        "object": {k: obj[k] for k in ("name", "first_public", "date_source")}, "terms": terms,
+        "object": {k: obj[k] for k in ("name", "type", "first_public", "date_source")}, "terms": terms,
         "volume": None, "serp": None, "watch": None, "follow_up": None,
         "model": None, "decision": None, "evidence_refs": [screen_ref], "bindings": None,
         "history": [{"at": now(), "from": None, "to": "found", "by": by, "reason": reason.strip()}],
