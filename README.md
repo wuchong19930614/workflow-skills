@@ -41,6 +41,7 @@
 | [xinci-bench-assess](xinci-bench-workflow/xinci-bench-assess/SKILL.md) | 六步深核、标杆份额法测算、结算并生成决策书与建站简报 |
 | [xinci-bench-status](xinci-bench-workflow/xinci-bench-status/SKILL.md) | 只读看板 |
 | [xinci-bench-run](xinci-bench-workflow/xinci-bench-run/SKILL.md) | 连续运行驱动器，暗号 `xinci_bench_run max_rounds=N` |
+| [xinci-bench-quick](xinci-bench-workflow/xinci-bench-quick/SKILL.md) | 新词快道，暗号 `xinci_bench_quick_run`：抓近 90 天冒出、首页还没人做的任务词，go 时强推立即建站 |
 | [xinci-bench-core](xinci-bench-workflow/xinci-bench-core/) | 选站契约、数据采集、命令与观察、schema、脚本 |
 
 ## 仓库边界

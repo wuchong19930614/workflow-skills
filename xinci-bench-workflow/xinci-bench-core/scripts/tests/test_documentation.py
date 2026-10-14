@@ -92,7 +92,8 @@ class QuickContractTest(unittest.TestCase):
 
 class SkillTest(unittest.TestCase):
     def test_skills_named_and_point_to_contract(self):
-        for name in ("xinci-bench-scan", "xinci-bench-assess", "xinci-bench-status", "xinci-bench-run"):
+        for name in ("xinci-bench-scan", "xinci-bench-assess", "xinci-bench-status", "xinci-bench-run",
+                     "xinci-bench-quick"):
             body = (WORKFLOW / name / "SKILL.md").read_text(encoding="utf-8")
             m = re.match(r"---\nname: (\S+)\ndescription: '(.+)'\n---\n", body)
             self.assertIsNotNone(m, name)
