@@ -5,15 +5,17 @@ import sys
 from pathlib import Path
 
 import data_root
-from _common import (LEDGER_REL, MANUAL_SEEDS_REL, REJECTS_REL, SEEDS_REL,
-                     atomic_save)
+from _common import (LEDGER_REL, MANUAL_SEEDS_REL, QUICK_POOL_REL, QUICK_REJECTS_REL, REJECTS_REL,
+                     SEEDS_REL, SUGGEST_DIR_REL, atomic_save)
 
-SUBDIRS = ("账本", "种子", "淘汰索引", "词库", "证据/_scan", "文档/历史", "运行", "反馈")
+SUBDIRS = ("账本", "种子", "淘汰索引", "词库", "证据/_scan", "证据/_quick", "文档/历史", "运行", "反馈",
+           SUGGEST_DIR_REL)
 EMPTY_FILES = {
     LEDGER_REL: {"schema_version": 1, "directions": {}},
     SEEDS_REL: {"schema_version": 1, "seeds": {}},
     MANUAL_SEEDS_REL: {"schema_version": 1, "seeds": []},
     REJECTS_REL: {"schema_version": 1, "domains": {}},
+    QUICK_REJECTS_REL: {"schema_version": 1, "terms": {}},
 }
 
 
@@ -30,6 +32,11 @@ def init_workspace(root) -> list:
         if not p.is_file():
             atomic_save(p, empty)
             created.append(str(p))
+    pool = root / QUICK_POOL_REL          # 原料池是 jsonl,空文件即可
+    if not pool.is_file():
+        pool.parent.mkdir(parents=True, exist_ok=True)
+        pool.write_text("", encoding="utf-8")
+        created.append(str(pool))
     return created
 
 

@@ -14,6 +14,9 @@ MANUAL_SEEDS_REL = "种子/手工种子.json"
 REJECTS_REL = "淘汰索引/域名.json"
 LEXICON_REL = "词库/旧词库.json"
 VERDICTS_REL = "词库/旧裁决.json"
+QUICK_POOL_REL = "快道/原料.jsonl"
+QUICK_REJECTS_REL = "快道/淘汰.json"
+SUGGEST_DIR_REL = "快道/补全快照"
 
 SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
 

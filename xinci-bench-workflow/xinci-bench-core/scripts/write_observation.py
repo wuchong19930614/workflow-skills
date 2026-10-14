@@ -9,10 +9,16 @@ from datetime import date, datetime
 from pathlib import Path
 
 import data_root
+import quick_model as QM
 from _common import SLUG_RE, BenchError, load_json, require, stamp
 
-KINDS = ("scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief")
+QUICK_KINDS = ("quick_signal", "quick_screen", "quick_volume", "quick_brief")
+KINDS = ("scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief") + QUICK_KINDS
 CHECKS = ("B1", "B2", "B3", "B4", "B5")
+QUICK_CHECKS = ("Q1", "Q2", "Q3", "Q4", "Q5", "Q6")
+QUICK_SOURCES = ("autocomplete", "trends_rising", "trends_rss", "steamcharts", "apple", "itunes",
+                 "google_play", "producthunt", "github", "hackernews", "youtube", "wikipedia",
+                 "policy", "reddit", "other")
 # 初核数值门槛(选站契约 §3.2);标"通过"但数字不达标的观察直接拒收
 LIMITS = {"max_age_months": 24, "max_authority_score": 30, "min_us_organic": 5000}
 # 每个 kind 的 readings 必填键;值的类型在 _check_<kind> 里再细查
@@ -29,6 +35,13 @@ REQUIRED = {
                  "feasible", "basis"),
     "brief": ("positioning", "pages", "tech_hosting", "monetization_plan", "seo_notes",
               "geo_notes", "risks"),
+    "quick_signal": ("items",),
+    "quick_screen": ("term", "checks", "ai_overview", "top10", "occupied_by"),
+    "quick_volume": ("anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "window_days",
+                     "new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "ratio_7d",
+                     "estimate_7d", "estimate_30d", "series_30d"),
+    "quick_brief": ("positioning", "pages", "data_sources", "license", "update_frequency", "build_days",
+                    "data_available", "hosting", "risks"),
 }
 _YM = re.compile(r"\d{4}-\d{2}")
 _DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
@@ -166,12 +179,86 @@ def _check_brief(r):
         require(isinstance(r[k], list), f"{k} 须为列表")
 
 
+def _check_null_rule(checks, keys, label):
+    """pass 为 true/false/null;null 只表示"前项已不过、为省额度没查"。"""
+    require(isinstance(checks, dict) and set(checks) == set(keys), f"{label}: checks 须恰好含 {keys}")
+    verdicts = []
+    for k in keys:
+        c = checks[k]
+        require(isinstance(c, dict) and c.get("pass") in (True, False, None), f"{label}.{k}.pass 须为 true/false/null")
+        require(isinstance(c.get("basis"), str) and c["basis"].strip(), f"{label}.{k}.basis 缺失")
+        verdicts.append(c["pass"])
+    require(False in verdicts or None not in verdicts, f"{label}: 没有不过项时不能留 null")
+
+
+def _check_quick_signal(r):
+    require(isinstance(r["items"], list) and r["items"], "quick_signal.items 须为非空列表")
+    for it in r["items"]:
+        require(it.get("source") in QUICK_SOURCES, f"原料来源须为 {QUICK_SOURCES}")
+        require(isinstance(it.get("object"), str) and it["object"].strip(), "原料 object 缺失")
+        require(it.get("term") is None or (isinstance(it["term"], str) and it["term"].strip()), "原料 term 须为文字或 null")
+        require(isinstance(it.get("url"), str) and it["url"].strip(), "原料 url 缺失(写实际取回的网址)")
+        require(_DATE.fullmatch(str(it.get("seen_at"))), "原料 seen_at 须为 YYYY-MM-DD")
+
+
+def _check_quick_screen(r):
+    require(isinstance(r["term"], str) and r["term"].strip(), "quick_screen.term 缺失")
+    _check_null_rule(r["checks"], QUICK_CHECKS, r["term"])
+    aio = r["ai_overview"]
+    require(isinstance(aio, dict) and {"present", "completes_task", "cited_domains"} <= set(aio),
+            "ai_overview 须含 present/completes_task/cited_domains")
+    require(isinstance(r["top10"], list), "top10 须为列表")
+    if r["checks"]["Q5"]["pass"] is False:
+        require(isinstance(r["occupied_by"], str) and r["occupied_by"].strip(), "Q5 不过时 occupied_by 须写完整做了任务的页面域名")
+
+
+def _check_quick_volume(r):
+    require(isinstance(r["anchor_term"], str) and r["anchor_term"].strip(), "anchor_term 缺失")
+    require(_num(r["anchor_volume"]) and r["anchor_volume"] > 0, "anchor_volume 须为正数")
+    require(r["anchor_source"] in ("lexicon", "semrush"), "anchor_source 须为 lexicon/semrush")
+    require(_DATE.fullmatch(str(r["anchor_measured_at"])), "anchor_measured_at 须为 YYYY-MM-DD")
+    require(r["window_days"] == 7, "window_days 固定为 7(同时报 30 天对照)")
+    for k in ("new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "estimate_7d", "estimate_30d"):
+        require(_num(r[k]), f"{k} 须为非负数")
+    require(r["anchor_mean_7d"] > 0 and r["anchor_mean_30d"] > 0, "锚词热度为 0,换一个锚词")
+    ratio = r["new_mean_7d"] / r["anchor_mean_7d"]
+    require(abs(ratio - r["ratio_7d"]) < 0.001, "ratio_7d 须等于 new_mean_7d ÷ anchor_mean_7d")
+    require(QM.ratio_ok(ratio), "锚词与新词热度比须在 0.2–5 之间,换一个量级更接近的锚词")
+    require(abs(r["estimate_7d"] - r["anchor_volume"] * ratio) <= 1, "estimate_7d 须等于 anchor_volume × ratio_7d(取整)")
+    s = r["series_30d"]
+    require(isinstance(s, list) and len(s) >= 14 and all(_num(v) for v in s),
+            "series_30d 须为至少 14 个非负数(Trends 显示 \"<1\" 的点记 0)")
+
+
+def _check_quick_brief(r):
+    require(isinstance(r["positioning"], str) and r["positioning"].strip(), "positioning 缺失")
+    require(isinstance(r["pages"], list) and r["pages"], "pages 须为非空列表")
+    for p in r["pages"]:
+        for k in ("path", "target_query", "deliverable"):
+            require(isinstance(p.get(k), str) and p[k].strip(), f"page.{k} 缺失")
+    for k in ("license", "update_frequency", "hosting"):
+        require(isinstance(r[k], str) and r[k].strip(), f"{k} 缺失")
+    require(isinstance(r["data_sources"], list) and isinstance(r["risks"], list), "data_sources/risks 须为列表")
+    require(_num(r["build_days"]), "build_days 须为非负数")
+    require(isinstance(r["data_available"], bool), "data_available 须为布尔")
+
+
+def _expected_stage(kind):
+    return "scan" if kind == "scan" else ("quick" if kind in QUICK_KINDS else "assess")
+
+
+def _preflight_ok(pf):
+    pf = pf or {}
+    return (all(pf.get(k) is True for k in ("controllable", "desktop", "logged_out")) and pf.get("region") == "us"
+            and isinstance(pf.get("evidence"), str) and bool(pf["evidence"].strip()))
+
+
 def validate(obs: dict) -> None:
     kind, stage = obs.get("kind"), obs.get("stage")
     require(kind in KINDS, f"kind 须为 {KINDS}")
-    require(stage == ("scan" if kind == "scan" else "assess"), "kind=scan 时 stage=scan,其余 stage=assess")
-    if kind == "scan":
-        require(obs.get("slug") is None, "scan 批次观察 slug 须为 null")
+    require(stage == _expected_stage(kind), "kind=scan 时 stage=scan;快道四类 stage=quick;其余 stage=assess")
+    if kind in ("scan", "quick_signal"):
+        require(obs.get("slug") is None, f"{kind} 批次观察 slug 须为 null")
     else:
         require(isinstance(obs.get("slug"), str) and SLUG_RE.fullmatch(obs["slug"]), "slug 无效")
     require(isinstance(obs.get("observed_at"), str) and _iso(obs["observed_at"]),
@@ -181,9 +268,7 @@ def validate(obs: dict) -> None:
     require(isinstance(obs.get("semrush_calls"), int) and obs["semrush_calls"] >= 0, "semrush_calls 须为非负整数")
     require(isinstance(obs.get("points"), list), "points 须为列表")
     if kind == "serp":
-        pf = obs.get("browser_preflight") or {}
-        require(all(pf.get(k) is True for k in ("controllable", "desktop", "logged_out")) and pf.get("region") == "us"
-                and isinstance(pf.get("evidence"), str) and pf["evidence"].strip(),
+        require(_preflight_ok(obs.get("browser_preflight")),
                 "serp 观察须有通过的 browser_preflight(可控、桌面、美区、未登录、依据)")
     r = obs.get("readings")
     require(isinstance(r, dict), "readings 须为对象")
@@ -193,11 +278,13 @@ def validate(obs: dict) -> None:
         _check_scan(r, obs["observed_at"])
     else:
         globals()[f"_check_{kind}"](r)
+    if kind == "quick_screen" and (r["checks"]["Q5"]["pass"] is not None or r["checks"]["Q6"]["pass"] is not None):
+        require(_preflight_ok(obs.get("browser_preflight")), "Q5/Q6 有结论时须有通过的 browser_preflight")
 
 
 def write(root, obs: dict) -> str:
     validate(obs)
-    folder = "_scan" if obs["kind"] == "scan" else obs["slug"]
+    folder = {"scan": "_scan", "quick_signal": "_quick"}.get(obs["kind"], obs["slug"])
     ref = f"证据/{folder}/{stamp()}-{uuid.uuid4().hex[:8]}-{obs['kind']}.json"
     path = Path(root) / ref
     path.parent.mkdir(parents=True, exist_ok=True)

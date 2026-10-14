@@ -1,29 +1,31 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "xinci-bench 观察文件",
-  "description": "说明性 schema;强制校验在 write_observation.py。kind=scan 时 stage=scan、slug=null,其余 stage=assess。",
+  "description": "说明性 schema;强制校验在 write_observation.py。kind=scan 时 stage=scan、slug=null;快道四类 stage=quick(quick_signal 的 slug=null);其余 stage=assess。",
   "type": "object",
   "required": ["slug", "observed_at", "stage", "kind", "source_urls", "semrush_calls", "points", "readings"],
   "properties": {
     "slug": {"type": ["string", "null"]},
     "observed_at": {"type": "string", "description": "ISO 时间,写之前先取系统时间"},
-    "stage": {"enum": ["scan", "assess"]},
-    "kind": {"enum": ["scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief"]},
+    "stage": {"enum": ["scan", "assess", "quick"]},
+    "kind": {"enum": ["scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief", "quick_signal", "quick_screen", "quick_volume", "quick_brief"]},
     "source_urls": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "semrush_calls": {"type": "integer", "minimum": 0},
     "points": {"type": "array", "items": {"type": "string"}},
-    "browser_preflight": {"description": "kind=serp 时必填且四项通过",
-      "required": ["controllable", "desktop", "region", "logged_out", "evidence"]},
+    "browser_preflight": {"description": "kind=serp 时必填;quick_screen 的 Q5/Q6 有结论时必填;四项须通过", "required": ["controllable", "desktop", "region", "logged_out", "evidence"]},
     "readings": {"type": "object"}
   },
   "readings_required": {
     "scan": ["domains"],
-    "benchmark": ["domain", "traffic_start", "us_organic_now", "us_organic_m12", "curve", "referring_domains",
-                  "anchor_summary", "link_driven", "algo_risk", "update_readings", "ads_txt", "pricing"],
+    "benchmark": ["domain", "traffic_start", "us_organic_now", "us_organic_m12", "curve", "referring_domains", "anchor_summary", "link_driven", "algo_risk", "update_readings", "ads_txt", "pricing"],
     "demand": ["clusters", "competitor_traffic", "crowding", "new_sites"],
     "serp": ["query", "cluster_id", "answered", "answered_basis", "ai_overview", "benchmark_position", "top10"],
     "differentiation": ["copy_only", "gaps"],
     "delivery": ["data_sources", "license", "hours", "cash_first_year", "monthly_hours", "feasible", "basis"],
-    "brief": ["positioning", "pages", "tech_hosting", "monetization_plan", "seo_notes", "geo_notes", "risks"]
+    "brief": ["positioning", "pages", "tech_hosting", "monetization_plan", "seo_notes", "geo_notes", "risks"],
+    "quick_signal": ["items"],
+    "quick_screen": ["term", "checks", "ai_overview", "top10", "occupied_by"],
+    "quick_volume": ["anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "window_days", "new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "ratio_7d", "estimate_7d", "estimate_30d", "series_30d"],
+    "quick_brief": ["positioning", "pages", "data_sources", "license", "update_frequency", "build_days", "data_available", "hosting", "risks"]
   }
 }

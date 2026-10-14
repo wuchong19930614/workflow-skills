@@ -157,3 +157,75 @@ def setup_direction(root, slug="example-county", us_organic_m12=20000, stale=Fal
 def write_json(path, obj):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     Path(path).write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ---------------------------------------------------------------- 新词快道
+
+QUICK_BASE = {**BASE, "stage": "quick"}
+OBJ = {"name": "Grow a Garden 2", "first_public": "2026-09-28", "date_source": "https://example.org/launch"}
+
+
+def quick_signal_obs(*terms):
+    items = [{"source": "autocomplete", "object": OBJ["name"], "term": t,
+              "url": "https://suggestqueries.google.com/complete/search?q=grow", "seen_at": "2026-10-13"}
+             for t in (terms or ("grow a garden 2 calculator",))]
+    return {**QUICK_BASE, "slug": None, "kind": "quick_signal", "readings": {"items": items}}
+
+
+def quick_screen_obs(slug, term="grow a garden 2 calculator", fail=None, aio=False, occupied_by=None, preflight=True):
+    """六条默认全过;fail={"Q5": False} 让指定项不过。"""
+    checks = {k: {"pass": True, "basis": f"{k} 依据"} for k in ("Q1", "Q2", "Q3", "Q4", "Q5", "Q6")}
+    for k, v in (fail or {}).items():
+        checks[k] = {"pass": v, "basis": f"{k} 读数"}
+    obs = {**QUICK_BASE, "slug": slug, "kind": "quick_screen",
+           "readings": {"term": term, "checks": checks,
+                        "ai_overview": {"present": aio, "completes_task": False, "cited_domains": []},
+                        "top10": [{"pos": 1, "domain": "reddit.com", "type": "forum", "completes_task": False}],
+                        "occupied_by": occupied_by}}
+    if preflight:
+        obs["browser_preflight"] = dict(PREFLIGHT)
+    return obs
+
+
+def rising_series():
+    return list(range(20, 50))          # 30 个点,最近 7 天均值 46 ≥ 前 7 天 39 × 0.8,峰值 49 无回落
+
+
+def quick_volume_obs(slug, anchor_volume=60000, new_mean=50.0, anchor_mean=60.0, series=None, measured="2026-10-08"):
+    """默认 60000 × 50/60 = 50000 月搜索量 → 基准 1 万访问(恰好过线)。"""
+    ratio = new_mean / anchor_mean
+    return {**QUICK_BASE, "slug": slug, "kind": "quick_volume",
+            "source_urls": ["https://trends.google.com/trends/explore?geo=US&q=grow"],
+            "readings": {"anchor_term": "anchor term", "anchor_volume": anchor_volume, "anchor_source": "lexicon",
+                         "anchor_measured_at": measured, "window_days": 7,
+                         "new_mean_7d": new_mean, "anchor_mean_7d": anchor_mean,
+                         "new_mean_30d": new_mean, "anchor_mean_30d": anchor_mean,
+                         "ratio_7d": round(ratio, 4), "estimate_7d": round(anchor_volume * ratio),
+                         "estimate_30d": round(anchor_volume * ratio),
+                         "series_30d": series if series is not None else rising_series()}}
+
+
+def quick_brief_obs(slug, build_days=2, data_available=True):
+    return {**QUICK_BASE, "slug": slug, "kind": "quick_brief",
+            "readings": {"positioning": "输入作物与天气,算出售价",
+                         "pages": [{"path": "/", "target_query": "grow a garden 2 calculator",
+                                    "deliverable": "按作物与突变算价格"}],
+                         "data_sources": ["社区 wiki 价格表"], "license": "事实数据,自行整理",
+                         "update_frequency": "随游戏更新", "build_days": build_days,
+                         "data_available": data_available, "hosting": "Cloudflare Pages 免费版",
+                         "risks": ["游戏热度可能回落"]}}
+
+
+def setup_quick(root, slug="gag2-calculator", volume=None, brief=True, screen=None):
+    """快道方向:速判全过 → 登记 → 量级(默认恰好过线)与简报素材。返回 (slug, 引用列表)。"""
+    import ledger
+    import write_observation as W
+    term = f"{slug} term"
+    screen_ref = W.write(root, screen or quick_screen_obs(slug, term=term))
+    ledger.register_quick(root, slug, "新游戏计算器", "tool", dict(OBJ),
+                          [{"term": term, "source": "autocomplete", "first_seen": "2026-10-13"}], screen_ref, "速判全过")
+    refs = [W.write(root, volume or quick_volume_obs(slug))]
+    if brief:
+        refs.append(W.write(root, quick_brief_obs(slug)))
+    ledger.update(root, slug, {}, refs)
+    return slug, [screen_ref] + refs
