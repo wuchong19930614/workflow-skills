@@ -97,5 +97,43 @@ class RunLogTest(unittest.TestCase):
                 start_assess(root, max_rounds=5)
 
 
+def start_quick(root, run_id="quick-a"):
+    return R.record(root, skill="xinci-bench-quick", progress={
+        "run_id": run_id, "round": 1, "max_rounds": 1, "source_kind": "quick",
+        "seed_value": "自动补全与 Trends 飙升", "outcome": "started", "next_step": "quick"})
+
+
+class QuickRunLogTest(unittest.TestCase):
+    def test_quick_lifecycle(self):
+        with TmpRoot() as root:
+            self.assertEqual(R.plan(root, lane="quick")["action"], "quick")
+            start_quick(root)
+            p = R.plan(root, lane="quick")
+            self.assertEqual((p["resume"]["run_id"], p["active_run_ids"]), ("quick-a", ["quick-a"]))
+            R.finish(root, run_id="quick-a", outcome="blocked", notes=["Trends 429"])
+            R.finish(root, run_id="quick-a", semrush_calls=1)
+            self.assertEqual(R.plan(root, "quick-a", lane="quick")["action"], "done")
+
+    def test_lanes_do_not_block_each_other(self):
+        with TmpRoot() as root:
+            start(root)                     # 标杆道运行未完成
+            start_quick(root)               # 快道照样能开
+            self.assertEqual(R.plan(root)["resume"]["run_id"], "run-a")
+            self.assertEqual(R.plan(root, lane="quick")["resume"]["run_id"], "quick-a")
+            with self.assertRaisesRegex(BenchError, "这条道"):
+                start_quick(root, run_id="quick-b")
+
+    def test_quick_run_shape(self):
+        with TmpRoot() as root:
+            with self.assertRaisesRegex(BenchError, "max_rounds"):
+                R.record(root, skill="xinci-bench-quick", progress={
+                    "run_id": "q", "round": 1, "max_rounds": 2, "source_kind": "quick",
+                    "seed_value": "x", "outcome": "started", "next_step": "quick"})
+            with self.assertRaisesRegex(BenchError, "source_kind"):
+                R.record(root, skill="xinci-bench-scan", progress={
+                    "run_id": "b", "round": 1, "max_rounds": 1, "source_kind": "quick",
+                    "seed_value": "x", "outcome": "started", "next_step": "scan"})
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -28,5 +28,35 @@ class ReportStatusTest(unittest.TestCase):
             self.assertEqual(st["found_ranked"], [])
 
 
+class QuickStatusTest(unittest.TestCase):
+    def test_pending_go_on_top_and_milestones(self):
+        import ledger
+        from helpers import setup_quick
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root)
+            settle.settle(root, slug, "go", None, "r", "u", on="2026-10-20")
+            q = RS.status(root, on="2026-10-28")["quick"]
+            self.assertEqual(q["pending_go"][0]["slug"], slug)
+            self.assertTrue(q["pending_go"][0]["overdue"])            # 建议 10-27 前上线
+            ledger.follow_up(root, slug, "started", domain="x.com", on="2026-10-28")
+            ledger.follow_up(root, slug, "launched", on="2026-11-01")
+            q = RS.status(root, on="2026-12-01")["quick"]
+            self.assertEqual(q["pending_go"], [])
+            self.assertEqual([m["day"] for m in q["milestones_due"]], [14, 30])
+
+    def test_banner_is_first_line_with_formatted_numbers(self):
+        import contextlib
+        import io
+        from helpers import setup_quick
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root)
+            settle.settle(root, slug, "go", None, "r", "u")
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                RS.main(["--data-root", str(root)])
+            first = buf.getvalue().splitlines()[0]
+            self.assertTrue(first.startswith(f"【立即建站】{slug}:基准约 10,000 次访问、$40.00/月"), first)
+
+
 if __name__ == "__main__":
     unittest.main()
