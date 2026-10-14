@@ -10,7 +10,7 @@ from pathlib import Path
 
 import data_root
 import quick_model as QM
-from _common import SLUG_RE, BenchError, is_date, load_json, require, stamp
+from _common import EN_COUNTRIES, SLUG_RE, BenchError, is_date, load_json, require, stamp
 
 QUICK_KINDS = ("quick_signal", "quick_screen", "quick_volume", "quick_brief")
 KINDS = ("scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief") + QUICK_KINDS
@@ -20,13 +20,13 @@ QUICK_SOURCES = ("autocomplete", "trends_rising", "trends_rss", "steamcharts", "
                  "google_play", "producthunt", "github", "hackernews", "youtube", "wikipedia",
                  "policy", "reddit", "other")
 # 初核数值门槛(选站契约 §3.2);标"通过"但数字不达标的观察直接拒收
-LIMITS = {"max_age_months": 24, "max_authority_score": 30, "min_us_organic": 5000}
+LIMITS = {"max_age_months": 24, "max_authority_score": 30, "min_en_organic": 5000}
 # 每个 kind 的 readings 必填键;值的类型在 _check_<kind> 里再细查
 REQUIRED = {
     "scan": ("domains",),
-    "benchmark": ("domain", "traffic_start", "us_organic_now", "us_organic_m12", "curve",
-                  "referring_domains", "anchor_summary", "link_driven", "algo_risk",
-                  "update_readings", "ads_txt", "pricing"),
+    "benchmark": ("domain", "traffic_start", "us_organic_now", "us_organic_m12", "country_traffic",
+                  "en_organic_now", "en_organic_m12", "curve", "referring_domains", "anchor_summary",
+                  "link_driven", "algo_risk", "update_readings", "ads_txt", "pricing"),
     "demand": ("clusters", "competitor_traffic", "crowding", "new_sites"),
     "serp": ("query", "cluster_id", "answered", "answered_basis", "ai_overview",
              "benchmark_position", "top10"),
@@ -77,6 +77,25 @@ def _check_scan(r, observed_at):
         _check_limits(d, observed_at)
 
 
+def _en_factor(dist, label):
+    """按国家分布 → 英文区 ÷ 美国 的倍数;美国为 0 时返回 None(不能按比例换算)。"""
+    require(isinstance(dist, dict) and sorted(dist) == sorted(EN_COUNTRIES) and all(_num(v) for v in dist.values()),
+            f"{label}: 按国家分布须恰好含英文区 6 国 {EN_COUNTRIES},值为非负数(没有的国家填 0)")
+    return sum(dist.values()) / dist["US"] if dist["US"] else None
+
+
+def _check_en(label, dist, us, en, en_key):
+    """英文区读数 = 美区读数 × 6 国合计 ÷ 美国(允许取整误差 1);美国为 0 时按逐国实测填,只要求非负。"""
+    factor = _en_factor(dist, label)
+    if us is None:
+        require(en is None, f"{label}: 美区读数为 null 时 {en_key} 也须为 null")
+        return
+    require(_num(en), f"{label}: {en_key} 须为非负数")
+    if factor is not None:
+        require(abs(en - us * factor) <= 1,
+                f"{label}: {en_key} 须等于美区读数 × 6 国合计 ÷ 美国(应为约 {round(us * factor)})")
+
+
 def _months_between(earlier, later):
     a, b = date.fromisoformat(earlier[:10]), date.fromisoformat(later[:10])
     return (b.year - a.year) * 12 + b.month - a.month - (b.day < a.day)
@@ -95,8 +114,10 @@ def _check_limits(d, observed_at):
         require(_num(a) and a <= LIMITS["max_authority_score"], f"{name}: AS 须 ≤ {LIMITS['max_authority_score']} 才能判 B2 通过")
     if c["B3"]["pass"] is True:
         t = d.get("us_organic_now")
-        require(_num(t) and t >= LIMITS["min_us_organic"],
-                f"{name}: 去品牌词与定位词后的美区自然流量须 ≥ {LIMITS['min_us_organic']} 才能判 B3 通过")
+        require(_num(t), f"{name}: B3 判通过须有去品牌词与定位词后的美区自然流量 us_organic_now")
+        _check_en(name, d.get("country_traffic"), t, d.get("en_organic_now"), "en_organic_now")
+        require(d["en_organic_now"] >= LIMITS["min_en_organic"],
+                f"{name}: 去品牌词与定位词后的英文区自然流量须 ≥ {LIMITS['min_en_organic']} 才能判 B3 通过")
 
 
 def _check_benchmark(r):
@@ -108,6 +129,8 @@ def _check_benchmark(r):
     require(isinstance(curve, dict) and set(curve) == {"3", "6", "12"}, "curve 须恰好含键 3/6/12")
     require(all(v is None or _num(v) for v in curve.values()), "curve 值须为非负数或 null")
     require(r["referring_domains"] is None or _num(r["referring_domains"]), "referring_domains 须为非负数或 null")
+    _check_en(r["domain"], r["country_traffic"], r["us_organic_now"], r["en_organic_now"], "en_organic_now")
+    _check_en(r["domain"], r["country_traffic"], r["us_organic_m12"], r["en_organic_m12"], "en_organic_m12")
     for k in ("link_driven", "algo_risk"):
         require(isinstance(r[k], bool), f"{k} 须为布尔")
     for k in ("anchor_summary", "update_readings", "ads_txt"):
@@ -123,6 +146,7 @@ def _check_demand(r):
         require(_DATE.fullmatch(str(c.get("measured_at"))), f"{c['id']}: measured_at 须为 YYYY-MM-DD")
         require(c.get("coverage") in ("benchmark", "ours"), f"{c['id']}: coverage 须为 benchmark/ours")
         require(isinstance(c.get("near_me"), bool), f"{c['id']}: near_me 须为布尔")
+        _check_en(c["id"], c.get("seed_country_volume"), c["volume"], c.get("en_volume"), "en_volume")
     require(isinstance(r["competitor_traffic"], list), "competitor_traffic 须为列表")
     for t in r["competitor_traffic"]:
         require(isinstance(t, dict) and isinstance(t.get("domain"), str) and _num(t.get("traffic"))

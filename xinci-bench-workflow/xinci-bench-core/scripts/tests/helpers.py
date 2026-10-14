@@ -33,18 +33,28 @@ BASE = {"observed_at": "2026-10-13T08:00:00+00:00", "source_urls": ["https://exa
         "semrush_calls": 1, "points": ["要点"]}
 
 
+EN = ("US", "GB", "CA", "AU", "NZ", "IE")
+
+
+def us_only(n):
+    """英文区 6 国分布,只有美国有量(默认测试数据:英文区读数等于美区读数)。"""
+    return {g: (n if g == "US" else 0) for g in EN}
+
+
 def scan_obs(*domains, failing=None):
     """domains 全部 B1–B5 通过;failing={域名: {"B3": False}} 让指定项不过、其后留 null。"""
     items = []
     for d in domains:
         items.append({"domain": d, "registered_at": "2025-12-29", "aged_domain": False,
-                      "authority_score": 11, "us_organic_now": 5400, "checks": _all_pass()})
+                      "authority_score": 11, "us_organic_now": 5400, "country_traffic": us_only(5400),
+                      "en_organic_now": 5400, "checks": _all_pass()})
     for d, fails in (failing or {}).items():
         checks = _all_pass()
         for k, v in fails.items():
             checks[k] = {"pass": v, "basis": f"{k} 读数"}
         items.append({"domain": d, "registered_at": "2025-01-01", "aged_domain": False,
-                      "authority_score": 20, "us_organic_now": 1200, "checks": checks})
+                      "authority_score": 20, "us_organic_now": 1200, "country_traffic": us_only(1200),
+                      "en_organic_now": 1200, "checks": checks})
     return {**BASE, "slug": None, "stage": "scan", "kind": "scan", "readings": {"domains": items}}
 
 
@@ -54,12 +64,18 @@ def benchmark_obs(slug, domain="example-bench.com", **over):
          "anchor_summary": "品牌词与网址为主", "link_driven": False, "algo_risk": False,
          "update_readings": "3/6/8 月更新前后平稳", "ads_txt": "google.com, pub-1, DIRECT", "pricing": None}
     r.update(over)
+    r.setdefault("country_traffic", us_only(r["us_organic_now"]))
+    r.setdefault("en_organic_now", r["us_organic_now"])
+    r.setdefault("en_organic_m12", r["us_organic_m12"])
     return {**BASE, "slug": slug, "stage": "assess", "kind": "benchmark", "readings": r}
 
 
 def demand_obs(slug, clusters=None):
     clusters = clusters or [{"id": "core", "seed_term": "what county am i in", "volume": 100000,
                              "measured_at": "2026-10-13", "coverage": "benchmark", "near_me": False}]
+    for c in clusters:
+        c.setdefault("seed_country_volume", us_only(c["volume"]))
+        c.setdefault("en_volume", c["volume"])
     return {**BASE, "slug": slug, "stage": "assess", "kind": "demand",
             "readings": {"clusters": clusters, "keyword_count": 1500,
                          "competitor_traffic": [{"domain": "example-big.com", "traffic": 21000,
@@ -112,6 +128,8 @@ def benchmark_record(domain="example-bench.com", **over):
          "authority_score": 11, "us_organic_now": 5400, "us_organic_m12": None, "covered_demand": 100000,
          "link_driven": False, "algo_risk": False, "monetization": ["adsense"], "clean": True}
     b.update(over)
+    b.setdefault("en_organic_now", b["us_organic_now"])
+    b.setdefault("en_organic_m12", b["us_organic_m12"])
     return b
 
 
@@ -119,6 +137,7 @@ def cluster_record(**over):
     c = {"id": "core", "seed_term": "what county am i in", "volume": 100000, "measured_at": "2026-10-13",
          "coverage": "benchmark", "near_me": False, "answered": False, "counted": True}
     c.update(over)
+    c.setdefault("en_volume", c["volume"])
     return c
 
 

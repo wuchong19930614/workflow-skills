@@ -55,11 +55,14 @@ def _section_benchmarks(rec, by_kind):
     bs = rec["benchmarks"]
     clean = [b for b in bs if b.get("clean") is True]
     lines = ["### 1. 标杆证据", ""]
-    lines.append(f"**{len(bs)} 个标杆，其中 {len(clean)} 个干净（初核全过且不靠垃圾外链）。**流量均为 Semrush 估算的美区自然流量。")
+    lines.append(f"**{len(bs)} 个标杆，其中 {len(clean)} 个干净（初核全过且不靠垃圾外链）。**流量是 Semrush 估算的自然流量；"
+                 "英文区 = 美区读数按 Domain Overview 的国家分布换算到美、英、加、澳、新、爱 6 国合计。")
     lines.append("")
-    lines += _table(["域名", "注册日", "起量月", "当前", "第 12 个月", "AS", "外链驱动", "算法风险", "变现", "干净"],
+    lines += _table(["域名", "注册日", "起量月", "当前英文区", "当前美区", "第 12 个月英文区", "AS", "外链驱动", "算法风险",
+                     "变现", "干净"],
                     [[b["domain"], b.get("registered_at") or "—", b.get("traffic_start") or "—",
-                      _fmt(b.get("us_organic_now")), _fmt(b.get("us_organic_m12")), _fmt(b.get("authority_score")),
+                      _fmt(b.get("en_organic_now")), _fmt(b.get("us_organic_now")), _fmt(b.get("en_organic_m12")),
+                      _fmt(b.get("authority_score")),
                       _yn(b.get("link_driven")), _yn(b.get("algo_risk")),
                       "、".join(b.get("monetization") or []) or "—", _yn(b.get("clean"))] for b in bs])
     for _, o in by_kind.get("benchmark", []):
@@ -73,14 +76,15 @@ def _section_demand(rec, by_kind):
     cs = rec["clusters"]
     counted = [c for c in cs if c["counted"] and not c["answered"]]
     covered = bench_model.covered_demand(cs)
+    covered_us = bench_model.covered_demand(cs, key="volume")
     lines = ["### 2. 方向需求与对手", ""]
     if not cs:
         return lines + ["**本方向没有做到需求测算这一步。**", ""]
-    lines.append(f"**计入需求约 {_fmt(covered)}/月（{len(counted)} 个簇计入，"
+    lines.append(f"**计入需求约 {_fmt(covered)}/月（英文区，其中美国约 {_fmt(covered_us)}；{len(counted)} 个簇计入，"
                  f"{sum(c['answered'] for c in cs)} 个簇被首屏答完不计）；同方向 {_fmt(rec.get('crowding'))} 个新站在抢（含标杆）。**")
     lines.append("")
-    lines += _table(["簇", "种子词", "月量", "测量日", "覆盖", "near me", "首屏答完", "计入"],
-                    [[c["id"], c["seed_term"], _fmt(c["volume"]), c["measured_at"],
+    lines += _table(["簇", "种子词", "英文区月量", "美区月量", "测量日", "覆盖", "near me", "首屏答完", "计入"],
+                    [[c["id"], c["seed_term"], _fmt(c["en_volume"]), _fmt(c["volume"]), c["measured_at"],
                       "标杆已做" if c["coverage"] == "benchmark" else "我们额外做",
                       _yn(c["near_me"]), _yn(c["answered"]), _yn(c["counted"])] for c in cs])
     lines.append("")
@@ -115,13 +119,14 @@ def _section_model(model):
     if not model:
         return lines + ["**本方向没有完成测算。**", ""]
     base = model["scenarios"]["base"]
-    lines.append(f"**基准情景第 12 个月约 {_fmt(base['visits_m12'])} 次美区访问、{_money(base['total'])}/月（模型估算），"
+    lines.append(f"**基准情景第 12 个月约 {_fmt(base['visits_m12'])} 次英文区访问、{_money(base['total'])}/月（模型估算），"
                  f"{'过' if model['passes'] else '不过'} ${model['threshold']:.0f} 门槛。**")
     lines.append("")
-    lines += _table(["情景", "后来者系数", "第 12 个月访问", "广告网络", "广告", "付费", "合计"],
-                    [[SCEN_CN[k], v["coef"], _fmt(v["visits_m12"]), NET_CN[v["network"]], _money(v["ads"]),
-                      _money(v["paid"]), _money(v["total"])] for k, v in model["scenarios"].items()])
-    lines += ["", f"- 标杆份额率 {model['share_rate']:.4f}；我们覆盖的需求约 {_fmt(model['covered_demand'])}/月；拥挤度 {model['crowding']}",
+    lines += _table(["情景", "后来者系数", "第 12 个月访问", "其中美国", "广告网络", "广告", "付费", "合计"],
+                    [[SCEN_CN[k], v["coef"], _fmt(v["visits_m12"]), _fmt(v["us_visits"]), NET_CN[v["network"]],
+                      _money(v["ads"]), _money(v["paid"]), _money(v["total"])] for k, v in model["scenarios"].items()])
+    lines += ["", f"- 标杆份额率 {model['share_rate']:.4f}；我们覆盖的英文区需求约 {_fmt(model['covered_demand'])}/月；拥挤度 {model['crowding']}",
+              f"- 美国访问占 {model['us_share']:.0%}（按覆盖需求里美国的占比）；美国以外按美国一半的每千访问收入算",
               f"- 达到 ${model['threshold']:.0f} 需要第 12 个月约 {_fmt(model['visits_needed_for_threshold'])} 次访问，"
               f"相当于标杆流量的 {model['benchmark_fraction_needed']} 倍",
               f"- 假设表版本 {model['assumptions_version']}" + ("；标杆还不满 12 个月，用的是当前值，偏保守" if model["ramping"] else "")]
@@ -220,7 +225,7 @@ def render_md(root, rec) -> str:
              "## 结论", "", f"一句话：**{verdict}**。{dec['reason']}", ""]
     if model:
         base = model["scenarios"]["base"]
-        lines += [f"- 基准情景第 12 个月约 {_fmt(base['visits_m12'])} 次访问、{_money(base['total'])}/月（模型估算）",
+        lines += [f"- 基准情景第 12 个月约 {_fmt(base['visits_m12'])} 次英文区访问、{_money(base['total'])}/月（模型估算）",
                   f"- 达标需要约 {_fmt(model['visits_needed_for_threshold'])} 次访问（标杆的 {model['benchmark_fraction_needed']} 倍）"]
     lines += [f"- 最大的未知：{dec['biggest_unknown']}", "", "## 第一部分 决策", ""]
     lines += _section_benchmarks(rec, by_kind) + _section_demand(rec, by_kind) + _section_serp(by_kind)

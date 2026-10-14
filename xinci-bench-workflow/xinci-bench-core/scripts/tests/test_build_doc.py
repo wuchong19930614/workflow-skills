@@ -32,6 +32,8 @@ class BuildDocTest(unittest.TestCase):
                       "### 10. 里程碑与止损", "## 附：证据清单"):
                 self.assertIn(h, body)
             self.assertIn("一句话：**值得做（go）**", body)
+            self.assertIn("次英文区访问", body)
+            self.assertNotIn("美区访问", body)
             # 每个三级标题后的第一段以粗体开头
             for block in body.split("\n### ")[1:]:
                 first = [ln for ln in block.split("\n")[1:] if ln.strip()][0]

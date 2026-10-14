@@ -19,6 +19,8 @@ QUICK_REJECTS_REL = "快道/淘汰.json"
 SUGGEST_DIR_REL = "快道/补全快照"
 
 SLUG_RE = re.compile(r"[a-z0-9][a-z0-9-]*")
+# 英文区:美、英、加、澳、新、爱(用户 2026-10-14 定),两条道共用
+EN_COUNTRIES = ("US", "GB", "CA", "AU", "NZ", "IE")
 _DAY_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 

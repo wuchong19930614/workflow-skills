@@ -10,7 +10,7 @@ description: '标杆倒推选站的深核与决策：对已登记的方向核起
 1. `run_log.py --plan` 核对恢复位置，写 assess started 清单。`ledger.py rank` 取前 2 个 found（用户指定优先；不足 2 个核全部）。
 2. 每个方向按契约 §4 六步走，每步先 `date -u` 取时间、写观察、记本观察的 Semrush 调用数：
    1. 每个标杆一份 benchmark：曲线、引荐域名与锚文本、三次垃圾更新前后、ads.txt、定价页；
-   2. 一份 demand：先 `lexicon.py --match <主题词>` 查旧词库与旧裁决，再按需用 Keyword Magic 补测，对手流量按网址筛；
+   2. 一份 demand：先 `lexicon.py --match <主题词>` 查旧词库与旧裁决，再按需用 Keyword Magic 补测，每簇种子词用 Keyword Overview 取 6 国月量换算英文区簇量，对手流量按网址筛；
    3. 3–5 份 serp：内置面板预检通过后读首屏，两次请求间隔 ≥ 60 秒；
    4. 一份 differentiation、一份 delivery；准备判 go 时再写一份 brief。
 3. 每步之后用 `ledger.py update --patch <补数> --ref <观察>` 把结构化结果补进方向记录；clean 只能给初核全过且非外链驱动的标杆。

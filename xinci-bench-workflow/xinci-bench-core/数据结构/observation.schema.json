@@ -17,7 +17,7 @@
   },
   "readings_required": {
     "scan": ["domains"],
-    "benchmark": ["domain", "traffic_start", "us_organic_now", "us_organic_m12", "curve", "referring_domains", "anchor_summary", "link_driven", "algo_risk", "update_readings", "ads_txt", "pricing"],
+    "benchmark": ["domain", "traffic_start", "us_organic_now", "us_organic_m12", "country_traffic", "en_organic_now", "en_organic_m12", "curve", "referring_domains", "anchor_summary", "link_driven", "algo_risk", "update_readings", "ads_txt", "pricing"],
     "demand": ["clusters", "competitor_traffic", "crowding", "new_sites"],
     "serp": ["query", "cluster_id", "answered", "answered_basis", "ai_overview", "benchmark_position", "top10"],
     "differentiation": ["copy_only", "gaps"],
@@ -28,5 +28,6 @@
     "quick_volume": ["window_days", "countries", "trend_geo", "estimate_7d", "estimate_30d", "series_30d"],
     "quick_brief": ["positioning", "pages", "data_sources", "license", "update_frequency", "build_days", "data_available", "hosting", "risks"]
   },
-  "quick_volume_country": {"description": "quick_volume.countries[] 每个国家一行;readable=false 时只需 geo、readable、basis;美国以外的锚词月量须来自 Semrush", "required": ["geo", "readable", "basis"], "readable_required": ["anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "ratio_7d", "estimate_7d", "estimate_30d"]}
+  "quick_volume_country": {"description": "quick_volume.countries[] 每个国家一行;readable=false 时只需 geo、readable、basis;美国以外的锚词月量须来自 Semrush", "required": ["geo", "readable", "basis"], "readable_required": ["anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "ratio_7d", "estimate_7d", "estimate_30d"]},
+  "en_region": {"description": "标杆道:scan 与 benchmark 的 country_traffic、demand 簇的 seed_country_volume 都是英文区 6 国的分布(US、GB、CA、AU、NZ、IE,没有的国家填 0);en_* = 美区读数 × 6 国合计 ÷ 美国,美国为 0 时按逐国实测填"}
 }

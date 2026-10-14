@@ -66,6 +66,29 @@ class BenchModelTest(unittest.TestCase):
         out = M.compute(model_record(site_type="game"))
         self.assertTrue(any("游戏" in x for x in out["unconfirmed_assumptions"]))
 
+    def test_english_region_counts_and_non_us_earns_half(self):
+        b = benchmark_record(us_organic_m12=15000, en_organic_m12=20000, en_organic_now=7200)
+        c = cluster_record(volume=75000, en_volume=100000)
+        out = M.compute(model_record(benchmarks=[b], clusters=[c]))
+        base = out["scenarios"]["base"]
+        self.assertEqual((base["visits_m12"], base["network"], base["us_visits"]), (10000, "mediavine_journey", 7500))
+        self.assertEqual(base["ads"], 140.0)                     # 7500 × $16 + 2500 × $8
+        self.assertEqual(out["us_share"], 0.75)
+        self.assertTrue(any("一半" in u for u in out["unconfirmed_assumptions"]))
+
+    def test_visits_needed_depends_on_us_share(self):
+        no_paid = {"applicable": False}
+        self.assertEqual(M.visits_needed_for_threshold(no_paid), 10000)
+        self.assertEqual(M.visits_needed_for_threshold(no_paid, us_share=0.5), 10000)
+        self.assertEqual(M.visits_needed_for_threshold(no_paid, us_share=0.0), 12500)   # 全在别国:Journey $8
+
+    def test_milestones_use_us_curve_against_us_traffic(self):
+        b = benchmark_record(us_organic_now=5400, en_organic_now=10800)
+        rec = model_record(benchmarks=[b])
+        model = M.compute(rec)
+        ms = M.milestones(rec, model, {"3": 500, "6": 5400, "12": None})
+        self.assertEqual(ms["6"]["expected_clicks"], model["scenarios"]["base"]["visits_m12"])  # 曲线是美区读数
+
     def test_zero_covered_demand_refused_zero_traffic_ok(self):
         with self.assertRaisesRegex(BenchError, "covered_demand"):
             M.compute(model_record(benchmarks=[benchmark_record(covered_demand=0)]))

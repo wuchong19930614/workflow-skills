@@ -14,11 +14,11 @@ from datetime import date, timedelta
 from pathlib import Path
 
 import data_root
-from _common import BenchError, load_json, load_ledger, require
+from _common import EN_COUNTRIES, BenchError, load_json, load_ledger, require
 
 QUICK_ASSUMPTIONS = {
     "version": "2026-10-14.q2",
-    "countries": ("US", "GB", "CA", "AU", "NZ", "IE"),     # 英文区:美、英、加、澳、新、爱
+    "countries": EN_COUNTRIES,                            # 英文区:美、英、加、澳、新、爱
     "share": {"low": 0.10, "base": 0.20, "high": 0.30},
     "aio_factor": 0.6,
     "threshold_visits": 10000,                            # 英文区合计

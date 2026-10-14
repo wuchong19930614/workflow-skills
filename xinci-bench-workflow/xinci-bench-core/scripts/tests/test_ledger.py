@@ -88,6 +88,16 @@ class UpdateRankTest(unittest.TestCase):
             self.assertEqual([r["slug"] for r in rows], ["fast", "slow"])
             self.assertEqual(rows[0]["speed"], 4500.0)
 
+    def test_rank_uses_english_region_traffic(self):
+        with TmpRoot() as root:
+            ref = W.write(root, scan_obs("us.com", "uk.com"))
+            L.register(root, "us", "x", "tool", "us.com", ref, "r")
+            L.register(root, "uk", "y", "tool", "uk.com", ref, "r")
+            L.update(root, "us", {"benchmarks": [benchmark_record(domain="us.com", us_organic_now=9000)]})
+            L.update(root, "uk", {"benchmarks": [benchmark_record(domain="uk.com", us_organic_now=6000,
+                                                                 en_organic_now=12000)]})
+            self.assertEqual([r["slug"] for r in L.rank(root, on="2026-10-13")], ["uk", "us"])
+
 
 class TransitionTest(unittest.TestCase):
     def test_illegal_and_gate_rules(self):

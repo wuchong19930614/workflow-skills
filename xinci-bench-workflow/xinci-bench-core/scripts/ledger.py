@@ -35,14 +35,16 @@ FOLLOW_UP_STATUSES = ("pending", "started", "launched", "abandoned")
 SITE_TYPES = ("tool", "content", "game", "mixed")
 SCOPE_ITEMS = ("ymyl", "brand_nav", "news", "adult_gambling", "infringement")
 BENCH_KEYS = ("domain", "registered_at", "aged_domain", "traffic_start", "authority_score",
-              "us_organic_now", "us_organic_m12", "covered_demand", "link_driven", "algo_risk",
-              "monetization", "clean")
-CLUSTER_KEYS = ("id", "seed_term", "volume", "measured_at", "coverage", "near_me", "answered", "counted")
+              "us_organic_now", "us_organic_m12", "en_organic_now", "en_organic_m12", "covered_demand",
+              "link_driven", "algo_risk", "monetization", "clean")
+CLUSTER_KEYS = ("id", "seed_term", "volume", "en_volume", "measured_at", "coverage", "near_me", "answered",
+                "counted")
 PATCHABLE = ("title", "site_type", "benchmarks", "clusters", "crowding", "paid")
 FRESH_DAYS = 90
 # 账本里决定收入的字段必须等于绑定观察的读数(结算时核对)
-BENCH_OBS_FIELDS = ("traffic_start", "us_organic_now", "us_organic_m12", "link_driven", "algo_risk")
-CLUSTER_OBS_FIELDS = ("seed_term", "volume", "measured_at", "coverage", "near_me")
+BENCH_OBS_FIELDS = ("traffic_start", "us_organic_now", "us_organic_m12", "en_organic_now", "en_organic_m12",
+                    "link_driven", "algo_risk")
+CLUSTER_OBS_FIELDS = ("seed_term", "volume", "en_volume", "measured_at", "coverage", "near_me")
 
 
 def _observations(root, refs):
@@ -82,6 +84,7 @@ def register(root, slug, title, site_type, domain, scan_ref, reason, by="xinci-b
                         "aged_domain": bool(item.get("aged_domain", False)), "traffic_start": None,
                         "authority_score": item.get("authority_score"),
                         "us_organic_now": item.get("us_organic_now"), "us_organic_m12": None,
+                        "en_organic_now": item.get("en_organic_now"), "en_organic_m12": None,
                         "covered_demand": None, "link_driven": None, "algo_risk": None,
                         "monetization": [], "clean": None}],
         "clusters": [], "crowding": None,
@@ -173,7 +176,7 @@ def _months_since(ym, on):
 
 
 def rank(root, on=None) -> list:
-    """found 排序:起量速度(流量 ÷ 起量月数)降序,同分 AS 低的在前。只排序不否决。"""
+    """found 排序:起量速度(英文区流量 ÷ 起量月数)降序,同分 AS 低的在前。只排序不否决。"""
     on = on or today()
     rows = []
     for slug, rec in load_ledger(root)["directions"].items():
@@ -181,11 +184,11 @@ def rank(root, on=None) -> list:
             continue
         best = None
         for b in rec["benchmarks"]:
-            if b.get("link_driven") is True or b.get("us_organic_now") is None:
+            if b.get("link_driven") is True or b.get("en_organic_now") is None:
                 continue
             start = b.get("traffic_start") or (b.get("registered_at") or "")[:7] or None
             months = _months_since(start, on) if start else 24
-            speed = b["us_organic_now"] / months
+            speed = b["en_organic_now"] / months
             if best is None or speed > best[0]:
                 best = (speed, b.get("authority_score") if b.get("authority_score") is not None else 99)
         if best:
@@ -212,7 +215,7 @@ def _latest(obs, kind, key=None, value=None):
 
 def _check_against_observations(rec, obs):
     """账本里的标杆读数、簇量、拥挤度必须等于最新的对应观察;覆盖需求不能小于"标杆已做"的簇量合计。"""
-    floor = sum(c["volume"] for c in rec["clusters"] if c["coverage"] == "benchmark")
+    floor = sum(c["en_volume"] for c in rec["clusters"] if c["coverage"] == "benchmark")
     for b in rec["benchmarks"]:
         if b.get("clean") is not True:
             continue
