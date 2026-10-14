@@ -28,3 +28,5 @@ description: '标杆倒推选站的连续运行：暗号 xinci_bench_run（可�
 收尾汇报：k/N 轮、初核域名数与通过数、登记方向数、go/rejected（按 gate）/parked 数、每个 go 的方向与基准收入与决策书路径、取到的未确认假设证据、Semrush 累计调用、种子池余量、下次来源。建不建站由用户决定。
 
 汇报前先跑 `report_status.py`：看板第一屏有"【立即建站】"行时，原样放在汇报最前面（新词快道的 go 在用户标已开建或放弃之前，每次都要再推荐一次）。
+
+动 Semrush 之前先看 `run_log.py --plan` 的 `semrush_stop`：为 true（今天两条道合计已用到 90 次）就不再开始花 Semrush 的步骤，当前阶段按 blocked 收尾，改天接着跑。

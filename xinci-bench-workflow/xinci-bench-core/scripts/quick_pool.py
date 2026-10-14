@@ -69,6 +69,7 @@ def add_items(root, items, observation) -> dict:
     require(isinstance(observation, str) and observation.startswith("证据/_quick/"), "observation 须为 quick_signal 观察路径")
     rows, rejects, known = _read_pool(root), _rejects(root)["terms"], _known_terms(root)
     live = {_key(r) for r in rows if r["status"] != "expired"}
+    pending_rows = {_key(r): r for r in rows if r["status"] == "pending"}
     expired = {_key(r): r for r in rows if r["status"] == "expired"}
     added, skipped = [], []
     for it in items:
@@ -76,10 +77,15 @@ def add_items(root, items, observation) -> dict:
         reason = (f"快道淘汰过({rejects[k]['gate']})" if k in rejects else
                   "已在原料池" if k in live else known.get(k))
         if reason:
+            row = pending_rows.get(k)
+            if row is not None:            # 又被别的来源看到:记下来,排优先级时算"几个来源"
+                row.setdefault("also_seen", []).append({"source": it["source"], "seen_at": it["seen_at"],
+                                                        "observation": observation})
+                row["rising"] = _max_rising(row.get("rising"), it.get("rising"))
             skipped.append({"term": k, "reason": reason})
             continue
         fresh = {"source": it["source"], "object": it["object"], "term": it.get("term"), "url": it["url"],
-                 "seen_at": it["seen_at"], "status": "pending", "observation": observation}
+                 "seen_at": it["seen_at"], "rising": it.get("rising"), "status": "pending", "observation": observation}
         row = expired.pop(k, None)
         if row is not None:           # 过期后又被来源取回:原行复活,保留 id
             row.update(fresh, revived_at=now())
@@ -92,8 +98,24 @@ def add_items(root, items, observation) -> dict:
     return {"added": added, "skipped": skipped}
 
 
-def pending(root) -> list:
-    return [r for r in _read_pool(root) if r["status"] == "pending"]
+def _rising_value(r):
+    return float("inf") if r == "breakout" else (r or 0)
+
+
+def _max_rising(a, b):
+    return a if _rising_value(a) >= _rising_value(b) else b
+
+
+def priority(row) -> tuple:
+    """排序键(越小越先看):有具体说法 > 被几个来源看到 > Trends 飙升幅度(breakout 最大) > 先看到的。"""
+    sources = {row["source"]} | {a["source"] for a in row.get("also_seen") or []}
+    return (row.get("term") is None, -len(sources), -_rising_value(row.get("rising")), row["seen_at"])
+
+
+def pending(root, top=None) -> list:
+    """待看原料按优先级排序;首屏速判每次取前 10 个。"""
+    rows = sorted((r for r in _read_pool(root) if r["status"] == "pending"), key=priority)
+    return rows[:top] if top else rows
 
 
 def mark(root, ids, status) -> None:
@@ -158,7 +180,8 @@ def main(argv=None):
     sub = ap.add_subparsers(dest="cmd", required=True)
     a1 = sub.add_parser("add")
     a1.add_argument("--observation", required=True, help="quick_signal 观察路径,原料取自它的 items")
-    sub.add_parser("pending")
+    pe = sub.add_parser("pending")
+    pe.add_argument("--top", type=int, help="只列优先级最高的前 N 个(首屏速判取 10)")
     m = sub.add_parser("mark")
     m.add_argument("--id", action="append", required=True)
     m.add_argument("--status", required=True, choices=STATUSES)
@@ -176,7 +199,7 @@ def main(argv=None):
             require(obs.get("kind") == "quick_signal", "--observation 须为 quick_signal 观察")
             out = add_items(root, obs["readings"]["items"], a.observation)
         elif a.cmd == "pending":
-            out = pending(root)
+            out = pending(root, a.top)
         elif a.cmd == "mark":
             mark(root, a.id, a.status)
             out = {"marked": a.id, "status": a.status}

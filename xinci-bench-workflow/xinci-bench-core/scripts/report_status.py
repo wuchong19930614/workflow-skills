@@ -60,9 +60,10 @@ def status(root, on=None) -> dict:
         if r["state"] == "rejected":
             g = r["decision"]["gate"]
             rejected[g] = rejected.get(g, 0) + 1
+    rows = run_log.records(root)
     return {"data_root": str(root), "counts": counts, "quick": quick, "found_ranked": L.rank(root, on),
             "parked": parked, "go": go, "rejected_by_gate": rejected, "seeds": seeds.stats(root, on),
-            "semrush_calls_total": sum(r["semrush_calls"] for r in run_log.records(root))}
+            "semrush_calls_total": sum(r["semrush_calls"] for r in rows), "semrush": run_log.semrush_budget(rows)}
 
 
 def main(argv=None):
@@ -100,7 +101,9 @@ def main(argv=None):
     s = st["seeds"]
     print(f"种子池待初核:{s['pending'] or '无'};已初核 {s['checked']};淘汰 {s['rejected']}(到期可复查 {s['recheck_due']})")
     print(f"快道原料池待看:{q['pool_pending']}")
-    print(f"累计 Semrush 调用:{st['semrush_calls_total']}")
+    b = st["semrush"]
+    print(f"今天 Semrush 已用 {b['semrush_calls_today']}/{b['semrush_daily_limit']} 次"
+          + ("(到了停止线,今天别再跑 Semrush)" if b["semrush_stop"] else "") + f";累计 {st['semrush_calls_total']} 次")
     return 0
 
 

@@ -19,3 +19,5 @@ description: '标杆倒推选站的发现阶段：从种子池或 sibling/serp/g
 不做深核与 SERP 现场；不改门槛；登录失效、额度用完或验证码时 `--finish --outcome blocked` 并报告现象。
 
 汇报前先跑 `report_status.py`：看板第一屏有"【立即建站】"行时，原样放在汇报最前面（新词快道的 go 在用户标已开建或放弃之前，每次都要再推荐一次）。
+
+动 Semrush 之前先看 `run_log.py --plan` 的 `semrush_stop`：为 true（今天两条道合计已用到 90 次）就不再开始花 Semrush 的步骤，当前阶段按 blocked 收尾，改天接着跑。

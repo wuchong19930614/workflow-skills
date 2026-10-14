@@ -10,6 +10,7 @@ from _common import LEDGER_REL, SEEDS_REL, VERDICTS_REL, BenchError, load_json
 from helpers import TmpRoot, write_json
 
 OBS = "证据/_quick/20261013T080000000000Z-abcd1234-quick_signal.json"
+OBS2 = "证据/_quick/20261014T080000000000Z-ef567890-quick_signal.json"
 
 
 def item(term, seen="2026-10-13"):
@@ -45,6 +46,19 @@ class QuickPoolTest(unittest.TestCase):
                    "url": "https://steamcharts.com/top", "seen_at": "2026-10-13"}
             out = P.add_items(root, [obj, dict(obj, object="NEW  game")], OBS)
             self.assertEqual((len(out["added"]), out["skipped"][0]["reason"]), (1, "已在原料池"))
+
+    def test_pending_priority(self):
+        with TmpRoot() as root:
+            P.add_items(root, [dict(item(None), object="Only Object"), item("plain term", seen="2026-10-10"),
+                               dict(item("hot term"), rising=300), dict(item("breakout term"), rising="breakout"),
+                               item("multi term", seen="2026-10-12")], OBS)
+            out = P.add_items(root, [dict(item("Multi  Term"), source="trends_rising")], OBS2)
+            self.assertEqual(out["skipped"][0]["reason"], "已在原料池")
+            order = [r["term"] or r["object"] for r in P.pending(root)]
+            # 有说法 > 来源多 > 飙升幅度(breakout 最大) > 先看到的;只有对象的排最后
+            self.assertEqual(order, ["multi term", "breakout term", "hot term", "plain term", "Only Object"])
+            self.assertEqual([a["source"] for a in P.pending(root)[0]["also_seen"]], ["trends_rising"])
+            self.assertEqual(len(P.pending(root, top=2)), 2)
 
     def test_expire_after_seven_days(self):
         with TmpRoot() as root:

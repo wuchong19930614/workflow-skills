@@ -88,6 +88,16 @@ class QuickObservationTest(unittest.TestCase):
         with self.assertRaisesRegex(BenchError, "至少"):
             W.validate(obs)
 
+    def test_signal_rising_checked(self):
+        obs = quick_signal_obs()
+        obs["readings"]["items"][0]["rising"] = "breakout"
+        W.validate(obs)
+        obs["readings"]["items"][0]["rising"] = 250
+        W.validate(obs)
+        obs["readings"]["items"][0]["rising"] = "huge"
+        with self.assertRaisesRegex(BenchError, "rising"):
+            W.validate(obs)
+
     def test_signal_source_checked(self):
         obs = quick_signal_obs()
         obs["readings"]["items"][0]["source"] = "twitter"

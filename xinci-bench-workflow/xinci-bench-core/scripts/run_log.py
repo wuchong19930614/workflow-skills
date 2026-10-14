@@ -19,6 +19,8 @@ SOURCE_KINDS = seeds.SOURCES + ("quick",)
 ROTATION = ("sibling", "serp", "geo", "community")
 OUTCOMES = ("started", "completed", "blocked", "skipped")
 FOUND_TARGET = 3
+SEMRUSH_DAILY_LIMIT = 100        # 代理站每天约一百来次(以往运行实测),两条道合计
+SEMRUSH_STOP_AT = 90             # 今天用到这个数就停,留余量给恢复和复查
 
 
 def records(root) -> list:
@@ -105,6 +107,14 @@ def record(root, *, skill, progress, sources_opened=(), directions_touched=(), s
     return path
 
 
+def semrush_budget(rows, day=None) -> dict:
+    """今天(UTC 日期,与清单时间同口径)两条道合计用了多少 Semrush、还剩多少、是否该停。"""
+    day = day or today()
+    used = sum(r["semrush_calls"] for r in rows if r["recorded_at"][:10] == day)
+    return {"semrush_calls_today": used, "semrush_daily_limit": SEMRUSH_DAILY_LIMIT,
+            "semrush_left_today": max(SEMRUSH_DAILY_LIMIT - used, 0), "semrush_stop": used >= SEMRUSH_STOP_AT}
+
+
 def _next_source(root, rows):
     if seeds.take(root, "legacy", 1):
         return "legacy", "旧数据导入的标杆种子还有待初核的,先用完"
@@ -131,7 +141,7 @@ def _plan_quick(root, rows, run_id):
             action = "done"
     return {"lane": "quick", "action": None if conflict else action, "resume": resume, "conflict": conflict,
             "active_run_ids": sorted(active), "latest_log": selected["_path"] if selected else None,
-            "semrush_calls_total": sum(r["semrush_calls"] for r in rows)}
+            "semrush_calls_total": sum(r["semrush_calls"] for r in rows), **semrush_budget(rows)}
 
 
 def plan(root, run_id=None, lane="bench") -> dict:
@@ -161,7 +171,7 @@ def plan(root, run_id=None, lane="bench") -> dict:
             "resume": resume, "conflict": conflict, "active_run_ids": sorted(active),
             "next_source": source, "source_reason": reason,
             "latest_log": selected["_path"] if selected else None,
-            "semrush_calls_total": sum(r["semrush_calls"] for r in rows)}
+            "semrush_calls_total": sum(r["semrush_calls"] for r in rows), **semrush_budget(rows)}
 
 
 def finish(root, *, run_id, outcome="completed", sources_opened=(), directions_touched=(), semrush_calls=0,

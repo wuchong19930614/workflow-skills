@@ -224,6 +224,9 @@ def _check_quick_signal(r):
         require(it.get("term") is None or (isinstance(it["term"], str) and it["term"].strip()), "原料 term 须为文字或 null")
         require(isinstance(it.get("url"), str) and it["url"].strip(), "原料 url 缺失(写实际取回的网址)")
         require(is_date(it.get("seen_at")), "原料 seen_at 须为日历上存在的 YYYY-MM-DD")
+        rising = it.get("rising")
+        require(rising is None or rising == "breakout" or (_num(rising) and isinstance(rising, int)),
+                "原料 rising 须为 Trends 飙升百分比(非负整数)、\"breakout\" 或不写")
 
 
 def _check_quick_screen(r):

@@ -58,5 +58,17 @@ class QuickStatusTest(unittest.TestCase):
             self.assertTrue(first.startswith(f"【立即建站】{slug}:基准约 10,000 次访问、$40.00/月"), first)
 
 
+
+class SemrushTodayLineTest(unittest.TestCase):
+    def test_board_shows_today_usage(self):
+        import contextlib
+        import io
+        with TmpRoot() as root:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                RS.main(["--data-root", str(root)])
+            self.assertIn("今天 Semrush 已用 0/100 次", buf.getvalue())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -143,5 +143,25 @@ class QuickRunLogTest(unittest.TestCase):
                     "seed_value": "x", "outcome": "started", "next_step": "scan"})
 
 
+
+class SemrushBudgetTest(unittest.TestCase):
+    def test_today_usage_across_lanes_and_stop_flag(self):
+        import json as _json
+        with TmpRoot() as root:
+            start(root)
+            R.finish(root, run_id="run-a", semrush_calls=60)
+            p = R.plan(root)
+            self.assertEqual((p["semrush_calls_today"], p["semrush_left_today"], p["semrush_stop"]), (60, 40, False))
+            start_quick(root)
+            R.finish(root, run_id="quick-a", semrush_calls=31)
+            q = R.plan(root, lane="quick")
+            self.assertEqual((q["semrush_calls_today"], q["semrush_stop"]), (91, True))     # 两条道合计,到 90 就停
+            for f in (root / "运行").glob("*.json"):                                      # 挪到以前的日子
+                d = _json.loads(f.read_text(encoding="utf-8"))
+                d["recorded_at"] = "2026-01-01" + d["recorded_at"][10:]
+                f.write_text(_json.dumps(d, ensure_ascii=False), encoding="utf-8")
+            self.assertEqual(R.plan(root)["semrush_calls_today"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
