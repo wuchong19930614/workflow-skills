@@ -159,7 +159,11 @@ def md_to_html_body(md: str):
 
 
 def _decorate(body: str) -> str:
-    """html 独有的两处排版:开篇结论加底色;证据清单折起来(它是给人反查的)。"""
+    """html 独有的排版:快道"立即建站"整节加底色;开篇结论加底色;证据清单折起来(它是给人反查的)。"""
+    m = re.search(r'(<span class="a" id="s\d+"></span><h2>立即建站</h2>)(.*?)(?=<span class="a" id="s\d+"></span><h2>)',
+                  body, re.S)
+    if m:
+        body = body[:m.end(1)] + '<div class="lede">' + m.group(2) + "</div>" + body[m.end(2):]
     body = re.sub(r"(<h2>结论</h2>)\s*(<p>一句话：.*?</p>)",
                   lambda m: f'{m.group(1)}<div class="lede">{m.group(2)}</div>',
                   body, count=1, flags=re.S)

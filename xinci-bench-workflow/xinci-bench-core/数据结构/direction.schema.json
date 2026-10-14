@@ -1,27 +1,30 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "xinci-bench 方向记录",
-  "description": "说明性 schema;强制校验在 ledger.py 与 validate_ledger.py。账本结构 {schema_version: 1, directions: {slug: 本记录}}。",
+  "description": "说明性 schema;强制校验在 ledger.py 与 validate_ledger.py。账本结构 {schema_version: 1, directions: {slug: 本记录}}。lane=bench 的记录按 required,lane=quick 的按 quick_required。",
   "type": "object",
-  "required": ["slug", "title", "site_type", "state", "benchmarks", "clusters", "crowding", "paid",
-               "model", "decision", "evidence_refs", "bindings", "history"],
+  "required": ["slug", "title", "site_type", "lane", "state", "benchmarks", "clusters", "crowding", "paid", "model", "decision", "evidence_refs", "bindings", "history"],
   "properties": {
     "slug": {"type": "string", "pattern": "^[a-z0-9][a-z0-9-]*$"},
     "title": {"type": "string"},
     "site_type": {"enum": ["tool", "content", "game", "mixed"]},
-    "state": {"enum": ["found", "go", "rejected", "parked"]},
-    "benchmarks": {"type": "array", "minItems": 1, "items": {"required": [
-      "domain", "registered_at", "aged_domain", "traffic_start", "authority_score", "us_organic_now",
-      "us_organic_m12", "covered_demand", "link_driven", "algo_risk", "monetization", "clean"]}},
-    "clusters": {"type": "array", "items": {"required": [
-      "id", "seed_term", "volume", "measured_at", "coverage", "near_me", "answered", "counted"]}},
+    "lane": {"enum": ["bench", "quick"]},
+    "state": {"enum": ["found", "go", "rejected", "parked", "watching"], "description": "watching 只对 lane=quick 合法"},
+    "benchmarks": {"type": "array", "minItems": 1, "items": {"required": ["domain", "registered_at", "aged_domain", "traffic_start", "authority_score", "us_organic_now", "us_organic_m12", "covered_demand", "link_driven", "algo_risk", "monetization", "clean"]}},
+    "clusters": {"type": "array", "items": {"required": ["id", "seed_term", "volume", "measured_at", "coverage", "near_me", "answered", "counted"]}},
     "crowding": {"type": ["integer", "null"], "minimum": 1},
     "paid": {"required": ["applicable", "price_month", "evidence"]},
     "model": {"type": ["object", "null"], "description": "bench_model.compute 的输出,结算时写入"},
-    "decision": {"type": ["object", "null"],
-      "required": ["verdict", "gate", "reason", "biggest_unknown", "scope_hit", "decided_at", "doc_sha256"]},
+    "decision": {"type": ["object", "null"], "required": ["verdict", "gate", "reason", "biggest_unknown", "scope_hit", "decided_at", "doc_sha256"]},
     "evidence_refs": {"type": "array", "items": {"type": "string"}},
     "bindings": {"type": ["object", "null"], "required": ["bound_at", "files"]},
-    "history": {"type": "array", "minItems": 1}
-  }
+    "history": {"type": "array", "minItems": 1},
+    "object": {"required": ["name", "first_public", "date_source"], "description": "快道:催生新词的对象"},
+    "terms": {"type": "array", "minItems": 1, "items": {"required": ["term", "source", "first_seen"]}},
+    "volume": {"type": ["object", "null"], "description": "快道:结算时由最新 quick_volume 写入(estimate_7d、estimate_30d、锚词信息、trend)"},
+    "serp": {"type": ["object", "null"], "description": "快道:结算时由最新 quick_screen 写入(aio_present、aio_completes、occupied_by)"},
+    "watch": {"type": ["object", "null"], "required": ["since", "expires_at", "checks"]},
+    "follow_up": {"type": ["object", "null"], "required": ["status", "go_at", "launch_by", "domain", "started_at", "launched_at", "reason"], "properties": {"status": {"enum": ["pending", "started", "launched", "abandoned"]}}}
+  },
+  "quick_required": ["slug", "title", "site_type", "lane", "state", "object", "terms", "volume", "serp", "watch", "follow_up", "model", "decision", "evidence_refs", "bindings", "history"]
 }

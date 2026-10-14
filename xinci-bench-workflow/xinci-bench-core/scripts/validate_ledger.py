@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""账本、种子池、淘汰索引的不变式校验;有错非零退出。单元测试通过不能代替它。"""
+"""账本、种子池、淘汰索引、快道原料池的不变式校验;有错非零退出。单元测试通过不能代替它。"""
 import argparse
 import sys
 from pathlib import Path
@@ -7,27 +7,61 @@ from pathlib import Path
 import bench_model
 import data_root
 import ledger as L
+import quick_model as QM
+import quick_pool
 import write_observation as W
-from _common import REJECTS_REL, SEEDS_REL, BenchError, load_json, load_ledger, sha256_file
+from _common import REJECTS_REL, SEEDS_REL, BenchError, load_json, load_ledger, sha256_file, today
 
-REQUIRED = ("slug", "title", "site_type", "state", "benchmarks", "clusters", "crowding", "paid",
+REQUIRED = ("slug", "title", "site_type", "lane", "state", "benchmarks", "clusters", "crowding", "paid",
             "model", "decision", "evidence_refs", "bindings", "history")
+REQUIRED_QUICK = ("slug", "title", "site_type", "lane", "state", "object", "terms", "volume", "serp", "watch",
+                  "follow_up", "model", "decision", "evidence_refs", "bindings", "history")
 
 
 def _history_errors(slug, rec):
     errs, hist = [], rec["history"]
+    legal = L.LEGAL_BY_LANE[rec["lane"]]
     if not hist or hist[0].get("from") is not None or hist[0].get("to") != "found":
         return [f"{slug}: history 须以 null → found 开始"]
     for h in hist[1:]:
-        if h.get("to") not in L.LEGAL.get(h.get("from"), set()):
+        if h.get("to") not in legal.get(h.get("from"), set()):
             errs.append(f"{slug}: history 含非法转移 {h.get('from')} → {h.get('to')}")
     if hist[-1]["to"] != rec["state"]:
         errs.append(f"{slug}: 状态 {rec['state']} 与 history 末条 {hist[-1]['to']} 不一致")
     return errs
 
 
-def check_direction(root, slug, rec) -> list:
-    missing = [k for k in REQUIRED if k not in rec]
+def _quick_errors(slug, rec, on):
+    errs, dec = [], rec.get("decision") or {}
+    if rec["state"] in ("go", "watching") or dec.get("gate") == "volume":
+        try:
+            if QM.compute(rec) != rec.get("model"):
+                errs.append(f"{slug}: 快道模型重算与账本不一致")
+        except BenchError as exc:
+            errs.append(f"{slug}: 快道模型无法重算: {exc}")
+    if rec["state"] == "watching":
+        w = rec.get("watch") or {}
+        if not w.get("expires_at"):
+            errs.append(f"{slug}: 观察中须有到期日")
+        elif on > w["expires_at"]:
+            errs.append(f"{slug}: 观察已于 {w['expires_at']} 到期,须按 go 或 volume 否决结算")
+    if rec["state"] == "go":
+        fu = rec.get("follow_up") or {}
+        if fu.get("status") not in L.FOLLOW_UP_STATUSES or not fu.get("launch_by"):
+            errs.append(f"{slug}: 快道 go 的建站跟进缺失或状态无效")
+        elif fu["status"] == "launched" and not fu.get("launched_at"):
+            errs.append(f"{slug}: 已上线须有上线日期")
+    if dec.get("gate") and dec["gate"] not in L.QUICK_GATES:
+        errs.append(f"{slug}: 快道否决门无效 {dec['gate']}")
+    return errs
+
+
+def check_direction(root, slug, rec, on=None) -> list:
+    on = on or today()
+    lane = rec.get("lane")
+    if lane not in L.LANES:
+        return [f"{slug}: 缺 lane 或取值无效(须为 {L.LANES})"]
+    missing = [k for k in (REQUIRED if lane == "bench" else REQUIRED_QUICK) if k not in rec]
     if missing:
         return [f"{slug}: 缺字段 {missing}"]
     errs = []
@@ -58,7 +92,9 @@ def check_direction(root, slug, rec) -> list:
         if not p.is_file() or sha256_file(p) != f["sha256"]:
             errs.append(f"{slug}: 绑定观察已变动或丢失 {f['ref']}")
     if not rec.get("bindings"):
-        errs.append(f"{slug}: 终态或搁置须有绑定")
+        errs.append(f"{slug}: 终态、搁置或观察中须有绑定")
+    if lane == "quick":
+        return errs + _quick_errors(slug, rec, on)
     if rec["state"] == "go" or dec.get("gate") == "revenue":
         try:
             model = bench_model.compute(rec)
@@ -88,12 +124,23 @@ def check_seeds(root) -> list:
     return errs
 
 
-def check_all(root) -> list:
+def check_quick_files(root) -> list:
+    errs = []
+    for r in quick_pool._read_pool(root):
+        if r.get("status") not in quick_pool.STATUSES:
+            errs.append(f"原料 {r.get('id')}: status 无效")
+    for term, e in quick_pool._rejects(root)["terms"].items():
+        if e.get("gate") not in quick_pool.QUICK_GATES or not str(e.get("observation", "")).startswith("证据/"):
+            errs.append(f"快道淘汰 {term}: gate 或观察引用无效")
+    return errs
+
+
+def check_all(root, on=None) -> list:
     ledger = load_ledger(root)
     errs = [] if ledger.get("schema_version") == 1 else ["账本 schema_version 须为 1"]
     for slug, rec in ledger.get("directions", {}).items():
-        errs += check_direction(root, slug, rec)
-    return errs + check_seeds(root)
+        errs += check_direction(root, slug, rec, on)
+    return errs + check_seeds(root) + check_quick_files(root)
 
 
 def main(argv=None):
