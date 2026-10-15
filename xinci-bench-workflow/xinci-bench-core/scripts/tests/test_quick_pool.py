@@ -47,6 +47,13 @@ class QuickPoolTest(unittest.TestCase):
             out = P.add_items(root, [obj, dict(obj, object="NEW  game")], OBS)
             self.assertEqual((len(out["added"]), out["skipped"][0]["reason"]), (1, "已在原料池"))
 
+    def test_same_batch_second_source_recorded(self):
+        with TmpRoot() as root:
+            out = P.add_items(root, [dict(item("dup term"), source="trends_rising", rising=300), item("Dup  Term")], OBS)
+            self.assertEqual(len(out["added"]), 1)
+            row = P.pending(root)[0]
+            self.assertEqual([a["source"] for a in row["also_seen"]], ["autocomplete"])   # 同一批里第二个来源也记下
+
     def test_upcoming_held_until_playable(self):
         with TmpRoot() as root:
             soon = {"source": "wikipedia", "object": "Soon Game", "term": None, "url": "https://en.wikipedia.org/x",

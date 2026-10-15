@@ -31,7 +31,7 @@ GATES_BY_LANE = {"bench": GATES, "quick": QUICK_GATES}
 OBJECT_TYPES = ("game", "other")                       # 快道对象类型:游戏 14 天、其他 90 天
 # 快道否决门 → 速判观察里必须不过的那一条
 QUICK_GATE_CHECK = {"not_new": "Q1", "oneoff": "Q3", "scope": "Q4", "occupied": "Q5", "answered": "Q6"}
-QUICK_PATCHABLE = ("title", "site_type", "terms")
+QUICK_PATCHABLE = ("title", "site_type", "terms", "object")   # object 只许更正 date_source
 FOLLOW_UP_STATUSES = ("pending", "started", "launched", "abandoned")
 SITE_TYPES = ("tool", "content", "game", "mixed")
 SCOPE_ITEMS = ("ymyl", "brand_nav", "news", "adult_gambling", "infringement")
@@ -124,7 +124,7 @@ def _check_clusters(clusters):
 
 
 def update(root, slug, patch: dict, refs=()) -> dict:
-    """补数:标杆道只对 found/parked,改了输入就清掉旧模型结果;快道只能补标题、站型、说法与引用。"""
+    """补数:标杆道只对 found/parked,改了输入就清掉旧模型结果;快道只能补标题、站型、说法、对象的日期来源与引用。"""
     ledger = load_ledger(root)
     rec = ledger["directions"].get(slug)
     require(rec, f"没有方向 {slug}")
@@ -144,6 +144,11 @@ def update(root, slug, patch: dict, refs=()) -> dict:
             new_refs.append(ref)
     if "site_type" in patch:
         require(patch["site_type"] in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
+    if lane == "quick" and "object" in patch:
+        o = patch["object"]
+        require(isinstance(o, dict) and set(o) == {"date_source"} and isinstance(o["date_source"], str)
+                and o["date_source"].strip(), "快道对象只能更正 date_source(非空文字);名称、类型、首次公开日登记后不改")
+        patch = dict(patch, object=dict(rec["object"], date_source=o["date_source"].strip()))
     if "terms" in patch:
         _check_terms(patch["terms"])
         _check_term_clash(ledger, slug, patch["terms"])

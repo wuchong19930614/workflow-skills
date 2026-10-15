@@ -55,6 +55,16 @@ class RegisterQuickTest(unittest.TestCase):
             with self.assertRaisesRegex(BenchError, "type"):
                 L.register_quick(root, "q", "t", "tool", dict(OBJ, type="movie"), term("q"), ref, "r")
 
+    def test_update_can_fix_object_date_source_only(self):
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root)
+            rec = L.update(root, slug, {"object": {"date_source": "https://example.org/launch(更正:公布日 2025-12-11)"}})
+            self.assertEqual(rec["object"]["date_source"], "https://example.org/launch(更正:公布日 2025-12-11)")
+            self.assertEqual((rec["object"]["first_public"], rec["object"]["type"]), (OBJ["first_public"], OBJ["type"]))
+            for bad in ({"first_public": "2026-10-10"}, {"type": "other"}, {"date_source": "  "}):
+                with self.assertRaisesRegex(BenchError, "date_source"):
+                    L.update(root, slug, {"object": bad})
+
     def test_term_cannot_belong_to_two_directions(self):
         with TmpRoot() as root:
             setup_quick(root, slug="a")

@@ -12,7 +12,7 @@ description: '新词快道：暗号 xinci_bench_quick_run 或 /xinci-bench-quick
 3. **复查观察中**：每个 watching 方向重测量级（必要时重看首页），写新观察，`ledger.py watch-check --slug <方向> --ref <新观察>`；建议是 go 或否决就用 `settle.py` 结算，建议是 watching 就继续观察。
 4. **扫信号**：`quick_pool.py expire`；按 `数据采集.md` 第 7 节取上游新对象，其中两项每次都要取：
    - **Trends 飙升词**：Trends 页面里用 `scripts/trends_fetch.js` 的 `xinciTrendsRising`，最多 6 个种子词（`beta`、`playtest` 用 `cat: 8` 游戏分类，再选 3–4 个任务词），两次执行间隔 ≥ 30 秒，遇 429 停下，没查的种子写"本次未取"；
-   - **Wikipedia 发售表**：`wiki_releases.py --output <scratchpad>/wiki_releases.json`，把输出的 items 并进本次信号观察。
+   - **Wikipedia 发售表**：`wiki_releases.py --output <scratchpad>/wiki_releases.json`（最近 14 天已上线与未来 30 天要上线的），把输出的 items 并进本次信号观察，浏览量没取到的也一起并进。
    对新对象跑 `suggest_snapshot.py --object`；处在测试、抢先体验或即将上线的对象，原料写 `playable_at`（第一次让大量普通用户用上的日期）与 `stage`，还没到这天的只进即将开玩（`quick_pool.py upcoming`），不看首页。把取回的对象与说法写成一份 `quick_signal` 观察，`quick_pool.py add`。没在本次实际取回的来源不写"已检查"。
 5. **零成本速判** Q1–Q4（Q1 的日期按第一次让大量普通用户用上的那天，不按公布日；游戏须在那天之后 14 天内、其他 90 天内，见契约 10.4），再对剩下的用内置浏览器看首页判 Q5、Q6（两次请求间隔 ≥ 60 秒，每次最多 10 个词，按 `quick_pool.py pending --top 10` 的顺序取）。每个词写一份 `quick_screen` 观察；不过的 `quick_pool.py reject`；Q5 不过且占位的是小站，加 `--seed-domain` 同时登记为标杆道种子。
 6. **登记与测算**：六条全过的 `ledger.py register-quick`（`object.type` 写 `game` 或 `other`）；英文区 6 国（US、GB、CA、AU、NZ、IE）各做一次锚词换算：美国的锚词先查 `lexicon.py`，没有再用 Semrush，美国以外的锚词月量一律用 Semrush 查；先用美国的锚词在 Trends 页面把 6 国曲线都取一遍（`scripts/trends_fetch.js`，不花 Semrush），交给 `trends_volume.py`：读不出的国家自动记 0，只为它列出的国家去 Semrush 查锚词月量，补齐后由它写入 `quick_volume`（命令与观察 §7.5），不手算；预计能过线的写 `quick_brief`；`ledger.py update --ref` 引用后 `ledger.py quick-preview` 看三档。

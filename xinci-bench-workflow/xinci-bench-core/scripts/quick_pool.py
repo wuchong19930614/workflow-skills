@@ -96,6 +96,7 @@ def add_items(root, items, observation) -> dict:
         else:
             row = {"id": hashlib.sha1(k.encode("utf-8")).hexdigest()[:12], **fresh}
             rows.append(row)
+        pending_rows[k] = row             # 同一批里再出现时也能记到 also_seen
         live.add(k)
         added.append(row)
     _write_pool(root, rows)

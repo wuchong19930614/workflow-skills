@@ -45,6 +45,17 @@ class TrendsVolumeTest(unittest.TestCase):
         self.assertEqual(r["series_30d"], list(range(20, 50)))
         self.assertEqual((obs["semrush_calls"], len(obs["source_urls"])), (1, 3))
 
+    def test_empty_curve_counts_as_unreadable(self):
+        p = payload()
+        del p["skipped"]["AU"]
+        p["series"].append(dict(series("AU", [], []), dates=[]))              # Trends 对量太小的词返回空曲线
+        self.assertEqual(TV.analyze(p)["countries"]["AU"]["status"], "empty_curve")
+        obs = TV.build_observation(p, "gag2-calculator", at="2026-10-14T03:00:00+00:00")
+        W.validate(obs)
+        au = next(c for c in obs["readings"]["countries"] if c["geo"] == "AU")
+        self.assertFalse(au["readable"])
+        self.assertIn("空曲线", au["basis"])
+
     def test_readable_country_without_anchor_volume_is_listed(self):
         p = payload()
         del p["anchors"]["GB"]

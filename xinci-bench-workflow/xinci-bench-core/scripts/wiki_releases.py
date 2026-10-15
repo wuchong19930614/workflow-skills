@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""快道上线日历:从 Wikipedia "List of video games released in <年>" 取未来 N 天上线的新游戏,按词条浏览量排热度。
+"""快道上线日历:从 Wikipedia "List of video games released in <年>" 取最近 14 天已上线与未来 N 天要上线的新游戏,按词条浏览量排热度。
 
 只留原创(Original)与抢先体验(Early access)、有独立词条、英文区能玩的;移植、重制、正式版(抢先体验早就开了)不算新对象。
-浏览量一条一条查(中间停顿),遇到 429 就停,剩下的列为"未取"。取数函数可注入,测试不联网。
+浏览量一条一条查(中间停顿),遇到 429 就停,剩下的列为"未取"但仍输出成原料(浏览量为 null)。取数函数可注入,测试不联网。
 输出的 items 是 quick_signal 原料格式(source=wikipedia、term=null、带 playable_at 与 stage),由执行者并进本次信号观察。
 """
 import argparse
@@ -17,9 +17,12 @@ import urllib.request
 from datetime import date, timedelta
 from pathlib import Path
 
+import quick_model as QM
 from _common import BenchError, require, today
 
 NEW_TYPES = ("Original", "Early access")
+# 发售表"类型"列会出现的值;标题后面紧跟的就是它时,说明平台格跟上一行合并了(rowspan)
+TYPE_VALUES = NEW_TYPES + ("Port", "Remaster", "Remake", "Compilation", "Expansion", "Full release", "Rerelease", "DLC")
 QUARTERS = (("January–March", 1, 3), ("April–June", 4, 6), ("July–September", 7, 9), ("October–December", 10, 12))
 MONTHS = {m: i for i, m in enumerate(("January", "February", "March", "April", "May", "June", "July", "August",
                                       "September", "October", "November", "December"), 1)}
@@ -41,13 +44,35 @@ class NotFound(Exception):
     """词条没有浏览量数据(太新或改名):记为查不到,继续下一条。"""
 
 
+def _strip_notes(text):
+    """去掉脚注:{{efn|…}}、{{refn|…}} 之类(内容里可能还套着模板)和 <ref>…</ref>。"""
+    text = re.sub(r"<ref[^>]*/>|<ref[^>]*>.*?</ref>", "", text)
+    out, i = [], 0
+    while True:
+        m = re.compile(r"\{\{\s*(?:efn|refn|efn-\w+)\s*\|", re.I).search(text, i)
+        if not m:
+            return "".join(out) + text[i:]
+        out.append(text[i:m.start()])
+        depth, j = 0, m.start()
+        while j < len(text):
+            if text.startswith("{{", j):
+                depth, j = depth + 1, j + 2
+            elif text.startswith("}}", j):
+                depth, j = depth - 1, j + 2
+                if depth == 0:
+                    break
+            else:
+                j += 1
+        i = j
+
+
 def _cells(chunk):
-    """一行表格的各个单元格;去掉 rowspan 之类的属性前缀。"""
+    """一行表格的各个单元格;去掉 rowspan 之类的属性前缀与脚注。"""
     out = []
     for line in chunk.split("\n"):
         if not line.startswith("| "):
             continue
-        cell = line[2:].strip()
+        cell = _strip_notes(line[2:]).strip()
         m = re.match(r'^((?:\w+="[^"]*"\s*)+)\|\s*(.*)$', cell)
         out.append(m.group(2).strip() if m else cell)
     return out
@@ -72,7 +97,7 @@ def _article(title_cell):
 
 def parse_rows(wikitext, year) -> list:
     """把一节发售表拆成行:日期(跨行沿用上一行)、标题、词条、平台、类型、类别、地区。只有月份没有日的跳过。"""
-    rows, cur = [], None
+    rows, cur, platforms = [], None, ""
     for chunk in wikitext.split("\n|-")[1:]:
         cells = _cells(chunk)
         if not cells:
@@ -85,13 +110,18 @@ def parse_rows(wikitext, year) -> list:
             cur = None                 # 只写到月份:日期不明
             continue
         ti = next((i for i, c in enumerate(cells) if "''" in c), None)
-        if cur is None or ti is None or len(cells) < ti + 3:
+        if cur is None or ti is None or len(cells) < ti + 2:
             continue                   # 标题跨行的续行(同一款游戏的另一组平台)不重复算
-        title_cell = cells[ti]
+        title_cell, rest = cells[ti], cells[ti + 1:]
+        if _plain(rest[0]).split("{{")[0].strip() in TYPE_VALUES:
+            rest = [platforms] + rest          # 平台格沿用上一行
+        if len(rest) < 2:
+            continue                       # 只剩一格,读不出类型
+        platforms = rest[0]
         region = re.search(r"''\s*\(([^)]*)\)\s*$", title_cell)
         rows.append({"date": cur, "title": _plain(re.sub(r"\s*\([^)]*\)\s*$", "", title_cell)),
-                     "article": _article(title_cell), "platforms": cells[ti + 1], "type": _plain(cells[ti + 2]),
-                     "genre": _plain(cells[ti + 3]) if len(cells) > ti + 3 else "",
+                     "article": _article(title_cell), "platforms": platforms, "type": _plain(rest[1]),
+                     "genre": _plain(rest[2]) if len(rest) > 2 else "",
                      "region": region.group(1) if region else None})
     return rows
 
@@ -100,16 +130,17 @@ def _english(region):
     return region is None or any(k in region for k in ("WW", "NA", "EU", "UK", "AU"))
 
 
-def window(rows, on, days=30) -> list:
-    """未来 days 天(含今天)上线的新游戏:原创或抢先体验、有独立词条、英文区能玩;同名只留最早一天。"""
+def window(rows, on, days=30, recent_days=0) -> list:
+    """最近 recent_days 天已上线到未来 days 天(含今天)要上线的新游戏:原创或抢先体验、有独立词条、英文区能玩;
+    同名只留最早一天。"""
     try:
         start = date.fromisoformat(on)
     except ValueError as exc:
         raise BenchError(f"on 须为日历上存在的 YYYY-MM-DD: {on}") from exc
-    end = (start + timedelta(days=days)).isoformat()
+    first, end = (start - timedelta(days=recent_days)).isoformat(), (start + timedelta(days=days)).isoformat()
     seen, out = set(), []
     for r in sorted(rows, key=lambda r: r["date"]):
-        if not (on <= r["date"] <= end) or r["type"] not in NEW_TYPES or not r["article"] or not _english(r["region"]):
+        if not (first <= r["date"] <= end) or r["type"] not in NEW_TYPES or not r["article"] or not _english(r["region"]):
             continue
         if r["article"] in seen:
             continue
@@ -118,10 +149,10 @@ def window(rows, on, days=30) -> list:
     return out
 
 
-def sections_for(on, days=30) -> list:
-    """窗口覆盖的 (年, 小节标题),跨年时连下一年的一起。"""
-    start = date.fromisoformat(on)
-    end = start + timedelta(days=days)
+def sections_for(on, days=30, recent_days=0) -> list:
+    """窗口覆盖的 (年, 小节标题),跨季度、跨年时连相邻的一起。"""
+    start = date.fromisoformat(on) - timedelta(days=recent_days)
+    end = date.fromisoformat(on) + timedelta(days=days)
     out, d = [], start
     while d <= end:
         q = next(q for q in QUARTERS if q[1] <= d.month <= q[2])
@@ -132,11 +163,13 @@ def sections_for(on, days=30) -> list:
 
 
 def rank(rows, fetch_views, on, sleep=time.sleep) -> dict:
-    """一条一条查近 30 天浏览量,按浏览量从高到低排(查不到的排最后);遇到 429 停下,剩下的进 not_fetched。"""
+    """一条一条查近 30 天浏览量,按浏览量从高到低排(查不到的排最后);遇到 429 停下,剩下的进 not_fetched,
+    但仍以浏览量 null 留在 ranked 里,不从原料里丢掉。"""
     ranked, not_fetched = [], []
     for i, r in enumerate(rows):
         if not_fetched:
             not_fetched.append(r["title"])
+            ranked.append(dict(r, views_30d=None))
             continue
         if i:
             sleep(PAUSE_SECONDS)
@@ -144,7 +177,7 @@ def rank(rows, fetch_views, on, sleep=time.sleep) -> dict:
             views = fetch_views(r["article"], on)
         except RateLimited:
             not_fetched.append(r["title"])
-            continue
+            views = None
         except NotFound:
             views = None
         ranked.append(dict(r, views_30d=views))
@@ -200,25 +233,27 @@ def fetch_views(article, on) -> int:
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--days", type=int, default=30, help="未来多少天内上线的(默认 30)")
+    ap.add_argument("--recent-days", type=int, default=QM.QUICK_ASSUMPTIONS["new_days_game"],
+                    help="也收最近多少天已上线的(默认 = 游戏类真新窗口 14 天)")
     ap.add_argument("--top", type=int, default=20, help="按浏览量取前几个进原料(默认 20)")
     ap.add_argument("--output", required=True, help="结果 JSON 写到哪(放 scratchpad,之后并进 quick_signal)")
     a = ap.parse_args(argv)
     on = today()
     try:
         rows, urls = [], []
-        for year, title in sections_for(on, a.days):
+        for year, title in sections_for(on, a.days, a.recent_days):
             text = fetch_section(year, title)
             if text:
                 urls.append(f"https://en.wikipedia.org/wiki/{PAGE.format(year=year)}")
                 rows += parse_rows(text, year)
             time.sleep(PAUSE_SECONDS)
         require(rows, "发售表一行都没取到,本次不写 Wikipedia 来源")
-        cand = window(rows, on, a.days)
+        cand = window(rows, on, a.days, a.recent_days)
         out = rank(cand, fetch_views, on)
     except (BenchError, OSError, ValueError, KeyError, RateLimited) as exc:
         print(f"拒收: {exc}", file=sys.stderr)
         return 1
-    result = {"on": on, "window_days": a.days, "source_urls": urls, "rows": len(rows), "candidates": len(cand),
+    result = {"on": on, "window_days": a.days, "recent_days": a.recent_days, "source_urls": urls, "rows": len(rows), "candidates": len(cand),
               "items": to_items(out["ranked"], a.top, on), "not_fetched": out["not_fetched"]}
     Path(a.output).write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     print(json.dumps({k: result[k] for k in ("on", "rows", "candidates", "not_fetched")}

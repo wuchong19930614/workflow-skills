@@ -125,8 +125,10 @@ class RankTest(unittest.TestCase):
             return 10
         out = WR.rank(self.rows(), fetch, on="2026-10-14", sleep=lambda s: None)
         self.assertEqual(len(calls), 2)                                           # 遇到 429 就停,不连续重试
-        self.assertEqual(len(out["ranked"]), 1)
         self.assertEqual(len(out["not_fetched"]), 3)
+        # 没取到浏览量的候选照样留在 ranked 里(排在取到的后面),不从原料里丢掉
+        self.assertEqual([r["views_30d"] for r in out["ranked"]], [10, None, None, None])
+        self.assertEqual(len(WR.to_items(out["ranked"], top=20, seen_at="2026-10-14")), 4)
 
     def test_missing_article_does_not_stop(self):
         def fetch(art, on):
@@ -150,6 +152,30 @@ class RankTest(unittest.TestCase):
         W.validate({"slug": None, "observed_at": "2026-10-14T08:00:00+00:00", "stage": "quick", "kind": "quick_signal",
                     "source_urls": ["https://en.wikipedia.org/wiki/List_of_video_games_released_in_2026"],
                     "semrush_calls": 0, "points": ["x"], "readings": {"items": items}})
+
+    def test_recent_releases_included_when_asked(self):
+        text = WIKITEXT.replace("|- id=\"October\"", "|-\n| September 30\n| ''[[Just Out]]''\n| WIN\n| Original\n| RPG\n"
+                                "|-\n| September 29\n| ''[[Too Old]]''\n| WIN\n| Original\n| RPG\n|- id=\"October\"")
+        rows = WR.parse_rows(text, 2026)
+        self.assertNotIn("Just Out", [r["title"] for r in WR.window(rows, "2026-10-14", days=30)])
+        got = [r["title"] for r in WR.window(rows, "2026-10-14", days=30, recent_days=14)]
+        self.assertEqual(got[0], "Just Out")                                     # 已上线 14 天以内的也算(Q1 游戏窗口)
+        self.assertNotIn("Too Old", got)                                          # 第 15 天的不算
+        self.assertEqual(WR.sections_for("2026-10-05", 30, recent_days=14), [(2026, "July–September"), (2026, "October–December")])
+
+    def test_footnote_templates_stripped(self):
+        text = ("{| class=\"wikitable\"\n|-\n| October 18\n| ''[[Footnote Game]]''{{efn|Released as ''Foo'' in Japan {{sort|a|b}}}}\n| WIN\n"
+                "| Original{{efn|Early access since [[2025]]}}\n| RPG<ref>{{cite web|url=x}}</ref>\n")
+        r = WR.parse_rows(text, 2026)[0]
+        self.assertEqual((r["title"], r["article"], r["type"], r["genre"]), ("Footnote Game", "Footnote Game", "Original", "RPG"))
+
+    def test_platform_cell_shared_with_previous_row(self):
+        # 上一行的平台格跨两行(rowspan),这一行少一格:类型不能被读成平台
+        text = ("{| class=\"wikitable\"\n|-\n| rowspan=\"2\" | October 15\n| ''[[First Game]]''\n| rowspan=\"2\" | WIN, PS5\n"
+                "| Original\n| Action\n|-\n| ''[[Second Game]]''\n| Original\n| Puzzle\n")
+        rows = {r["title"]: r for r in WR.parse_rows(text, 2026)}
+        self.assertEqual((rows["Second Game"]["platforms"], rows["Second Game"]["type"], rows["Second Game"]["genre"]),
+                         ("WIN, PS5", "Original", "Puzzle"))
 
     def test_section_titles_cover_window(self):
         self.assertEqual(WR.sections_for("2026-10-14", 30), [(2026, "October–December")])

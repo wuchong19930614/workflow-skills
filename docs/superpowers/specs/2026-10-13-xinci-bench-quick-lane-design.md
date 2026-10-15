@@ -521,4 +521,8 @@ AI 概览系数:AI 概览在场但没答完 0.6,否则 1.0
 11. **加"即将开玩"日历**：新脚本 `wiki_releases.py` 从 Wikipedia 发售表取未来 30 天上线的原创、抢先体验游戏（有独立词条、英文区能玩），按近 30 天浏览量取前 20；原料可带 `playable_at` 与 `stage`，开玩日在今天之后的不进待看、只进 `quick_pool.py upcoming`，看板列出建议在开玩当天到第 3 天跑快道；保留 7 天从开玩日起算。发售表不含公开测试，测试靠 Trends 飙升词补。实测不可用：SteamDB（403）、Steam 商店与 Gematsu（连不上）、SteamCharts 不收测试版、TwitchTracker 榜单禁止抓取。仍不做定时任务。
 12. **Trends 飙升词每次运行都要取**：`trends_fetch.js` 加 `xinciTrendsRising`，最多 6 个种子词（`beta`、`playtest` 用游戏分类 `cat: 8`，再加 3–4 个任务词），两次执行间隔 ≥ 30 秒（实测间隔 6 秒连查第 3 次就 429），遇 429 停下并写"本次未取"。
 
+2026-10-15 第二次运行后修了实测发现的问题：
+
+13. **发售表与原料池的缺口**：`wiki_releases.py` 也收最近 14 天已上线的（`--recent-days`，默认等于 `new_days_game`），这正是游戏类 Q1 窗口；浏览量 429 后没查的候选仍以浏览量 null 输出，不丢；剥掉 `{{efn}}`、`<ref>` 脚注，平台格跨行时沿用上一行。`quick_pool.add` 同一批里同一词被第二个来源看到也记进 `also_seen`。`trends_volume.py` 接受空曲线（`values=[]`）按读不出记 0。`ledger.update` 允许快道只更正 `object.date_source`，名称、类型、首次公开日仍不可改。
+
 未做、需另行拍板：上线前按预测判 go（现在 go 要求当前搜索量过线，最早只能在开放游玩后判，而占位站是提前建的）。

@@ -15,7 +15,9 @@ import write_observation as W
 from _common import EN_COUNTRIES, BenchError, load_json, now, require
 
 STATUS_CN = {"ok": "可换算", "unreadable": "读不出(新词最近 7 天全为 0)", "anchor_zero": "锚词热度为 0,换锚词",
-             "ratio_out_of_range": "比值不在 0.2–5,换锚词", "needs_anchor_volume": "读得出,要查锚词在该国的月量"}
+             "ratio_out_of_range": "比值不在 0.2–5,换锚词", "needs_anchor_volume": "读得出,要查锚词在该国的月量",
+             "empty_curve": "读不出(Trends 返回空曲线,量太小)"}
+READABLE_OR_ZERO = ("ok", "unreadable", "empty_curve")
 
 
 def _mean(xs):
@@ -27,6 +29,8 @@ def _check_series(s):
     require(geo in EN_COUNTRIES, f"series 的 geo 须为英文区国家 {EN_COUNTRIES}")
     require(isinstance(s.get("terms"), list) and len(s["terms"]) == 2, f"{geo}: terms 须为 [新词, 锚词]")
     vals = s.get("values")
+    if vals == []:
+        return                         # Trends 对量太小的词返回空曲线:按读不出处理
     require(isinstance(vals, list) and len(vals) >= 14
             and all(isinstance(v, list) and len(v) == 2 and all(isinstance(x, (int, float)) and x >= 0 for x in v)
                     for v in vals),
@@ -46,6 +50,9 @@ def analyze(payload) -> dict:
     require(len({s["terms"][0].strip().lower() for s in series}) <= 1, "各国 series 的新词(terms[0])须是同一个词")
     countries, needs = {}, []
     for s in series:
+        if not s["values"]:
+            countries[s["geo"]] = {"status": "empty_curve"}
+            continue
         new, anc = [v[0] for v in s["values"]], [v[1] for v in s["values"]]
         n7, a7 = round(_mean(new[-7:]), 4), round(_mean(anc[-7:]), 4)
         n30, a30 = round(_mean(new[-30:]), 4), round(_mean(anc[-30:]), 4)
@@ -69,7 +76,7 @@ def analyze(payload) -> dict:
 def build_observation(payload, slug, semrush_calls=0, at=None) -> dict:
     """全部国家都是"可换算"或"读不出"时,拼出 quick_volume 观察;否则拒收并说明要做什么。"""
     res = analyze(payload)
-    bad = {g: c["status"] for g, c in res["countries"].items() if c["status"] not in ("ok", "unreadable")}
+    bad = {g: c["status"] for g, c in res["countries"].items() if c["status"] not in READABLE_OR_ZERO}
     require(not res["needs_anchor_volume"], f"这些国家读得出,先用 Semrush 查锚词在该国的锚词月量再填 anchors: {res['needs_anchor_volume']}")
     require(not bad, "换锚词重查,或把该国放进 skipped 写明原因(比值须在 0.2–5): "
                      + "、".join(f"{g} {STATUS_CN[s]}" for g, s in bad.items()))
@@ -81,6 +88,10 @@ def build_observation(payload, slug, semrush_calls=0, at=None) -> dict:
             points.append(f"{g} 未查:{res['skipped'][g]}")
             continue
         c, s = res["countries"][g], by_geo[g]
+        if c["status"] == "empty_curve":
+            rows.append({"geo": g, "readable": False, "basis": f"Trends {s['time']},geo={g},返回空曲线(新词与锚词量都太小)"})
+            points.append(f"{g} 返回空曲线,记 0")
+            continue
         if c["status"] == "unreadable":
             rows.append({"geo": g, "readable": False, "basis": f"Trends {s['time']},geo={g},新词最近 7 天全为 0"})
             points.append(f"{g} 读不出,记 0")
@@ -122,7 +133,7 @@ def main(argv=None):
         res = analyze(payload)
         summary = {g: STATUS_CN[c["status"]] for g, c in res["countries"].items()}
         summary.update({g: f"未查:{why}" for g, why in res["skipped"].items()})
-        if res["needs_anchor_volume"] or any(c["status"] not in ("ok", "unreadable") for c in res["countries"].values()):
+        if res["needs_anchor_volume"] or any(c["status"] not in READABLE_OR_ZERO for c in res["countries"].values()):
             print(json.dumps({"写入": False, "各国": summary, "要查锚词月量的国家": res["needs_anchor_volume"]},
                              ensure_ascii=False, indent=2))
             return 2
