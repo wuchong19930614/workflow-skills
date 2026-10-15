@@ -94,7 +94,7 @@ class QuickContractTest(unittest.TestCase):
 
     def test_trends_tools_documented(self):
         js, doc = text("scripts/trends_fetch.js"), text("命令与观察.md")
-        for fn in ("xinciTrends", "xinciTrendsRising"):
+        for fn in ("xinciTrends", "xinciTrendsRising", "xinciTrendsFirstSeen"):
             self.assertIn(f"async function {fn}(", js)
             self.assertIn(f"{fn}(", doc)
 
