@@ -71,6 +71,10 @@ class TrendsVolumeTest(unittest.TestCase):
             TV.build_observation(p, "gag2-calculator")
         p["series"][1] = series("GB", [5] * 30, [0] * 30)
         self.assertEqual(TV.analyze(p)["countries"]["GB"]["status"], "anchor_zero")
+        with self.assertRaises(BenchError) as cm:
+            TV.build_observation(p, "gag2-calculator")
+        self.assertIn("换锚词", str(cm.exception))
+        self.assertNotIn("放进 skipped 写明原因", str(cm.exception))          # 读得出的国家不能放进 skipped 按 0 计
 
     def test_every_country_once_and_same_new_term(self):
         p = payload()

@@ -205,7 +205,7 @@ def _check_brief(r):
 
 
 def _check_null_rule(checks, keys, label):
-    """pass 为 true/false/null;null 只表示"前项已不过、为省额度没查"。"""
+    """pass 为 true/false/null;null 表示"前项已不过、为省额度没查",快道 Q1 也可表示"查不到日期"。"""
     require(isinstance(checks, dict) and set(checks) == set(keys), f"{label}: checks 须恰好含 {keys}")
     verdicts = []
     for k in keys:

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """快道锚词换算:把 trends_fetch.js 取回的各国曲线与锚词月量换算成 quick_volume 观察,不再手算。
 
-先只带曲线跑一次:读不出的国家自动记 0,输出里列出"读得出、要去 Semrush 查锚词月量"的国家;
-补齐 anchors 再跑一次就写入观察(经 write_observation 校验)。比值不在 0.2–5 或锚词热度为 0 时拒收,换锚词重查。
+先只带曲线跑一次:读不出的国家(新词近 7 天全为 0 或空曲线)自动记 0,输出里列出"读得出、要去 Semrush 查锚词月量"的国家;
+补齐 anchors 再跑一次就写入观察(经 write_observation 校验)。比值不在 0.2–5 或锚词热度为 0 时拒收,换锚词重查;
+读得出的国家不能放进 skipped 按 0 计(用户 2026-10-15 定),skipped 只用于没查成的国家。
 """
 import argparse
 import json
@@ -78,7 +79,8 @@ def build_observation(payload, slug, semrush_calls=0, at=None) -> dict:
     res = analyze(payload)
     bad = {g: c["status"] for g, c in res["countries"].items() if c["status"] not in READABLE_OR_ZERO}
     require(not res["needs_anchor_volume"], f"这些国家读得出,先用 Semrush 查锚词在该国的锚词月量再填 anchors: {res['needs_anchor_volume']}")
-    require(not bad, "换锚词重查,或把该国放进 skipped 写明原因(比值须在 0.2–5): "
+    require(not bad, "这些国家新词读得出,换锚词重查到比值在 0.2–5(美国以外的锚词月量去 Semrush 查);"
+                     "不能放进 skipped 按 0 计,skipped 只用于没查成的国家(如 429): "
                      + "、".join(f"{g} {STATUS_CN[s]}" for g, s in bad.items()))
     by_geo = {s["geo"]: s for s in payload["series"]}
     rows, points = [], []
