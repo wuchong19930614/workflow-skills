@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """快道上线日历:从 Wikipedia "List of video games released in <年>" 取最近 14 天已上线与未来 N 天要上线的新游戏,按词条浏览量排热度。
 
-只留原创(Original)与抢先体验(Early access)、有独立词条、英文区能玩的;移植、重制、正式版(抢先体验早就开了)不算新对象。
+只留原创(Original)、抢先体验(Early access)与资料片(Expansion,用户 2026-10-15 定 DLC 算新对象)、有独立词条、英文区能玩的;
+移植、重制、正式版(抢先体验早就开了)不算新对象。
 浏览量一条一条查(中间停顿),遇到 429 就停,剩下的列为"未取"但仍输出成原料(浏览量为 null)。取数函数可注入,测试不联网。
 输出的 items 是 quick_signal 原料格式(source=wikipedia、term=null、带 playable_at 与 stage),由执行者并进本次信号观察。
 """
@@ -20,7 +21,7 @@ from pathlib import Path
 import quick_model as QM
 from _common import BenchError, require, today
 
-NEW_TYPES = ("Original", "Early access")
+NEW_TYPES = ("Original", "Early access", "Expansion")
 # 发售表"类型"列会出现的值;标题后面紧跟的就是它时,说明平台格跟上一行合并了(rowspan)
 TYPE_VALUES = NEW_TYPES + ("Port", "Remaster", "Remake", "Compilation", "Expansion", "Full release", "Rerelease", "DLC")
 QUARTERS = (("January–March", 1, 3), ("April–June", 4, 6), ("July–September", 7, 9), ("October–December", 10, 12))
@@ -131,7 +132,7 @@ def _english(region):
 
 
 def window(rows, on, days=30, recent_days=0) -> list:
-    """最近 recent_days 天已上线到未来 days 天(含今天)要上线的新游戏:原创或抢先体验、有独立词条、英文区能玩;
+    """最近 recent_days 天已上线到未来 days 天(含今天)要上线的新游戏:原创、抢先体验或资料片,有独立词条、英文区能玩;
     同名只留最早一天。"""
     try:
         start = date.fromisoformat(on)

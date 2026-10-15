@@ -177,6 +177,11 @@ class RankTest(unittest.TestCase):
         self.assertEqual((rows["Second Game"]["platforms"], rows["Second Game"]["type"], rows["Second Game"]["genre"]),
                          ("WIN, PS5", "Original", "Puzzle"))
 
+    def test_expansion_counts_as_new_object(self):
+        # 用户 2026-10-15 定:DLC、资料片算新对象
+        text = "{| class=\"wikitable\"\n|-\n| October 20\n| ''[[Big Game: New Lands]]''\n| WIN\n| Expansion\n| RPG\n"
+        self.assertEqual([r["title"] for r in WR.window(WR.parse_rows(text, 2026), "2026-10-14")], ["Big Game: New Lands"])
+
     def test_section_titles_cover_window(self):
         self.assertEqual(WR.sections_for("2026-10-14", 30), [(2026, "October–December")])
         self.assertEqual(WR.sections_for("2026-12-20", 30), [(2026, "October–December"), (2027, "January–March")])

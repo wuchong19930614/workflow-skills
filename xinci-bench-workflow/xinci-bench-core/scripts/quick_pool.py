@@ -90,6 +90,8 @@ def add_items(root, items, observation) -> dict:
                  "seen_at": it["seen_at"], "rising": it.get("rising"), "status": "pending", "observation": observation}
         if it.get("playable_at"):
             fresh.update(playable_at=it["playable_at"], stage=it.get("stage"))
+        if it.get("platform"):
+            fresh["platform"] = it["platform"]
         row = expired.pop(k, None)
         if row is not None:           # 过期后又被来源取回:原行复活,保留 id
             row.update(fresh, revived_at=now())
@@ -111,10 +113,15 @@ def _max_rising(a, b):
     return a if _rising_value(a) >= _rising_value(b) else b
 
 
+def _roblox_codes(row) -> bool:
+    return (row.get("platform") or "").lower() == "roblox" and "codes" in (row.get("term") or "").lower().split()
+
+
 def priority(row) -> tuple:
-    """排序键(越小越先看):有具体说法 > 被几个来源看到 > Trends 飙升幅度(breakout 最大) > 先看到的。"""
+    """排序键(越小越先看):有具体说法 > 不是 Roblox 兑换码 > 被几个来源看到 > Trends 飙升幅度(breakout 最大) > 先看到的。
+    Roblox 兑换码 2026-10-15 实测 12 个全在 1–3 天内被大站占满,用户定排到其他说法后面。"""
     sources = {row["source"]} | {a["source"] for a in row.get("also_seen") or []}
-    return (row.get("term") is None, -len(sources), -_rising_value(row.get("rising")), row["seen_at"])
+    return (row.get("term") is None, _roblox_codes(row), -len(sources), -_rising_value(row.get("rising")), row["seen_at"])
 
 
 def _not_yet(row, on) -> bool:

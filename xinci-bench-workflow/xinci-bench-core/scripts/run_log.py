@@ -21,6 +21,7 @@ OUTCOMES = ("started", "completed", "blocked", "skipped")
 FOUND_TARGET = 3
 SEMRUSH_DAILY_LIMIT = 100        # 代理站每天约一百来次(以往运行实测),两条道合计
 SEMRUSH_STOP_AT = 90             # 今天用到这个数就停,留余量给恢复和复查
+QUICK_ROUNDS_PER_DAY = 1         # 快道每天最多开 1 轮(用户 2026-10-15 定:同日第 2 轮 Trends 就 429,多轮分天跑)
 
 
 def records(root) -> list:
@@ -139,7 +140,12 @@ def _plan_quick(root, rows, run_id):
             resume = dict(selected["progress"], next_step="quick")
         else:
             action = "done"
+    day = today()
+    rounds_today = len({r["progress"]["run_id"] for r in rows
+                        if LANE_OF[r["skill"]] == "quick" and r["recorded_at"][:10] == day})
     return {"lane": "quick", "action": None if conflict else action, "resume": resume, "conflict": conflict,
+            "quick_rounds_today": rounds_today, "quick_rounds_per_day": QUICK_ROUNDS_PER_DAY,
+            "quick_new_round_allowed": rounds_today < QUICK_ROUNDS_PER_DAY,
             "active_run_ids": sorted(active), "latest_log": selected["_path"] if selected else None,
             "semrush_calls_total": sum(r["semrush_calls"] for r in rows), **semrush_budget(rows)}
 

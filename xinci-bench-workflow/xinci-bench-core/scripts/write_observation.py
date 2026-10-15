@@ -231,6 +231,8 @@ def _check_quick_signal(r):
                 "原料 playable_at 须为日历上存在的 YYYY-MM-DD(第一次让大量普通用户用上的日期,可在未来)")
         require(it.get("stage") is None or (isinstance(it["stage"], str) and it["stage"].strip()),
                 "原料 stage 须为文字(如 closed beta、Early access)或不写")
+        require(it.get("platform") is None or (isinstance(it["platform"], str) and it["platform"].strip()),
+                "原料 platform 须为文字(如 roblox、steam、mobile)或不写")
 
 
 def _check_quick_screen(r):

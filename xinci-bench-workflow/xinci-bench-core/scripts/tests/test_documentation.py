@@ -87,6 +87,10 @@ class QuickContractTest(unittest.TestCase):
         for g in L.QUICK_GATES:
             self.assertIn(f"`{g}`", c)
 
+    def test_quick_rounds_per_day_documented(self):
+        import run_log as R
+        self.assertIn(f"每天最多跑 {R.QUICK_ROUNDS_PER_DAY} 轮", text("选站契约.md"))
+
     def test_object_types_documented(self):
         s = json.loads(text("数据结构/direction.schema.json"))
         self.assertEqual(tuple(s["properties"]["object"]["properties"]["type"]["enum"]), L.OBJECT_TYPES)

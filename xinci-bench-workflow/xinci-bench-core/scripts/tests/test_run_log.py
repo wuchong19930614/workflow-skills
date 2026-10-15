@@ -144,6 +144,25 @@ class QuickRunLogTest(unittest.TestCase):
 
 
 
+class QuickDailyRoundTest(unittest.TestCase):
+    def test_one_quick_round_per_day(self):
+        import json as _json
+        with TmpRoot() as root:
+            q = R.plan(root, lane="quick")
+            self.assertEqual((q["quick_rounds_today"], q["quick_rounds_per_day"], q["quick_new_round_allowed"]), (0, 1, True))
+            start_quick(root, run_id="quick-a")
+            R.finish(root, run_id="quick-a")
+            q = R.plan(root, lane="quick")
+            self.assertEqual((q["quick_rounds_today"], q["quick_new_round_allowed"], q["action"]), (1, False, "quick"))
+            start(root)                                                                  # 标杆道不算快道轮数
+            self.assertEqual(R.plan(root, lane="quick")["quick_rounds_today"], 1)
+            for f in (root / "运行").glob("*.json"):                                    # 挪到以前的日子
+                d = _json.loads(f.read_text(encoding="utf-8"))
+                d["recorded_at"] = "2026-01-01" + d["recorded_at"][10:]
+                f.write_text(_json.dumps(d, ensure_ascii=False), encoding="utf-8")
+            self.assertTrue(R.plan(root, lane="quick")["quick_new_round_allowed"])
+
+
 class SemrushBudgetTest(unittest.TestCase):
     def test_today_usage_across_lanes_and_stop_flag(self):
         import json as _json

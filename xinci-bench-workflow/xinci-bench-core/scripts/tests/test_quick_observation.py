@@ -109,6 +109,14 @@ class QuickObservationTest(unittest.TestCase):
         with self.assertRaisesRegex(BenchError, "stage"):
             W.validate(obs)
 
+    def test_signal_platform_checked(self):
+        obs = quick_signal_obs()
+        obs["readings"]["items"][0]["platform"] = "roblox"
+        W.validate(obs)
+        obs["readings"]["items"][0]["platform"] = ""
+        with self.assertRaisesRegex(BenchError, "platform"):
+            W.validate(obs)
+
     def test_signal_source_checked(self):
         obs = quick_signal_obs()
         obs["readings"]["items"][0]["source"] = "twitter"

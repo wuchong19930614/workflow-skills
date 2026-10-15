@@ -54,6 +54,15 @@ class QuickPoolTest(unittest.TestCase):
             row = P.pending(root)[0]
             self.assertEqual([a["source"] for a in row["also_seen"]], ["autocomplete"])   # 同一批里第二个来源也记下
 
+    def test_roblox_codes_ranked_after_other_terms(self):
+        with TmpRoot() as root:
+            P.add_items(root, [dict(item("hot game codes"), platform="roblox", rising="breakout", source="trends_rising"),
+                               dict(item("hot game tier list"), platform="roblox", rising=100),
+                               item("new map"), dict(item(None), object="Only Object")], OBS)
+            order = [r["term"] or r["object"] for r in P.pending(root)]
+            # Roblox 兑换码几乎都在 1–3 天内被大站占满:排在其他有说法的词后面,仍在只有对象名的前面
+            self.assertEqual(order, ["hot game tier list", "new map", "hot game codes", "Only Object"])
+
     def test_upcoming_held_until_playable(self):
         with TmpRoot() as root:
             soon = {"source": "wikipedia", "object": "Soon Game", "term": None, "url": "https://en.wikipedia.org/x",
