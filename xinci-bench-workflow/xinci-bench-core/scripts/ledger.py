@@ -32,7 +32,8 @@ GATES_BY_LANE = {"bench": GATES, "quick": QUICK_GATES}
 OBJECT_TYPES = ("game", "other")                       # 快道对象类型:游戏 14 天、其他 90 天
 # 快道否决门 → 速判观察里必须不过的那一条
 QUICK_GATE_CHECK = {"not_new": "Q1", "oneoff": "Q3", "scope": "Q4", "occupied": "Q5", "answered": "Q6"}
-QUICK_PATCHABLE = ("title", "site_type", "terms", "object")   # object 只许更正 date_source
+QUICK_PATCHABLE = ("title", "site_type", "terms", "object")   # 现行方向的 object 只许更正 date_source
+FORECAST_SLIPPABLE = ("found", "watching", "go")          # 预判方向在这三个状态下可改开玩日(object.first_public)
 FORECAST_REGISTERABLE = ("go", "watching")                # 预判建议为这两种才登记;skip、measure_rest 不登记
 FORECAST_KEYS = ("ref", "playable_at", "object_volume_pre", "tasks", "forecast_p25", "forecast_median", "review_at",
                  "review", "slipped_days")                # 预判方向开玩前结算后账本里 forecast 块的键
@@ -127,15 +128,58 @@ def _check_clusters(clusters):
             require(isinstance(c[k], bool), f"簇 {c['id']}: {k} 须为布尔")
 
 
-def update(root, slug, patch: dict, refs=()) -> dict:
-    """补数:标杆道只对 found/parked,改了输入就清掉旧模型结果;快道只能补标题、站型、说法、对象的日期来源与引用。"""
+def _patched_object(rec, o, on) -> dict:
+    """快道对象的补数 → 补后的 object。现行方向只许更正 date_source;预判方向(开玩前、观察中、go)还可连同新的开玩日
+    first_public 一起给,新开玩日须在 on 之后;名称、类型登记后不改。"""
+    movable = rec.get("basis") == "forecast" and rec["state"] in FORECAST_SLIPPABLE
+    keys = {"date_source", "first_public"} if movable else {"date_source"}
+    require(isinstance(o, dict) and "date_source" in o and set(o) <= keys
+            and isinstance(o["date_source"], str) and o["date_source"].strip(),
+            "预判方向的对象只能更正 date_source(非空文字),或连同新的开玩日 first_public 一起给;名称、类型登记后不改" if movable
+            else "快道对象只能更正 date_source(非空文字);名称、类型、首次公开日登记后不改")
+    new = dict(rec["object"], date_source=o["date_source"].strip())
+    if "first_public" in o:
+        require(is_date(o["first_public"]), f"first_public 须为日历上存在的 YYYY-MM-DD(收到 {o['first_public']!r})")
+        require(o["first_public"] > on, f"新开玩日 {o['first_public']} 须在 {on} 之后")
+        new["first_public"] = o["first_public"]
+    return new
+
+
+def _slip_forecast(rec, days):
+    """预判方向开玩日变了 days 天:forecast 块的开玩日、复核日、累计推迟天数跟着变;观察中的到期日顺延到新复核日,
+    还没开建的 go 的建议最晚上线日顺延到新开玩日前 1 天。开玩前(found)还没有 forecast 块,旧预判观察的开玩日对不上,由结算拦下。"""
+    f = rec.get("forecast")
+    if not f:
+        return
+    require(f["review"] is None and not (rec.get("watch") or {}).get("checks"),
+            "开玩后已经复核或复查过,开玩日不能再改")
+    dates = QM.forecast_dates(rec["object"]["first_public"])
+    f.update(playable_at=rec["object"]["first_public"], review_at=dates["review_at"],
+             slipped_days=f["slipped_days"] + days)
+    if rec["state"] == "watching":
+        rec["watch"]["expires_at"] = dates["review_at"]
+    if rec["state"] == "go" and (rec.get("follow_up") or {}).get("status") == "pending":
+        rec["follow_up"]["launch_by"] = dates["launch_by"]
+
+
+def update(root, slug, patch: dict, refs=(), on=None) -> dict:
+    """补数:标杆道只对 found/parked,改了输入就清掉旧模型结果;快道只能补标题、站型、说法、对象的日期来源与引用。
+    预判方向(found、观察中、go)还可改开玩日 object.first_public(须同时给 date_source,新日期在 on 之后,on 缺省今天),
+    forecast 块、观察到期日、建议最晚上线日跟着顺延;go 只许改 object。"""
+    on = on or today()
+    require(is_date(on), f"日期须为日历上存在的 YYYY-MM-DD(收到 {on!r})")
     ledger = load_ledger(root)
     rec = ledger["directions"].get(slug)
     require(rec, f"没有方向 {slug}")
     lane = rec.get("lane", "bench")
+    forecast_dir = lane == "quick" and rec.get("basis") == "forecast"
     open_states = ("found", "parked") if lane == "bench" else ("found", "parked", "watching")
+    if forecast_dir:
+        open_states += ("go",)
     require(rec["state"] in open_states, f"{slug} 已是 {rec['state']},不能补数")
     allowed = PATCHABLE if lane == "bench" else QUICK_PATCHABLE
+    if forecast_dir and rec["state"] == "go":
+        allowed = ("object",)
     bad = [k for k in patch if k not in allowed]
     require(not bad, f"不可补的字段: {bad}(可补: {allowed})")
     new_refs, screens = list(rec["evidence_refs"]), []
@@ -148,11 +192,11 @@ def update(root, slug, patch: dict, refs=()) -> dict:
             new_refs.append(ref)
     if "site_type" in patch:
         require(patch["site_type"] in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
+    slip = 0
     if lane == "quick" and "object" in patch:
-        o = patch["object"]
-        require(isinstance(o, dict) and set(o) == {"date_source"} and isinstance(o["date_source"], str)
-                and o["date_source"].strip(), "快道对象只能更正 date_source(非空文字);名称、类型、首次公开日登记后不改")
-        patch = dict(patch, object=dict(rec["object"], date_source=o["date_source"].strip()))
+        new_object = _patched_object(rec, patch["object"], on)
+        slip = (date.fromisoformat(new_object["first_public"]) - date.fromisoformat(rec["object"]["first_public"])).days
+        patch = dict(patch, object=new_object)
     if "terms" in patch:
         _check_terms(patch["terms"])
         _check_term_clash(ledger, slug, patch["terms"])
@@ -173,6 +217,8 @@ def update(root, slug, patch: dict, refs=()) -> dict:
                     "付费适用时须有正数 price_month 与有用户的 evidence")
     rec.update(patch)
     rec["evidence_refs"] = new_refs
+    if slip:
+        _slip_forecast(rec, slip)
     if lane == "bench":
         rec["model"] = None
     save_ledger(root, ledger)
@@ -546,7 +592,8 @@ def _precheck_forecast(root, rec, to, on):
     require(f, "缺预判观察 quick_forecast")
     playable_at = f["readings"]["playable_at"]
     require(playable_at == rec["object"]["first_public"],
-            f"最新预判观察的开玩日 {playable_at} 与方向的 object.first_public {rec['object']['first_public']} 不一致")
+            f"最新预判观察的开玩日 {playable_at} 与方向的 object.first_public {rec['object']['first_public']} 不一致"
+            "(开玩日变过的话:按新开玩日重做预判写新的 quick_forecast 观察,用 update --ref 引用后再结算)")
     lo, hi = QM.QUICK_ASSUMPTIONS["forecast_days"]
     lead = (date.fromisoformat(playable_at) - date.fromisoformat(on)).days
     require(lo <= lead <= hi, f"开玩日在结算日之后 {lead} 天,须在 {lo}–{hi} 天内才能按预判结算")
@@ -600,11 +647,17 @@ def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
 
 
 def watch_check(root, slug, refs=(), on=None) -> dict:
-    """复查观察中的方向:加入新观察,算一次,记一条复查;只给建议,转移仍走 settle.py。"""
+    """复查观察中的方向:加入新观察,算一次,记一条复查;只给建议,转移仍走 settle.py。
+    预判方向另有三条:复核日前拒收;最新速判与量级(取任务说法的量,对象名的不算)须在开玩日或之后;
+    第一次复查先把到期日改为复查日 + 观察天数(预判结算时的到期日只是复核日)。"""
     on = on or today()
     ledger = load_ledger(root)
     rec = ledger["directions"].get(slug)
     require(rec and rec.get("lane") == "quick" and rec["state"] == "watching", f"{slug} 不是观察中的快道方向")
+    pregame = rec.get("basis") == "forecast"           # 预判方向:开玩后才复查,速判与量级都按开玩后的读数
+    if pregame:
+        review_at = rec["forecast"]["review_at"]
+        require(on >= review_at, f"复核日 {review_at} 未到:预判方向要开玩后 {QM.QUICK_ASSUMPTIONS['review_days']} 天才复查(现在 {on})")
     for ref in refs:
         obs = W.read(root, ref)
         require(obs["slug"] == slug, f"{ref} 属于别的方向")
@@ -613,7 +666,17 @@ def watch_check(root, slug, refs=(), on=None) -> dict:
         if ref not in rec["evidence_refs"]:
             rec["evidence_refs"].append(ref)
     obs = _observations(root, rec["evidence_refs"])
-    screen, vol = _latest(obs, "quick_screen"), _latest(obs, "quick_volume")
+    screen = _latest(obs, "quick_screen")
+    require(screen, "缺速判观察 quick_screen")
+    vol = _latest_term_volume(obs, rec["terms"]) if pregame else _latest(obs, "quick_volume")    # 预判方向别取成对象名的量
+    require(vol, "缺量级观察 quick_volume(预判方向须有开玩后测任务说法的量,对象名的量不算)" if pregame else "缺量级观察 quick_volume")
+    if pregame:
+        playable_at = rec["forecast"]["playable_at"]
+        for name, o in (("速判", screen), ("量级", vol)):
+            require(o["observed_at"][:10] >= playable_at,
+                    f"最新{name}观察是 {o['observed_at'][:10]} 看的,在开玩日 {playable_at} 之前;开玩后重新观察再复查")
+        if not rec["watch"]["checks"]:             # 第一次复查:到期日改为复查日 + 观察天数,在此之前的建议才有"还能观察"可言
+            rec["watch"]["expires_at"] = QM.add_days(on, QM.QUICK_ASSUMPTIONS["watch_days"])
     checks = screen["readings"]["checks"]
     # 先看最新速判:第一条不过的项就是否决门;AI 概览已答完同 answered,此时不再测算
     failed = next((g for g, q in QUICK_GATE_CHECK.items() if checks[q]["pass"] is False), None)
@@ -637,6 +700,50 @@ def watch_check(root, slug, refs=(), on=None) -> dict:
     rec["watch"]["checks"].append(check)
     save_ledger(root, ledger)
     return {"slug": slug, "expires_at": rec["watch"]["expires_at"], **check}
+
+
+def review_forecast(root, slug, refs=(), on=None) -> dict:
+    """开玩后 7 天复核预判 go:每项任务取开玩日及之后测的最新量级,合计与预测下四分位比,实测低于 25% 提示止损。
+    只写 forecast.review,不改状态;每个方向只复核一次。"""
+    on = on or today()
+    require(is_date(on), f"日期须为日历上存在的 YYYY-MM-DD(收到 {on!r})")
+    ledger = load_ledger(root)
+    rec = ledger["directions"].get(slug)
+    require(rec and rec.get("lane") == "quick" and rec.get("basis") == "forecast" and rec["state"] == "go"
+            and isinstance(rec.get("forecast"), dict), f"{slug} 不是预判的 go 方向,没有预测可复核")
+    f = rec["forecast"]
+    require(f["review"] is None, f"{slug} 已复核过: {f['review']}")
+    require(on >= f["review_at"], f"复核日 {f['review_at']} 未到(开玩后 {QM.QUICK_ASSUMPTIONS['review_days']} 天才复核,现在 {on})")
+    for ref in refs:
+        obs = W.read(root, ref)
+        require(obs["slug"] == slug, f"{ref} 属于别的方向")
+        if ref not in rec["evidence_refs"]:
+            rec["evidence_refs"].append(ref)
+    obs = _observations(root, rec["evidence_refs"])
+    _, forecast = latest_forecast(root, rec)
+    require(forecast, "缺预判观察 quick_forecast")
+    by_task, missing = [], []
+    for t in forecast["readings"]["tasks"]:
+        terms = {quick_pool.normalize_term(x) for x in t["terms"]}
+        rows = [(i, ref, o) for i, (ref, o) in enumerate(obs)
+                if o["kind"] == "quick_volume" and o["readings"].get("term") is not None
+                and quick_pool.normalize_term(o["readings"]["term"]) in terms
+                and o["observed_at"][:10] >= f["playable_at"]]
+        if not rows:
+            missing.append(f"{t['task']}(测的词须是 {t['terms']})")
+            continue
+        _, ref, o = max(rows, key=lambda x: (_at(x[2]["observed_at"]), x[0]))
+        by_task.append({"task": t["task"], "ref": ref, "estimate_7d": o["readings"]["estimate_7d"]})
+    require(not missing, f"缺开玩日 {f['playable_at']} 或之后测的量级观察 quick_volume:{';'.join(missing)}")
+    actual = sum(t["estimate_7d"] for t in by_task)
+    stop = actual < f["forecast_p25"] * QM.QUICK_ASSUMPTIONS["review_stop_ratio"]
+    ratio = round(actual / f["forecast_p25"], 4)
+    f["review"] = {"at": on, "actual": actual, "forecast_p25": f["forecast_p25"], "ratio": ratio, "stop": stop,
+                   "by_task": by_task}
+    save_ledger(root, ledger)
+    message = ("预判失准,建议停止追加投入" if stop
+               else f"实测达到预测下四分位的 {ratio:.0%},没低到 {QM.QUICK_ASSUMPTIONS['review_stop_ratio']:.0%},不提示止损")
+    return {"slug": slug, **f["review"], "message": message}
 
 
 def follow_up(root, slug, status, domain=None, on=None, reason=None) -> dict:
@@ -715,6 +822,9 @@ def main(argv=None):
     wc = sub.add_parser("watch-check")
     wc.add_argument("--slug", required=True)
     wc.add_argument("--ref", action="append", default=[])
+    rf = sub.add_parser("review-forecast")
+    rf.add_argument("--slug", required=True)
+    rf.add_argument("--ref", action="append", default=[], help="开玩后测任务说法的量级观察路径(每项任务一份)")
     fu = sub.add_parser("follow-up")
     fu.add_argument("--slug", required=True)
     fu.add_argument("--status", required=True, choices=FOLLOW_UP_STATUSES[1:])
@@ -740,6 +850,8 @@ def main(argv=None):
             out = {**derive_quick(root, rec), "model": _quick_model(root, rec)}
         elif a.cmd == "watch-check":
             out = watch_check(root, a.slug, a.ref)
+        elif a.cmd == "review-forecast":
+            out = review_forecast(root, a.slug, a.ref)
         elif a.cmd == "follow-up":
             out = follow_up(root, a.slug, a.status, a.domain, a.date, a.reason)
         else:
