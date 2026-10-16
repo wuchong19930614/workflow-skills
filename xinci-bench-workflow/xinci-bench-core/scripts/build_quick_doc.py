@@ -12,6 +12,7 @@ from pathlib import Path
 import build_doc
 import build_doc_html
 import data_root
+import ledger as L
 import quick_model as QM
 import write_observation as W
 from _common import BenchError, load_ledger, require
@@ -119,23 +120,45 @@ def _part_one(rec, by_kind):
 
 
 def _is_forecast_doc(rec) -> bool:
-    """开玩前按预判结算(go、观察中)的方向:模型是预判模型且有 forecast 块;搁置没有 forecast 块,照现行版式出。"""
-    return (rec.get("model") or {}).get("basis") == "forecast" and bool(rec.get("forecast"))
+    """开玩前结算的预判方向用预判版式:go、观察中(预判模型且有 forecast 块),以及开玩前就搁置的
+    (basis=forecast、没有 forecast 块、也没有现行路径的量级与首屏读数,模型是预判模型或为空)。
+    开玩后按现行路径复判出现行模型的方向,照现行版式出。"""
+    m = rec.get("model")
+    if m and m.get("basis") == "forecast" and rec.get("forecast"):
+        return True
+    return (rec.get("basis") == "forecast" and rec["decision"]["verdict"] == "parked" and not rec.get("forecast")
+            and rec.get("volume") is None and rec.get("serp") is None and (m is None or m.get("basis") == "forecast"))
 
 
 def _forecast_readings(rec, by_kind) -> dict:
-    """绑定的观察里 forecast.ref 指向的那份预判观察的读数(绑了几份就认账本记的那份)。"""
-    ref = rec["forecast"]["ref"]
-    rows = [o for r, o in by_kind.get("quick_forecast", []) if r == ref]
-    require(rows, f"绑定的观察里没有账本 forecast.ref 指向的预判观察 {ref}")
-    return rows[0]["readings"]
+    """预判观察的读数:账本 forecast.ref 指向的那份(绑了几份就认账本记的);搁置的方向没有 forecast 块,
+    取绑定里最新的一份,规则同 ledger.latest_forecast(按观察时间,同时刻取靠后的)。"""
+    rows = by_kind.get("quick_forecast", [])
+    if rec.get("forecast"):
+        ref = rec["forecast"]["ref"]
+        rows = [(r, o) for r, o in rows if r == ref]
+        require(rows, f"绑定的观察里没有账本 forecast.ref 指向的预判观察 {ref}")
+        return rows[0][1]["readings"]
+    require(rows, "绑定的观察里没有预判观察 quick_forecast")
+    return max(enumerate(rows), key=lambda x: (L._at(x[1][1]["observed_at"]), x[0]))[1][1]["readings"]
 
 
 def _days(start, end) -> int:
     return (date.fromisoformat(end) - date.fromisoformat(start)).days
 
 
+def _until(start, end) -> str:
+    n = _days(start, end)
+    return f"还有 {n} 天" if n >= 0 else f"已过 {-n} 天"
+
+
+def _ratio(x) -> str:
+    return "—" if x is None else f"{x:g}"
+
+
 def _scope_cn(t, category) -> str:
+    if t["scope"] is None:
+        return "—"
     if t["scope"] == "category":
         return f"同类别 `{category}`"
     return f"同类别不足 {QM.QUICK_ASSUMPTIONS['min_references']} 条，取全部类别"
@@ -167,70 +190,95 @@ def _go_block_forecast(rec, by_kind):
     return lines + [""]
 
 
-def _part_one_forecast(rec, by_kind):
-    obj, m, f, dec = rec["object"], rec["model"], rec["forecast"], rec["decision"]
-    r = _forecast_readings(rec, by_kind)
-    a, checks, tasks = QM.QUICK_ASSUMPTIONS, r["checks"], r["tasks"]
-    playable = obj["first_public"]
-    settled = (rec.get("follow_up") or {}).get("go_at") or (rec.get("watch") or {}).get("since") or dec["decided_at"][:10]
+def _forecast_scenarios(m) -> list:
+    """第 5 节正文:下四分位、中位数两档各一张三档表;模型为空(搁置时预判测算被拒)就只说没有完成测算。"""
+    if m is None:
+        return ["**本方向没有完成测算。**", ""]
+    a = QM.QUICK_ASSUMPTIONS
     base, med = m["scenarios"]["base"], m["median_scenarios"]["base"]
-    lines = ["## 第一部分 决策", "", "### 1. 即将开玩的游戏", "",
-             f"**{obj['name']} 计划 {playable} 开玩，离结算日 {settled} 还有 {_days(settled, playable)} 天。**"
-             f"日期来源：{obj['date_source']}", "",
-             f"- P1 依据：{checks['P1']['basis']}", "", "### 2. 有人在等", ""]
-    pre = f["object_volume_pre"]
-    lines += [f"**{obj['name']} 开玩前月搜索量约 {_fmt(m['object_volume'])}（英文区 {len(a['countries'])} 国各自按 Trends "
-              f"锚词换算后相加，其中美国约 {_fmt(pre.get('US', 0))}）。**", ""]
-    lines += _table(["国家", "开玩前月搜索量"], [[g, _fmt(pre[g]) if g in pre else "读不出，记 0"] for g in a["countries"]])
-    lines += ["", f"- P2 依据：{checks['P2']['basis']}", "", "### 3. 任务与参照倍数", "",
-              f"**最小版本做 {len(tasks)} 项任务（{'、'.join(t['task'] for t in tasks)}），倍数取自已开玩游戏的参照："
-              f"下四分位是保守档，中位数是对照档。**", ""]
-    lines += _table(["任务", "说法", "参照条数", "下四分位倍数", "中位数倍数", "取自"],
-                    [[t["task"], "、".join(t["terms"]), f"{t['references']} 条参照", f"{t['r_p25']:g}", f"{t['r_median']:g}",
-                      _scope_cn(t, r["category"])] for t in tasks])
-    lines += ["", "### 4. 首页现场", ""]
-    done = sum(1 for s in r["serp"] for row in s["top10"] if row.get("completes_task") is True)
-    lines += [f"**两次首页查询的前 10 条里，完整做了这个任务的有 {done} 条；AI 概览开玩前未知，按 {m['aio_factor']} 取系数。**", ""]
-    lines += _table(["查询", "前 10 条域名", "完整做了任务"],
-                    [[s["query"], "、".join(str(row.get("domain") or "—") for row in s["top10"]),
-                      sum(1 for row in s["top10"] if row.get("completes_task") is True)] for s in r["serp"]])
-    lines += ["", f"- P5 依据：{checks['P5']['basis']}", f"- P6 依据：{checks['P6']['basis']}", "",
-              "### 5. 预测访问与收入", "",
-              f"**下四分位倍数下基准单月约 {_fmt(base['visits'])} 次英文区访问、{_money(base['revenue'])}/月（模型估算），"
-              f"{'过' if m['passes'] else '不过'} {_fmt(m['threshold_visits'])} 访问门槛；中位数倍数下基准约 {_fmt(med['visits'])} 次、"
-              f"{_money(med['revenue'])}/月，{'过' if m['passes_median'] else '不过'}。**", ""]
     head = ["情景", "首发份额", "预计月访问", "预计月收入（AdSense）"]
-    lines += [f"下四分位倍数（判 go 看这一档）：站点预测月搜索量约 {_fmt(m['forecast_p25'])}", ""]
+    lines = [f"**下四分位倍数下基准单月约 {_fmt(base['visits'])} 次英文区访问、{_money(base['revenue'])}/月（模型估算），"
+             f"{'过' if m['passes'] else '不过'} {_fmt(m['threshold_visits'])} 访问门槛；中位数倍数下基准约 {_fmt(med['visits'])} 次、"
+             f"{_money(med['revenue'])}/月，{'过' if m['passes_median'] else '不过'}。**", "",
+             f"下四分位倍数（判 go 看这一档）：站点预测月搜索量约 {_fmt(m['forecast_p25'])}", ""]
     lines += _table(head, _scenario_rows(m["scenarios"]))
     lines += ["", f"中位数倍数（对照）：站点预测月搜索量约 {_fmt(m['forecast_median'])}", ""]
     lines += _table(head, _scenario_rows(m["median_scenarios"]))
-    lines += ["", f"- 站点预测月搜索量 = 对象名开玩前月搜索量 {_fmt(m['object_volume'])} × 各任务倍数，按任务相加；"
-                  f"基准访问 = 预测月搜索量 × 首发份额 × AI 概览系数 {m['aio_factor']}",
-              f"- 其中美国访问约 {_fmt(base['us_visits'])}（基准，下四分位）；收入按 AdSense 美国 ${a['rpm_adsense']:.0f}、"
-              f"其他英文国家 ${a['rpm_other_en']:.0f}/千访问估算",
-              f"- 基准过线需要站点预测月搜索量约 {_fmt(m['searches_needed'])}；假设表版本 {m['assumptions_version']}",
-              "", "### 6. 预判依据与风险", "", f"**最大的未知：{dec['biggest_unknown']}。**", ""]
-    lines += ["- 倍数来自参照库：" + "；".join(
-        f"{t['task']} {t['references']} 条参照（{_scope_cn(t, r['category'])}），下四分位 {t['r_p25']:g}、中位数 {t['r_median']:g}"
-        for t in tasks) + "；参照条数越少倍数越不稳",
-        f"- 两档结果：下四分位基准约 {_fmt(base['visits'])} 次访问（{'过' if m['passes'] else '不过'}线）、中位数基准约 "
-        f"{_fmt(med['visits'])} 次（{'过' if m['passes_median'] else '不过'}线）；判 go 只认下四分位，中位数过线只进观察",
-        f"- 参照窗口写死、不挑：对象名取开玩日前第 {a['reference_object_window'][0]} 到第 {a['reference_object_window'][1]} 天，"
-        f"任务词取开玩后 {a['reference_task_span']} 天内最高的连续 {a['reference_task_days']} 天"]
-    review = f"- {f['review_at']} 复核（开玩日后第 {_days(playable, f['review_at'])} 天）：按现行锚词换算实测各任务词的量，和预测比"
-    if dec["verdict"] == "go":
-        lines.append(review + f"；实测月搜索量低于 {_stop_line(rec)}（预测下四分位 {_fmt(f['forecast_p25'])} × "
-                              f"{a['review_stop_ratio']:.0%}）提示止损，不再追加投入")
+    return lines + ["", f"- 站点预测月搜索量 = 对象名开玩前月搜索量 {_fmt(m['object_volume'])} × 各任务倍数，按任务相加；"
+                        f"基准访问 = 预测月搜索量 × 首发份额 × AI 概览系数 {m['aio_factor']}",
+                    f"- 其中美国访问约 {_fmt(base['us_visits'])}（基准，下四分位）；收入按 AdSense 美国 ${a['rpm_adsense']:.0f}、"
+                    f"其他英文国家 ${a['rpm_other_en']:.0f}/千访问估算",
+                    f"- 基准过线需要站点预测月搜索量约 {_fmt(m['searches_needed'])}；假设表版本 {m['assumptions_version']}", ""]
+
+
+def _forecast_risks(rec, r, by_kind) -> list:
+    """第 6 节正文(最大的未知之后):参照倍数、两档结果、窗口、复核与止损(只有 go、观察中有复核日)、简报里的风险。"""
+    m, f, dec, a = rec["model"], rec.get("forecast"), rec["decision"], QM.QUICK_ASSUMPTIONS
+    lines = []
+    if r["forecast_p25"] is not None:
+        lines.append("- 倍数来自参照库：" + "；".join(
+            f"{t['task']} {t['references']} 条参照（{_scope_cn(t, r['category'])}），下四分位 {t['r_p25']:g}、中位数 {t['r_median']:g}"
+            for t in r["tasks"]) + "；参照条数越少倍数越不稳")
+    if m:
+        base, med = m["scenarios"]["base"], m["median_scenarios"]["base"]
+        lines.append(f"- 两档结果：下四分位基准约 {_fmt(base['visits'])} 次访问（{'过' if m['passes'] else '不过'}线）、中位数基准约 "
+                     f"{_fmt(med['visits'])} 次（{'过' if m['passes_median'] else '不过'}线）；判 go 只认下四分位，中位数过线只进观察")
+    lines.append(f"- 参照窗口写死、不挑：对象名取开玩日前第 {a['reference_object_window'][0]} 到第 {a['reference_object_window'][1]} 天，"
+                 f"任务词取开玩后 {a['reference_task_span']} 天内最高的连续 {a['reference_task_days']} 天")
+    if f:
+        review = (f"- {f['review_at']} 复核（开玩日后第 {_days(rec['object']['first_public'], f['review_at'])} 天）："
+                  "按现行锚词换算实测各任务词的量，和预测比")
+        if dec["verdict"] == "go":
+            lines.append(review + f"；实测月搜索量低于 {_stop_line(rec)}（预测下四分位 {_fmt(f['forecast_p25'])} × "
+                                  f"{a['review_stop_ratio']:.0%}）提示止损，不再追加投入")
+        else:
+            lines.append(review + "，并按现行路径复判（过线判 go、继续观察或否决）")
+        lines.append(f"- 开玩日累计推迟超过 {a['forecast_slip_days']} 天，这个预判要重新评估")
     else:
-        lines.append(review + "，并按现行路径复判（过线判 go、继续观察或否决）")
-    lines.append(f"- 开玩日累计推迟超过 {a['forecast_slip_days']} 天，这个预判要重新评估")
+        lines.append("- 这个方向在开玩前就搁置了，没有复核日")
     if rec.get("watch"):
         w = rec["watch"]
         lines.append(f"- 观察中：{w['since']} 起，{w['expires_at']} 到期；已复查 {len(w['checks'])} 次")
     risks = list((_latest(by_kind, "quick_brief") or {}).get("risks") or [])
     risks.append(f"首发份额是起点假设（{'/'.join(f'{v:.0%}' for v in a['share'].values())}），新域名多久能排上去未确认")
-    lines += [f"- {x}" for x in risks]
-    return lines + [""]
+    return lines + [f"- {x}" for x in risks]
+
+
+def _part_one_forecast(rec, by_kind):
+    obj, m, dec = rec["object"], rec["model"], rec["decision"]
+    r = _forecast_readings(rec, by_kind)
+    a, checks, tasks, pre = QM.QUICK_ASSUMPTIONS, r["checks"], r["tasks"], r["object_volume_pre"]
+    playable = obj["first_public"]
+    settled = (rec.get("follow_up") or {}).get("go_at") or (rec.get("watch") or {}).get("since") or dec["decided_at"][:10]
+    lines = ["## 第一部分 决策", "", "### 1. 即将开玩的游戏", "",
+             f"**{obj['name']} 计划 {playable} 开玩，离结算日 {settled} {_until(settled, playable)}。**"
+             f"日期来源：{obj['date_source']}", "",
+             f"- P1 依据：{checks['P1']['basis']}", "", "### 2. 有人在等", ""]
+    if pre is None:                       # 最新预判观察六条没有全过,只记了观察,没有量与倍数
+        lines += [f"**{obj['name']} 开玩前月搜索量没有测出（预判六条没有全过，只记了观察）。**"]
+    else:
+        lines += [f"**{obj['name']} 开玩前月搜索量约 {_fmt(sum(pre.values()))}（英文区 {len(a['countries'])} 国各自按 Trends "
+                  f"锚词换算后相加，其中美国约 {_fmt(pre.get('US', 0))}）。**", ""]
+        lines += _table(["国家", "开玩前月搜索量"], [[g, _fmt(pre[g]) if g in pre else "读不出，记 0"] for g in a["countries"]])
+    lines += ["", f"- P2 依据：{checks['P2']['basis']}", "", "### 3. 任务与参照倍数", "",
+              f"**最小版本做 {len(tasks)} 项任务（{'、'.join(t['task'] for t in tasks)}），"
+              + ("倍数取自已开玩游戏的参照：下四分位是保守档，中位数是对照档。**" if pre is not None
+                 else "参照倍数没有取到。**"), ""]
+    lines += _table(["任务", "说法", "参照条数", "下四分位倍数", "中位数倍数", "取自"],
+                    [[t["task"], "、".join(t["terms"]), "—" if t["references"] is None else f"{t['references']} 条参照",
+                      _ratio(t["r_p25"]), _ratio(t["r_median"]), _scope_cn(t, r["category"])] for t in tasks])
+    lines += ["", "### 4. 首页现场", ""]
+    done = sum(1 for s in r["serp"] for row in s["top10"] if row.get("completes_task") is True)
+    lines += [f"**两次首页查询的前 10 条里，完整做了这个任务的有 {done} 条；AI 概览开玩前未知，"
+              f"按 {a['aio_factor']} 取系数。**", ""]
+    lines += _table(["查询", "前 10 条域名", "完整做了任务"],
+                    [[s["query"], "、".join(str(row.get("domain") or "—") for row in s["top10"]),
+                      sum(1 for row in s["top10"] if row.get("completes_task") is True)] for s in r["serp"]])
+    lines += ["", f"- P5 依据：{checks['P5']['basis']}", f"- P6 依据：{checks['P6']['basis']}", "",
+              "### 5. 预测访问与收入", ""]
+    lines += _forecast_scenarios(m)
+    lines += ["### 6. 预判依据与风险", "", f"**最大的未知：{dec['biggest_unknown']}。**", ""]
+    return lines + _forecast_risks(rec, r, by_kind) + [""]
 
 
 def _brief(rec, by_kind):

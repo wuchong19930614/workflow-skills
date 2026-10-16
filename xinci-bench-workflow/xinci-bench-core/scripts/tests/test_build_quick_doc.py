@@ -1,12 +1,18 @@
 import sys
 import unittest
+from datetime import date
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+import build_quick_doc as BQ
+import ledger
+import quick_forecast
 import quick_model as QM
 import settle as S
-from helpers import TmpRoot, quick_volume_obs, setup_forecast, setup_quick
+import write_observation as W
+from _common import load_ledger
+from helpers import TmpRoot, forecast_payload, quick_volume_obs, setup_forecast, setup_quick
 
 ON = "2026-10-20"
 
@@ -169,11 +175,63 @@ class PregameDocTest(unittest.TestCase):
             start = html.index("<h2>立即建站</h2>")
             self.assertTrue(html[start:].split("</h2>", 1)[1].startswith('<div class="lede">'))
 
-    def test_parked_pregame_doc_still_builds_without_forecast_block(self):
+    def test_parked_pregame_doc_uses_forecast_layout_without_review_or_stop_line(self):
         with TmpRoot() as root:
             md = _pregame_md(root, "parked", brief=False)
-            self.assertNotIn("## 立即建站", md)
-            self.assertNotIn("### 6. 预判依据与风险", md)
+            for needle in ("### 1. 即将开玩的游戏", "### 3. 任务与参照倍数", "### 6. 预判依据与风险", "10,800", "3 条参照",
+                           "| US | 600,000 |", "**最大的未知：倍数只有 3 个参照。**", "没有复核日"):
+                self.assertIn(needle, md)
+            for needle in ("## 立即建站", "按当前量估算", "没有做到量级换算", "没有曲线读数", "没有首屏读数",
+                           "2026-11-05 复核", "止损", "22,500", "推迟超过"):
+                self.assertNotIn(needle, md)
+            for block in md.split("\n### ")[1:]:
+                first = [ln for ln in block.split("\n")[1:] if ln.strip()][0]
+                self.assertTrue(first.startswith("**"), block.split("\n")[0])
+
+    def test_parked_pregame_days_to_play_count_from_the_decision_date(self):
+        with TmpRoot() as root:
+            md = _pregame_md(root, "parked", brief=False)
+            decided = load_ledger(root)["directions"]["mho-map"]["decision"]["decided_at"][:10]
+            days = (date.fromisoformat("2026-10-29") - date.fromisoformat(decided)).days
+            self.assertIn(f"离结算日 {decided} " + (f"还有 {days} 天" if days >= 0 else f"已过 {-days} 天"), md)
+
+    def test_parked_pregame_without_model_says_not_measured_instead_of_tables(self):
+        with TmpRoot() as root:
+            _pregame_md(root, "parked", brief=False)
+            rec = load_ledger(root)["directions"]["mho-map"]
+            rec["model"] = None                                   # 搁置时预判测算被拒的情形
+            md = BQ.render_md(root, rec)
+            five = _section(md, "5. 预测访问与收入")
+            self.assertIn("本方向没有完成测算", five)
+            self.assertNotIn("| 情景 |", md)
+            self.assertNotIn("两档结果", md)
+            self.assertIn("### 6. 预判依据与风险", md)
+            self.assertIn("**最大的未知：倍数只有 3 个参照。**", md)
+            self.assertIn("| US | 600,000 |", md)                 # 对象名月量与参照倍数仍读自预判观察
+            self.assertIn("3 条参照", md)
+
+    def test_parked_pregame_whose_latest_forecast_observation_failed_still_builds(self):
+        with TmpRoot() as root:
+            slug, refs = setup_forecast(root, brief=False)
+            payload = forecast_payload(slug=slug, object="Monster Hunter Outlanders", volume_ref=refs[1])
+            payload["checks"]["P5"] = {"pass": False, "basis": "测试期已有专做本作的 wiki"}
+            failed = W.write(root, quick_forecast.build_observation(root, payload, at="2026-10-13T09:00:00+00:00"))
+            ledger.update(root, slug, {}, [failed])
+            S.settle(root, slug, "parked", reason="首页已被占", biggest_unknown="开玩日会不会变", on=PRE_ON)
+            md = (root / "文档" / f"{slug}.md").read_text(encoding="utf-8")
+            self.assertIn("本方向没有完成测算", _section(md, "5. 预测访问与收入"))
+            self.assertIn("没有测出", _section(md, "2. 有人在等"))
+            self.assertIn("P5 依据：测试期已有专做本作的 wiki", md)
+            self.assertNotIn("按当前量估算", md)
+
+    def test_forecast_basis_direction_with_current_basis_model_keeps_current_layout(self):
+        with TmpRoot() as root:
+            _pregame_md(root, "parked", brief=False)
+            rec = load_ledger(root)["directions"]["mho-map"]
+            rec["model"] = {k: v for k, v in rec["model"].items() if k != "basis"}   # 开玩后按现行路径复判出的模型
+            md = BQ.render_md(root, rec)
+            self.assertIn("### 6. 风险与最大未知", md)
+            self.assertNotIn("预判依据与风险", md)
 
     def test_current_path_doc_has_no_forecast_sections(self):
         with TmpRoot() as root:
