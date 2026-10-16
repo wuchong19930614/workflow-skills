@@ -704,6 +704,7 @@ def watch_check(root, slug, refs=(), on=None) -> dict:
 
 def review_forecast(root, slug, refs=(), on=None) -> dict:
     """开玩后 7 天复核预判 go:每项任务取开玩日及之后测的最新量级,合计与预测下四分位比,实测低于 25% 提示止损。
+    只对开玩前预判就判 go 的方向(模型是预判模型);观察中、开玩后按现行路径才判 go 的不复核。
     只写 forecast.review,不改状态;每个方向只复核一次。"""
     on = on or today()
     require(is_date(on), f"日期须为日历上存在的 YYYY-MM-DD(收到 {on!r})")
@@ -711,6 +712,8 @@ def review_forecast(root, slug, refs=(), on=None) -> dict:
     rec = ledger["directions"].get(slug)
     require(rec and rec.get("lane") == "quick" and rec.get("basis") == "forecast" and rec["state"] == "go"
             and isinstance(rec.get("forecast"), dict), f"{slug} 不是预判的 go 方向,没有预测可复核")
+    require((rec.get("model") or {}).get("basis") == "forecast",
+            f"{slug} 的 go 是观察中、开玩后按现行路径判的(模型不是开玩前预判),预判下四分位当初没过线,没有预判止损可复核")
     f = rec["forecast"]
     require(f["review"] is None, f"{slug} 已复核过: {f['review']}")
     require(on >= f["review_at"], f"复核日 {f['review_at']} 未到(开玩后 {QM.QUICK_ASSUMPTIONS['review_days']} 天才复核,现在 {on})")

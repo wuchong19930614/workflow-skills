@@ -736,6 +736,21 @@ class ReviewTest(unittest.TestCase):
             settle.settle(root, current, "go", reason="速判全过", biggest_unknown="热度", on="2026-10-14")
             self.assertRaises(BenchError, L.review_forecast, root, current, [], on="2026-11-05")        # 现行方向没有预测可比
 
+    def test_watching_that_went_go_on_the_current_path_is_not_reviewed(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root, object_us=450000)
+            settle.settle(root, slug, "watching", reason="中位数过线", biggest_unknown="开玩后量", on="2026-10-14")
+            screen = dict(H.quick_screen_obs(slug, term="mho map"), observed_at="2026-11-05T08:00:00+00:00")
+            volume = W.write(root, task_volume(slug, 60000))                      # 基准 60000 × 0.2 = 12000 访问,过现行门槛
+            self.assertEqual(L.watch_check(root, slug, [W.write(root, screen), volume], on="2026-11-05")["suggestion"], "go")
+            rec = settle.settle(root, slug, "go", reason="开玩后量够了", biggest_unknown="热度", on="2026-11-05")
+            self.assertEqual((rec["state"], rec["basis"], rec["model"].get("basis"), rec["forecast"]["review"]),
+                             ("go", "forecast", None, None))                       # 现行路径的模型,但 forecast 块还在
+            before = load_ledger(root)
+            with self.assertRaisesRegex(BenchError, "现行路径"):
+                L.review_forecast(root, slug, [volume], on="2026-11-05")
+            self.assertEqual(load_ledger(root), before)
+
     def test_review_cli(self):
         with H.TmpRoot() as root:
             slug = self.go(root)
