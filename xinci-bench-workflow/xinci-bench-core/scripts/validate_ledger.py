@@ -31,14 +31,39 @@ def _history_errors(slug, rec):
     return errs
 
 
+def _forecast_block_errors(slug, rec):
+    """预判模型的账本记录:forecast 块键齐全,开玩日与对象首次公开日一致,复核日 = 开玩日 + 7 天。"""
+    f = rec.get("forecast")
+    if not isinstance(f, dict):
+        return [f"{slug}: 预判模型须有 forecast 块"] if rec["state"] in ("go", "watching") else []
+    missing = [k for k in L.FORECAST_KEYS if k not in f]
+    if missing:
+        return [f"{slug}: forecast 块缺字段 {missing}"]
+    errs, first_public = [], (rec.get("object") or {}).get("first_public")
+    if f["playable_at"] != first_public:
+        errs.append(f"{slug}: forecast.playable_at {f['playable_at']} 与 object.first_public {first_public} 不一致")
+    elif is_date(f["playable_at"]):
+        review_at = QM.forecast_dates(f["playable_at"])["review_at"]
+        if f["review_at"] != review_at:
+            errs.append(f"{slug}: forecast.review_at {f['review_at']} 应为开玩日后 {QM.QUICK_ASSUMPTIONS['review_days']} 天 {review_at}")
+    return errs
+
+
 def _quick_errors(slug, rec, on):
     errs, dec = [], rec.get("decision") or {}
+    if "basis" in rec and rec["basis"] != "forecast":
+        errs.append(f"{slug}: basis 只能是 forecast(现行方向不写这个字段),现为 {rec['basis']!r}")
     if rec["state"] in ("go", "watching") or dec.get("gate") == "volume":
         try:
-            if QM.compute(rec) != rec.get("model"):
+            if QM.recompute(rec) != rec.get("model"):
                 errs.append(f"{slug}: 快道模型重算与账本不一致")
         except BenchError as exc:
             errs.append(f"{slug}: 快道模型无法重算: {exc}")
+        except (KeyError, AttributeError, TypeError) as exc:                   # 记录残缺:报错,不崩
+            errs.append(f"{slug}: 快道模型无法重算(记录残缺): {type(exc).__name__} {exc}")
+    model = rec.get("model")
+    if isinstance(model, dict) and model.get("basis") == "forecast":
+        errs += _forecast_block_errors(slug, rec)
     if rec["state"] == "watching":
         w = rec.get("watch") or {}
         if not w.get("expires_at"):

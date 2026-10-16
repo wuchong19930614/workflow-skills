@@ -24,7 +24,9 @@
     "volume": {"type": ["object", "null"], "description": "快道:结算时由最新 quick_volume 写入(英文区合计 estimate_7d/30d、各国 by_geo 与 anchors、最早锚词测量日、trend_geo、trend)"},
     "serp": {"type": ["object", "null"], "description": "快道:结算时由最新 quick_screen 写入(aio_present、aio_completes、occupied_by)"},
     "watch": {"type": ["object", "null"], "required": ["since", "expires_at", "checks"]},
-    "follow_up": {"type": ["object", "null"], "required": ["status", "go_at", "launch_by", "domain", "started_at", "launched_at", "reason"], "properties": {"status": {"enum": ["pending", "started", "launched", "abandoned"]}}}
+    "follow_up": {"type": ["object", "null"], "required": ["status", "go_at", "launch_by", "domain", "started_at", "launched_at", "reason"], "properties": {"status": {"enum": ["pending", "started", "launched", "abandoned"]}}},
+    "basis": {"enum": ["forecast"], "description": "快道可选:按上线前预判登记的方向写 forecast;现行(速判)方向不写这个字段。开玩前(state=found)按预判结算,开玩后的复核按现行路径"},
+    "forecast": {"type": ["object", "null"], "required": ["ref", "playable_at", "object_volume_pre", "tasks", "forecast_p25", "forecast_median", "review_at", "review", "slipped_days"], "description": "快道可选,仅预判方向开玩前结算为 go 或观察中时写:ref 是结算所依据的最新预判观察;playable_at 须等于 object.first_public;object_volume_pre 是对象名开玩前各国月搜索量;tasks 是 [{task, r_p25, r_median}](参照库倍数);forecast_p25、forecast_median 是站点预测月搜索量;review_at = 开玩日 + 7 天;review 是复核结果(复核前为 null);slipped_days 是开玩日累计推迟天数。此时 model 是 quick_model.forecast 的输出(basis=forecast),volume、serp 为 null;go 的 follow_up.launch_by = 开玩日前 1 天,观察中的 watch.expires_at = review_at"}
   },
   "quick_required": ["slug", "title", "site_type", "lane", "state", "object", "terms", "volume", "serp", "watch", "follow_up", "model", "decision", "evidence_refs", "bindings", "history"]
 }

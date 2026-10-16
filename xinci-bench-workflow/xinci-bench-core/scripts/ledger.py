@@ -6,13 +6,14 @@
 import argparse
 import json
 import sys
-from datetime import date
+from datetime import date, datetime, timezone
 from pathlib import Path
 
 import bench_model
 import data_root
 import quick_model as QM
 import quick_pool
+import quick_reference as QR
 import write_observation as W
 from _common import (SLUG_RE, BenchError, is_date, load_json, load_ledger, now, require, save_ledger, sha256_file,
                      today)
@@ -33,6 +34,8 @@ OBJECT_TYPES = ("game", "other")                       # 快道对象类型:游�
 QUICK_GATE_CHECK = {"not_new": "Q1", "oneoff": "Q3", "scope": "Q4", "occupied": "Q5", "answered": "Q6"}
 QUICK_PATCHABLE = ("title", "site_type", "terms", "object")   # object 只许更正 date_source
 FORECAST_REGISTERABLE = ("go", "watching")                # 预判建议为这两种才登记;skip、measure_rest 不登记
+FORECAST_KEYS = ("ref", "playable_at", "object_volume_pre", "tasks", "forecast_p25", "forecast_median", "review_at",
+                 "review", "slipped_days")                # 预判方向开玩前结算后账本里 forecast 块的键
 FOLLOW_UP_STATUSES = ("pending", "started", "launched", "abandoned")
 SITE_TYPES = ("tool", "content", "game", "mixed")
 SCOPE_ITEMS = ("ymyl", "brand_nav", "news", "adult_gambling", "infringement")
@@ -293,7 +296,13 @@ def _require_evidence(root, rec, to, gate, on):
     require(docs_consistent(root, rec["slug"]), "决策书 md/html 缺失或不一致;请用 settle.py 结算")
     precheck(root, rec, to, gate, on, dec.get("scope_hit"))
     if rec.get("lane", "bench") == "quick":
-        if to in ("go", "watching") or gate == "volume":
+        if is_pregame(rec):
+            if to in ("go", "watching"):
+                model = forecast_model(root, rec)
+                require(rec.get("volume") is None and rec.get("serp") is None, "预判方向开玩前结算,volume、serp 须为空")
+                require(rec.get("model") == model, "账本里的模型结果与现场重算不一致")
+                require(rec.get("forecast") == forecast_block(root, rec, model), "账本里的预判块与最新预判观察不一致")
+        elif to in ("go", "watching") or gate == "volume":
             derived = derive_quick(root, rec)
             require(rec.get("volume") == derived["volume"] and rec.get("serp") == derived["serp"],
                     "账本里的量级与首屏读数须等于最新观察")
@@ -460,7 +469,96 @@ def _quick_model(root, rec):
     return QM.compute(dict(rec, **derive_quick(root, rec)))
 
 
+def is_pregame(rec) -> bool:
+    """预判登记、还没结算过的方向:按开玩前的预判结算;结算之后(观察中、搁置)的复核按现行路径。"""
+    return rec.get("basis") == "forecast" and rec["state"] == "found"
+
+
+def _at(ts: str) -> datetime:
+    t = datetime.fromisoformat(ts)
+    return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
+
+
+def latest_forecast(root, rec) -> tuple:
+    """方向引用里最新的预判观察 → (路径, 观察);按观察时间比,同时刻取引用里靠后的;没有返回 (None, None)。"""
+    rows = [(ref, o) for ref, o in _observations(root, rec["evidence_refs"]) if o["kind"] == "quick_forecast"]
+    if not rows:
+        return None, None
+    return max(enumerate(rows), key=lambda x: (_at(x[1][1]["observed_at"]), x[0]))[1]
+
+
+def _check_object_volume(root, rec, r):
+    """预判观察的对象名月量须来自本方向引用里的对象名量级观察(测的词是对象名),数对得上。"""
+    ref = r["object_volume_ref"]
+    require(ref in rec["evidence_refs"], f"预判观察的对象名量级观察 {ref} 不在方向引用里(先用 update --ref 补进来)")
+    vol = W.read(root, ref)
+    require(vol["kind"] == "quick_volume" and vol["slug"] == rec["slug"], f"{ref} 不是本方向的对象名量级观察 quick_volume")
+    term = vol["readings"].get("term")
+    require(isinstance(term, str) and quick_pool.normalize_term(term) == quick_pool.normalize_term(r["object"]),
+            f"{ref} 测的词是 {term!r},不是对象名 {r['object']!r}(任务词的量不能当对象名的量用)")
+    pre = {c["geo"]: c["estimate_7d"] for c in vol["readings"]["countries"] if c["readable"]}
+    require(pre == r["object_volume_pre"], f"预判观察的对象名月量 {r['object_volume_pre']} 与量级观察 {ref} 的读数 {pre} 不一致")
+
+
+def forecast_model(root, rec) -> dict:
+    """预判方向的模型:从方向引用里最新的预判观察重算。六条须全过、国家须测全、说法须在任务里;对象名量级须在引用里且对得上;
+    每项任务的倍数与条数都按引用的参照路径向参照库重算,不一致就拒收(观察里的倍数不能自己说了算)。"""
+    ref, f = latest_forecast(root, rec)
+    require(f, "缺预判观察 quick_forecast")
+    r = f["readings"]
+    failed = [k for k in W.FORECAST_CHECKS if r["checks"][k]["pass"] is not True]
+    require(not failed, f"最新预判观察 {ref} 的 {'、'.join(failed)} 没过,不能测算")
+    require(not r["skipped_geos"], f"最新预判观察 {ref} 还有没测的国家 {r['skipped_geos']},补测其余国家后重新预判")
+    _check_forecast_terms(rec["terms"], f)
+    _check_object_volume(root, rec, r)
+    for t in r["tasks"]:
+        got = QR.check_refs(root, t["reference_refs"], t["task"], r["category"], t["scope"])
+        same = (t["r_p25"], t["r_median"], t["references"]) == (got["r_p25"], got["r_median"], got["references"])
+        require(same, f"{t['task']}: 参照倍数与参照库重算不一致(观察写 下四分位 {t['r_p25']}、中位数 {t['r_median']}、"
+                      f"{t['references']} 条;按引用的参照重算为 {got['r_p25']}、{got['r_median']}、{got['references']} 条)")
+    return QM.forecast(r["object_volume_pre"], r["tasks"], complete=True)
+
+
+def forecast_block(root, rec, model) -> dict:
+    """开玩前结算后账本里的 forecast 块:最新预判观察的预测与任务倍数、复核日;复核结果之后由复核写入。"""
+    ref, f = latest_forecast(root, rec)
+    r = f["readings"]
+    return {"ref": ref, "playable_at": r["playable_at"], "object_volume_pre": dict(r["object_volume_pre"]),
+            "tasks": [{"task": t["task"], "r_p25": t["r_p25"], "r_median": t["r_median"]} for t in r["tasks"]],
+            "forecast_p25": model["forecast_p25"], "forecast_median": model["forecast_median"],
+            "review_at": QM.forecast_dates(r["playable_at"])["review_at"], "review": None, "slipped_days": 0}
+
+
+def _require_brief(obs):
+    brief = _latest(obs, "quick_brief")
+    require(brief, "go 缺最小简报素材 quick_brief")
+    require(brief["readings"]["data_available"] is True and brief["readings"]["build_days"] <= 3,
+            "最小版本须 3 天内能做出、数据拿得到")
+
+
+def _precheck_forecast(root, rec, to, on):
+    """开玩前结算预判方向:搁置直接放行,不能否决;go、观察中要求开玩日对得上、结算日在开玩前 3–21 天、
+    重算的预判建议与结论一致(go 只认 go,观察中只认 watching),go 另要最小简报素材。"""
+    if to == "parked":
+        return
+    require(to != "rejected", "预判方向开玩前只能结算 go、观察中或搁置;否决等开玩后复核按现行路径")
+    _, f = latest_forecast(root, rec)
+    require(f, "缺预判观察 quick_forecast")
+    playable_at = f["readings"]["playable_at"]
+    require(playable_at == rec["object"]["first_public"],
+            f"最新预判观察的开玩日 {playable_at} 与方向的 object.first_public {rec['object']['first_public']} 不一致")
+    lo, hi = QM.QUICK_ASSUMPTIONS["forecast_days"]
+    lead = (date.fromisoformat(playable_at) - date.fromisoformat(on)).days
+    require(lo <= lead <= hi, f"开玩日在结算日之后 {lead} 天,须在 {lo}–{hi} 天内才能按预判结算")
+    suggestion = forecast_model(root, rec)["suggestion"]
+    require(suggestion == to, f"重算的预判建议是 {suggestion},与结论 {to} 不符(go 只认 go,观察中只认 watching)")
+    if to == "go":
+        _require_brief(_observations(root, rec["evidence_refs"]))
+
+
 def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
+    if is_pregame(rec):
+        return _precheck_forecast(root, rec, to, on)
     obs = _observations(root, rec["evidence_refs"])
     if to == "parked":
         return
@@ -478,10 +576,7 @@ def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
         trend = QM.trend(vol["readings"]["series_30d"])
         require(not trend["spike_decay"], "曲线冲高回落,应按 oneoff 否决")
         if to == "go":
-            brief = _latest(obs, "quick_brief")
-            require(brief, "go 缺最小简报素材 quick_brief")
-            require(brief["readings"]["data_available"] is True and brief["readings"]["build_days"] <= 3,
-                    "最小版本须 3 天内能做出、数据拿得到")
+            _require_brief(obs)
             require(model["passes"], "基准预计不到 1 万访问,不能判 go")
         else:
             require(not model["passes"], "基准已过 1 万,应判 go")

@@ -51,8 +51,34 @@ def _build(root, slug, lane):
     (build_quick_doc if lane == "quick" else build_doc).build(root, slug)
 
 
+def _new_follow_up(on, launch_by):
+    return {"status": "pending", "go_at": on, "launch_by": launch_by,
+            "domain": None, "started_at": None, "launched_at": None, "reason": None}
+
+
+def _fill_forecast(root, rec, verdict, on):
+    """开玩前结算(预判登记的方向):模型从最新预判观察重算,volume、serp 留空;go、观察中另写 forecast 块,
+    观察中到期日 = 复核日,go 的建议最晚上线日 = 开玩日前 1 天;搁置只尝试写模型(重算被拒就记空),不写 forecast 块。"""
+    try:
+        rec["model"] = L.forecast_model(root, rec)
+    except BenchError:
+        require(verdict == "parked", "go 与观察中必须能完成预判测算")
+        rec["model"] = None
+    if verdict == "parked":
+        return
+    rec["volume"] = rec["serp"] = None
+    rec["forecast"] = L.forecast_block(root, rec, rec["model"])
+    dates = QM.forecast_dates(rec["forecast"]["playable_at"])
+    if verdict == "watching":
+        rec["watch"] = {"since": on, "expires_at": dates["review_at"], "checks": []}
+    if verdict == "go":
+        rec["follow_up"] = _new_follow_up(on, dates["launch_by"])
+
+
 def _fill_quick(root, rec, verdict, gate, on):
-    """快道结算:从最新观察写入量级与首屏读数,算模型;观察中写到期日,go 初始化建站跟进。"""
+    """快道结算:从最新观察写入量级与首屏读数,算模型;观察中写到期日,go 初始化建站跟进。预判登记的方向在开玩前走预判结算。"""
+    if L.is_pregame(rec):
+        return _fill_forecast(root, rec, verdict, on)
     rec.update(L.derive_quick(root, rec))
     try:
         rec["model"] = QM.compute(rec)
@@ -62,9 +88,7 @@ def _fill_quick(root, rec, verdict, gate, on):
     if verdict == "watching":
         rec["watch"] = {"since": on, "expires_at": QM.add_days(on, QM.QUICK_ASSUMPTIONS["watch_days"]), "checks": []}
     if verdict == "go":
-        rec["follow_up"] = {"status": "pending", "go_at": on,
-                            "launch_by": QM.add_days(on, QM.QUICK_ASSUMPTIONS["launch_days"]),
-                            "domain": None, "started_at": None, "launched_at": None, "reason": None}
+        rec["follow_up"] = _new_follow_up(on, QM.add_days(on, QM.QUICK_ASSUMPTIONS["launch_days"]))
 
 
 def settle(root, slug, verdict, gate=None, reason="", biggest_unknown="", by="xinci-bench-assess",

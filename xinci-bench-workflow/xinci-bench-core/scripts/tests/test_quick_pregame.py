@@ -1,4 +1,5 @@
 import contextlib
+import copy
 import io
 import sys
 import unittest
@@ -9,9 +10,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import helpers as H
 import ledger as L
 import quick_forecast as QF
+import quick_model as QM
+import settle
 import trends_volume as TV
+import validate_ledger
 import write_observation as W
-from _common import BenchError, load_ledger
+from _common import BenchError, load_ledger, save_ledger
 
 AT = "2026-10-13T08:00:00+00:00"
 OBJECT = "Monster Hunter Outlanders"
@@ -234,6 +238,303 @@ class DeriveTest(unittest.TestCase):
             L.update(root, slug, {}, [other])
             rec = load_ledger(root)["directions"][slug]
             self.assertEqual(L.derive_quick(root, rec)["volume"]["estimate_7d"], 50000)
+
+
+def hand_forecast(root, slug, refs, observed_at="2026-10-13T09:00:00+00:00", r_p25=None, object_us=None,
+                  playable_at=None, volume_ref=None):
+    """在已登记方向的预判观察(refs[0])上手改几处:合计与建议按改后的数重算,所以观察本身合法、能写入。
+    写入后补进方向引用(观察时间晚于原观察,成为最新),返回路径。"""
+    obs = copy.deepcopy(W.read(root, refs[0]))
+    r = obs["readings"]
+    obs["observed_at"] = observed_at
+    if r_p25 is not None:
+        r["tasks"][0]["r_p25"] = r_p25
+    if object_us is not None:
+        r["object_volume_pre"] = {"US": object_us}
+    if playable_at is not None:
+        r["playable_at"] = playable_at
+    if volume_ref is not None:
+        r["object_volume_ref"] = volume_ref
+    r["forecast_p25"], r["forecast_median"] = QM.forecast_totals(r["object_volume_pre"], r["tasks"])
+    r["suggestion"] = QM.forecast_suggestion(r["forecast_p25"], r["forecast_median"], complete=True)
+    ref = W.write(root, obs)
+    L.update(root, slug, {}, [ref])
+    return ref
+
+
+class PregameSettleTest(unittest.TestCase):
+    def test_pregame_go(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            rec = settle.settle(root, slug, "go", reason="开玩前预测过线", biggest_unknown="倍数只有 3 个参照", on="2026-10-14")
+            self.assertEqual((rec["state"], rec["follow_up"]["launch_by"], rec["forecast"]["review_at"]), ("go", "2026-10-28", "2026-11-05"))
+            self.assertEqual((rec["model"]["basis"], rec["forecast"]["forecast_p25"], rec["volume"]), ("forecast", 90000, None))
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-10-14"), [])
+
+    def test_pregame_go_writes_the_forecast_block(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            rec = settle.settle(root, slug, "go", reason="开玩前预测过线", biggest_unknown="倍数只有 3 个参照", on="2026-10-14")
+            self.assertEqual(rec["forecast"], {
+                "ref": refs[0], "playable_at": "2026-10-29", "object_volume_pre": {"US": 600000},
+                "tasks": [{"task": "map", "r_p25": 0.15, "r_median": 0.2}], "forecast_p25": 90000,
+                "forecast_median": 120000, "review_at": "2026-11-05", "review": None, "slipped_days": 0})
+            self.assertEqual((rec["serp"], rec["watch"]), (None, None))
+            self.assertEqual((rec["follow_up"]["status"], rec["follow_up"]["go_at"]), ("pending", "2026-10-14"))
+            self.assertEqual(rec["model"]["scenarios"]["base"]["visits"], 10800)
+
+    def test_pregame_watching_expires_at_review(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root, object_us=450000)        # 下四分位 8100 访问、中位数 10800
+            rec = settle.settle(root, slug, "watching", reason="中位数过线", biggest_unknown="开玩后量", on="2026-10-14")
+            self.assertEqual(rec["watch"]["expires_at"], "2026-11-05")
+            self.assertEqual((rec["watch"]["since"], rec["watch"]["checks"], rec["follow_up"]), ("2026-10-14", [], None))
+            self.assertEqual((rec["forecast"]["review_at"], rec["volume"], rec["model"]["suggestion"]), ("2026-11-05", None, "watching"))
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-10-14"), [])
+
+    def test_wrong_verdict_refused(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root, object_us=450000)
+            self.assertRaises(BenchError, settle.settle, root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+            self.assertRaises(BenchError, settle.settle, root, slug, "rejected", gate="volume", reason="x",
+                              biggest_unknown="y", on="2026-10-14")          # 开玩前不能否决
+            settle.settle(root, slug, "parked", reason="先放着", biggest_unknown="y", on="2026-10-14")
+
+    def test_go_suggestion_cannot_settle_as_watching(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)                                 # 下四分位就过线,建议 go
+            with self.assertRaisesRegex(BenchError, "go"):
+                settle.settle(root, slug, "watching", reason="x", biggest_unknown="y", on="2026-10-14")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "found")
+
+    def test_rejected_is_refused_before_launch_with_the_reason(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root, object_us=450000)
+            with self.assertRaisesRegex(BenchError, "开玩前只能结算 go、观察中或搁置"):
+                settle.settle(root, slug, "rejected", gate="volume", reason="x", biggest_unknown="y", on="2026-10-14")
+            rec = load_ledger(root)["directions"][slug]
+            self.assertEqual((rec["state"], rec["decision"], rec["bindings"]), ("found", None, None))
+
+    def test_parked_only_tries_the_model(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root, object_us=450000)
+            rec = settle.settle(root, slug, "parked", reason="先放着", biggest_unknown="y", on="2026-10-14")
+            self.assertEqual((rec["state"], rec["model"]["basis"], rec["watch"], rec["follow_up"], rec["volume"]),
+                             ("parked", "forecast", None, None, None))
+            self.assertNotIn("forecast", rec)                                # 搁置不写 forecast 块
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-10-14"), [])
+
+    def test_parked_records_no_model_when_the_forecast_is_refused(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            hand_forecast(root, slug, refs, r_p25=0.12)                      # 倍数与参照库对不上
+            rec = settle.settle(root, slug, "parked", reason="先放着", biggest_unknown="y", on="2026-10-14")
+            self.assertEqual((rec["state"], rec["model"]), ("parked", None))
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-10-14"), [])
+
+    def test_pregame_settle_outside_window_refused(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            self.assertRaises(BenchError, settle.settle, root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-27")
+
+    def test_settle_window_is_3_to_21_days_before_playable(self):
+        for on, ok in (("2026-10-07", False), ("2026-10-08", True), ("2026-10-26", True), ("2026-10-27", False),
+                       ("2026-10-29", False), ("2026-10-30", False)):
+            with self.subTest(on), H.TmpRoot() as root:
+                slug, _ = H.setup_forecast(root)
+                if ok:
+                    self.assertEqual(settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on=on)["state"], "go")
+                else:
+                    with self.assertRaisesRegex(BenchError, "3–21 天"):
+                        settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on=on)
+                    self.assertEqual(load_ledger(root)["directions"][slug]["state"], "found")
+
+    def test_go_needs_brief(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root, brief=False)
+            self.assertRaises(BenchError, settle.settle, root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+            with self.assertRaisesRegex(BenchError, "quick_brief"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def test_go_needs_buildable_brief(self):
+        for name, brief in {"no_data": H.quick_brief_obs(SLUG, data_available=False),
+                            "too_long": H.quick_brief_obs(SLUG, build_days=4)}.items():
+            with self.subTest(name), H.TmpRoot() as root:
+                slug, _ = H.setup_forecast(root, brief=False)
+                L.update(root, slug, {}, [W.write(root, brief)])
+                with self.assertRaisesRegex(BenchError, "3 天内"):
+                    settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def test_watching_does_not_need_brief(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root, object_us=450000, brief=False)
+            self.assertEqual(settle.settle(root, slug, "watching", reason="x", biggest_unknown="y", on="2026-10-14")["state"],
+                             "watching")
+
+    def test_tampered_reference_rate_refused(self):
+        # 手写一份预判观察:reference_refs 仍是那三条参照,但 r_p25 写 0.12(合计按 0.12 重算,观察本身合法、能写入),
+        # 它自己的建议是 watching;update 引用后结算 watching → 拒收,信息含"参照倍数与参照库重算不一致"
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            fake = hand_forecast(root, slug, refs, r_p25=0.12)
+            obs = W.read(root, fake)["readings"]
+            self.assertEqual((obs["forecast_p25"], obs["suggestion"]), (72000, "watching"))
+            self.assertEqual(obs["tasks"][0]["reference_refs"], W.read(root, refs[0])["readings"]["tasks"][0]["reference_refs"])
+            with self.assertRaisesRegex(BenchError, "参照倍数与参照库重算不一致"):
+                settle.settle(root, slug, "watching", reason="x", biggest_unknown="y", on="2026-10-14")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "found")      # 拒收不留半截
+
+    def test_latest_forecast_is_the_one_settled_on(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root, object_us=450000)            # 原观察判 watching
+            self.assertEqual(settle.settle(root, slug, "watching", reason="x", biggest_unknown="y", on="2026-10-14")["forecast"]["ref"],
+                             refs[0])
+
+    def test_forecast_with_other_playable_date_refused(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            hand_forecast(root, slug, refs, playable_at="2026-10-30")        # 方向的开玩日仍是 10-29
+            with self.assertRaisesRegex(BenchError, "开玩日"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def test_object_volume_must_be_in_evidence_refs(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            other = W.write(root, H.quick_volume_obs(slug, anchor_volume=600000, new_mean=50.0, anchor_mean=50.0,
+                                                     term="Monster Hunter Outlanders"))
+            hand_forecast(root, slug, refs, volume_ref=other)                # 量级观察存在,但没引用进方向
+            with self.assertRaisesRegex(BenchError, "对象名量级观察.*不在方向引用里"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def test_object_volume_must_match_the_volume_observation(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            hand_forecast(root, slug, refs, object_us=900000)                # 观察里写 90 万,量级观察只有 60 万
+            with self.assertRaisesRegex(BenchError, "对象名月量.*与量级观察.*不一致"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def test_object_volume_must_be_the_object_name_not_a_task_word(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            task_word = W.write(root, H.quick_volume_obs(slug, anchor_volume=600000, new_mean=50.0, anchor_mean=50.0,
+                                                         term="mho map"))             # 数对得上,但测的是任务词
+            L.update(root, slug, {}, [task_word])
+            hand_forecast(root, slug, refs, volume_ref=task_word)
+            with self.assertRaisesRegex(BenchError, "不是对象名"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def test_partial_geos_forecast_refused(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            obs = copy.deepcopy(W.read(root, refs[0]))
+            obs["observed_at"] = "2026-10-13T09:00:00+00:00"
+            obs["readings"]["skipped_geos"] = ["GB"]
+            obs["readings"]["suggestion"] = QM.forecast_suggestion(90000, 120000, complete=False)      # measure_rest
+            L.update(root, slug, {}, [W.write(root, obs)])
+            with self.assertRaisesRegex(BenchError, "没测的国家"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def test_registered_terms_must_stay_covered_by_the_forecast_tasks(self):
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            L.update(root, slug, {"terms": [{"term": "mho tier list", "source": "autocomplete", "first_seen": "2026-10-12"}]})
+            with self.assertRaisesRegex(BenchError, "mho tier list"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def test_settle_is_resumable(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            first = settle.settle(root, slug, "go", reason="开玩前预测过线", biggest_unknown="y", on="2026-10-14")
+            again = settle.settle(root, slug, "go", reason="开玩前预测过线", biggest_unknown="y", on="2026-10-14")
+            self.assertEqual((again["state"], again["forecast"], again["history"]), (first["state"], first["forecast"], first["history"]))
+
+    def test_transition_alone_rechecks_the_pregame_evidence(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+            ledger = load_ledger(root)                                       # 回到结算前,但账本里留着新结算的产物
+            rec = ledger["directions"][slug]
+            rec["state"] = "found"
+            rec["forecast"]["forecast_p25"] += 1                             # 预判块被改
+            save_ledger(root, ledger)
+            with self.assertRaisesRegex(BenchError, "预判块"):
+                L.transition(root, slug, "go", None, "x", "t", "2026-10-14")
+
+    def test_validate_catches_model_drift(self):
+        # 结算后手改账本 rec["forecast"]["tasks"][0]["r_p25"] = 0.2 → check_direction 报"快道模型重算与账本不一致"
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            rec = settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+            rec["forecast"]["tasks"][0]["r_p25"] = 0.2
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-10-14"),
+                             [f"{slug}: 快道模型重算与账本不一致"])
+
+
+class PregameValidateTest(unittest.TestCase):
+    def settled(self, root, **kw):
+        slug, _ = H.setup_forecast(root, **kw)
+        return slug, settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
+    def check(self, root, slug, rec):
+        return validate_ledger.check_direction(root, slug, rec, on="2026-10-14")
+
+    def test_malformed_forecast_records_are_errors_not_crashes(self):
+        def no_block(rec):
+            rec["forecast"] = None
+
+        def no_tasks(rec):
+            del rec["forecast"]["tasks"]
+
+        def no_volume(rec):
+            del rec["forecast"]["object_volume_pre"]
+
+        def task_without_rate(rec):
+            del rec["forecast"]["tasks"][0]["r_median"]
+
+        def not_a_dict(rec):
+            rec["forecast"] = "x"
+
+        for fn in (no_block, no_tasks, no_volume, task_without_rate, not_a_dict):
+            with self.subTest(fn.__name__), H.TmpRoot() as root:
+                slug, rec = self.settled(root)
+                fn(rec)
+                errs = self.check(root, slug, rec)
+                self.assertTrue(errs)
+                self.assertTrue(all(e.startswith(f"{slug}: ") for e in errs), errs)
+
+    def test_forecast_block_keys_must_be_complete(self):
+        with H.TmpRoot() as root:
+            slug, rec = self.settled(root)
+            del rec["forecast"]["review"]
+            self.assertIn(f"{slug}: forecast 块缺字段 ['review']", self.check(root, slug, rec))
+
+    def test_block_playable_must_equal_first_public(self):
+        with H.TmpRoot() as root:
+            slug, rec = self.settled(root)
+            rec["forecast"]["playable_at"] = "2026-10-30"
+            errs = self.check(root, slug, rec)
+            self.assertTrue(any("playable_at" in e and "first_public" in e for e in errs), errs)
+
+    def test_block_review_at_must_follow_playable(self):
+        with H.TmpRoot() as root:
+            slug, rec = self.settled(root)
+            rec["forecast"]["review_at"] = "2026-11-06"
+            errs = self.check(root, slug, rec)
+            self.assertTrue(any("review_at" in e and "2026-11-05" in e for e in errs), errs)
+
+    def test_basis_can_only_be_forecast(self):
+        with H.TmpRoot() as root:
+            slug, rec = self.settled(root)
+            rec["basis"] = "current"
+            self.assertTrue(any("basis" in e for e in self.check(root, slug, rec)))
+
+    def test_current_directions_are_not_asked_for_a_forecast_block(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_quick(root)
+            rec = settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-13")
+            self.assertNotIn("basis", rec)
+            self.assertNotIn("forecast", rec)
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-10-13"), [])
 
 
 class RegisterQuickCliTest(unittest.TestCase):

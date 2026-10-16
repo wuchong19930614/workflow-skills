@@ -36,8 +36,9 @@ def _go_block(rec, by_kind):
     lines += [f"- {SCEN_CN[k]}：约 {_fmt(v['visits'])} 次访问、{_money(v['revenue'])}/月" for k, v in m["scenarios"].items()]
     if m["single_site_100"]:
         lines.append("- 基准预计收入 ≥ $100/月：单站就能到 $100")
-    lines.append(f"- 当前月搜索量约 {_fmt(vol['estimate_7d'])}（英文区各国 Trends 换算合计，其中美国约 "
-                 f"{_fmt(vol['by_geo'].get('US', 0))}）")
+    if vol:                                  # 开玩前按预判结算的方向没有任务词的量级(volume 为空),完整预判版决策书另做
+        lines.append(f"- 当前月搜索量约 {_fmt(vol['estimate_7d'])}（英文区各国 Trends 换算合计，其中美国约 "
+                     f"{_fmt(vol['by_geo'].get('US', 0))}）")
     lines.append("- 最小版本要做的页面：" + "；".join(f"`{p['path']}` {p['target_query']}" for p in brief["pages"]))
     return lines + [""]
 
