@@ -14,6 +14,7 @@ import data_root
 import quick_model as QM
 import quick_pool
 import quick_reference as QR
+import trends_volume as TV
 import write_observation as W
 from _common import (SLUG_RE, BenchError, is_date, load_json, load_ledger, now, require, save_ledger, sha256_file,
                      today)
@@ -722,7 +723,8 @@ def watch_check(root, slug, refs=(), on=None) -> dict:
 
 
 def review_forecast(root, slug, refs=(), on=None) -> dict:
-    """开玩后 7 天复核预判 go:每项任务取开玩日及之后测的最新量级,合计与预测下四分位比,实测低于 25% 提示止损。
+    """开玩后 7 天复核预判 go:任务与说法按结算时那份预判观察(forecast.ref);每项任务取复核日及之后测的最新量级
+    (6 国都测过,没有"未查:"的国家),合计与预测下四分位比,实测低于 25% 提示止损。
     只对开玩前预判就判 go 的方向(模型是预判模型);观察中、开玩后按现行路径才判 go 的不复核。
     只写 forecast.review,不改状态;每个方向只复核一次。"""
     on = on or today()
@@ -742,21 +744,25 @@ def review_forecast(root, slug, refs=(), on=None) -> dict:
         if ref not in rec["evidence_refs"]:
             rec["evidence_refs"].append(ref)
     obs = _observations(root, rec["evidence_refs"])
-    _, forecast = latest_forecast(root, rec)
-    require(forecast, "缺预判观察 quick_forecast")
+    forecast = W.read(root, f["ref"])                 # 按结算时那份预判观察的任务与说法,go 之后再挂的预判观察不算
+    require(forecast["kind"] == "quick_forecast", f"forecast.ref {f['ref']} 不是预判观察 quick_forecast")
     by_task, missing = [], []
     for t in forecast["readings"]["tasks"]:
         terms = {quick_pool.normalize_term(x) for x in t["terms"]}
         rows = [(i, ref, o) for i, (ref, o) in enumerate(obs)
                 if o["kind"] == "quick_volume" and o["readings"].get("term") is not None
                 and quick_pool.normalize_term(o["readings"]["term"]) in terms
-                and o["observed_at"][:10] >= f["playable_at"]]
+                and o["observed_at"][:10] >= f["review_at"]]          # 复核日起测的:7 天窗口整段落在开玩后
         if not rows:
             missing.append(f"{t['task']}(测的词须是 {t['terms']})")
             continue
         _, ref, o = max(rows, key=lambda x: (_at(x[2]["observed_at"]), x[0]))
+        skipped = [c["geo"] for c in o["readings"]["countries"]
+                   if not c["readable"] and c["basis"].startswith(TV.SKIPPED_PREFIX)]
+        require(not skipped, f"{t['task']} 用的量级观察 {ref} 有没测的国家 {skipped}(basis 以\"{TV.SKIPPED_PREFIX}\"开头):"
+                             "预测是英文区 6 国合计,复核也要 6 国都测过,补测后再复核")
         by_task.append({"task": t["task"], "ref": ref, "estimate_7d": o["readings"]["estimate_7d"]})
-    require(not missing, f"缺开玩日 {f['playable_at']} 或之后测的量级观察 quick_volume:{';'.join(missing)}")
+    require(not missing, f"缺复核日 {f['review_at']} 或之后测的量级观察 quick_volume:{';'.join(missing)}")
     actual = sum(t["estimate_7d"] for t in by_task)
     stop = actual < f["forecast_p25"] * QM.QUICK_ASSUMPTIONS["review_stop_ratio"]
     ratio = round(actual / f["forecast_p25"], 4)

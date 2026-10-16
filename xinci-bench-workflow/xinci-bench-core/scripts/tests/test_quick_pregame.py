@@ -768,6 +768,46 @@ class ReviewTest(unittest.TestCase):
                 L.review_forecast(root, slug, [volume], on="2026-11-05")
             self.assertEqual(load_ledger(root), before)
 
+    def test_partly_measured_volume_is_refused(self):
+        # 只测了美国、其余 5 国"未查:"的量级不能拿来复核(预测是 6 国合计,只比美国会误报止损)
+        with H.TmpRoot() as root:
+            slug = self.go(root)
+            us_only = task_volume(slug, 30000)
+            for c in us_only["readings"]["countries"]:
+                if not c["readable"]:
+                    c["basis"] = f"{TV.SKIPPED_PREFIX}只测美国"
+            before = load_ledger(root)
+            with self.assertRaisesRegex(BenchError, "没测的国家.*GB"):
+                L.review_forecast(root, slug, [W.write(root, us_only)], on="2026-11-05")
+            self.assertEqual(load_ledger(root), before)
+
+    def test_volume_before_the_review_day_is_refused(self):
+        # 开玩当天、复核日前一天测的量,7 天窗口没全落在开玩后,不能拿来复核;复核日当天测的才算
+        with H.TmpRoot() as root:
+            slug = self.go(root)
+            for day in ("2026-10-29", "2026-11-04"):
+                with self.subTest(day):
+                    early = W.write(root, task_volume(slug, 30000, day=day))
+                    with self.assertRaisesRegex(BenchError, "复核日 2026-11-05 或之后"):
+                        L.review_forecast(root, slug, [early], on="2026-11-06")
+            out = L.review_forecast(root, slug, [W.write(root, task_volume(slug, 30000))], on="2026-11-06")
+            self.assertEqual(out["actual"], 30000)
+
+    def test_review_uses_the_settled_forecast(self):
+        # go 之后再挂一份任务不同的新预判观察:复核仍按结算时那份(forecast.ref)的任务与说法
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            settle.settle(root, slug, "go", reason="开玩前预测过线", biggest_unknown="倍数", on="2026-10-14")
+            newer = copy.deepcopy(W.read(root, refs[0]))
+            newer["observed_at"] = "2026-10-15T09:00:00+00:00"
+            r = newer["readings"]
+            r["tasks"].append(dict(r["tasks"][0], task="codes", terms=["mho codes"]))
+            r["forecast_p25"], r["forecast_median"] = QM.forecast_totals(r["object_volume_pre"], r["tasks"])
+            r["suggestion"] = QM.forecast_suggestion(r["forecast_p25"], r["forecast_median"], complete=True)
+            L.update(root, slug, {}, [W.write(root, newer)])
+            out = L.review_forecast(root, slug, [W.write(root, task_volume(slug, 30000))], on="2026-11-05")
+            self.assertEqual(([t["task"] for t in out["by_task"]], out["forecast_p25"]), (["map"], 90000))
+
     def test_review_cli(self):
         with H.TmpRoot() as root:
             slug = self.go(root)
