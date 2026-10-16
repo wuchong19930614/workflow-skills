@@ -17,6 +17,7 @@ import trends_volume as TV
 import validate_ledger
 import write_observation as W
 from _common import BenchError, load_ledger, save_ledger
+from helpers import task_volume
 
 AT = "2026-10-13T08:00:00+00:00"
 OBJECT = "Monster Hunter Outlanders"
@@ -603,11 +604,6 @@ class RegisterQuickCliTest(unittest.TestCase):
                     self.assertIn("拒收", err)
                     self.assertIn("恰好", err)
             self.assertEqual(load_ledger(root)["directions"], {})
-
-
-def task_volume(slug, estimate, day="2026-11-05", term="mho map"):
-    return H.quick_volume_obs(slug, anchor_volume=estimate, new_mean=50.0, anchor_mean=50.0,
-                              term=term, observed_at=f"{day}T08:00:00+00:00")
 
 
 def two_task_go(root):

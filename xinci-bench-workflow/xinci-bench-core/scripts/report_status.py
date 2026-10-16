@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """只读看板:置顶待开建的快道 go;各状态数、待深核排序、观察中剩余天数、搁置天数、go 的文档、
-到期的验收节点、即将开玩的对象与建议跑快道的日期、种子池与原料池余量、待复查淘汰、累计 Semrush 调用。"""
+到期的验收节点、即将开玩的对象与建议跑快道的日期、上线前预判的五类提醒(可预判的原料、复核到期、预判失准、
+开玩日推迟、补参照)、种子池与原料池余量、待复查淘汰、累计 Semrush 调用。"""
 import argparse
 import json
 import sys
@@ -10,12 +11,66 @@ import data_root
 import ledger as L
 import quick_model as QM
 import quick_pool
+import quick_reference as QR
 import run_log
 import seeds
 from _common import BenchError, load_ledger, today
 
 PARKED_WARN_DAYS = 90
 RUN_AFTER_PLAYABLE_DAYS = 3                       # 建议在开玩当天到第 3 天之间跑一次快道
+
+
+def _forecast_window(root, on) -> list:
+    """可预判的待看原料:开玩日在今天之后 forecast_days 这个范围(含两端)内的。"""
+    near, far = QM.QUICK_ASSUMPTIONS["forecast_days"]
+    rows = [{"object": r["object"], "stage": r.get("stage"), "playable_at": r["playable_at"],
+             "days_ahead": (date.fromisoformat(r["playable_at"]) - date.fromisoformat(on)).days}
+            for r in quick_pool.upcoming(root, on=on, days=far)]
+    return [w for w in rows if w["days_ahead"] >= near]
+
+
+def _forecast_reminders(dirs, on) -> dict:
+    """预判方向的三类提醒:复核到期、预判失准、开玩日推迟(都只读账本里的 forecast 块、复核与复查记录)。
+    复核到期:预判 go(模型是开玩前预判,不含观察中开玩后按现行路径才判 go 的)没复核过,或预判观察中还没复查过,且到了复核日。"""
+    due, warnings, slipped = [], [], []
+    for s, r in dirs.items():
+        f = r.get("forecast")                      # 只有预判登记的方向才有 forecast 块(开玩前结算时写入)
+        if not f:
+            continue
+        if r["state"] == "go" and (r.get("model") or {}).get("basis") == "forecast" and f["review"] is None \
+                and on >= f["review_at"]:
+            due.append({"slug": s, "state": "go", "review_at": f["review_at"]})
+        if r["state"] == "watching" and not r["watch"]["checks"] and on >= f["review_at"]:
+            due.append({"slug": s, "state": "watching", "review_at": f["review_at"]})
+        if f["review"] and f["review"]["stop"] and (r.get("follow_up") or {}).get("status") != "abandoned":
+            warnings.append({"slug": s, "actual": f["review"]["actual"], "forecast_p25": f["review"]["forecast_p25"]})
+        if r["state"] in ("go", "watching") and f["slipped_days"] > QM.QUICK_ASSUMPTIONS["forecast_slip_days"]:
+            slipped.append({"slug": s, "first_public": r["object"]["first_public"], "slipped_days": f["slipped_days"]})
+    return {"forecast_reviews_due": due, "forecast_warnings": warnings, "forecast_slipped": slipped}
+
+
+def _references_due(root, dirs, on) -> list:
+    """补参照提醒:有 forecast 块的方向(任何状态),开玩满 reference_task_days 天、参照库里还没有该对象该任务的,每项任务一行 add;
+    参照库里 full_60_days 为假的,开玩满 reference_task_span 天后一行 update。due 是提醒到期的那天。"""
+    a = QM.QUICK_ASSUMPTIONS
+    library = QR.load_library(root)
+    have = {(quick_pool.normalize_term(x["object"]), x["task"]) for x in library}
+    rows = []
+    for r in dirs.values():
+        f = r.get("forecast")
+        if not f:
+            continue
+        due = QM.add_days(f["playable_at"], a["reference_task_days"])
+        name = r["object"]["name"]
+        for t in f["tasks"]:
+            key = (quick_pool.normalize_term(name), t["task"])
+            if on >= due and key not in have:
+                rows.append({"object": name, "task": t["task"], "action": "add", "due": due})
+    for x in library:
+        due = QM.add_days(x["playable_at"], a["reference_task_span"])
+        if not x["full_60_days"] and on >= due:
+            rows.append({"object": x["object"], "task": x["task"], "action": "update", "due": due})
+    return sorted(rows, key=lambda x: (x["due"], x["object"], x["task"]))
 
 
 def _quick_status(root, dirs, on) -> dict:
@@ -33,7 +88,8 @@ def _quick_status(root, dirs, on) -> dict:
         if fu["status"] == "pending":
             pending.append({"slug": s, "title": r["title"], "base_visits": base["visits"],
                             "base_revenue": base["revenue"], "launch_by": fu["launch_by"],
-                            "overdue": on > fu["launch_by"], "doc": str(L.doc_paths(root, s)[0])})
+                            "overdue": on > fu["launch_by"], "doc": str(L.doc_paths(root, s)[0]),
+                            "forecast": r["model"].get("basis") == "forecast"})
         elif fu["status"] == "launched":
             for m in QM.milestones(fu["launched_at"]):
                 if m["date"] <= on:
@@ -43,7 +99,9 @@ def _quick_status(root, dirs, on) -> dict:
                  "run_to": (date.fromisoformat(r["playable_at"]) + timedelta(days=RUN_AFTER_PLAYABLE_DAYS)).isoformat()}
                 for r in quick_pool.upcoming(root, on=on)]
     return {"pending_go": pending, "watching": sorted(watching, key=lambda w: w["days_left"]),
-            "milestones_due": launched_due, "pool_pending": len(quick_pool.pending(root, on=on)), "upcoming": upcoming}
+            "milestones_due": launched_due, "pool_pending": len(quick_pool.pending(root, on=on)), "upcoming": upcoming,
+            "forecast_window": _forecast_window(root, on), **_forecast_reminders(dirs, on),
+            "references_due": _references_due(root, dirs, on)}
 
 
 def status(root, on=None) -> dict:
@@ -87,10 +145,19 @@ def main(argv=None):
         return 0
     c, q = st["counts"], st["quick"]
     for g in q["pending_go"]:
-        print(f"【立即建站】{g['slug']}:基准约 {g['base_visits']:,} 次访问、${g['base_revenue']:.2f}/月,"
+        tag = "(开玩前预判)" if g["forecast"] else ""
+        print(f"【立即建站】{g['slug']}{tag}:基准约 {g['base_visits']:,} 次访问、${g['base_revenue']:.2f}/月,"
               f"建议最晚 {g['launch_by']} 上线" + ("(已超期)" if g["overdue"] else "") + f" → {g['doc']}")
     for m in q["milestones_due"]:
         print(f"  验收节点到了:{m['slug']} 上线第 {m['day']} 天({m['date']}),去看 Search Console")
+    for d in q["forecast_reviews_due"]:
+        print(f"  复核到期 {d['slug']}:{d['review_at']},测任务词的量后跑 ledger.py review-forecast(观察中的跑 watch-check)")
+    for w in q["forecast_warnings"]:
+        print(f"  预判失准 {w['slug']}:实测 {w['actual']} / 预测 {w['forecast_p25']},建议停止追加投入")
+    for w in q["forecast_slipped"]:
+        print(f"  开玩日推迟 {w['slug']}:累计 {w['slipped_days']} 天,现为 {w['first_public']},请重新评估")
+    for x in q["references_due"]:
+        print(f"  {'补参照' if x['action'] == 'add' else '更新参照'} {x['object']} {x['task']}")
     print(f"数据区:{st['data_root']}")
     print(f"方向:found {c['found']} · go {c['go']} · rejected {c['rejected']} · parked {c['parked']} · 观察中 {c['watching']}")
     for w in q["watching"]:
@@ -109,6 +176,8 @@ def main(argv=None):
     for u in q["upcoming"]:
         print(f"  即将开玩 {u['object']}" + (f"({u['stage']})" if u["stage"] else "")
               + f":{u['playable_at']},建议 {u['run_from']}~{u['run_to']} 跑一次快道")
+    for w in q["forecast_window"]:
+        print(f"  可预判 {w['object']}:{w['playable_at']},还有 {w['days_ahead']} 天(每轮最多预判 {QM.QUICK_ASSUMPTIONS['forecast_per_run']} 个)")
     b = st["semrush"]
     print(f"今天 Semrush 已用 {b['semrush_calls_today']}/{b['semrush_daily_limit']} 次"
           + ("(到了停止线,今天别再跑 Semrush)" if b["semrush_stop"] else "") + f";累计 {st['semrush_calls_total']} 次")

@@ -373,6 +373,12 @@ def write_forecast(root, slug="mho-map", object_us=600000, playable_at="2026-10-
     return forecast_ref, volume_ref
 
 
+def task_volume(slug, estimate, day="2026-11-05", term="mho map"):
+    """开玩后测任务词的量级观察:day 当天、月搜索量 estimate(锚词均值与新词均值相等,所以估算量就是锚词月量)。"""
+    return quick_volume_obs(slug, anchor_volume=estimate, new_mean=50.0, anchor_mean=50.0,
+                            term=term, observed_at=f"{day}T08:00:00+00:00")
+
+
 def setup_forecast(root, slug="mho-map", object_us=600000, playable_at="2026-10-29", brief=True):
     """上线前预判的快道方向:写参照 → 对象名量级 → 预判观察 → 按预判登记 → 简报素材并补进引用。
 
