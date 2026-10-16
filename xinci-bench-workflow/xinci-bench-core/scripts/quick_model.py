@@ -53,6 +53,7 @@ QUICK_ASSUMPTIONS = {
     "reference_task_days": 14,                            # 参照里任务词窗口长 14 天
     "reference_task_span": 60,                            # 在开玩后 60 天内找最高的连续 14 天
     "forecast_slip_days": 7,                              # 开玩日累计推迟超过 7 天,看板提醒重新评估
+    "forecast_volume_max_lag_days": 2,                    # 对象名量级观察须在预判当天或之前 2 天内测(按日期比)
 }
 TASK_WORDS = ("calculator", "codes", "tracker", "tier list", "map", "checker", "generator",
               "converter", "build", "value")
@@ -159,6 +160,16 @@ def reference_object_window(playable_at: str, a=QUICK_ASSUMPTIONS) -> list:
 def forecast_dates(playable_at: str, a=QUICK_ASSUMPTIONS) -> dict:
     return {"launch_by": add_days(playable_at, -a["forecast_launch_lead"]),
             "review_at": add_days(playable_at, a["review_days"])}
+
+
+def check_object_volume_lag(ref: str, volume_at: str, forecast_at: str, a=QUICK_ASSUMPTIONS) -> None:
+    """对象名量级观察须在预判当天或之前 forecast_volume_max_lag_days 天内测(按日期比,不比时刻):
+    O 取预判前最近 7 天,隔久了量就旧了;晚于预判的量不是预判时看到的。不合就拒收。"""
+    v, f = date.fromisoformat(volume_at[:10]), date.fromisoformat(forecast_at[:10])
+    lag, most = (f - v).days, a["forecast_volume_max_lag_days"]
+    require(lag >= 0, f"对象名量级观察 {ref} 是 {v} 测的,晚于预判观察的 {f}:须先测对象名的量再预判")
+    require(lag <= most, f"对象名量级观察 {ref} 是 {v} 测的,比预判观察的 {f} 早 {lag} 天:"
+                         f"须在预判当天或之前 {most} 天内测,重测对象名的量再预判")
 
 
 def forecast_totals(by_geo: dict, tasks: list) -> tuple:

@@ -176,6 +176,15 @@ class PregameDocTest(unittest.TestCase):
                        "references_due", "measure_rest", "watching", "skip", "\"review\"", "--dry-run"):
             self.assertIn(needle, sec)
 
+    def test_object_volume_lag_documented(self):
+        # 对象名量的时效:契约 10.6 写数值(由测试锁住),10.9 与命令手册 7.7 引用
+        lag = QM.QUICK_ASSUMPTIONS["forecast_volume_max_lag_days"]
+        c = text("选站契约.md")
+        table = c.split("### 10.6 ", 1)[1].split("### 10.7 ", 1)[0]
+        self.assertIn(f"| 预判对象名量的时效 | 对象名量级观察须在预判当天或之前 {lag} 天内测", table)
+        self.assertIn("预判对象名量的时效", c.split("### 10.9 ", 1)[1])
+        self.assertIn("预判对象名量的时效", text("命令与观察.md").split("### 7.7 上线前预判", 1)[1])
+
     def test_contract_has_pregame_section_and_step(self):
         c = text("选站契约.md")
         self.assertIn("### 10.9 上线前预判", c)

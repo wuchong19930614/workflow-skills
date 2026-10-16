@@ -7,7 +7,8 @@ r_p25、r_median、references、reference_refs、scope 原样来自 quick_refere
 
 输入 JSON(--input):
   slug、object、category、playable_at、date_source:提议的方向名、对象名、游戏类别、开玩日及其出处;
-  object_volume_ref:对象名量级观察(quick_volume,须是本方向的、term 就是对象名)的路径,前面有不过项没测时填 null;
+  object_volume_ref:对象名量级观察(quick_volume,须是本方向的、term 就是对象名,在预判当天或之前 2 天内测)的路径,
+    前面有不过项没测时填 null;
   tasks:[{task, terms}],最小版本要做的 1–4 项任务与归到它的说法;
   checks:P1、P2、P4、P5、P6 的 {pass, basis}(P3 由本脚本按参照库算;自己写了 P3 不过则照记,写通过不算数);
   serp:P5 看的两次美国首页 [{query, top10}],其中一次是"<游戏名> wiki";source_urls;
@@ -34,8 +35,9 @@ INPUT_CHECKS = ("P1", "P2", "P4", "P5", "P6")                 # 执行者判;P3 
 RATE_KEYS = ("r_p25", "r_median", "references", "reference_refs", "scope")
 
 
-def _object_volume(root, ref, slug, obj) -> tuple:
-    """读对象名量级观察 → (读得出的国家 → 开玩前月搜索量, 没查的国家)。须是本方向的 quick_volume,且 term 就是对象名。"""
+def _object_volume(root, ref, slug, obj, at) -> tuple:
+    """读对象名量级观察 → (读得出的国家 → 开玩前月搜索量, 没查的国家)。须是本方向的 quick_volume,term 就是对象名,
+    且在预判观察时间 at 当天或之前 forecast_volume_max_lag_days 天内测。"""
     vol = W.read(root, ref)
     require(vol["kind"] == "quick_volume", f"{ref} 不是量级观察(kind={vol['kind']}),须是 quick_volume")
     require(vol["slug"] == slug, f"{ref} 属于方向 {vol['slug']},不是 {slug}(量级观察的 slug 须和预判一致)")
@@ -44,6 +46,7 @@ def _object_volume(root, ref, slug, obj) -> tuple:
             f"{ref} 没记 term:对象名的量须用 trends_volume.py --term 记下测的是哪个词")
     require(quick_pool.normalize_term(term) == quick_pool.normalize_term(obj),
             f"{ref} 的 term 是 {term!r},不是对象名 {obj!r}(任务词的量不能当对象名的量用)")
+    QM.check_object_volume_lag(ref, vol["observed_at"], at)
     rows = vol["readings"]["countries"]
     pre = {c["geo"]: c["estimate_7d"] for c in rows if c["readable"]}
     cut = {c["geo"] for c in rows if not c["readable"] and c["basis"].startswith(TV.SKIPPED_PREFIX)}
@@ -96,7 +99,8 @@ def build_observation(root, payload: dict, at: str | None = None) -> dict:
     require(isinstance(checks_in, dict) and set(INPUT_CHECKS) <= set(checks_in) <= set(W.FORECAST_CHECKS),
             f"checks 须含 {INPUT_CHECKS}(P3 由脚本按参照库算,可以不写)")
     require(ref is None or isinstance(ref, str), "object_volume_ref 须为路径或 null")
-    pre, skipped = _object_volume(root, ref, slug, obj) if ref is not None else (None, [])
+    at = at or now()
+    pre, skipped = _object_volume(root, ref, slug, obj, at) if ref is not None else (None, [])
     rates = _task_rates(root, category, tasks)
     given = checks_in.get("P3")
     p3 = given if isinstance(given, dict) and given.get("pass") is False else _p3(category, tasks, rates)
@@ -116,7 +120,7 @@ def build_observation(root, payload: dict, at: str | None = None) -> dict:
                 "date_source": payload["date_source"], "object_volume_pre": pre, "object_volume_ref": ref,
                 "skipped_geos": skipped, "tasks": out_tasks, "forecast_p25": f25, "forecast_median": f50,
                 "suggestion": suggestion, "checks": checks, "serp": payload["serp"]}
-    obs = {"slug": slug, "observed_at": at or now(), "stage": "quick", "kind": "quick_forecast",
+    obs = {"slug": slug, "observed_at": at, "stage": "quick", "kind": "quick_forecast",
            "source_urls": payload["source_urls"], "semrush_calls": payload.get("semrush_calls", 0),
            "points": _points(readings), "readings": readings}
     if payload.get("browser_preflight") is not None:

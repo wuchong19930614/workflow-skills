@@ -425,6 +425,27 @@ class PregameSettleTest(unittest.TestCase):
             with self.assertRaisesRegex(BenchError, "不是对象名"):
                 settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
 
+    def test_object_volume_lag_is_checked_at_settle(self):
+        # 预判观察比对象名量级观察晚 2 天还认,晚 3 天拒收;量级观察晚于预判观察也拒收(都按日期比)
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            hand_forecast(root, slug, refs, observed_at="2026-10-15T09:00:00+00:00")
+            self.assertEqual(settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-15")["state"], "go")
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            hand_forecast(root, slug, refs, observed_at="2026-10-16T09:00:00+00:00")
+            with self.assertRaisesRegex(BenchError, "早 3 天"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-16")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "found")
+        with H.TmpRoot() as root:
+            slug, refs = H.setup_forecast(root)
+            later = W.write(root, H.quick_volume_obs(slug, anchor_volume=600000, new_mean=50.0, anchor_mean=50.0, term=OBJECT,
+                                                     observed_at="2026-10-14T08:00:00+00:00"))
+            L.update(root, slug, {}, [later])
+            hand_forecast(root, slug, refs, volume_ref=later)                 # 预判观察 10-13,量级观察 10-14
+            with self.assertRaisesRegex(BenchError, "晚于预判"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+
     def test_partial_geos_forecast_refused(self):
         with H.TmpRoot() as root:
             slug, refs = H.setup_forecast(root)
@@ -935,7 +956,10 @@ class SlipTest(unittest.TestCase):
         with H.TmpRoot() as root:
             slug, refs = H.setup_forecast(root)
             self.slip(root, slug, "2026-11-05", on="2026-10-22")
-            hand_forecast(root, slug, refs, playable_at="2026-11-05", observed_at="2026-10-22T09:00:00+00:00")
+            fresh = W.write(root, H.quick_volume_obs(slug, anchor_volume=600000, new_mean=50.0, anchor_mean=50.0, term=OBJECT,
+                                                     observed_at="2026-10-22T08:00:00+00:00"))   # 重做预判要重测对象名的量
+            L.update(root, slug, {}, [fresh])
+            hand_forecast(root, slug, refs, playable_at="2026-11-05", observed_at="2026-10-22T09:00:00+00:00", volume_ref=fresh)
             rec = settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-22")
             self.assertEqual((rec["forecast"]["playable_at"], rec["forecast"]["review_at"], rec["follow_up"]["launch_by"]),
                              ("2026-11-05", "2026-11-12", "2026-11-04"))

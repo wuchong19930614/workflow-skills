@@ -533,8 +533,9 @@ def latest_forecast(root, rec) -> tuple:
     return max(enumerate(rows), key=lambda x: (_at(x[1][1]["observed_at"]), x[0]))[1]
 
 
-def _check_object_volume(root, rec, r):
-    """预判观察的对象名月量须来自本方向引用里的对象名量级观察(测的词是对象名),数对得上。"""
+def _check_object_volume(root, rec, r, forecast_at):
+    """预判观察的对象名月量须来自本方向引用里的对象名量级观察(测的词是对象名),数对得上,
+    且在预判观察当天或之前 forecast_volume_max_lag_days 天内测。"""
     ref = r["object_volume_ref"]
     require(ref in rec["evidence_refs"], f"预判观察的对象名量级观察 {ref} 不在方向引用里(先用 update --ref 补进来)")
     vol = W.read(root, ref)
@@ -542,12 +543,14 @@ def _check_object_volume(root, rec, r):
     term = vol["readings"].get("term")
     require(isinstance(term, str) and quick_pool.normalize_term(term) == quick_pool.normalize_term(r["object"]),
             f"{ref} 测的词是 {term!r},不是对象名 {r['object']!r}(任务词的量不能当对象名的量用)")
+    QM.check_object_volume_lag(ref, vol["observed_at"], forecast_at)
     pre = {c["geo"]: c["estimate_7d"] for c in vol["readings"]["countries"] if c["readable"]}
     require(pre == r["object_volume_pre"], f"预判观察的对象名月量 {r['object_volume_pre']} 与量级观察 {ref} 的读数 {pre} 不一致")
 
 
 def forecast_model(root, rec) -> dict:
-    """预判方向的模型:从方向引用里最新的预判观察重算。六条须全过、国家须测全、说法须在任务里;对象名量级须在引用里且对得上;
+    """预判方向的模型:从方向引用里最新的预判观察重算。六条须全过、国家须测全、说法须在任务里;对象名量级须在引用里、
+    对得上、在预判当天或之前 2 天内测;
     每项任务的倍数与条数都按引用的参照路径向参照库重算,不一致就拒收(观察里的倍数不能自己说了算)。"""
     ref, f = latest_forecast(root, rec)
     require(f, "缺预判观察 quick_forecast")
@@ -556,7 +559,7 @@ def forecast_model(root, rec) -> dict:
     require(not failed, f"最新预判观察 {ref} 的 {'、'.join(failed)} 没过,不能测算")
     require(not r["skipped_geos"], f"最新预判观察 {ref} 还有没测的国家 {r['skipped_geos']},补测其余国家后重新预判")
     _check_forecast_terms(rec["terms"], f)
-    _check_object_volume(root, rec, r)
+    _check_object_volume(root, rec, r, f["observed_at"])
     for t in r["tasks"]:
         got = QR.check_refs(root, t["reference_refs"], t["task"], r["category"], t["scope"])
         same = (t["r_p25"], t["r_median"], t["references"]) == (got["r_p25"], got["r_median"], got["references"])

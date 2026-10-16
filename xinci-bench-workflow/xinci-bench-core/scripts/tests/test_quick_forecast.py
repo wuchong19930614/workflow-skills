@@ -231,6 +231,22 @@ class BuildForecastTest(unittest.TestCase):
             with self.assertRaises(BenchError):
                 QF.build_observation(root, H.forecast_payload(volume_ref=f"证据/{SLUG}/not-there.json"), at=AT)
 
+    def test_object_volume_lag(self):
+        # 对象名量须在预判当天或之前 forecast_volume_max_lag_days(2)天内测,按日期比;晚于预判也拒收
+        lag = QM.QUICK_ASSUMPTIONS["forecast_volume_max_lag_days"]
+        self.assertEqual(lag, 2)
+        cases = (("2026-10-13T23:00:00+00:00", None), ("2026-10-11T08:00:00+00:00", None),
+                 ("2026-10-10T08:00:00+00:00", "早 3 天"), ("2026-10-14T08:00:00+00:00", "晚于预判"))
+        for observed_at, refusal in cases:
+            with self.subTest(observed_at), H.TmpRoot() as root:
+                vref = setup(root, observed_at=observed_at)
+                if refusal is None:
+                    obs = QF.build_observation(root, H.forecast_payload(volume_ref=vref), at=AT)
+                    self.assertEqual(obs["readings"]["suggestion"], "go")
+                else:
+                    with self.assertRaisesRegex(BenchError, refusal):
+                        QF.build_observation(root, H.forecast_payload(volume_ref=vref), at=AT)
+
     def test_all_pass_without_volume_ref_refused(self):
         with H.TmpRoot() as root:
             H.write_references(root)
