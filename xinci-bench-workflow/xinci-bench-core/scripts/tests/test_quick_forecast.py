@@ -4,11 +4,13 @@ import json
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import helpers as H
 import quick_forecast as QF
+import quick_model as QM
 import trends_volume as TV
 import write_observation as W
 from _common import BenchError
@@ -400,10 +402,16 @@ class CliTest(unittest.TestCase):
         src.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
         return str(src)
 
+    def dated_payload(self, root, **kw):
+        """命令行的预判观察时间由脚本取 now(),所以日期都跟着今天走:对象名量级观察记在今天,
+        开玩日 = 今天 + 10 天(在 3–21 天窗口内),哪天跑都不过期。"""
+        day = QF.now()[:10]
+        vref = setup(root, observed_at=f"{day}T00:00:00+00:00")
+        return H.forecast_payload(volume_ref=vref, playable_at=QM.add_days(day, 10), **kw)
+
     def test_writes_and_prints_summary(self):
         with H.TmpRoot() as root:
-            vref = setup(root)
-            src = self.write_payload(root, H.forecast_payload(volume_ref=vref))
+            src = self.write_payload(root, self.dated_payload(root))
             code, out, _ = self.run_cli(["--data-root", str(root), "--input", src])
             self.assertEqual(code, 0)
             got = json.loads(out)
@@ -415,8 +423,7 @@ class CliTest(unittest.TestCase):
 
     def test_dry_run_writes_nothing(self):
         with H.TmpRoot() as root:
-            vref = setup(root)
-            src = self.write_payload(root, H.forecast_payload(volume_ref=vref))
+            src = self.write_payload(root, self.dated_payload(root))
             before = sorted(p.name for p in (root / "证据" / SLUG).glob("*"))
             code, out, _ = self.run_cli(["--data-root", str(root), "--input", src, "--dry-run"])
             self.assertEqual(code, 0)
@@ -425,8 +432,7 @@ class CliTest(unittest.TestCase):
 
     def test_failed_forecast_prints_nulls(self):
         with H.TmpRoot() as root:
-            vref = setup(root)
-            p = H.forecast_payload(volume_ref=vref, tasks=[{"task": "calculator", "terms": ["mho calculator"]}])
+            p = self.dated_payload(root, tasks=[{"task": "calculator", "terms": ["mho calculator"]}])
             code, out, _ = self.run_cli(["--data-root", str(root), "--input", self.write_payload(root, p)])
             got = json.loads(out)
             self.assertEqual((code, got["suggestion"], got["forecast_p25"], got["下四分位基准访问"]), (0, "skip", None, None))
@@ -444,6 +450,21 @@ class CliTest(unittest.TestCase):
             code, _, err = self.run_cli(["--data-root", str(root), "--input", src])
             self.assertEqual(code, 1)
             self.assertTrue(err.startswith("拒收:"))
+
+
+class CliClockTest(CliTest):
+    """同 CliTest,把 quick_forecast 的时钟拨到 2026-10-27 再跑一遍:日期写死的夹具到了那天开玩日就不在 3–21 天窗口里。"""
+    CLOCK = "2026-10-27T08:00:00+00:00"
+
+    def setUp(self):
+        patcher = mock.patch.object(QF, "now", return_value=self.CLOCK)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+
+class CliLaterClockTest(CliClockTest):
+    """同上,时钟拨到 2026-11-20(写死的开玩日早已过去)。"""
+    CLOCK = "2026-11-20T08:00:00+00:00"
 
 
 if __name__ == "__main__":
