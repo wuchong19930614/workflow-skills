@@ -12,10 +12,11 @@ import data_root
 import quick_model as QM
 from _common import EN_COUNTRIES, SLUG_RE, BenchError, is_date, load_json, require, stamp
 
-QUICK_KINDS = ("quick_signal", "quick_screen", "quick_volume", "quick_brief", "quick_reference")
+QUICK_KINDS = ("quick_signal", "quick_screen", "quick_volume", "quick_brief", "quick_reference", "quick_forecast")
 KINDS = ("scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief") + QUICK_KINDS
 CHECKS = ("B1", "B2", "B3", "B4", "B5")
 QUICK_CHECKS = ("Q1", "Q2", "Q3", "Q4", "Q5", "Q6")
+FORECAST_CHECKS = ("P1", "P2", "P3", "P4", "P5", "P6")        # 上线前预判的六条适用范围
 QUICK_SOURCES = ("autocomplete", "trends_rising", "trends_rss", "steamcharts", "apple", "itunes",
                  "google_play", "producthunt", "github", "hackernews", "youtube", "wikipedia",
                  "policy", "reddit", "other")
@@ -43,6 +44,8 @@ REQUIRED = {
     "quick_reference": ("object", "category", "task", "task_term", "playable_at", "anchor_term", "anchor_volume",
                         "anchor_source", "object_window", "object_ratio", "task_window", "task_ratio",
                         "full_60_days", "object_volume_pre", "task_volume_post", "r"),
+    "quick_forecast": ("object", "category", "playable_at", "date_source", "object_volume_pre", "object_volume_ref",
+                       "skipped_geos", "tasks", "forecast_p25", "forecast_median", "suggestion", "checks", "serp"),
 }
 # quick_volume 里每个读得出的国家必须有的字段
 COUNTRY_FIELDS = ("anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "new_mean_7d",
@@ -345,6 +348,79 @@ def _check_quick_reference(r, observed_at):
                 f"full_60_days 为 true 须观察日 ≥ 开玩日 + {span} 天(不到就写 false)")
 
 
+def _check_forecast_task(t):
+    """预判里一项任务的倍数:参照条数够数、引用的路径与条数对得上、下四分位不超过中位数。"""
+    a = QM.QUICK_ASSUMPTIONS
+    name = t["task"]
+    n, refs = t.get("references"), t.get("reference_refs")
+    require(isinstance(n, int) and not isinstance(n, bool) and n >= a["min_references"],
+            f"{name}: references 须为整数且 ≥ {a['min_references']}(参照不足不能预判)")
+    require(isinstance(refs, list) and len(refs) == n and all(isinstance(x, str) and x.startswith("证据/") for x in refs),
+            f"{name}: reference_refs 须为 {n} 个 证据/ 下的参照观察路径,与 references 条数一致")
+    require(len(set(refs)) == len(refs), f"{name}: reference_refs 有重复的路径,同一条参照不能算两次")
+    require(_num(t.get("r_p25")) and _num(t.get("r_median")) and t["r_p25"] <= t["r_median"],
+            f"{name}: r_p25、r_median 须为非负数且 r_p25 ≤ r_median")
+    require(t.get("scope") in ("category", "task_type"), f"{name}: scope 须为 category(同类别)或 task_type(退到全部类别)")
+
+
+def _check_forecast_numbers(r):
+    """六条都过时的数:对象名量、跳过的国家、每项任务的倍数、合计与建议都要对得上。"""
+    pre, tasks = r["object_volume_pre"], r["tasks"]
+    require(isinstance(pre, dict) and pre and set(pre) <= set(EN_COUNTRIES) and all(_num(v) for v in pre.values()),
+            f"object_volume_pre 须为英文区 {EN_COUNTRIES} 里读得出的国家 → 开玩前月搜索量(非负数)")
+    require(pre.get("US", 0) > 0, "object_volume_pre 里美国须 > 0(参照的倍数按美国测,美国读不出就不能预判)")
+    require(isinstance(r["object_volume_ref"], str) and r["object_volume_ref"].startswith("证据/"),
+            "六条都过时 object_volume_ref 须为对象名量级观察 quick_volume 的路径(证据/ 下)")
+    skipped = r["skipped_geos"]
+    require(isinstance(skipped, list) and len(set(skipped)) == len(skipped) and set(skipped) <= set(EN_COUNTRIES)
+            and "US" not in skipped and not set(skipped) & set(pre),
+            "skipped_geos 须为英文区里没查的国家:不含美国、不重复、不与 object_volume_pre 的国家重叠")
+    for t in tasks:
+        _check_forecast_task(t)
+    p25, median = QM.forecast_totals(pre, tasks)
+    require((r["forecast_p25"], r["forecast_median"]) == (p25, median),
+            f"forecast_p25、forecast_median 须等于对象名量 × 各任务倍数之和(取整,应为 {p25}、{median})")
+    want = QM.forecast_suggestion(p25, median, complete=not skipped)
+    require(r["suggestion"] == want, f"suggestion 须为 {want}(按下四分位 {p25}、中位数 {median}、"
+                                     f"{'已测全部国家' if not skipped else '只测了部分国家'}算出)")
+
+
+def _check_quick_forecast(r, observed_at):
+    """上线前预判:对象名开玩前的量 × 参照库倍数,一款游戏一个站,按 1–4 项任务合计;六条没有全过时只记观察、建议 skip。"""
+    a = QM.QUICK_ASSUMPTIONS
+    require(isinstance(r["object"], str) and r["object"].strip(), "quick_forecast.object 须为非空文字")
+    _check_null_rule(r["checks"], FORECAST_CHECKS, r["object"])
+    require(r["category"] in QM.GAME_CATEGORIES, f"category 须为 {QM.GAME_CATEGORIES}")
+    require(is_date(r["playable_at"]), "playable_at 须为日历上存在的 YYYY-MM-DD")
+    require(isinstance(r["date_source"], str) and r["date_source"].strip(), "date_source 须为非空文字(开玩日从哪读的)")
+    verdicts = {k: r["checks"][k]["pass"] for k in FORECAST_CHECKS}
+    if verdicts["P1"] is True:
+        lo, hi = a["forecast_days"]
+        lead = (date.fromisoformat(r["playable_at"]) - datetime.fromisoformat(observed_at).date()).days
+        require(lo <= lead <= hi, f"P1 判通过须开玩日在观察日之后 {lo}–{hi} 天(现为 {lead} 天)")
+    tasks = r["tasks"]
+    require(isinstance(tasks, list) and 1 <= len(tasks) <= 4, "tasks 须为 1–4 项(一款游戏一个站,最小版本要做的任务)")
+    for t in tasks:
+        require(isinstance(t, dict) and isinstance(t.get("task"), str) and QM.TASK_TYPE_RE.fullmatch(t["task"]),
+                "tasks[].task 须为小写英文任务类型(字母开头,可含数字与下划线,如 map、tier_list)")
+        require(isinstance(t.get("terms"), list) and t["terms"] and all(isinstance(x, str) and x.strip() for x in t["terms"]),
+                f"{t['task']}: terms 须为非空的文字列表(归到这项任务的说法)")
+    names = [t["task"] for t in tasks]
+    require(len(set(names)) == len(names), "tasks 里任务类型不能重复")
+    serp = r["serp"]
+    require(isinstance(serp, list) and all(isinstance(s, dict) and isinstance(s.get("query"), str) and s["query"].strip()
+                                           and isinstance(s.get("top10"), list) for s in serp),
+            "serp 须为列表,每项含 query 与 top10 列表(两次首页的前 10)")
+    if verdicts["P5"] is not None:
+        require(len(serp) >= 2 and any(s["query"].strip().lower().endswith(" wiki") for s in serp),
+                "P5 有结论时 serp 至少两条(<游戏名> <任务词> 与 <游戏名> wiki),其中一条查询以 \" wiki\" 结尾")
+    require(r["suggestion"] in ("go", "watching", "skip", "measure_rest"), "suggestion 须为 go/watching/skip/measure_rest")
+    if all(v is True for v in verdicts.values()):
+        _check_forecast_numbers(r)
+    else:
+        require(r["suggestion"] == "skip", "六条里有不过项时 suggestion 须为 skip(只记观察,不预判)")
+
+
 def _expected_stage(kind):
     return "scan" if kind == "scan" else ("quick" if kind in QUICK_KINDS else "assess")
 
@@ -376,12 +452,14 @@ def validate(obs: dict) -> None:
     require(isinstance(r, dict), "readings 须为对象")
     missing = [k for k in REQUIRED[kind] if k not in r]
     require(not missing, f"{kind}.readings 缺字段: {missing}")
-    if kind in ("scan", "quick_reference"):
+    if kind in ("scan", "quick_reference", "quick_forecast"):
         globals()[f"_check_{kind}"](r, obs["observed_at"])
     else:
         globals()[f"_check_{kind}"](r)
     if kind == "quick_screen" and (r["checks"]["Q5"]["pass"] is not None or r["checks"]["Q6"]["pass"] is not None):
         require(_preflight_ok(obs.get("browser_preflight")), "Q5/Q6 有结论时须有通过的 browser_preflight")
+    if kind == "quick_forecast" and r["checks"]["P5"]["pass"] is not None:
+        require(_preflight_ok(obs.get("browser_preflight")), "P5 有结论时须有通过的 browser_preflight")
 
 
 def write(root, obs: dict) -> str:

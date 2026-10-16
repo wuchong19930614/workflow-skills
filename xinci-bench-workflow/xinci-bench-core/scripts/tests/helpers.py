@@ -275,6 +275,59 @@ def reference_obs(object="Game A", task="map", category="mmo_gacha", playable_at
                          "r": round(post / pre, 4)}}
 
 
+def write_references(root, rs=(0.1, 0.2, 0.3), category="mmo_gacha", task="map"):
+    """写一组参照观察(每个 r 一款不同的游戏:Ref Game 0、1、2…),返回它们的路径;对象名比值恒为 1,所以 r = 任务词比值。"""
+    import write_observation as W
+    return [W.write(root, reference_obs(object=f"Ref Game {i}", task=task, category=category, task_ratio=r))
+            for i, r in enumerate(rs)]
+
+
+FORECAST_PASS_BASIS = {
+    "P1": "发售表与官方商店页都写 2026-10-29 开玩,尚无公开测试",
+    "P2": "对象名开玩前 7 天美国读得出,参照库里同类游戏有地图类任务",
+    "P4": "不在契约第 1 节五条排除之内",
+    "P5": "美国首页两次查询,没有专做本作的 wiki 或工具站",
+    "P6": "开玩前 AI 概览答不了未上线的内容,记开玩前未知,按 0.6 取系数",
+}
+
+
+def forecast_payload(slug="mho-map", object="Monster Hunter Outlanders", playable_at="2026-10-29", volume_ref=None,
+                     tasks=None, category="mmo_gacha"):
+    """quick_forecast.build_observation 的输入:P1、P2、P4、P5、P6 全过(P3 由脚本按参照库算),两次首页读数齐全。
+
+    category 默认与 write_references 一致(mmo_gacha),参照够数时倍数取同类别。
+    """
+    top10 = [{"pos": 1, "domain": "reddit.com", "type": "forum", "completes_task": False}]
+    return {"slug": slug, "object": object, "category": category, "playable_at": playable_at,
+            "date_source": "https://example.org/mho", "object_volume_ref": volume_ref,
+            "tasks": tasks or [{"task": "map", "terms": ["mho map"]}],
+            "checks": {k: {"pass": True, "basis": b} for k, b in FORECAST_PASS_BASIS.items()},
+            "serp": [{"query": "monster hunter outlanders map", "top10": list(top10)},
+                     {"query": "monster hunter outlanders wiki", "top10": list(top10)}],
+            "source_urls": ["https://example.org/mho"], "browser_preflight": dict(PREFLIGHT)}
+
+
+def forecast_obs(slug="mho-map", playable_at="2026-10-29"):
+    """手写的合法预判观察:观察日 2026-10-13,P1–P6 全过,判 go。
+
+    美国对象名月量 600000;三条参照倍数 0.1/0.2/0.3 → 下四分位 0.15、中位数 0.2 →
+    站点预测 90000(下四分位)/ 120000(中位数),基准访问 floor(90000 × 0.2 × 0.6) = 10800 ≥ 10000。
+    """
+    refs = [f"证据/_quick/20261016T080000000000Z-0000000{i}-quick_reference.json" for i in range(3)]
+    checks = {k: {"pass": True, "basis": f"{k} 依据"} for k in ("P1", "P2", "P3", "P4", "P5", "P6")}
+    top10 = [{"pos": 1, "domain": "reddit.com", "type": "forum", "completes_task": False}]
+    return {**QUICK_BASE, "slug": slug, "kind": "quick_forecast", "browser_preflight": dict(PREFLIGHT),
+            "readings": {"object": "Monster Hunter Outlanders", "category": "mmo_gacha", "playable_at": playable_at,
+                         "date_source": "https://example.org/mho", "object_volume_pre": {"US": 600000},
+                         "object_volume_ref": f"证据/{slug}/20261013T080000000000Z-00000000-quick_volume.json",
+                         "skipped_geos": [],
+                         "tasks": [{"task": "map", "terms": ["mho map"], "r_p25": 0.15, "r_median": 0.2,
+                                    "references": 3, "reference_refs": refs, "scope": "category"}],
+                         "forecast_p25": 90000, "forecast_median": 120000, "suggestion": "go", "checks": checks,
+                         "serp": [{"query": "monster hunter outlanders map", "top10": list(top10)},
+                                  {"query": "monster hunter outlanders wiki", "top10": list(top10)}]}}
+
+
 def quick_brief_obs(slug, build_days=2, data_available=True):
     return {**QUICK_BASE, "slug": slug, "kind": "quick_brief",
             "readings": {"positioning": "输入作物与天气,算出售价",
