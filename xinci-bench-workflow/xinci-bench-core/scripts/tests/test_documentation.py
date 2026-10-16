@@ -81,6 +81,17 @@ class QuickContractTest(unittest.TestCase):
                        " / ".join(str(m) for m in a["milestones"]) + " 天", f"基准预计 × {a['stop_ratio']:.0%}"):
             self.assertIn(needle, c)
 
+    def test_pregame_numbers_match_code(self):
+        c, a = text("选站契约.md"), QM.QUICK_ASSUMPTIONS
+        lo, hi = a["forecast_days"]
+        far, near = a["reference_object_window"]
+        for needle in (f"今天之后 {lo}–{hi} 天", f"每轮最多预判 {a['forecast_per_run']} 个", f"参照至少 {a['min_references']} 条",
+                       "下四分位", f"开玩日前 {a['forecast_launch_lead']} 天", f"开玩日 + {a['review_days']} 天",
+                       f"预测 × {a['review_stop_ratio']:.0%}", f"门槛 × {a['us_only_cutoff']:.0%}",
+                       f"开玩日前第 {far} 到第 {near} 天", f"开玩后 {a['reference_task_span']} 天内最高的连续 {a['reference_task_days']} 天",
+                       f"推迟超过 {a['forecast_slip_days']} 天", *QM.GAME_CATEGORIES):
+            self.assertIn(needle, c)
+
     def test_task_words_and_quick_gates_documented(self):
         c = text("选站契约.md")
         self.assertIn("、".join(QM.TASK_WORDS), c)

@@ -82,5 +82,57 @@ class QuickModelTest(unittest.TestCase):
         self.assertEqual(Q.add_days("2026-10-20", 7), "2026-10-27")
 
 
+class ForecastTest(unittest.TestCase):
+    def test_go_on_p25(self):
+        m = Q.forecast({"US": 300000, "GB": 100000},
+                       [{"task": "map", "r_p25": 0.15, "r_median": 0.25}, {"task": "build", "r_p25": 0.06, "r_median": 0.1}])
+        self.assertEqual((m["forecast_p25"], m["forecast_median"]), (84000, 140000))
+        base = m["scenarios"]["base"]
+        self.assertEqual((base["visits"], base["us_visits"], base["revenue"]), (10080, 7560, 35.28))
+        self.assertEqual((m["passes"], m["suggestion"], m["basis"], m["aio_factor"]), (True, "go", "forecast", 0.6))
+        self.assertEqual(m["median_scenarios"]["base"]["visits"], 16800)
+
+    def test_median_only_is_watching(self):
+        m = Q.forecast({"US": 400000}, [{"task": "map", "r_p25": 0.1, "r_median": 0.25}])
+        self.assertEqual((m["passes"], m["passes_median"], m["suggestion"]), (False, True, "watching"))
+
+    def test_threshold_boundary(self):
+        one = [{"task": "map", "r_p25": 1.0, "r_median": 1.0}]
+        self.assertEqual(Q.forecast({"US": 83334}, one)["suggestion"], "go")     # floor(83334×0.12)=10000
+        self.assertEqual(Q.forecast({"US": 83333}, one)["suggestion"], "skip")
+        self.assertEqual(Q.forecast({"US": 83334}, one * 4)["suggestion"], "go")  # 任务数边界:1 与 4 项可以
+        for by_geo, tasks in (({"US": 1}, []), ({"US": 1}, one * 5),                  # 0 项、5 项拒收
+                              ({"US": 1}, [{"task": "map", "r_p25": 0.3, "r_median": 0.2}]),    # 下四分位大于中位数
+                              ({"US": 1}, [{"task": "map", "r_p25": -0.1, "r_median": 0.2}]),   # 倍数为负
+                              ({"US": 1, "IN": 1}, one), ({}, one)):                # 非英文区、没有量
+            with self.assertRaises(BenchError):
+                Q.forecast(by_geo, tasks)
+
+    def test_us_only_cutoff_uses_median(self):
+        t = lambda med: [{"task": "map", "r_p25": 0.01, "r_median": med}]
+        # 美国单国中位数基准 floor(300000×0.15×0.12)=5400 ≥ 门槛 × 50% → 还要测其他 5 国
+        self.assertEqual(Q.forecast({"US": 300000}, t(0.15), complete=False)["suggestion"], "measure_rest")
+        self.assertEqual(Q.forecast({"US": 300000}, t(0.1), complete=False)["suggestion"], "skip")
+
+    def test_dates_and_windows(self):
+        self.assertEqual(Q.forecast_dates("2026-10-29"), {"launch_by": "2026-10-28", "review_at": "2026-11-05"})
+        self.assertEqual(Q.reference_object_window("2026-08-22"), ["2026-08-13", "2026-08-19"])
+
+    def test_recompute_dispatches_on_model_basis(self):
+        f = {"object_volume_pre": {"US": 400000}, "tasks": [{"task": "map", "r_p25": 0.1, "r_median": 0.25}]}
+        m = Q.forecast(f["object_volume_pre"], f["tasks"])
+        self.assertEqual(Q.recompute({"model": m, "forecast": f}), m)
+        cur = {"volume": {"estimate_7d": 50000, "by_geo": {"US": 50000}, "trend": {"non_declining": True}},
+               "serp": {"aio_present": False, "aio_completes": False}}
+        self.assertEqual(Q.recompute({"model": {"basis": "current"}, **cur}), Q.compute(cur))   # 现行方向不写 basis 也走 compute
+        self.assertEqual(Q.recompute(cur), Q.compute(cur))
+
+    def test_compute_unchanged(self):
+        # 抽出 _scenarios 的守护:改动前就会通过,改完仍须通过(美国 50000 → 基准 10000)
+        r = {"volume": {"estimate_7d": 50000, "by_geo": {"US": 50000}, "trend": {"non_declining": True}},
+             "serp": {"aio_present": False, "aio_completes": False}}
+        self.assertEqual(Q.compute(r)["scenarios"]["base"], {"share": 0.2, "visits": 10000, "us_visits": 10000, "revenue": 40.0})
+
+
 if __name__ == "__main__":
     unittest.main()
