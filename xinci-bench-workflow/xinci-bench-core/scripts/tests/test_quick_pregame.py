@@ -155,6 +155,29 @@ class RegisterForecastTest(unittest.TestCase):
             H.setup_forecast(root, brief=False)
             self.assertEqual(quick_pool.pending(root), [])
 
+    def test_register_consumes_the_games_calendar_item(self):
+        import quick_pool
+        calendar = {"source": "wikipedia", "object": OBJECT, "term": None, "url": "https://en.wikipedia.org/x",
+                    "seen_at": "2026-10-12", "playable_at": "2026-10-29", "stage": "Release"}
+        other = dict(calendar, object="Other Game", url="https://en.wikipedia.org/y", playable_at="2026-10-30")
+        with H.TmpRoot() as root:
+            quick_pool.add_items(root, [calendar, other], "证据/_quick/x-quick_signal.json")
+            before = [r["object"] for r in quick_pool.upcoming(root, on="2026-10-13", days=21)]
+            self.assertEqual(before, [OBJECT, "Other Game"])
+            H.setup_forecast(root)
+            after = [r["object"] for r in quick_pool.upcoming(root, on="2026-10-13", days=21)]
+            self.assertEqual(after, ["Other Game"])                       # 登记过的游戏不再出现在即将开玩里
+            self.assertEqual([r["status"] for r in quick_pool._read_pool(root) if r["object"] == OBJECT], ["used"])
+
+    def test_screen_registration_leaves_the_calendar_item_alone(self):
+        import quick_pool
+        calendar = {"source": "wikipedia", "object": H.OBJ["name"], "term": None, "url": "https://en.wikipedia.org/x",
+                    "seen_at": "2026-10-12", "playable_at": "2026-10-20", "stage": "Release"}
+        with H.TmpRoot() as root:
+            quick_pool.add_items(root, [calendar], "证据/_quick/x-quick_signal.json")
+            H.setup_quick(root)                                           # 现行(速判)登记只消耗登记的说法
+            self.assertEqual([r["object"] for r in quick_pool.upcoming(root, on="2026-10-13")], [H.OBJ["name"]])
+
     def test_current_registration_unchanged(self):
         with H.TmpRoot() as root:
             slug, _ = H.setup_quick(root)

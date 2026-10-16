@@ -415,7 +415,8 @@ def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason,
         rec["basis"] = "forecast"              # 现行方向不写 basis(不写即速判登记)
     ledger["directions"][slug] = rec
     save_ledger(root, ledger)
-    quick_pool.consume(root, [t["term"] for t in terms])
+    used = [t["term"] for t in terms] + ([obj["name"]] if forecast_ref is not None else [])
+    quick_pool.consume(root, used)             # 预判登记另消耗游戏本身:开玩日历原料没有说法,以对象名为键
     return rec
 
 
