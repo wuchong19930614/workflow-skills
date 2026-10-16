@@ -9,7 +9,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import bench_model as M
 import ledger as L
+import quick_forecast as QF
 import quick_model as QM
+import quick_reference as QR
 import seed_import as I
 import validate_ledger as V
 import write_observation as W
@@ -20,6 +22,37 @@ WORKFLOW = CORE.parent
 
 def text(name):
     return (CORE / name).read_text(encoding="utf-8")
+
+
+def skill_text(name):
+    return (WORKFLOW / name / "SKILL.md").read_text(encoding="utf-8")
+
+
+SPEC = WORKFLOW.parent / "docs" / "superpowers" / "specs" / "2026-10-16-xinci-bench-quick-pregame-go-design.md"
+
+
+def headings(body):
+    """文档里的二到六级标题(跳过代码块和"目录"本身)。"""
+    out, fence = [], False
+    for line in body.splitlines():
+        if line.startswith("```"):
+            fence = not fence
+        elif not fence:
+            m = re.match(r"#{2,6} (.+)$", line)
+            if m and m.group(1).strip() != "目录":
+                out.append(m.group(1).strip())
+    return out
+
+
+def toc_entries(body):
+    """目录里的 (标题, 锚点);目录从"## 目录"到下一个二级标题。"""
+    block = body.split("\n## 目录\n", 1)[1].split("\n## ", 1)[0]
+    return re.findall(r"^\s*- \[(.+?)\]\(#(.+?)\)\s*$", block, re.M)
+
+
+def anchor(heading):
+    """GitHub 式锚点:转小写,只留字母数字(含汉字)、空格、连字符、下划线,空格换连字符。"""
+    return "".join(c for c in heading.lower() if c.isalnum() or c in " -_").replace(" ", "-")
 
 
 class ContractTest(unittest.TestCase):
@@ -116,6 +149,66 @@ class QuickContractTest(unittest.TestCase):
     def test_direction_schema_quick_required(self):
         s = json.loads(text("数据结构/direction.schema.json"))
         self.assertEqual(tuple(s["quick_required"]), V.REQUIRED_QUICK)
+
+
+class PregameDocTest(unittest.TestCase):
+    """上线前预判的文档:命令、字段、流程步骤与目录都要跟代码对得上。"""
+
+    def test_pregame_tools_documented(self):
+        doc, coll, skill = text("命令与观察.md"), text("数据采集.md"), skill_text("xinci-bench-quick")
+        for needle in ("quick_reference.py time-range", "quick_reference.py build", "quick_reference.py summary",
+                       "quick_forecast.py --input", "ledger.py review-forecast", "\"basis\": \"forecast\"",
+                       "\"skipped_geos\"", "\"scope\""):
+            self.assertIn(needle, doc)
+        self.assertIn("xinciTrends(", coll)
+        self.assertIn("quick_reference.py time-range", coll)
+        for needle in ("quick_forecast.py", "review-forecast", f"每轮最多预判 {QM.QUICK_ASSUMPTIONS['forecast_per_run']} 个"):
+            self.assertIn(needle, skill)
+
+    def test_command_doc_lists_every_pregame_field(self):
+        sec = text("命令与观察.md").split("### 7.7 上线前预判", 1)[1]
+        keys = set(W.REQUIRED["quick_reference"]) | set(W.REQUIRED["quick_forecast"]) | set(L.FORECAST_KEYS)
+        keys |= set(QR.PAYLOAD_KEYS) | set(QF.PAYLOAD_KEYS) | set(QF.RATE_KEYS)
+        keys |= set(QR.summary([{"task": "map", "category": "mmo_gacha", "r": 0.1}])[0])
+        for k in sorted(keys):
+            self.assertIn(f'"{k}"', sec, f"7.7 的 JSON 里没写字段 {k}")
+        for needle in ("forecast_window", "forecast_reviews_due", "forecast_warnings", "forecast_slipped",
+                       "references_due", "measure_rest", "watching", "skip", "\"review\"", "--dry-run"):
+            self.assertIn(needle, sec)
+
+    def test_contract_has_pregame_section_and_step(self):
+        c = text("选站契约.md")
+        self.assertIn("### 10.9 上线前预判", c)
+        sec, steps = c.split("### 10.9 上线前预判", 1)[1], c.split("### 10.2 ", 1)[1].split("### 10.3 ", 1)[0]
+        self.assertEqual(re.findall(r"^\d+\. ([^：]+)：", steps, re.M),
+                         ["先提醒", "复查观察中", "扫信号", "上线前预判", "零成本速判", "首屏速判", "登记、测算、结算", "推荐与汇报"])
+        self.assertIn("### 10.2 一次运行的八步", c)
+        for code in ("P1", "P2", "P3", "P4", "P5", "P6"):
+            self.assertIn(f"**{code} ", sec)
+        for needle in ("10.6", "飙升词 > 复核到期 > 预判 > 补参照", "不能否决", "review-forecast", "update"):
+            self.assertIn(needle, sec)
+
+    def test_skill_steps_are_numbered_and_cover_pregame(self):
+        body = skill_text("xinci-bench-quick")
+        nums = [int(n) for n in re.findall(r"^(\d+)\. ", body, re.M)]
+        self.assertEqual(nums, list(range(1, len(nums) + 1)))
+        for needle in ("forecast_window", "quick_forecast.py", "register-quick", "`forecast` 键", "review-forecast",
+                       "watch-check", "开玩日前 1 天", "quick_reference.py", "references_due", "不能 `rejected`",
+                       "不能用 `ledger.py quick-preview`"):
+            self.assertIn(needle, body)
+
+    def test_spec_marked_implemented_with_rulings(self):
+        body = SPEC.read_text(encoding="utf-8")
+        self.assertIn("- 状态：已批准，已实施", body)
+        sec = body.split("## 13. 实施时补的口径", 1)[1]
+        self.assertEqual([int(n) for n in re.findall(r"^(\d+)\. ", sec, re.M)], list(range(1, 11)))
+
+    def test_tables_of_contents_list_every_heading(self):
+        for name, body in (("选站契约.md", text("选站契约.md")), ("命令与观察.md", text("命令与观察.md")),
+                           ("数据采集.md", text("数据采集.md")), ("设计稿", SPEC.read_text(encoding="utf-8"))):
+            toc, want = toc_entries(body), headings(body)
+            self.assertEqual([t for t, _ in toc], want, f"{name} 的目录与标题不一致")
+            self.assertEqual([a for _, a in toc], [anchor(h) for h in want], f"{name} 的目录锚点有误")
 
 
 class SkillTest(unittest.TestCase):
