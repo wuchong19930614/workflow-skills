@@ -170,6 +170,27 @@ class LibraryTest(unittest.TestCase):
             self.assertEqual(sorted((x["task"], x["r"]) for x in lib), [("codes", 0.5), ("map", 0.3)])
             self.assertTrue(all(x["ref"].startswith("证据/_quick/") and x["observed_at"] for x in lib))
 
+    def test_load_library_skips_bad_references_when_asked(self):
+        # 给了 skipped 列表:校验不过的、读不出的参照跳过并记下 {ref, reason},其余照常;没给就照旧拒收
+        import json
+        with H.TmpRoot() as root:
+            good = H.write_references(root)
+            garbled = W.write(root, H.reference_obs(object="Broken A"))
+            (root / garbled).write_text("{not json", encoding="utf-8")
+            tampered = W.write(root, H.reference_obs(object="Broken B"))
+            obs = json.loads((root / tampered).read_text(encoding="utf-8"))
+            obs["readings"]["r"] = 9.9                                            # r 与体积对不上,校验不过
+            (root / tampered).write_text(json.dumps(obs, ensure_ascii=False), encoding="utf-8")
+            skipped = []
+            lib = QR.load_library(root, skipped)
+            self.assertEqual(sorted(x["ref"] for x in lib), sorted(good))
+            self.assertEqual(sorted(x["ref"] for x in skipped), sorted([garbled, tampered]))
+            reasons = {x["ref"]: x["reason"] for x in skipped}
+            self.assertIn("JSONDecodeError", reasons[garbled])
+            self.assertIn("r 须等于", reasons[tampered])
+            with self.assertRaises((BenchError, ValueError)):
+                QR.load_library(root)
+
     def test_load_library_empty(self):
         with H.TmpRoot() as root:
             self.assertEqual(QR.load_library(root), [])

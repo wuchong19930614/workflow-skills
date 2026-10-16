@@ -453,6 +453,25 @@ class CliTest(unittest.TestCase):
             got = json.loads(out)
             self.assertEqual((code, got["suggestion"], got["forecast_p25"], got["下四分位基准访问"]), (0, "skip", None, None))
 
+    def test_bad_reference_is_skipped_and_reported(self):
+        # 参照库里一条坏了:跳过它照常预判,输出的"参照不可用"与观察的 points 都写明跳过了哪条
+        with H.TmpRoot() as root:
+            src = self.write_payload(root, self.dated_payload(root))
+            bad = W.write(root, H.reference_obs(object="Broken"))
+            (root / bad).write_text("{not json", encoding="utf-8")
+            code, out, _ = self.run_cli(["--data-root", str(root), "--input", src])
+            self.assertEqual(code, 0)
+            got = json.loads(out)
+            self.assertEqual(([x["ref"] for x in got["参照不可用"]], got["suggestion"]), ([bad], "go"))
+            self.assertTrue(any(bad in p for p in W.read(root, got["写入"])["points"]))
+            code, out, _ = self.run_cli(["--data-root", str(root), "--input", src, "--dry-run"])
+            self.assertTrue(any(bad in p for p in json.loads(out)["points"]))
+
+    def test_no_bad_reference_reports_an_empty_list(self):
+        with H.TmpRoot() as root:
+            code, out, _ = self.run_cli(["--data-root", str(root), "--input", self.write_payload(root, self.dated_payload(root))])
+            self.assertEqual((code, json.loads(out)["参照不可用"]), (0, []))
+
     def test_refusal_exits_1_and_writes_nothing(self):
         with H.TmpRoot() as root:
             vref = setup(root, term="Other Game")

@@ -137,12 +137,21 @@ def _at(ts: str) -> datetime:
     return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
 
 
-def load_library(root) -> list:
-    """证据/_quick/ 下全部参照观察(逐条重新校验);同一(规范化对象名, 任务类型)只留观察时间最新的一条。"""
+def load_library(root, skipped=None) -> list:
+    """证据/_quick/ 下全部参照观察(逐条重新校验);同一(规范化对象名, 任务类型)只留观察时间最新的一条。
+    给了 skipped 列表时,读不出、校验不过的参照跳过并记进去({"ref", "reason"}),其余照常用(一条坏了不连累整个库);
+    没给就照旧拒收。"""
     latest = {}
     for p in sorted(Path(root).glob(LIBRARY_GLOB)):
         ref = p.relative_to(root).as_posix()
-        obs = W.read(root, ref)
+        try:
+            obs = W.read(root, ref)
+            require(obs["kind"] == "quick_reference", f"{ref} 不是参照观察(kind={obs['kind']})")
+        except (BenchError, ValueError, KeyError, TypeError, AttributeError, OSError) as exc:
+            if skipped is None:
+                raise
+            skipped.append({"ref": ref, "reason": str(exc) if isinstance(exc, BenchError) else f"{type(exc).__name__} {exc}"})
+            continue
         item = {"ref": ref, "observed_at": obs["observed_at"], **obs["readings"]}
         key = (quick_pool.normalize_term(item["object"]), item["task"])
         if key not in latest or _at(item["observed_at"]) >= _at(latest[key]["observed_at"]):

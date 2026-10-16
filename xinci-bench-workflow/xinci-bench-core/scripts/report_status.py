@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """只读看板:置顶待开建的快道 go;各状态数、待深核排序、观察中剩余天数、搁置天数、go 的文档、
 到期的验收节点、即将开玩的对象与建议跑快道的日期、上线前预判的五类提醒(可预判的原料、复核到期、预判失准、
-开玩日推迟、补参照)、种子池与原料池余量、待复查淘汰、累计 Semrush 调用。"""
+开玩日推迟、补参照)、参照库里不可用的参照、种子池与原料池余量、待复查淘汰、累计 Semrush 调用。"""
 import argparse
 import json
 import sys
@@ -49,11 +49,10 @@ def _forecast_reminders(dirs, on) -> dict:
     return {"forecast_reviews_due": due, "forecast_warnings": warnings, "forecast_slipped": slipped}
 
 
-def _references_due(root, dirs, on) -> list:
+def _references_due(library, dirs, on) -> list:
     """补参照提醒:有 forecast 块的方向(任何状态),开玩满 reference_task_days 天、参照库里还没有该对象该任务的,每项任务一行 add;
     参照库里 full_60_days 为假的,开玩满 reference_task_span 天后一行 update。due 是提醒到期的那天。"""
     a = QM.QUICK_ASSUMPTIONS
-    library = QR.load_library(root)
     have = {(quick_pool.normalize_term(x["object"]), x["task"]) for x in library}
     rows = []
     for r in dirs.values():
@@ -94,6 +93,8 @@ def _quick_status(root, dirs, on) -> dict:
             for m in QM.milestones(fu["launched_at"]):
                 if m["date"] <= on:
                     launched_due.append({"slug": s, "day": m["day"], "date": m["date"]})
+    unusable = []                                 # 参照库里读不出、校验不过的参照:跳过并列出,不让一条坏参照拖垮看板
+    library = QR.load_library(root, unusable)
     upcoming = [{"object": r["object"], "stage": r.get("stage"), "playable_at": r["playable_at"],
                  "run_from": r["playable_at"],
                  "run_to": (date.fromisoformat(r["playable_at"]) + timedelta(days=RUN_AFTER_PLAYABLE_DAYS)).isoformat()}
@@ -101,7 +102,7 @@ def _quick_status(root, dirs, on) -> dict:
     return {"pending_go": pending, "watching": sorted(watching, key=lambda w: w["days_left"]),
             "milestones_due": launched_due, "pool_pending": len(quick_pool.pending(root, on=on)), "upcoming": upcoming,
             "forecast_window": _forecast_window(root, on), **_forecast_reminders(dirs, on),
-            "references_due": _references_due(root, dirs, on)}
+            "references_due": _references_due(library, dirs, on), "references_unusable": unusable}
 
 
 def status(root, on=None) -> dict:
@@ -158,6 +159,8 @@ def main(argv=None):
         print(f"  开玩日推迟 {w['slug']}:累计 {w['slipped_days']} 天,现为 {w['first_public']},请重新评估")
     for x in q["references_due"]:
         print(f"  {'补参照' if x['action'] == 'add' else '更新参照'} {x['object']} {x['task']}")
+    for x in q["references_unusable"]:
+        print(f"  参照不可用 {x['ref']}: {x['reason']}")
     print(f"数据区:{st['data_root']}")
     print(f"方向:found {c['found']} · go {c['go']} · rejected {c['rejected']} · parked {c['parked']} · 观察中 {c['watching']}")
     for w in q["watching"]:

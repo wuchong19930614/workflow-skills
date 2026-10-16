@@ -15,6 +15,7 @@ r_p25、r_median、references、reference_refs、scope 原样来自 quick_refere
   可选 browser_preflight(P5 有结论时必填)、semrush_calls。
 
 六条没有全过时,数值字段(对象名量、合计、各任务倍数)置 null,suggestion 记 skip,只留观察。
+参照库里有读不出、校验不过的参照时跳过它照常算,跳过了哪些写进观察的 points 与输出的"参照不可用"。
 """
 import argparse
 import json
@@ -53,9 +54,9 @@ def _object_volume(root, ref, slug, obj, at) -> tuple:
     return pre, [g for g in EN_COUNTRIES if g in cut]
 
 
-def _task_rates(root, category, tasks) -> list:
-    """逐项任务从参照库取倍数(QR.rates,原样用);参照不足的任务记 None。"""
-    library = QR.load_library(root)
+def _task_rates(root, category, tasks, unusable) -> list:
+    """逐项任务从参照库取倍数(QR.rates,原样用);参照不足的任务记 None。参照库里校验不过的跳过,记进 unusable。"""
+    library = QR.load_library(root, unusable)
     return [QR.rates(library, t["task"], category) for t in tasks]
 
 
@@ -84,8 +85,10 @@ def _points(readings) -> list:
     return lines
 
 
-def build_observation(root, payload: dict, at: str | None = None) -> dict:
-    """预判输入 → quick_forecast 观察;量级观察不是本方向对象名的、任务不合规、数不对都拒收。"""
+def build_observation(root, payload: dict, at: str | None = None, unusable: list | None = None) -> dict:
+    """预判输入 → quick_forecast 观察;量级观察不是本方向对象名的、任务不合规、数不对都拒收。
+    参照库里读不出、校验不过的参照跳过不用,写进观察的 points;给了 unusable 列表时也记进去({"ref", "reason"})。"""
+    unusable = [] if unusable is None else unusable
     require(isinstance(payload, dict), "payload 须为 JSON 对象")
     missing = [k for k in PAYLOAD_KEYS if k not in payload]
     require(not missing, f"payload 缺字段: {missing}(object_volume_ref 可以是 null,但键要写)")
@@ -101,7 +104,7 @@ def build_observation(root, payload: dict, at: str | None = None) -> dict:
     require(ref is None or isinstance(ref, str), "object_volume_ref 须为路径或 null")
     at = at or now()
     pre, skipped = _object_volume(root, ref, slug, obj, at) if ref is not None else (None, [])
-    rates = _task_rates(root, category, tasks)
+    rates = _task_rates(root, category, tasks, unusable)
     given = checks_in.get("P3")
     p3 = given if isinstance(given, dict) and given.get("pass") is False else _p3(category, tasks, rates)
     checks = {k: (p3 if k == "P3" else checks_in[k]) for k in W.FORECAST_CHECKS}
@@ -122,7 +125,8 @@ def build_observation(root, payload: dict, at: str | None = None) -> dict:
                 "suggestion": suggestion, "checks": checks, "serp": payload["serp"]}
     obs = {"slug": slug, "observed_at": at, "stage": "quick", "kind": "quick_forecast",
            "source_urls": payload["source_urls"], "semrush_calls": payload.get("semrush_calls", 0),
-           "points": _points(readings), "readings": readings}
+           "points": _points(readings) + [f"参照不可用,已跳过 {x['ref']}:{x['reason']}" for x in unusable],
+           "readings": readings}
     if payload.get("browser_preflight") is not None:
         obs["browser_preflight"] = payload["browser_preflight"]
     W.validate(obs)
@@ -145,13 +149,14 @@ def main(argv=None):
     a = ap.parse_args(argv)
     root = data_root.resolve_or_exit(a.data_root)
     try:
-        obs = build_observation(root, load_json(Path(a.input)))
+        unusable = []
+        obs = build_observation(root, load_json(Path(a.input)), unusable=unusable)
         if a.dry_run:
-            out = obs
+            out = obs                                   # 跳过的参照写在观察的 points 里
         else:
             r = obs["readings"]
             out = {"写入": W.write(root, obs), "suggestion": r["suggestion"], "forecast_p25": r["forecast_p25"],
-                   "forecast_median": r["forecast_median"], "下四分位基准访问": base_visits(r)}
+                   "forecast_median": r["forecast_median"], "下四分位基准访问": base_visits(r), "参照不可用": unusable}
     except (BenchError, OSError, ValueError, KeyError) as exc:
         print(f"拒收: {exc}", file=sys.stderr)
         return 1

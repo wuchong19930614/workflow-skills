@@ -301,6 +301,30 @@ class PregameStatusTest(unittest.TestCase):
             self.assertIn("开玩日推迟 mho-map:累计 14 天,现为 2026-11-12,请重新评估", out)
             self.assertIn("更新参照 Wardogs map", out)
 
+    def test_a_bad_reference_does_not_take_down_the_board(self):
+        # 参照库里一条校验不过:看板照常出(【立即建站】在第一行),另列一行"参照不可用 <路径>: <原因>"
+        from helpers import setup_quick
+        with TmpRoot() as root:
+            slug, _ = setup_quick(root)
+            settle.settle(root, slug, "go", None, "r", "u", on="2026-10-16")
+            good = W.write(root, H.reference_obs(object="Wardogs", category="open_world_survival", task="map",
+                                                 playable_at="2026-08-22", task_window=("2026-08-26", "2026-09-08")))
+            bad = W.write(root, H.reference_obs(object="Broken"))
+            obs = json.loads((root / bad).read_text(encoding="utf-8"))
+            obs["readings"]["r"] = 9.9
+            (root / bad).write_text(json.dumps(obs, ensure_ascii=False), encoding="utf-8")
+            out = io.StringIO()
+            with mock.patch.object(RS, "today", return_value="2026-10-21"), contextlib.redirect_stdout(out):
+                code = RS.main(["--data-root", str(root)])
+            lines = out.getvalue().splitlines()
+            self.assertEqual(code, 0)
+            self.assertTrue(lines[0].startswith(f"【立即建站】{slug}:"), lines[0])
+            self.assertTrue(any(x.startswith(f"  参照不可用 {bad}: ") and "r 须等于" in x for x in lines), lines)
+            self.assertIn("  更新参照 Wardogs map", lines)                    # 其余参照照常用
+            q = board(root, "2026-10-21")
+            self.assertEqual([x["ref"] for x in q["references_unusable"]], [bad])
+            self.assertNotIn(good, [x["ref"] for x in q["references_unusable"]])
+
     def test_json_output_has_the_five_keys(self):
         with TmpRoot() as root:
             buf = io.StringIO()
