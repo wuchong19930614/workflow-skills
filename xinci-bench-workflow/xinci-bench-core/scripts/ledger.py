@@ -32,6 +32,7 @@ OBJECT_TYPES = ("game", "other")                       # 快道对象类型:游�
 # 快道否决门 → 速判观察里必须不过的那一条
 QUICK_GATE_CHECK = {"not_new": "Q1", "oneoff": "Q3", "scope": "Q4", "occupied": "Q5", "answered": "Q6"}
 QUICK_PATCHABLE = ("title", "site_type", "terms", "object")   # object 只许更正 date_source
+FORECAST_REGISTERABLE = ("go", "watching")                # 预判建议为这两种才登记;skip、measure_rest 不登记
 FOLLOW_UP_STATUSES = ("pending", "started", "launched", "abandoned")
 SITE_TYPES = ("tool", "content", "game", "mixed")
 SCOPE_ITEMS = ("ymyl", "brand_nav", "news", "adult_gambling", "infringement")
@@ -333,20 +334,19 @@ def _check_screen_term(terms, screen):
             f"速判的词 {screen['readings']['term']!r} 不在登记的说法里")
 
 
+def _check_forecast_terms(terms, forecast):
+    """预判观察只能为它任务里的说法背书:登记的每个说法(大小写与空格不计)都得在某项任务的 terms 里。"""
+    covered = {quick_pool.normalize_term(x) for t in forecast["readings"]["tasks"] for x in t["terms"]}
+    stray = sorted(_term_set(terms) - covered)
+    require(not stray, f"说法 {stray} 不在预判观察的任务说法里(预判只为任务里的说法背书)")
+
+
 def _screen_all_pass(obs):
     return all(obs["readings"]["checks"][k]["pass"] is True for k in W.QUICK_CHECKS)
 
 
-def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason, by="xinci-bench-quick") -> dict:
-    """登记快道方向:须有本方向 Q1–Q6 全过的速判观察;对象首次公开须在窗口内(游戏 14 天、其他 90 天)。"""
-    require(isinstance(slug, str) and SLUG_RE.fullmatch(slug), "slug 须为小写字母数字连字符")
-    require(isinstance(title, str) and title.strip(), "title 须写方向一句话")
-    require(site_type in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
-    require(isinstance(reason, str) and reason.strip(), "reason 不能为空")
-    require(isinstance(obj, dict) and isinstance(obj.get("name"), str) and obj["name"].strip()
-            and is_date(obj.get("first_public"))
-            and isinstance(obj.get("date_source"), str) and obj["date_source"].strip(),
-            "object 须含 name、first_public(YYYY-MM-DD)、date_source")
+def _screen_basis(root, slug, obj, terms, screen_ref) -> list:
+    """现行登记的依据:本方向 Q1–Q6 全过的速判观察;对象首次公开须在窗口内(游戏 14 天、其他 90 天)。返回 evidence_refs。"""
     require(obj.get("type") in OBJECT_TYPES, f"object.type 须为 {OBJECT_TYPES}(游戏 14 天、其他 90 天)")
     _check_terms(terms)
     screen = W.read(root, screen_ref)
@@ -357,6 +357,50 @@ def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason,
     limit = QM.QUICK_ASSUMPTIONS["new_days_game" if obj["type"] == "game" else "new_days"]
     require(0 <= age <= limit,
             f"对象首次公开距速判 {age} 天,超出{'游戏类' if obj['type'] == 'game' else ''} {limit} 天(或日期在未来)")
+    return [screen_ref]
+
+
+def _forecast_basis(root, slug, obj, terms, forecast_ref) -> list:
+    """预判登记的依据:本方向 P1–P6 全过、建议 go 或 watching 的预判观察;游戏、开玩日一致且在 3–21 天内,
+    说法都在某项任务里,对象名量级观察是本方向的 quick_volume。返回 evidence_refs:[预判观察, 对象名量级观察]。"""
+    require(obj.get("type") == "game", "预判登记只收游戏(object.type 须为 game):开玩日是预判的前提")
+    _check_terms(terms)
+    forecast = W.read(root, forecast_ref)
+    require(forecast["kind"] == "quick_forecast" and forecast["slug"] == slug, f"{forecast_ref} 不是本方向的预判观察")
+    r = forecast["readings"]
+    failed = [k for k in W.FORECAST_CHECKS if r["checks"][k]["pass"] is not True]
+    require(not failed, f"预判六条没有全过({'、'.join(failed)}),不登记")
+    require(r["suggestion"] in FORECAST_REGISTERABLE,
+            f"预判建议(suggestion)为 {r['suggestion']},只有 {'、'.join(FORECAST_REGISTERABLE)} 才登记")
+    require(obj["first_public"] == r["playable_at"],
+            f"object.first_public {obj['first_public']} 与预判观察的开玩日 {r['playable_at']} 不一致")
+    lo, hi = QM.QUICK_ASSUMPTIONS["forecast_days"]
+    lead = (date.fromisoformat(r["playable_at"]) - date.fromisoformat(forecast["observed_at"][:10])).days
+    require(lo <= lead <= hi, f"开玩日在预判之后 {lead} 天,须在 {lo}–{hi} 天内")
+    _check_forecast_terms(terms, forecast)
+    volume_ref = r["object_volume_ref"]
+    volume = W.read(root, volume_ref)
+    require(volume["kind"] == "quick_volume" and volume["slug"] == slug,
+            f"预判的 object_volume_ref {volume_ref} 不是本方向的对象名量级观察 quick_volume")
+    return [forecast_ref, volume_ref]
+
+
+def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason, by="xinci-bench-quick",
+                   forecast_ref=None) -> dict:
+    """登记快道方向。依据二选一:screen_ref 给本方向 Q1–Q6 全过的速判观察(现行,对象首次公开须在窗口内);
+    forecast_ref 给本方向的预判观察(上线前预判,记 basis=forecast,开玩日在 3–21 天内)。"""
+    require((screen_ref is None) != (forecast_ref is None),
+            "screen_ref 与 forecast_ref 恰好给一个(速判登记给 screen,上线前预判登记给 forecast)")
+    require(isinstance(slug, str) and SLUG_RE.fullmatch(slug), "slug 须为小写字母数字连字符")
+    require(isinstance(title, str) and title.strip(), "title 须写方向一句话")
+    require(site_type in SITE_TYPES, f"site_type 须为 {SITE_TYPES}")
+    require(isinstance(reason, str) and reason.strip(), "reason 不能为空")
+    require(isinstance(obj, dict) and isinstance(obj.get("name"), str) and obj["name"].strip()
+            and is_date(obj.get("first_public"))
+            and isinstance(obj.get("date_source"), str) and obj["date_source"].strip(),
+            "object 须含 name、first_public(YYYY-MM-DD)、date_source")
+    refs = (_screen_basis(root, slug, obj, terms, screen_ref) if forecast_ref is None
+            else _forecast_basis(root, slug, obj, terms, forecast_ref))
     ledger = load_ledger(root)
     require(slug not in ledger["directions"], f"方向已存在: {slug}")
     _check_term_clash(ledger, slug, terms)
@@ -364,19 +408,29 @@ def register_quick(root, slug, title, site_type, obj, terms, screen_ref, reason,
         "slug": slug, "title": title.strip(), "site_type": site_type, "lane": "quick", "state": "found",
         "object": {k: obj[k] for k in ("name", "type", "first_public", "date_source")}, "terms": terms,
         "volume": None, "serp": None, "watch": None, "follow_up": None,
-        "model": None, "decision": None, "evidence_refs": [screen_ref], "bindings": None,
+        "model": None, "decision": None, "evidence_refs": refs, "bindings": None,
         "history": [{"at": now(), "from": None, "to": "found", "by": by, "reason": reason.strip()}],
     }
+    if forecast_ref is not None:
+        rec["basis"] = "forecast"              # 现行方向不写 basis(不写即速判登记)
     ledger["directions"][slug] = rec
     save_ledger(root, ledger)
     quick_pool.consume(root, [t["term"] for t in terms])
     return rec
 
 
+def _latest_term_volume(obs, terms):
+    """最新一份本方向说法的量级观察:term 不写(现行方向),或规范化后属于本方向的说法;测对象名的不算。"""
+    mine = _term_set(terms)
+    rows = [o for _, o in obs if o["kind"] == "quick_volume"
+            and (o["readings"].get("term") is None or quick_pool.normalize_term(o["readings"]["term"]) in mine)]
+    return rows[-1] if rows else None
+
+
 def derive_quick(root, rec) -> dict:
     """从最新的量级观察与速判观察推导 volume、serp;结算时写进账本。"""
     obs = _observations(root, rec["evidence_refs"])
-    v, s = _latest(obs, "quick_volume"), _latest(obs, "quick_screen")
+    v, s = _latest_term_volume(obs, rec.get("terms")), _latest(obs, "quick_screen")
     volume = None
     if v:
         r = v["readings"]
@@ -558,7 +612,8 @@ def main(argv=None):
     s = sub.add_parser("show")
     s.add_argument("--slug", required=True)
     rq = sub.add_parser("register-quick")
-    rq.add_argument("--input", required=True, help="JSON:slug、title、site_type、object、terms、screen、reason")
+    rq.add_argument("--input", required=True,
+                    help="JSON:slug、title、site_type、object、terms、reason,另有 screen(速判观察)或 forecast(预判观察)二选一")
     pv = sub.add_parser("quick-preview")
     pv.add_argument("--slug", required=True)
     wc = sub.add_parser("watch-check")
@@ -582,7 +637,7 @@ def main(argv=None):
         elif a.cmd == "register-quick":
             d = load_json(Path(a.input))
             out = register_quick(root, d["slug"], d["title"], d["site_type"], d["object"], d["terms"],
-                                 d["screen"], d["reason"], d.get("by", "xinci-bench-quick"))
+                                 d.get("screen"), d["reason"], d.get("by", "xinci-bench-quick"), d.get("forecast"))
         elif a.cmd == "quick-preview":
             rec = load_ledger(root)["directions"].get(a.slug)
             require(rec and rec.get("lane") == "quick", f"没有快道方向 {a.slug}")

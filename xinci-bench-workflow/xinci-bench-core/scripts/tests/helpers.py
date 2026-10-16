@@ -352,3 +352,41 @@ def setup_quick(root, slug="gag2-calculator", volume=None, brief=True, screen=No
         refs.append(W.write(root, quick_brief_obs(slug)))
     ledger.update(root, slug, {}, refs)
     return slug, [screen_ref] + refs
+
+
+FORECAST_OBJECT = "Monster Hunter Outlanders"
+
+
+def write_forecast(root, slug="mho-map", object_us=600000, playable_at="2026-10-29"):
+    """写参照库(库里还没有时)、对象名量级观察(美国 object_us,term 是对象名)与预判观察,返回 (预判路径, 量级路径)。
+
+    观察日都是 2026-10-13;object_us=600000 时下四分位基准 10800 访问,判 go;100000 时判 skip。
+    """
+    import quick_forecast
+    import write_observation as W
+    if not list((Path(root) / "证据" / "_quick").glob("*-quick_reference.json")):
+        write_references(root)
+    volume_ref = W.write(root, quick_volume_obs(slug, anchor_volume=object_us, new_mean=50.0, anchor_mean=50.0,
+                                                term=FORECAST_OBJECT))
+    payload = forecast_payload(slug=slug, object=FORECAST_OBJECT, playable_at=playable_at, volume_ref=volume_ref)
+    forecast_ref = W.write(root, quick_forecast.build_observation(root, payload, at=QUICK_BASE["observed_at"]))
+    return forecast_ref, volume_ref
+
+
+def setup_forecast(root, slug="mho-map", object_us=600000, playable_at="2026-10-29", brief=True):
+    """上线前预判的快道方向:写参照 → 对象名量级 → 预判观察 → 按预判登记 → 简报素材并补进引用。
+
+    返回 (slug, 引用列表):refs[0] 预判观察、refs[1] 对象名量级观察,brief=True 时 refs[2] 是简报素材。
+    """
+    import ledger
+    import write_observation as W
+    forecast_ref, volume_ref = write_forecast(root, slug, object_us, playable_at)
+    obj = {"name": FORECAST_OBJECT, "type": "game", "first_public": playable_at, "date_source": "https://example.org/mho"}
+    ledger.register_quick(root, slug, "怪物猎人新作地图", "tool", obj,
+                          [{"term": "mho map", "source": "autocomplete", "first_seen": "2026-10-12"}], None,
+                          "预判过线", forecast_ref=forecast_ref)
+    refs = [forecast_ref, volume_ref]
+    if brief:
+        refs.append(W.write(root, quick_brief_obs(slug)))
+        ledger.update(root, slug, {}, refs[2:])
+    return slug, refs
