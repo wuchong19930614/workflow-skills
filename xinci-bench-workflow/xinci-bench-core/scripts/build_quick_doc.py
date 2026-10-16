@@ -259,7 +259,9 @@ def _part_one_forecast(rec, by_kind):
     else:
         lines += [f"**{obj['name']} 开玩前月搜索量约 {_fmt(sum(pre.values()))}（英文区 {len(a['countries'])} 国各自按 Trends "
                   f"锚词换算后相加，其中美国约 {_fmt(pre.get('US', 0))}）。**", ""]
-        lines += _table(["国家", "开玩前月搜索量"], [[g, _fmt(pre[g]) if g in pre else "读不出，记 0"] for g in a["countries"]])
+        skipped = set(r["skipped_geos"])               # 没测的国家写"未测",测了读不出的才是"读不出，记 0"
+        lines += _table(["国家", "开玩前月搜索量"], [[g, _fmt(pre[g]) if g in pre else ("未测" if g in skipped else "读不出，记 0")]
+                                                     for g in a["countries"]])
     lines += ["", f"- P2 依据：{checks['P2']['basis']}", "", "### 3. 任务与参照倍数", "",
               f"**最小版本做 {len(tasks)} 项任务（{'、'.join(t['task'] for t in tasks)}），"
               + ("倍数取自已开玩游戏的参照：下四分位是保守档，中位数是对照档。**" if pre is not None

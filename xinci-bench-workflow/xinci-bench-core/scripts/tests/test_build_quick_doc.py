@@ -224,6 +224,22 @@ class PregameDocTest(unittest.TestCase):
             self.assertIn("P5 依据：测试期已有专做本作的 wiki", md)
             self.assertNotIn("按当前量估算", md)
 
+    def test_parked_pregame_marks_skipped_countries_as_not_measured(self):
+        # 最新预判观察只测了美国与几国、GB 没测(measure_rest)就搁置:没测的写"未测",测了读不出的仍写"读不出，记 0"
+        import copy
+        with TmpRoot() as root:
+            slug, refs = setup_forecast(root, brief=False)
+            obs = copy.deepcopy(W.read(root, refs[0]))
+            obs["observed_at"] = "2026-10-13T09:00:00+00:00"
+            obs["readings"]["skipped_geos"] = ["GB"]
+            obs["readings"]["suggestion"] = QM.forecast_suggestion(90000, 120000, complete=False)      # measure_rest
+            ledger.update(root, slug, {}, [W.write(root, obs)])
+            S.settle(root, slug, "parked", reason="其余国家没测完", biggest_unknown="英国的量", on=PRE_ON)
+            two = _section((root / "文档" / f"{slug}.md").read_text(encoding="utf-8"), "2. 有人在等")
+            self.assertIn("| GB | 未测 |", two)
+            self.assertIn("| CA | 读不出，记 0 |", two)
+            self.assertIn("| US | 600,000 |", two)
+
     def test_forecast_basis_direction_with_current_basis_model_keeps_current_layout(self):
         with TmpRoot() as root:
             _pregame_md(root, "parked", brief=False)

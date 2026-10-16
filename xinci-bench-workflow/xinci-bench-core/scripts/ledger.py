@@ -141,7 +141,7 @@ def _patched_object(rec, o, on) -> dict:
     new = dict(rec["object"], date_source=o["date_source"].strip())
     if "first_public" in o:
         require(is_date(o["first_public"]), f"first_public 须为日历上存在的 YYYY-MM-DD(收到 {o['first_public']!r})")
-        require(o["first_public"] > on, f"新开玩日 {o['first_public']} 须在 {on} 之后")
+        require(o["first_public"] > on, f"新开玩日 {o['first_public']} 须在 {on} 之后:开玩日是今天或更早，说明已经开玩，按现行路径看首页")
         new["first_public"] = o["first_public"]
     return new
 
@@ -417,7 +417,7 @@ def _screen_basis(root, slug, obj, terms, screen_ref) -> list:
 
 
 def _forecast_basis(root, slug, obj, terms, forecast_ref) -> list:
-    """预判登记的依据:本方向 P1–P6 全过、建议 go 或 watching 的预判观察;游戏、开玩日一致且在 3–21 天内,
+    """预判登记的依据:本方向 P1–P6 全过、建议 go 或 watching 的预判观察;游戏、对象名与开玩日一致且在 3–21 天内,
     说法都在某项任务里,对象名量级观察是本方向的 quick_volume。返回 evidence_refs:[预判观察, 对象名量级观察]。"""
     require(obj.get("type") == "game", "预判登记只收游戏(object.type 须为 game):开玩日是预判的前提")
     _check_terms(terms)
@@ -428,6 +428,8 @@ def _forecast_basis(root, slug, obj, terms, forecast_ref) -> list:
     require(not failed, f"预判六条没有全过({'、'.join(failed)}),不登记")
     require(r["suggestion"] in FORECAST_REGISTERABLE,
             f"预判建议(suggestion)为 {r['suggestion']},只有 {'、'.join(FORECAST_REGISTERABLE)} 才登记")
+    require(quick_pool.normalize_term(obj["name"]) == quick_pool.normalize_term(r["object"]),
+            f"object.name {obj['name']!r} 与预判观察的对象 {r['object']!r} 不一致(大小写与空格不计)")
     require(obj["first_public"] == r["playable_at"],
             f"object.first_public {obj['first_public']} 与预判观察的开玩日 {r['playable_at']} 不一致")
     lo, hi = QM.QUICK_ASSUMPTIONS["forecast_days"]

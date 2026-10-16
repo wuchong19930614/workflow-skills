@@ -87,6 +87,17 @@ class RegisterForecastTest(unittest.TestCase):
                     register_variant(root, **kw)
                 self.assertEqual(load_ledger(root)["directions"], {})        # 拒收不留半截记录
 
+    def test_object_name_must_be_the_forecast_object(self):
+        with H.TmpRoot() as root:
+            fref, _ = H.write_forecast(root, SLUG)
+            with self.assertRaisesRegex(BenchError, "Monster Hunter Wilds.*Monster Hunter Outlanders"):
+                L.register_quick(root, SLUG, "t", "tool", dict(OBJ, name="Monster Hunter Wilds"), TERMS, None, "r",
+                                 forecast_ref=fref)
+            self.assertEqual(load_ledger(root)["directions"], {})
+            rec = L.register_quick(root, SLUG, "t", "tool", dict(OBJ, name="monster hunter  OUTLANDERS"), TERMS, None, "r",
+                                   forecast_ref=fref)                          # 大小写与空格不计
+            self.assertEqual(rec["object"]["name"], "monster hunter  OUTLANDERS")
+
     def test_one_stray_term_is_enough_to_refuse(self):
         stray = TERMS + [{"term": "mho tier list", "source": "autocomplete", "first_seen": "2026-10-12"}]
         with H.TmpRoot() as root:
@@ -1020,6 +1031,15 @@ class SlipTest(unittest.TestCase):
                 with self.subTest(day):
                     self.assertRaises(BenchError, L.update, root, slug,
                                       {"object": {"first_public": day, "date_source": "https://example.org/x"}}, on="2026-10-20")
+
+    def test_slip_to_today_or_past_says_it_is_already_playable(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            for day in ("2026-10-20", "2026-10-19"):
+                with self.subTest(day):
+                    with self.assertRaisesRegex(BenchError, "说明已经开玩，按现行路径看首页"):
+                        L.update(root, slug, {"object": {"first_public": day, "date_source": "https://example.org/x"}},
+                                 on="2026-10-20")
 
     def test_current_direction_still_cannot_change_date(self):
         with H.TmpRoot() as root:
