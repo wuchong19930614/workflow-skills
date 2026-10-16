@@ -68,6 +68,9 @@ def _quick_errors(slug, rec, on):
         w = rec.get("watch") or {}
         if not w.get("expires_at"):
             errs.append(f"{slug}: 观察中须有到期日")
+        elif on > w["expires_at"] and rec.get("basis") == "forecast" and not w.get("checks"):
+            # 预判观察中第一次复查前,到期日只是复核日:结算要先复查(settle 会拒收)
+            errs.append(f"{slug}: 观察已于 {w['expires_at']} 到期(预判方向的复核日),还没复查过:到了复核日，先跑 watch-check,再按建议结算")
         elif on > w["expires_at"]:
             errs.append(f"{slug}: 观察已于 {w['expires_at']} 到期,须按 go 或 volume 否决结算")
     if rec["state"] == "go":

@@ -877,6 +877,92 @@ class PregameWatchTest(unittest.TestCase):
 
 
 
+class PregameWatchSettleTest(unittest.TestCase):
+    """预判观察中的方向开玩后结算(go、volume 与 oneoff 否决):复核日到了、复查过(watch-check),
+    最新速判与任务说法的量级都是开玩日或之后看的,才按现行路径结算。"""
+
+    def watching(self, root):
+        slug, _ = H.setup_forecast(root, object_us=450000)               # 简报素材已在引用里
+        settle.settle(root, slug, "watching", reason="中位数过线", biggest_unknown="开玩后量", on="2026-10-14")
+        return slug
+
+    def observe(self, root, slug, estimate, day, series=None):
+        """补挂一份速判与一份任务说法的量级观察(都在 day 当天看),不复查。"""
+        screen = W.write(root, dict(H.quick_screen_obs(slug, term="mho map"), observed_at=f"{day}T08:00:00+00:00"))
+        vol = task_volume(slug, estimate, day=day)
+        if series is not None:
+            vol["readings"]["series_30d"] = series
+        L.update(root, slug, {}, [screen, W.write(root, vol)])
+
+    def test_go_before_launch_is_refused(self):
+        with H.TmpRoot() as root:
+            slug = self.watching(root)
+            self.observe(root, slug, 60000, "2026-10-20")                  # 开玩前看的,量已够现行门槛
+            with self.assertRaisesRegex(BenchError, "复核日 2026-11-05 未到"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-20")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "watching")
+
+    def test_volume_rejection_needs_a_watch_check_first(self):
+        spike = [100] * 23 + [10] * 7                                      # 最近 7 天 < 峰值 × 30%:冲高回落
+        for gate, series in (("volume", None), ("oneoff", spike)):
+            with self.subTest(gate), H.TmpRoot() as root:
+                slug = self.watching(root)
+                self.observe(root, slug, 30000, "2026-11-05", series)
+                with self.assertRaisesRegex(BenchError, "先跑 watch-check"):
+                    settle.settle(root, slug, "rejected", gate=gate, reason="x", biggest_unknown="y", on="2026-11-06")
+                self.assertEqual(load_ledger(root)["directions"][slug]["state"], "watching")
+
+    def test_after_a_watch_check_the_current_path_settles(self):
+        with H.TmpRoot() as root:
+            slug = self.watching(root)
+            self.observe(root, slug, 30000, "2026-11-05")
+            out = L.watch_check(root, slug, on="2026-11-05")
+            self.assertEqual((out["suggestion"], out["expires_at"]), ("watching", "2026-12-05"))
+            rec = settle.settle(root, slug, "rejected", gate="volume", reason="30 天没涨够", biggest_unknown="无", on="2026-12-05")
+            self.assertEqual((rec["state"], rec["decision"]["gate"], rec["volume"]["estimate_7d"]), ("rejected", "volume", 30000))
+
+    def test_latest_readings_must_be_after_launch(self):
+        with H.TmpRoot() as root:
+            slug = self.watching(root)
+            self.observe(root, slug, 60000, "2026-11-05")
+            self.assertEqual(L.watch_check(root, slug, on="2026-11-05")["suggestion"], "go")
+            L.update(root, slug, {}, [W.write(root, task_volume(slug, 60000, day="2026-10-20"))])   # 后补的开玩前量级成了最新
+            with self.assertRaisesRegex(BenchError, "开玩日 2026-10-29 之前"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-11-05")
+        with H.TmpRoot() as root:
+            slug = self.watching(root)
+            self.observe(root, slug, 60000, "2026-11-05")
+            L.watch_check(root, slug, on="2026-11-05")
+            L.update(root, slug, {}, [W.write(root, H.quick_screen_obs(slug, term="mho map"))])     # 后补的开玩前速判(10-13)
+            with self.assertRaisesRegex(BenchError, "速判观察是 2026-10-13"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-11-05")
+
+    def test_object_name_volume_is_not_taken_as_the_reading(self):
+        with H.TmpRoot() as root:
+            slug = self.watching(root)
+            self.observe(root, slug, 60000, "2026-11-05")
+            L.watch_check(root, slug, on="2026-11-05")
+            as_object = task_volume(slug, 900000, day="2026-11-05", term=OBJECT)        # 对象名的量,后补,曲线冲高回落
+            as_object["readings"]["series_30d"] = [100] * 23 + [10] * 7
+            L.update(root, slug, {}, [W.write(root, as_object)])
+            rec = settle.settle(root, slug, "go", reason="开玩后量够了", biggest_unknown="热度", on="2026-11-05")
+            self.assertEqual((rec["state"], rec["volume"]["estimate_7d"]), ("go", 60000))
+
+    def test_validate_says_run_watch_check_before_the_first_check(self):
+        with H.TmpRoot() as root:
+            slug = self.watching(root)
+            rec = load_ledger(root)["directions"][slug]
+            errs = validate_ledger.check_direction(root, slug, rec, on="2026-11-06")
+            self.assertTrue(any("到了复核日，先跑 watch-check" in e and "到期" in e for e in errs), errs)
+            self.assertFalse(any("须按 go 或 volume 否决结算" in e for e in errs), errs)
+            self.observe(root, slug, 30000, "2026-11-05")
+            L.watch_check(root, slug, on="2026-11-06")
+            rec = load_ledger(root)["directions"][slug]
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-11-06"), [])
+            errs = validate_ledger.check_direction(root, slug, rec, on="2026-12-07")
+            self.assertTrue(any("须按 go 或 volume 否决结算" in e for e in errs), errs)
+
+
 class SlipTest(unittest.TestCase):
     def test_slip_moves_dates(self):
         with H.TmpRoot() as root:

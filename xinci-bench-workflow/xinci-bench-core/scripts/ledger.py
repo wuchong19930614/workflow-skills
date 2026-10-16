@@ -606,6 +606,19 @@ def _precheck_forecast(root, rec, to, on):
         _require_brief(_observations(root, rec["evidence_refs"]))
 
 
+def _require_after_launch(rec, screen, vol, on):
+    """预判观察中的方向开玩后结算(go 与读量级的否决门):复核日到了、复查过(watch-check),
+    最新速判与任务说法的量级(有的话)都是开玩日或之后看的;到期日在第一次复查前只是复核日,不能拿它当观察到期。"""
+    f, review_at = rec["forecast"], rec["forecast"]["review_at"]
+    require(on >= review_at, f"复核日 {review_at} 未到:预判观察中的方向要开玩后 {QM.QUICK_ASSUMPTIONS['review_days']} 天"
+                             f"复查过才能结算(现在 {on})")
+    require(rec["watch"]["checks"], "预判观察中的方向还没复查过:到了复核日，先跑 watch-check(开玩后的速判与任务说法的量),再按建议结算")
+    for name, o in (("速判", screen), ("量级", vol)):
+        if o is not None:
+            require(o["observed_at"][:10] >= f["playable_at"],
+                    f"最新{name}观察是 {o['observed_at'][:10]} 看的,在开玩日 {f['playable_at']} 之前;开玩后重新观察、跑 watch-check 再结算")
+
+
 def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
     if is_pregame(rec):
         return _precheck_forecast(root, rec, to, on)
@@ -616,7 +629,10 @@ def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
     require(screen, "缺速判观察 quick_screen")
     _check_screen_term(rec["terms"], screen)
     checks = screen["readings"]["checks"]
-    vol = _latest(obs, "quick_volume")
+    forecast_dir = rec.get("basis") == "forecast"
+    vol = _latest_term_volume(obs, rec["terms"]) if forecast_dir else _latest(obs, "quick_volume")   # 预判方向别取成对象名的量
+    if forecast_dir and rec["state"] == "watching" and (to == "go" or gate in ("volume", "oneoff")):
+        _require_after_launch(rec, screen, vol, on)
     if to in ("go", "watching"):
         require(_screen_all_pass(screen), "最新速判观察六条须全过")
         require(vol, "缺量级观察 quick_volume")
