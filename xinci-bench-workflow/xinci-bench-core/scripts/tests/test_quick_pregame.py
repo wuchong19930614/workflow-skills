@@ -4,6 +4,7 @@ import io
 import sys
 import unittest
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -535,6 +536,28 @@ class PregameValidateTest(unittest.TestCase):
             self.assertNotIn("basis", rec)
             self.assertNotIn("forecast", rec)
             self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-10-13"), [])
+
+
+class SettleValidatesAsOfSettleDayTest(unittest.TestCase):
+    """settle 结算后的自校验按结算日 on 算,不按真实今天:结算时观察还没到期,
+    不能因为之后某天已过到期日,就把刚结算出的结果拒掉(用 today 往后拨到到期日之后来模拟)。"""
+    LATER = "2026-11-20"                                  # 晚于预判观察的到期日 11-05 与下面现行观察的到期日 11-19
+
+    def test_pregame_watching_is_valid_as_of_the_settle_day(self):
+        with H.TmpRoot() as root, mock.patch.object(validate_ledger, "today", return_value=self.LATER):
+            slug, _ = H.setup_forecast(root, object_us=450000)
+            rec = settle.settle(root, slug, "watching", reason="中位数过线", biggest_unknown="开玩后量", on="2026-10-14")
+            self.assertEqual((rec["state"], rec["watch"]["expires_at"]), ("watching", "2026-11-05"))
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-10-14"), [])
+            self.assertTrue(any("到期" in e for e in validate_ledger.check_direction(root, slug, rec)))   # 按"今天"看确已到期
+
+    def test_current_watching_is_valid_as_of_the_settle_day(self):
+        volume = H.quick_volume_obs("gag2-calculator", anchor_volume=9900, new_mean=50.0, anchor_mean=99.0)    # 约 5,000 → 观察中
+        with H.TmpRoot() as root, mock.patch.object(validate_ledger, "today", return_value=self.LATER):
+            slug, _ = H.setup_quick(root, volume=volume)
+            rec = settle.settle(root, slug, "watching", reason="量还不够,在涨", biggest_unknown="能不能涨到 5 万", on="2026-10-20")
+            self.assertEqual((rec["state"], rec["watch"]["expires_at"]), ("watching", "2026-11-19"))
+            self.assertTrue(any("到期" in e for e in validate_ledger.check_direction(root, slug, rec)))
 
 
 class RegisterQuickCliTest(unittest.TestCase):

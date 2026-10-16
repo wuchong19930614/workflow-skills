@@ -147,7 +147,7 @@ def settle(root, slug, verdict, gate=None, reason="", biggest_unknown="", by="xi
                 p.write_bytes(data)
             raise
     rec = load_ledger(root)["directions"][slug]
-    errs = validate_ledger.check_direction(root, slug, rec)
+    errs = validate_ledger.check_direction(root, slug, rec, on)       # 按结算日校验,不按真实今天(命令行 on 缺省就是今天)
     require(not errs, "结算后校验失败: " + "; ".join(errs))
     return rec
 
