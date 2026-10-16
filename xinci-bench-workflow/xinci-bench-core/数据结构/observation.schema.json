@@ -1,14 +1,14 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "xinci-bench 观察文件",
-  "description": "说明性 schema;强制校验在 write_observation.py。kind=scan 时 stage=scan、slug=null;快道四类 stage=quick(quick_signal 的 slug=null);其余 stage=assess。",
+  "description": "说明性 schema;强制校验在 write_observation.py。kind=scan 时 stage=scan、slug=null;快道各类 stage=quick(quick_signal、quick_reference 的 slug=null);其余 stage=assess。",
   "type": "object",
   "required": ["slug", "observed_at", "stage", "kind", "source_urls", "semrush_calls", "points", "readings"],
   "properties": {
     "slug": {"type": ["string", "null"]},
     "observed_at": {"type": "string", "description": "ISO 时间,写之前先取系统时间"},
     "stage": {"enum": ["scan", "assess", "quick"]},
-    "kind": {"enum": ["scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief", "quick_signal", "quick_screen", "quick_volume", "quick_brief"]},
+    "kind": {"enum": ["scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief", "quick_signal", "quick_screen", "quick_volume", "quick_brief", "quick_reference"]},
     "source_urls": {"type": "array", "minItems": 1, "items": {"type": "string"}},
     "semrush_calls": {"type": "integer", "minimum": 0},
     "points": {"type": "array", "items": {"type": "string"}},
@@ -26,8 +26,11 @@
     "quick_signal": ["items"],
     "quick_screen": ["term", "checks", "ai_overview", "top10", "occupied_by"],
     "quick_volume": ["window_days", "countries", "trend_geo", "estimate_7d", "estimate_30d", "series_30d"],
-    "quick_brief": ["positioning", "pages", "data_sources", "license", "update_frequency", "build_days", "data_available", "hosting", "risks"]
+    "quick_brief": ["positioning", "pages", "data_sources", "license", "update_frequency", "build_days", "data_available", "hosting", "risks"],
+    "quick_reference": ["object", "category", "task", "task_term", "playable_at", "anchor_term", "anchor_volume", "anchor_source", "object_window", "object_ratio", "task_window", "task_ratio", "full_60_days", "object_volume_pre", "task_volume_post", "r"]
   },
+  "quick_volume_optional": {"description": "quick_volume.readings 可选字段:term(非空文字,测的是哪个词——对象名还是任务词;预判里同一对象的两种量靠它区分;不写就不记)", "optional": ["term"]},
+  "quick_reference_note": {"description": "quick_reference 是预判用的参照:一款已开玩的游戏,开玩前第 9 到第 3 天对象名的量(object_window)与开玩后 60 天内最高连续 14 天任务词的量(task_window),都以同一个锚词换算;r = task_volume_post ÷ object_volume_pre;full_60_days 表示观察日已到开玩后 60 天(不到则窗口还可能后移,须更新)。slug 为 null,写到 证据/_quick/"},
   "quick_volume_country": {"description": "quick_volume.countries[] 每个国家一行;readable=false 时只需 geo、readable、basis;美国以外的锚词月量须来自 Semrush", "required": ["geo", "readable", "basis"], "readable_required": ["anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "new_mean_7d", "anchor_mean_7d", "new_mean_30d", "anchor_mean_30d", "ratio_7d", "estimate_7d", "estimate_30d"]},
   "quick_signal_item": {"description": "quick_signal.items[] 一条原料:source、object、term(没有说法时 null)、url、seen_at 必填;rising 可选(Trends 飙升百分比或 breakout);playable_at 可选(第一次让大量普通用户用上的日期,可在未来,没到这天的原料不进待看、只进即将开玩)、stage 可选(如 closed beta、Early access)", "required": ["source", "object", "term", "url", "seen_at"], "optional": ["rising", "playable_at", "stage"]},
   "en_region": {"description": "标杆道:scan 与 benchmark 的 country_traffic、demand 簇的 seed_country_volume 都是英文区 6 国的分布(US、GB、CA、AU、NZ、IE,没有的国家填 0);en_* = 美区读数 × 6 国合计 ÷ 美国,美国为 0 时按逐国实测填"}

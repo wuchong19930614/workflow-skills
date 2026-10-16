@@ -5,14 +5,14 @@ import json
 import re
 import sys
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 import data_root
 import quick_model as QM
 from _common import EN_COUNTRIES, SLUG_RE, BenchError, is_date, load_json, require, stamp
 
-QUICK_KINDS = ("quick_signal", "quick_screen", "quick_volume", "quick_brief")
+QUICK_KINDS = ("quick_signal", "quick_screen", "quick_volume", "quick_brief", "quick_reference")
 KINDS = ("scan", "benchmark", "demand", "serp", "differentiation", "delivery", "brief") + QUICK_KINDS
 CHECKS = ("B1", "B2", "B3", "B4", "B5")
 QUICK_CHECKS = ("Q1", "Q2", "Q3", "Q4", "Q5", "Q6")
@@ -40,6 +40,9 @@ REQUIRED = {
     "quick_volume": ("window_days", "countries", "trend_geo", "estimate_7d", "estimate_30d", "series_30d"),
     "quick_brief": ("positioning", "pages", "data_sources", "license", "update_frequency", "build_days",
                     "data_available", "hosting", "risks"),
+    "quick_reference": ("object", "category", "task", "task_term", "playable_at", "anchor_term", "anchor_volume",
+                        "anchor_source", "object_window", "object_ratio", "task_window", "task_ratio",
+                        "full_60_days", "object_volume_pre", "task_volume_post", "r"),
 }
 # quick_volume 里每个读得出的国家必须有的字段
 COUNTRY_FIELDS = ("anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "new_mean_7d",
@@ -288,6 +291,8 @@ def _check_quick_volume(r):
     s = r["series_30d"]
     require(isinstance(s, list) and len(s) >= 14 and all(_num(v) for v in s),
             "series_30d 须为至少 14 个非负数(Trends 显示 \"<1\" 的点记 0)")
+    require("term" not in r or (isinstance(r["term"], str) and r["term"].strip()),
+            "term 须为非空文字(测的是哪个词:对象名还是任务词),不测别的词就不写")
 
 
 def _check_quick_brief(r):
@@ -303,6 +308,43 @@ def _check_quick_brief(r):
     require(isinstance(r["data_available"], bool), "data_available 须为布尔")
 
 
+def _check_quick_reference(r, observed_at):
+    """参照:一款已开玩的游戏,开玩前对象名的量与开玩后任务词的量之比 r(预判的倍数从这些参照里取)。"""
+    a = QM.QUICK_ASSUMPTIONS
+    for k in ("object", "task_term", "anchor_term"):
+        require(isinstance(r[k], str) and r[k].strip(), f"quick_reference.{k} 须为非空文字")
+    require(r["category"] in QM.GAME_CATEGORIES, f"category 须为 {QM.GAME_CATEGORIES}")
+    require(isinstance(r["task"], str) and QM.TASK_TYPE_RE.fullmatch(r["task"]),
+            "task 须为小写英文任务类型(字母开头,可含数字与下划线,如 map、tier_list)")
+    require(is_date(r["playable_at"]), "playable_at 须为日历上存在的 YYYY-MM-DD")
+    require(_num(r["anchor_volume"]) and r["anchor_volume"] > 0, "anchor_volume 须为正数")
+    require(r["anchor_source"] in ("lexicon", "semrush"), "anchor_source 须为 lexicon/semrush")
+    require(r["object_window"] == QM.reference_object_window(r["playable_at"]),
+            f"object_window 须为开玩日前第 {a['reference_object_window'][0]} 天到第 {a['reference_object_window'][1]} 天"
+            f"(应为 {QM.reference_object_window(r['playable_at'])})")
+    tw = r["task_window"]
+    require(isinstance(tw, list) and len(tw) == 2 and all(is_date(d) for d in tw), "task_window 须为 [起, 止] 两个日期")
+    start, end, play = date.fromisoformat(tw[0]), date.fromisoformat(tw[1]), date.fromisoformat(r["playable_at"])
+    days, span = a["reference_task_days"], a["reference_task_span"]
+    require((end - start).days == days - 1, f"task_window 须恰好 {days} 天(起止相差 {days - 1} 天)")
+    require(start >= play, "task_window 的起点不能早于开玩日")
+    require(end <= play + timedelta(days=span - 1), f"task_window 的终点须在开玩后 {span} 天内")
+    require(end < date.fromisoformat(observed_at[:10]), "task_window 的终点须早于观察日(窗口里的曲线要已经走完)")
+    require(_num(r["object_ratio"]) and r["object_ratio"] > 0, "object_ratio 须为正数(对象名开玩前读不出就不能做参照)")
+    require(_num(r["task_ratio"]), "task_ratio 须为非负数")
+    for vol, ratio in (("object_volume_pre", "object_ratio"), ("task_volume_post", "task_ratio")):
+        require(_num(r[vol]), f"{vol} 须为非负数")
+        want = r["anchor_volume"] * r[ratio]
+        require(abs(r[vol] - want) <= 1, f"{vol} 须等于 anchor_volume × {ratio}(取整,应为约 {round(want)})")
+    require(r["object_volume_pre"] > 0, "object_volume_pre 须为正数(r 要拿它做分母)")
+    expect = round(r["task_volume_post"] / r["object_volume_pre"], 4)
+    require(_num(r["r"]) and abs(r["r"] - expect) < 1e-9, f"r 须等于 task_volume_post ÷ object_volume_pre(4 位小数,应为 {expect})")
+    require(isinstance(r["full_60_days"], bool), "full_60_days 须为布尔")
+    if r["full_60_days"]:
+        require(date.fromisoformat(observed_at[:10]) >= play + timedelta(days=span),
+                f"full_60_days 为 true 须观察日 ≥ 开玩日 + {span} 天(不到就写 false)")
+
+
 def _expected_stage(kind):
     return "scan" if kind == "scan" else ("quick" if kind in QUICK_KINDS else "assess")
 
@@ -316,8 +358,8 @@ def _preflight_ok(pf):
 def validate(obs: dict) -> None:
     kind, stage = obs.get("kind"), obs.get("stage")
     require(kind in KINDS, f"kind 须为 {KINDS}")
-    require(stage == _expected_stage(kind), "kind=scan 时 stage=scan;快道四类 stage=quick;其余 stage=assess")
-    if kind in ("scan", "quick_signal"):
+    require(stage == _expected_stage(kind), "kind=scan 时 stage=scan;快道各类 stage=quick;其余 stage=assess")
+    if kind in ("scan", "quick_signal", "quick_reference"):
         require(obs.get("slug") is None, f"{kind} 批次观察 slug 须为 null")
     else:
         require(isinstance(obs.get("slug"), str) and SLUG_RE.fullmatch(obs["slug"]), "slug 无效")
@@ -334,8 +376,8 @@ def validate(obs: dict) -> None:
     require(isinstance(r, dict), "readings 须为对象")
     missing = [k for k in REQUIRED[kind] if k not in r]
     require(not missing, f"{kind}.readings 缺字段: {missing}")
-    if kind == "scan":
-        _check_scan(r, obs["observed_at"])
+    if kind in ("scan", "quick_reference"):
+        globals()[f"_check_{kind}"](r, obs["observed_at"])
     else:
         globals()[f"_check_{kind}"](r)
     if kind == "quick_screen" and (r["checks"]["Q5"]["pass"] is not None or r["checks"]["Q6"]["pass"] is not None):
@@ -344,7 +386,7 @@ def validate(obs: dict) -> None:
 
 def write(root, obs: dict) -> str:
     validate(obs)
-    folder = {"scan": "_scan", "quick_signal": "_quick"}.get(obs["kind"], obs["slug"])
+    folder = {"scan": "_scan", "quick_signal": "_quick", "quick_reference": "_quick"}.get(obs["kind"], obs["slug"])
     ref = f"证据/{folder}/{stamp()}-{uuid.uuid4().hex[:8]}-{obs['kind']}.json"
     path = Path(root) / ref
     path.parent.mkdir(parents=True, exist_ok=True)

@@ -19,6 +19,7 @@ STATUS_CN = {"ok": "可换算", "unreadable": "读不出(新词最近 7 天全�
              "ratio_out_of_range": "比值不在 0.2–5,换锚词", "needs_anchor_volume": "读得出,要查锚词在该国的月量",
              "empty_curve": "读不出(Trends 返回空曲线,量太小)"}
 READABLE_OR_ZERO = ("ok", "unreadable", "empty_curve")
+SKIPPED_PREFIX = "未查:"                # 没查的国家 basis 的开头;别处判"这国没查"就认这个前缀
 
 
 def _mean(xs):
@@ -74,8 +75,11 @@ def analyze(payload) -> dict:
             "skipped": dict(skipped)}
 
 
-def build_observation(payload, slug, semrush_calls=0, at=None) -> dict:
-    """全部国家都是"可换算"或"读不出"时,拼出 quick_volume 观察;否则拒收并说明要做什么。"""
+def build_observation(payload, slug, semrush_calls=0, at=None, term=None) -> dict:
+    """全部国家都是"可换算"或"读不出"时,拼出 quick_volume 观察;否则拒收并说明要做什么。
+
+    term:测的是哪个词(对象名还是任务词),给了就写进读数,同一对象的两种量靠它区分。
+    """
     res = analyze(payload)
     bad = {g: c["status"] for g, c in res["countries"].items() if c["status"] not in READABLE_OR_ZERO}
     require(not res["needs_anchor_volume"], f"这些国家读得出,先用 Semrush 查锚词在该国的锚词月量再填 anchors: {res['needs_anchor_volume']}")
@@ -86,8 +90,8 @@ def build_observation(payload, slug, semrush_calls=0, at=None) -> dict:
     rows, points = [], []
     for g in EN_COUNTRIES:
         if g in res["skipped"]:
-            rows.append({"geo": g, "readable": False, "basis": f"未查:{res['skipped'][g]}"})
-            points.append(f"{g} 未查:{res['skipped'][g]}")
+            rows.append({"geo": g, "readable": False, "basis": f"{SKIPPED_PREFIX}{res['skipped'][g]}"})
+            points.append(f"{g} {SKIPPED_PREFIX}{res['skipped'][g]}")
             continue
         c, s = res["countries"][g], by_geo[g]
         if c["status"] == "empty_curve":
@@ -116,6 +120,8 @@ def build_observation(payload, slug, semrush_calls=0, at=None) -> dict:
                 "estimate_7d": sum(r["estimate_7d"] for r in readable),
                 "estimate_30d": sum(r["estimate_30d"] for r in readable),
                 "series_30d": [v[0] for v in by_geo[top]["values"]][-30:]}
+    if term is not None:
+        readings["term"] = term
     return {"slug": slug, "observed_at": at or now(), "stage": "quick", "kind": "quick_volume",
             "source_urls": [s["url"] for s in payload["series"]], "semrush_calls": semrush_calls,
             "points": points, "readings": readings}
@@ -126,6 +132,7 @@ def main(argv=None):
     ap.add_argument("--data-root")
     ap.add_argument("--input", required=True, help="JSON:series(各国 trends_fetch.js 输出)、anchors、skipped")
     ap.add_argument("--slug", required=True)
+    ap.add_argument("--term", help="这份量级测的是哪个词(如参照里的对象名或任务词),写进读数 term;不写就不记")
     ap.add_argument("--semrush-calls", type=int, default=0, help="这份观察新花的 Semrush 调用数(查锚词月量)")
     ap.add_argument("--dry-run", action="store_true", help="只打印观察,不写入")
     a = ap.parse_args(argv)
@@ -134,12 +141,12 @@ def main(argv=None):
         payload = load_json(Path(a.input))
         res = analyze(payload)
         summary = {g: STATUS_CN[c["status"]] for g, c in res["countries"].items()}
-        summary.update({g: f"未查:{why}" for g, why in res["skipped"].items()})
+        summary.update({g: f"{SKIPPED_PREFIX}{why}" for g, why in res["skipped"].items()})
         if res["needs_anchor_volume"] or any(c["status"] not in READABLE_OR_ZERO for c in res["countries"].values()):
             print(json.dumps({"写入": False, "各国": summary, "要查锚词月量的国家": res["needs_anchor_volume"]},
                              ensure_ascii=False, indent=2))
             return 2
-        obs = build_observation(payload, a.slug, a.semrush_calls)
+        obs = build_observation(payload, a.slug, a.semrush_calls, term=a.term)
         if a.dry_run:
             print(json.dumps(obs, ensure_ascii=False, indent=2))
             return 0

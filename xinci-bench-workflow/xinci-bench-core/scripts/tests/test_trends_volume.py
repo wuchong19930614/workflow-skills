@@ -45,6 +45,16 @@ class TrendsVolumeTest(unittest.TestCase):
         self.assertEqual(r["series_30d"], list(range(20, 50)))
         self.assertEqual((obs["semrush_calls"], len(obs["source_urls"])), (1, 3))
 
+    def test_term_written_to_readings(self):
+        obs = TV.build_observation(payload(), "gag2-calculator", at="2026-10-14T03:00:00+00:00", term="Wardogs")
+        W.validate(obs)
+        self.assertEqual(obs["readings"]["term"], "Wardogs")
+        plain = TV.build_observation(payload(), "gag2-calculator", at="2026-10-14T03:00:00+00:00")
+        self.assertNotIn("term", plain["readings"])
+        ie = next(c for c in plain["readings"]["countries"] if c["geo"] == "IE")
+        self.assertTrue(ie["basis"].startswith(TV.SKIPPED_PREFIX))
+        self.assertEqual(TV.SKIPPED_PREFIX, "未查:")
+
     def test_empty_curve_counts_as_unreadable(self):
         p = payload()
         del p["skipped"]["AU"]
@@ -107,6 +117,16 @@ class TrendsVolumeTest(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertIn("GB", out.getvalue())
             self.assertEqual(len(list((root / "证据" / "gag2-calculator").glob("*-quick_volume.json"))), 1)
+
+    def test_cli_term_flag(self):
+        with TmpRoot() as root:
+            src = root / "trends.json"
+            src.write_text(json.dumps(payload(), ensure_ascii=False), encoding="utf-8")
+            with contextlib.redirect_stdout(io.StringIO()):
+                code = TV.main(["--data-root", str(root), "--input", str(src), "--slug", "wardogs-map", "--term", "Wardogs"])
+            self.assertEqual(code, 0)
+            written = next((root / "证据" / "wardogs-map").glob("*-quick_volume.json"))
+            self.assertEqual(json.loads(written.read_text(encoding="utf-8"))["readings"]["term"], "Wardogs")
 
 
 if __name__ == "__main__":

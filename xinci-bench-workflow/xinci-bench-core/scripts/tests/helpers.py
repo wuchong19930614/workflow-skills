@@ -3,11 +3,13 @@ import copy
 import json
 import sys
 import tempfile
+from datetime import date, timedelta
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import init_workspace  # noqa: E402
+import quick_model as QM  # noqa: E402
 
 
 class TmpRoot:
@@ -224,23 +226,53 @@ def country_reading(geo, anchor_volume, new_mean, anchor_mean, measured="2026-10
 
 
 def quick_volume_obs(slug, anchor_volume=60000, new_mean=50.0, anchor_mean=60.0, series=None, measured="2026-10-08",
-                     others=None):
+                     others=None, term=None, observed_at=None):
     """美国一行用前几个参数;others={"GB": (锚词月量, 新词均值, 锚词均值)} 让别的国家可读,其余国家读不出记 0。
 
     默认只有美国 60000 × 50/60 = 50000 月搜索量 → 基准 1 万访问(恰好过线)、全按美国收入算。
+    term 给了就写进读数(测的是哪个词),observed_at 给了就覆盖观察时间。
     """
     rows = {"US": country_reading("US", anchor_volume, new_mean, anchor_mean, measured)}
     for geo, (av, nm, am) in (others or {}).items():
         rows[geo] = country_reading(geo, av, nm, am, measured)
     countries = [rows.get(g) or {"geo": g, "readable": False, "basis": "Trends 全为 0,读不出"} for g in EN_GEOS]
     readable = [c for c in countries if c["readable"]]
-    return {**QUICK_BASE, "slug": slug, "kind": "quick_volume",
-            "source_urls": ["https://trends.google.com/trends/explore?geo=US&q=grow"],
-            "readings": {"window_days": 7, "countries": countries,
-                         "trend_geo": max(readable, key=lambda c: c["estimate_7d"])["geo"],
-                         "estimate_7d": sum(c["estimate_7d"] for c in readable),
-                         "estimate_30d": sum(c["estimate_30d"] for c in readable),
-                         "series_30d": series if series is not None else rising_series()}}
+    obs = {**QUICK_BASE, "slug": slug, "kind": "quick_volume",
+           "source_urls": ["https://trends.google.com/trends/explore?geo=US&q=grow"],
+           "readings": {"window_days": 7, "countries": countries,
+                        "trend_geo": max(readable, key=lambda c: c["estimate_7d"])["geo"],
+                        "estimate_7d": sum(c["estimate_7d"] for c in readable),
+                        "estimate_30d": sum(c["estimate_30d"] for c in readable),
+                        "series_30d": series if series is not None else rising_series()}}
+    if term is not None:
+        obs["readings"]["term"] = term
+    if observed_at is not None:
+        obs["observed_at"] = observed_at
+    return obs
+
+
+def reference_obs(object="Game A", task="map", category="mmo_gacha", playable_at="2026-07-01", task_ratio=0.1,
+                  object_ratio=1.0, anchor_volume=10000, task_window=("2026-07-05", "2026-07-18"),
+                  observed_at="2026-10-16T08:00:00+00:00"):
+    """一条合法的参照观察:体积与 r 按公式从锚词月量与两个比值派生,窗口按开玩日写死。
+
+    object_volume_pre = 锚词月量 × 对象名比值;task_volume_post = 锚词月量 × 任务词比值;r = 后 ÷ 前(4 位小数);
+    full_60_days = 观察日 ≥ 开玩日 + 60 天。
+    """
+    pre = round(anchor_volume * object_ratio)
+    post = round(anchor_volume * task_ratio)
+    span = timedelta(days=QM.QUICK_ASSUMPTIONS["reference_task_span"])
+    full = date.fromisoformat(observed_at[:10]) >= date.fromisoformat(playable_at) + span
+    return {**QUICK_BASE, "slug": None, "kind": "quick_reference", "observed_at": observed_at,
+            "source_urls": ["https://trends.google.com/trends/explore?geo=US&q=object",
+                            "https://trends.google.com/trends/explore?geo=US&q=task"],
+            "semrush_calls": 0, "points": ["参照"],
+            "readings": {"object": object, "category": category, "task": task, "task_term": f"{object.lower()} {task}",
+                         "playable_at": playable_at, "anchor_term": "anchor term", "anchor_volume": anchor_volume,
+                         "anchor_source": "lexicon", "object_window": QM.reference_object_window(playable_at),
+                         "object_ratio": object_ratio, "task_window": list(task_window), "task_ratio": task_ratio,
+                         "full_60_days": full, "object_volume_pre": pre, "task_volume_post": post,
+                         "r": round(post / pre, 4)}}
 
 
 def quick_brief_obs(slug, build_days=2, data_available=True):
