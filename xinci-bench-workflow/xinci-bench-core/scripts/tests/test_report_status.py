@@ -127,9 +127,35 @@ class PregameStatusTest(unittest.TestCase):
             quick_pool.add_items(root, rows, SIGNAL)
             q = board(root, "2026-10-13")
             self.assertEqual(q["forecast_window"],
-                             [{"object": "Edge Near", "stage": "Early access", "playable_at": "2026-10-16", "days_ahead": 3},
-                              {"object": "Edge Far", "stage": "Open beta", "playable_at": "2026-11-03", "days_ahead": 21}])
+                             [{"object": "Edge Near", "stage": "Early access", "playable_at": "2026-10-16", "days_ahead": 3,
+                               "last_forecast": None},
+                              {"object": "Edge Far", "stage": "Open beta", "playable_at": "2026-11-03", "days_ahead": 21,
+                               "last_forecast": None}])
             self.assertEqual([u["object"] for u in q["upcoming"]], ["Too Soon", "Edge Near"])      # 即将开玩的原有口径(14 天内)不变
+
+    def test_window_puts_never_forecast_objects_first(self):
+        # 两个可预判的游戏,开玩早的那个已预判过(建议 skip,不登记、原料不消耗):没预判过的排前面,预判过的带上次预判的日期与建议
+        with TmpRoot() as root:
+            quick_pool.add_items(root, [pool_row("monster hunter  OUTLANDERS", "2026-10-29"), pool_row("Next Game", "2026-11-01")],
+                                 SIGNAL)
+            H.write_forecast(root, "mho-map", object_us=100000)               # 10-13 预判,建议 skip
+            q = board(root, "2026-10-13")
+            self.assertEqual([(w["object"], w["last_forecast"]) for w in q["forecast_window"]],
+                             [("Next Game", None),
+                              ("monster hunter  OUTLANDERS", {"observed_at": "2026-10-13", "suggestion": "skip"})])
+            out = cli_out(root, "2026-10-13")
+            self.assertIn("可预判 Next Game:2026-11-01,还有 19 天(每轮最多预判 2 个)", out)
+            self.assertIn("可预判 monster hunter  OUTLANDERS:2026-10-29,还有 16 天,上次预判 2026-10-13:skip(每轮最多预判 2 个)", out)
+            self.assertLess(out.index("可预判 Next Game"), out.index("可预判 monster hunter"))
+
+    def test_last_forecast_is_the_newest_one(self):
+        with TmpRoot() as root:
+            quick_pool.add_items(root, [pool_row(OBJECT, "2026-10-29")], SIGNAL)
+            later = dict(H.forecast_obs(slug="other-slug"), observed_at="2026-10-14T08:00:00+00:00")   # 任何方向文件夹的都算
+            W.write(root, later)
+            W.write(root, H.forecast_obs())                                   # 10-13,写得晚但看得早
+            self.assertEqual(board(root, "2026-10-14")["forecast_window"][0]["last_forecast"],
+                             {"observed_at": "2026-10-14", "suggestion": "go"})
 
     def test_window_skips_used_and_already_playable(self):
         with TmpRoot() as root:

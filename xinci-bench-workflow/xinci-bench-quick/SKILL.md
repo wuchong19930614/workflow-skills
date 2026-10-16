@@ -15,7 +15,7 @@ description: '新词快道：暗号 xinci_bench_quick_run 或 /xinci-bench-quick
    - **Wikipedia 发售表**：`wiki_releases.py --output <scratchpad>/wiki_releases.json`（最近 14 天已上线与未来 30 天要上线的），把输出的 items 并进本次信号观察，浏览量没取到的也一起并进。
    对新对象跑 `suggest_snapshot.py --object`；处在测试、抢先体验或即将上线的对象，原料写 `playable_at`（第一次让大量普通用户用上的日期）与 `stage`，还没到这天的只进即将开玩（`quick_pool.py upcoming`），不看首页。把取回的对象与说法写成一份 `quick_signal` 观察，`quick_pool.py add`。没在本次实际取回的来源不写"已检查"。
 5. **上线前预判**（契约 10.9，命令与字段见 `命令与观察.md` §7.7，取数规程见 `数据采集.md` §7.6）：
-   - 取看板 `report_status.py --json` 里 `quick.forecast_window`（开玩日在预判窗口内的游戏），按日历顺序，**每轮最多预判 2 个**；没有就跳过本步。Trends 不够用时按优先级取：本轮飙升词 > 复核到期 > 预判 > 补参照，没做的写"本次未取"；
+   - 取看板 `report_status.py --json` 里 `quick.forecast_window`（开玩日在预判窗口内的游戏），**没预判过的先取**（`last_forecast` 为 null；看板已把它们排在前面，再按开玩日），**每轮最多预判 2 个**；预判过的排在后面，行里写"上次预判 <日期>:<建议>"（隔多久可以重新预判还没定，待用户拍板）；没有就跳过本步。Trends 不够用时按优先级取：本轮飙升词 > 复核到期 > 预判 > 补参照，没做的写"本次未取"；
    - 每个对象：`suggest_snapshot.py --object` 找任务说法，定最小版本要做的 1–4 项任务；先判零成本的 P1、P3（`quick_reference.py summary` 看参照够不够）、P4，有不过的就不再花配额（后面写 `pass: null`）；再看美国首页判 P5、P6（"<游戏名> <任务词>"与"<游戏名> wiki"各一次，间隔 ≥ 60 秒，**这两次查询计入当轮 10 个首页名额**）；再**只测美国**的对象名量（`trends_volume.py --term <对象名>`，其余 5 国放 `skipped`）；用 `quick_forecast.py --input` 生成预判观察，不手算；
    - 看它给的 `suggestion`：`skip` 只记观察；`measure_rest` 补测其余 5 国后重跑；`go` 或 `watching` 才登记：写最小版本简报素材 `quick_brief`（go 必须），`ledger.py register-quick`，输入里用 `forecast` 键写预判观察路径（不写 `screen`；`object.type` 写 `game`，`first_public` 写开玩日），再 `ledger.py update --ref` 引用简报素材。预判方向不能用 `ledger.py quick-preview`（它读开玩后的当前量，会拒收），看 `quick_forecast.py` 的输出；
    - 有 Trends 余量时补参照：看板 `references_due` 每行一项，先 `quick_reference.py time-range` 得日期范围，再在 Trends 页面跑两次 `xinciTrends`（对象名 + 锚词、任务词 + 锚词，间隔 ≥ 35 秒），交给 `quick_reference.py build`；参照库不够时每轮补 2–4 条。

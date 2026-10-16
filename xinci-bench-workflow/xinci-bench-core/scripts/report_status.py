@@ -6,6 +6,7 @@ import argparse
 import json
 import sys
 from datetime import date, timedelta
+from pathlib import Path
 
 import data_root
 import ledger as L
@@ -14,19 +15,40 @@ import quick_pool
 import quick_reference as QR
 import run_log
 import seeds
+import write_observation as W
 from _common import BenchError, load_ledger, today
 
+FORECAST_GLOB = "证据/*/*-quick_forecast.json"
 PARKED_WARN_DAYS = 90
 RUN_AFTER_PLAYABLE_DAYS = 3                       # 建议在开玩当天到第 3 天之间跑一次快道
 
 
+def _last_forecasts(root) -> dict:
+    """各方向文件夹里的预判观察 → {规范化对象名: {"observed_at": 日期, "suggestion": 建议}},同一对象取观察时间最新的
+    (同时刻取路径靠后的);读不出、校验不过的跳过(看板不因它拒收)。"""
+    latest = {}
+    for p in sorted(Path(root).glob(FORECAST_GLOB)):
+        try:
+            obs = W.read(root, p.relative_to(root).as_posix())
+            r, at = obs["readings"], L._at(obs["observed_at"])
+            key = quick_pool.normalize_term(r["object"])
+        except (BenchError, ValueError, KeyError, TypeError, AttributeError, OSError):
+            continue
+        if obs["kind"] == "quick_forecast" and (key not in latest or at >= latest[key][0]):
+            latest[key] = (at, {"observed_at": obs["observed_at"][:10], "suggestion": r["suggestion"]})
+    return {k: v for k, (_, v) in latest.items()}
+
+
 def _forecast_window(root, on) -> list:
-    """可预判的待看原料:开玩日在今天之后 forecast_days 这个范围(含两端)内的。"""
+    """可预判的待看原料:开玩日在今天之后 forecast_days 这个范围(含两端)内的。每行带 last_forecast(上次预判的日期与建议,
+    没预判过为 None):预判 skip、measure_rest 不登记也不消耗原料,不标出来每轮都会重做最近的那几个;没预判过的排前面,再按开玩日。"""
     near, far = QM.QUICK_ASSUMPTIONS["forecast_days"]
+    last = _last_forecasts(root)
     rows = [{"object": r["object"], "stage": r.get("stage"), "playable_at": r["playable_at"],
-             "days_ahead": (date.fromisoformat(r["playable_at"]) - date.fromisoformat(on)).days}
+             "days_ahead": (date.fromisoformat(r["playable_at"]) - date.fromisoformat(on)).days,
+             "last_forecast": last.get(quick_pool.normalize_term(r["object"]))}
             for r in quick_pool.upcoming(root, on=on, days=far)]
-    return [w for w in rows if w["days_ahead"] >= near]
+    return sorted([w for w in rows if w["days_ahead"] >= near], key=lambda w: (w["last_forecast"] is not None, w["playable_at"]))
 
 
 def _forecast_reminders(dirs, on) -> dict:
@@ -180,7 +202,10 @@ def main(argv=None):
         print(f"  即将开玩 {u['object']}" + (f"({u['stage']})" if u["stage"] else "")
               + f":{u['playable_at']},建议 {u['run_from']}~{u['run_to']} 跑一次快道")
     for w in q["forecast_window"]:
-        print(f"  可预判 {w['object']}:{w['playable_at']},还有 {w['days_ahead']} 天(每轮最多预判 {QM.QUICK_ASSUMPTIONS['forecast_per_run']} 个)")
+        lf = w["last_forecast"]
+        print(f"  可预判 {w['object']}:{w['playable_at']},还有 {w['days_ahead']} 天"
+              + (f",上次预判 {lf['observed_at']}:{lf['suggestion']}" if lf else "")
+              + f"(每轮最多预判 {QM.QUICK_ASSUMPTIONS['forecast_per_run']} 个)")
     b = st["semrush"]
     print(f"今天 Semrush 已用 {b['semrush_calls_today']}/{b['semrush_daily_limit']} 次"
           + ("(到了停止线,今天别再跑 Semrush)" if b["semrush_stop"] else "") + f";累计 {st['semrush_calls_total']} 次")
