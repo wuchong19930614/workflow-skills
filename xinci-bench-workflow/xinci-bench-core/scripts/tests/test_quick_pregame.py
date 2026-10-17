@@ -1197,5 +1197,72 @@ class ParamsSettleTest(unittest.TestCase):
                 self.assertFalse(L.review_forecast(root, slug, [ref], on="2026-11-05")["stop"])
 
 
+class ParkedAfterLaunchTest(unittest.TestCase):
+    """预判登记后开玩前搁置的方向,开玩后按现行路径判 go:速判须在开玩后 14 天内、量级须在开玩日或之后;否决不限制。"""
+
+    def parked(self, root):
+        slug, _ = H.setup_forecast(root)                       # 开玩日 2026-10-29
+        settle.settle(root, slug, "parked", reason="开玩前搁置", biggest_unknown="开玩后量", on="2026-10-14")
+        return slug
+
+    def evidence(self, root, slug, day, q5=True):
+        screen = H.quick_screen_obs(slug, term="mho map", fail=None if q5 else {"Q5": False},
+                                    occupied_by=None if q5 else "mhofans.wiki")
+        screen["observed_at"] = f"{day}T08:00:00+00:00"
+        refs = [W.write(root, screen), W.write(root, H.task_volume(slug, 60000, day=day))]
+        L.update(root, slug, {}, refs)
+
+    def test_pre_launch_evidence_refused(self):
+        with H.TmpRoot() as root:
+            slug = self.parked(root)
+            self.evidence(root, slug, "2026-10-20")
+            with self.assertRaisesRegex(BenchError, "开玩"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-20")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "parked")
+
+    def test_screen_window_boundaries(self):
+        for day, ok in (("2026-10-29", True), ("2026-11-12", True), ("2026-11-13", False)):
+            with self.subTest(day), H.TmpRoot() as root:
+                slug = self.parked(root)
+                self.evidence(root, slug, day)
+                if ok:
+                    rec = settle.settle(root, slug, "go", reason="开玩后过线", biggest_unknown="y", on=day)
+                    self.assertEqual((rec["state"], rec["model"].get("basis")), ("go", None))   # 现行路径的模型
+                else:
+                    self.assertRaises(BenchError, settle.settle, root, slug, "go", reason="x", biggest_unknown="y", on=day)
+
+    def test_volume_before_launch_refused(self):
+        with H.TmpRoot() as root:
+            slug = self.parked(root)
+            screen = H.quick_screen_obs(slug, term="mho map")                  # 速判在开玩后第 1 天,窗口内
+            screen["observed_at"] = "2026-10-30T08:00:00+00:00"
+            L.update(root, slug, {}, [W.write(root, screen), W.write(root, H.task_volume(slug, 60000, day="2026-10-20"))])
+            with self.assertRaisesRegex(BenchError, "量级观察是 2026-10-20 看的,在开玩日 2026-10-29 之前"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-30")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "parked")
+
+    def test_late_screen_message_names_dates(self):
+        with H.TmpRoot() as root:
+            slug = self.parked(root)
+            self.evidence(root, slug, "2026-11-13")
+            with self.assertRaisesRegex(BenchError, "最新速判是 2026-11-13 看的,须在开玩日 2026-10-29 当天到开玩后 14 天内"):
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-11-13")
+
+    def test_rejection_not_restricted(self):
+        with H.TmpRoot() as root:
+            slug = self.parked(root)
+            self.evidence(root, slug, "2026-10-20", q5=False)
+            rec = settle.settle(root, slug, "rejected", gate="occupied", reason="开玩前已有专做本作的站",
+                                biggest_unknown="y", on="2026-10-20")
+            self.assertEqual(rec["state"], "rejected")
+
+    def test_current_parked_unchanged(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_quick(root)                       # 现行方向,无 basis;速判与量级都是 2026-10-13 看的
+            settle.settle(root, slug, "parked", reason="先放着", biggest_unknown="y", on="2026-10-13")
+            rec = settle.settle(root, slug, "go", reason="补数后过线", biggest_unknown="y", on="2026-10-13")
+            self.assertEqual(rec["state"], "go")
+
+
 if __name__ == "__main__":
     unittest.main()

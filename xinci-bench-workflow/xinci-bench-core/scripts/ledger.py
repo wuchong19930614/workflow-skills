@@ -626,6 +626,23 @@ def _require_after_launch(rec, screen, vol, on):
                     f"最新{name}观察是 {o['observed_at'][:10]} 看的,在开玩日 {f['playable_at']} 之前;开玩后重新观察、跑 watch-check 再结算")
 
 
+def _require_parked_after_launch(rec, screen, vol):
+    """预判登记后开玩前搁置的方向开玩后判 go:开玩日取 object.first_public(搁置的方向没有 forecast 块,也没有复核日与复查);
+    最新速判须在开玩日当天到开玩后 new_days_game 天内(相当于开玩后重新判一次 Q1),任务说法的量级(有的话)须在开玩日或之后看。
+    只管 go;否决是保守方向,不受这条限制。"""
+    playable_at = rec["object"]["first_public"]
+    limit = QM.QUICK_ASSUMPTIONS["new_days_game"]
+    seen = screen["observed_at"][:10]
+    age = (date.fromisoformat(seen) - date.fromisoformat(playable_at)).days
+    require(0 <= age <= limit,
+            f"预判后搁置的方向开玩后判 go:最新速判是 {seen} 看的,须在开玩日 {playable_at} 当天到开玩后 {limit} 天内"
+            "(开玩前的看不算;过了窗口的重新在开玩后观察)")
+    if vol is not None:
+        require(vol["observed_at"][:10] >= playable_at,
+                f"预判后搁置的方向开玩后判 go:最新量级观察是 {vol['observed_at'][:10]} 看的,在开玩日 {playable_at} 之前;"
+                "开玩后重新测任务说法的量再判 go")
+
+
 def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
     if is_pregame(rec):
         return _precheck_forecast(root, rec, to, on)
@@ -640,6 +657,8 @@ def _precheck_quick(root, rec, to, gate, on, scope_hit=None):
     vol = _latest_term_volume(obs, rec["terms"]) if forecast_dir else _latest(obs, "quick_volume")   # 预判方向别取成对象名的量
     if forecast_dir and rec["state"] == "watching" and (to == "go" or gate in ("volume", "oneoff")):
         _require_after_launch(rec, screen, vol, on)
+    if forecast_dir and rec["state"] == "parked" and to == "go":
+        _require_parked_after_launch(rec, screen, vol)
     if to in ("go", "watching"):
         require(_screen_all_pass(screen), "最新速判观察六条须全过")
         require(vol, "缺量级观察 quick_volume")
