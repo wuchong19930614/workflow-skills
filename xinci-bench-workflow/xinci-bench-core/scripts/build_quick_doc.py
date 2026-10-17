@@ -2,7 +2,8 @@
 """快道决策书(go 时含"立即建站"与最小版本建站简报):账本 + 绑定观察 → 文档/<slug>.md,再生成 html。
 
 只读绑定的观察;每节第一句是加粗的大白话结论,数字都从结构化字段派生。
-开玩前按预判结算的方向(model.basis == "forecast")第一部分与"立即建站"另写一版,依据读绑定的 quick_forecast 观察。
+开玩前按预判结算的方向(model.basis == "forecast")第一部分与"立即建站"另写一版,依据读绑定的 quick_forecast 观察;
+口径按观察自己记下的 params 写(设计稿 14.3:假设表后来改了,重建的决策书不变),参照窗口取它引用的参照各自记下的口径。
 """
 import argparse
 import sys
@@ -156,12 +157,29 @@ def _ratio(x) -> str:
     return "—" if x is None else f"{x:g}"
 
 
-def _scope_cn(t, category) -> str:
+def _scope_cn(t, category, a) -> str:
+    """倍数取自哪里;a 是预判观察自己口径下的假设表(QM.assumptions_from_params)。"""
     if t["scope"] is None:
         return "—"
     if t["scope"] == "category":
         return f"同类别 `{category}`"
-    return f"同类别不足 {QM.QUICK_ASSUMPTIONS['min_references']} 条，取全部类别"
+    return f"同类别不足 {a['min_references']} 条，取全部类别"
+
+
+def _reference_windows(root, r) -> list:
+    """预判观察引用的参照各自记下的窗口口径 → 去重后的 [((对象名窗口远端, 近端), 任务词天数, 任务词跨度)],按引用顺序;
+    预判观察的 params 不含参照窗口,所以读参照自己的 params。没引用参照(六条没有全过)为空;读不出、校验不过的参照跳过,
+    不让一条坏参照拦住决策书。"""
+    out = []
+    for ref in dict.fromkeys(x for t in r["tasks"] for x in t["reference_refs"]):
+        try:
+            a = QM.assumptions_from_params(W.read(root, ref)["readings"]["params"])
+        except (BenchError, ValueError, KeyError, TypeError, AttributeError, OSError):
+            continue
+        w = (tuple(a["reference_object_window"]), a["reference_task_days"], a["reference_task_span"])
+        if w not in out:
+            out.append(w)
+    return out
 
 
 def _stop_line(rec) -> str:
@@ -211,20 +229,21 @@ def _forecast_scenarios(m) -> list:
                     f"- 基准过线需要站点预测月搜索量约 {_fmt(m['searches_needed'])}；假设表版本 {m['assumptions_version']}", ""]
 
 
-def _forecast_risks(rec, r, by_kind) -> list:
-    """第 6 节正文(最大的未知之后):参照倍数、两档结果、窗口、复核与止损(只有 go、观察中有复核日)、简报里的风险。"""
-    m, f, dec, a = rec["model"], rec.get("forecast"), rec["decision"], QM.QUICK_ASSUMPTIONS
+def _forecast_risks(rec, r, by_kind, a, windows) -> list:
+    """第 6 节正文(最大的未知之后):参照倍数、两档结果、窗口、复核与止损(只有 go、观察中有复核日)、简报里的风险。
+    a 是预判观察自己口径下的假设表,windows 是引用的参照各自记下的窗口(_reference_windows)。"""
+    m, f, dec = rec["model"], rec.get("forecast"), rec["decision"]
     lines = []
     if r["forecast_p25"] is not None:
         lines.append("- 倍数来自参照库：" + "；".join(
-            f"{t['task']} {t['references']} 条参照（{_scope_cn(t, r['category'])}），下四分位 {t['r_p25']:g}、中位数 {t['r_median']:g}"
+            f"{t['task']} {t['references']} 条参照（{_scope_cn(t, r['category'], a)}），下四分位 {t['r_p25']:g}、中位数 {t['r_median']:g}"
             for t in r["tasks"]) + "；参照条数越少倍数越不稳")
     if m:
         base, med = m["scenarios"]["base"], m["median_scenarios"]["base"]
         lines.append(f"- 两档结果：下四分位基准约 {_fmt(base['visits'])} 次访问（{'过' if m['passes'] else '不过'}线）、中位数基准约 "
                      f"{_fmt(med['visits'])} 次（{'过' if m['passes_median'] else '不过'}线）；判 go 只认下四分位，中位数过线只进观察")
-    lines.append(f"- 参照窗口写死、不挑：对象名取开玩日前第 {a['reference_object_window'][0]} 到第 {a['reference_object_window'][1]} 天，"
-                 f"任务词取开玩后 {a['reference_task_span']} 天内最高的连续 {a['reference_task_days']} 天")
+    for (far, near), days, span in windows:
+        lines.append(f"- 参照窗口写死、不挑：对象名取开玩日前第 {far} 到第 {near} 天，任务词取开玩后 {span} 天内最高的连续 {days} 天")
     if f:
         review = (f"- {f['review_at']} 复核（开玩日后第 {_days(rec['object']['first_public'], f['review_at'])} 天）："
                   "按现行锚词换算实测各任务词的量，和预测比")
@@ -244,10 +263,11 @@ def _forecast_risks(rec, r, by_kind) -> list:
     return lines + [f"- {x}" for x in risks]
 
 
-def _part_one_forecast(rec, by_kind):
+def _part_one_forecast(root, rec, by_kind):
     obj, m, dec = rec["object"], rec["model"], rec["decision"]
     r = _forecast_readings(rec, by_kind)
-    a, checks, tasks, pre = QM.QUICK_ASSUMPTIONS, r["checks"], r["tasks"], r["object_volume_pre"]
+    a = QM.assumptions_from_params(r["params"])               # 按预判观察自己记下的口径写,不读当前假设表
+    checks, tasks, pre = r["checks"], r["tasks"], r["object_volume_pre"]
     playable = obj["first_public"]
     settled = (rec.get("follow_up") or {}).get("go_at") or (rec.get("watch") or {}).get("since") or dec["decided_at"][:10]
     lines = ["## 第一部分 决策", "", "### 1. 即将开玩的游戏", "",
@@ -268,7 +288,7 @@ def _part_one_forecast(rec, by_kind):
                  else "参照倍数没有取到。**"), ""]
     lines += _table(["任务", "说法", "参照条数", "下四分位倍数", "中位数倍数", "取自"],
                     [[t["task"], "、".join(t["terms"]), "—" if t["references"] is None else f"{t['references']} 条参照",
-                      _ratio(t["r_p25"]), _ratio(t["r_median"]), _scope_cn(t, r["category"])] for t in tasks])
+                      _ratio(t["r_p25"]), _ratio(t["r_median"]), _scope_cn(t, r["category"], a)] for t in tasks])
     lines += ["", "### 4. 首页现场", ""]
     done = sum(1 for s in r["serp"] for row in s["top10"] if row.get("completes_task") is True)
     lines += [f"**两次首页查询的前 10 条里，完整做了这个任务的有 {done} 条；AI 概览开玩前未知，"
@@ -280,7 +300,7 @@ def _part_one_forecast(rec, by_kind):
               "### 5. 预测访问与收入", ""]
     lines += _forecast_scenarios(m)
     lines += ["### 6. 预判依据与风险", "", f"**最大的未知：{dec['biggest_unknown']}。**", ""]
-    return lines + _forecast_risks(rec, r, by_kind) + [""]
+    return lines + _forecast_risks(rec, r, by_kind, a, _reference_windows(root, r)) + [""]
 
 
 def _brief(rec, by_kind):
@@ -322,7 +342,7 @@ def render_md(root, rec) -> str:
         lines.append(f"- {'按参照库下四分位倍数预判，' if forecast_doc else ''}"
                      f"基准情景上线 90 天内单月约 {_fmt(base['visits'])} 次访问、{_money(base['revenue'])}/月（模型估算）")
     lines += [f"- 最大的未知：{dec['biggest_unknown']}", ""]
-    lines += (_part_one_forecast if forecast_doc else _part_one)(rec, by_kind)
+    lines += _part_one_forecast(root, rec, by_kind) if forecast_doc else _part_one(rec, by_kind)
     if dec["verdict"] == "go":
         lines += _brief(rec, by_kind)
     files = (rec.get("bindings") or {}).get("files") or [{"ref": r, "sha256": ""} for r in refs]

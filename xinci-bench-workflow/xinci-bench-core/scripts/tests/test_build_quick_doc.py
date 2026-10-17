@@ -2,6 +2,7 @@ import sys
 import unittest
 from datetime import date
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -12,7 +13,7 @@ import quick_model as QM
 import settle as S
 import write_observation as W
 from _common import load_ledger
-from helpers import TmpRoot, forecast_payload, quick_volume_obs, setup_forecast, setup_quick
+from helpers import TmpRoot, forecast_payload, quick_volume_obs, setup_forecast, setup_quick, write_references
 
 ON = "2026-10-20"
 
@@ -248,6 +249,57 @@ class PregameDocTest(unittest.TestCase):
             md = BQ.render_md(root, rec)
             self.assertIn("### 6. 风险与最大未知", md)
             self.assertNotIn("预判依据与风险", md)
+
+    def test_rebuilt_doc_reads_the_observations_own_params(self):
+        # 假设表后来改了:重建的决策书仍按预判观察(min_references、aio_factor)与它引用的参照(窗口)自己记下的口径写
+        a = dict(QM.QUICK_ASSUMPTIONS)
+        far, near = a["reference_object_window"]
+        with TmpRoot() as root:
+            write_references(root, category="open_world_survival")      # 同类别 mmo_gacha 没有参照:倍数退到全部类别
+            slug, _ = setup_forecast(root)
+            S.settle(root, slug, "go", reason="r", biggest_unknown="u", on=PRE_ON)
+            rec = load_ledger(root)["directions"][slug]
+            changed = {"min_references": a["min_references"] + 1, "aio_factor": round(a["aio_factor"] / 2, 2),
+                       "reference_object_window": (far + 1, near + 1), "reference_task_days": a["reference_task_days"] + 1,
+                       "reference_task_span": a["reference_task_span"] - 10}
+            with mock.patch.dict(QM.QUICK_ASSUMPTIONS, changed):
+                md = BQ.render_md(root, rec)
+            self.assertIn(f"同类别不足 {a['min_references']} 条，取全部类别", _section(md, "3. 任务与参照倍数"))
+            self.assertIn(f"开玩前未知，按 {a['aio_factor']} 取系数", _section(md, "4. 首页现场"))
+            self.assertIn(f"对象名取开玩日前第 {far} 到第 {near} 天，任务词取开玩后 {a['reference_task_span']} 天内"
+                          f"最高的连续 {a['reference_task_days']} 天", _section(md, "6. 预判依据与风险"))
+            for wrong in (f"同类别不足 {changed['min_references']} 条", f"按 {changed['aio_factor']} 取系数",
+                          f"第 {far + 1} 到第 {near + 1} 天", f"开玩后 {changed['reference_task_span']} 天内",
+                          f"连续 {changed['reference_task_days']} 天"):
+                self.assertNotIn(wrong, md)
+
+    def test_doc_without_references_has_no_window_line(self):
+        # 最新预判观察六条没有全过、没引用参照:不写参照窗口(没有参照自己记的口径可写)
+        with TmpRoot() as root:
+            slug, refs = setup_forecast(root, brief=False)
+            payload = forecast_payload(slug=slug, object="Monster Hunter Outlanders", volume_ref=refs[1])
+            payload["checks"]["P5"] = {"pass": False, "basis": "测试期已有专做本作的 wiki"}
+            failed = W.write(root, quick_forecast.build_observation(root, payload, at="2026-10-13T09:00:00+00:00"))
+            ledger.update(root, slug, {}, [failed])
+            S.settle(root, slug, "parked", reason="首页已被占", biggest_unknown="开玩日会不会变", on=PRE_ON)
+            md = (root / "文档" / f"{slug}.md").read_text(encoding="utf-8")
+            self.assertNotIn("参照窗口", md)
+            self.assertIn("没有复核日", md)
+
+    def test_unreadable_reference_does_not_block_the_rebuild(self):
+        # 结算后引用的参照坏了:重建决策书照常出,坏的参照不提供窗口;一条都读不出就不写窗口
+        with TmpRoot() as root:
+            slug, _ = setup_forecast(root)
+            S.settle(root, slug, "go", reason="r", biggest_unknown="u", on=PRE_ON)
+            rec = load_ledger(root)["directions"][slug]
+            paths = sorted((root / "证据" / "_quick").glob("*-quick_reference.json"))
+            paths[0].write_text("{not json", encoding="utf-8")
+            self.assertIn("参照窗口", _section(BQ.render_md(root, rec), "6. 预判依据与风险"))     # 其余两条照常提供
+            for path in paths[1:]:
+                path.write_text("{not json", encoding="utf-8")
+            md = BQ.render_md(root, rec)
+            self.assertIn("### 6. 预判依据与风险", md)
+            self.assertNotIn("参照窗口", md)
 
     def test_current_path_doc_has_no_forecast_sections(self):
         with TmpRoot() as root:
