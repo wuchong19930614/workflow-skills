@@ -159,7 +159,7 @@ def reforecast_status(history: list, playable_at: str, on: str, library: list, a
     返回 {"reforecast": "new" 没预判过 | "due" 可以重做 | "wait" 还不到时候 | "no" 不再预判, "reason": 大白话原因}。
 
     判法(先到先得):没预判过 → new;已预判满 forecast_max_per_object 次(建议为 measure_rest 的不算),或上次是 go、
-    watching(已登记)→ no;上次 P4、P5、P6 不过 → no;P1 不过 → 开玩日改了才 due;P3 不过 → 每项任务的倍数都取得到才 due,
+    watching(应已登记;还出现在这里说明没登记,原因写"先查原因")→ no;上次 P4、P5、P6 不过 → no;P1 不过 → 开玩日改了才 due;P3 不过 → 每项任务的倍数都取得到才 due,
     否则 wait;P2 不过、或六条都过但建议 skip(量不够)→ 看对象名窗口(开玩前第 9 到第 3 天):上次已在窗口里做过 no,
     今天在窗口里 due,还没到窗口 wait,窗口已过 no;上次是 measure_rest → due(补测其余国家)。
     """
@@ -175,8 +175,8 @@ def reforecast_status(history: list, playable_at: str, on: str, library: list, a
     done = sum(1 for x in history if x["suggestion"] != "measure_rest")           # measure_rest 只测了美国,不算一次完整预判
     if done >= most:
         return out("no", f"已预判 {done} 次(每款游戏最多 {most} 次),不再预判")
-    if last["suggestion"] in ("go", "watching"):
-        return out("no", f"上次建议 {last['suggestion']},已登记,不再预判")
+    if last["suggestion"] in ("go", "watching"):            # 登记会把这款游戏的原料标已用,正常不会再出现在可预判里
+        return out("no", f"上次建议 {last['suggestion']},应已登记;还在可预判里说明没登记,先查原因")
     failed = last["failed"]
     if failed in PERMANENT_FAILS:
         return out("no", f"上次 {failed} 不过({PERMANENT_FAILS[failed]}),开玩后按现行路径看,不再预判")

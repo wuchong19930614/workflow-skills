@@ -686,8 +686,9 @@ class ReforecastTest(unittest.TestCase):
             return QF.reforecast_status(history, playable, on, list(library))["reason"]
         self.assertIn("没预判过", reason([], "2026-10-14"))
         self.assertIn("已预判 2 次", reason([h("2026-10-12"), h("2026-10-13")], "2026-10-20"))
-        self.assertIn("已登记", reason([h("2026-10-13", "go")], "2026-10-20"))
-        self.assertIn("已登记", reason([h("2026-10-13", "watching")], "2026-10-20"))
+        self.assertIn("上次建议 go,应已登记;还在可预判里说明没登记,先查原因", reason([h("2026-10-13", "go")], "2026-10-20"))
+        self.assertIn("上次建议 watching,应已登记;还在可预判里说明没登记,先查原因",
+                      reason([h("2026-10-13", "watching")], "2026-10-20"))
         for p in ("P4", "P5", "P6"):
             self.assertIn(f"上次 {p} 不过", reason([h("2026-10-13", failed=p)], "2026-10-20"))
         self.assertIn("开玩日", reason([h("2026-10-13", failed="P1")], "2026-10-20"))

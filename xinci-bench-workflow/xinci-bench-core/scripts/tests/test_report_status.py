@@ -212,7 +212,7 @@ class PregameStatusTest(unittest.TestCase):
             self.assertIn("(每轮最多预判 2 个) → 还不到时候:", lines[OBJECT])
             self.assertIn("开玩前 9–3 天", lines[OBJECT])
             self.assertIn("(每轮最多预判 2 个) → 不再预判:", lines["Registered Game"])
-            self.assertIn("已登记", lines["Registered Game"])
+            self.assertIn("还在可预判里说明没登记,先查原因", lines["Registered Game"])
             # 到了开玩前 9 天:同一款游戏改成"可重做"
             due = next(ln for ln in cli_out(root, "2026-10-20").splitlines() if f"可预判 {OBJECT}:" in ln)
             self.assertIn("→ 可重做:", due)
