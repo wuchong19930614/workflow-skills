@@ -122,7 +122,8 @@ def build_observation(root, payload: dict, at: str | None = None, unusable: list
     readings = {"object": obj, "category": category, "playable_at": payload["playable_at"],
                 "date_source": payload["date_source"], "object_volume_pre": pre, "object_volume_ref": ref,
                 "skipped_geos": skipped, "tasks": out_tasks, "forecast_p25": f25, "forecast_median": f50,
-                "suggestion": suggestion, "checks": checks, "serp": payload["serp"]}
+                "suggestion": suggestion, "checks": checks, "serp": payload["serp"],
+                "assumptions_version": QM.QUICK_ASSUMPTIONS["version"], "params": QM.forecast_params()}
     obs = {"slug": slug, "observed_at": at, "stage": "quick", "kind": "quick_forecast",
            "source_urls": payload["source_urls"], "semrush_calls": payload.get("semrush_calls", 0),
            "points": _points(readings) + [f"参照不可用,已跳过 {x['ref']}:{x['reason']}" for x in unusable],

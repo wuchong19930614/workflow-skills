@@ -127,7 +127,8 @@ def build_observation(payload: dict, at: str | None = None) -> dict:
                         "task_term": payload["task_term"], "playable_at": play, "anchor_term": payload["anchor_term"],
                         "anchor_volume": vol, "anchor_source": payload["anchor_source"], "object_window": object_window,
                         "object_ratio": object_ratio, "task_window": w, "task_ratio": best["ratio"],
-                        "full_60_days": best["full_60_days"], "object_volume_pre": pre, "task_volume_post": post, "r": r}}
+                        "full_60_days": best["full_60_days"], "object_volume_pre": pre, "task_volume_post": post, "r": r,
+                        "assumptions_version": a["version"], "params": QM.reference_params(a)}}
     W.validate(obs)
     return obs
 
@@ -137,10 +138,17 @@ def _at(ts: str) -> datetime:
     return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
 
 
+def stale_reason(obs: dict) -> str:
+    """参照记的口径不是当前的:写进"参照不可用"与拒收信息的说法。"""
+    return f"口径已变,需重测(写于 {obs['readings']['assumptions_version']})"
+
+
 def load_library(root, skipped=None) -> list:
-    """证据/_quick/ 下全部参照观察(逐条重新校验);同一(规范化对象名, 任务类型)只留观察时间最新的一条。
+    """证据/_quick/ 下全部参照观察(逐条按它自己记的口径重新校验);同一(规范化对象名, 任务类型)只留观察时间最新的一条。
     给了 skipped 列表时,读不出、校验不过的参照跳过并记进去({"ref", "reason"}),其余照常用(一条坏了不连累整个库);
-    没给就照旧拒收。"""
+    没给就照旧拒收。
+    口径(params)和当前假设表不同的参照一律不进库:倍数不混着不同口径算。它们不算坏,没给 skipped 时也不拒收,
+    给了就记 {"ref", "reason": "口径已变,需重测(写于 <版本>)"}。"""
     latest = {}
     for p in sorted(Path(root).glob(LIBRARY_GLOB)):
         ref = p.relative_to(root).as_posix()
@@ -151,6 +159,10 @@ def load_library(root, skipped=None) -> list:
             if skipped is None:
                 raise
             skipped.append({"ref": ref, "reason": str(exc) if isinstance(exc, BenchError) else f"{type(exc).__name__} {exc}"})
+            continue
+        if obs["readings"]["params"] != QM.reference_params():
+            if skipped is not None:
+                skipped.append({"ref": ref, "reason": stale_reason(obs)})
             continue
         item = {"ref": ref, "observed_at": obs["observed_at"], **obs["readings"]}
         key = (quick_pool.normalize_term(item["object"]), item["task"])
@@ -182,7 +194,7 @@ def rates(library: list, task: str, category: str, a=QM.QUICK_ASSUMPTIONS):
 
 
 def check_refs(root, refs: list, task: str, category: str, scope: str, a=QM.QUICK_ASSUMPTIONS) -> dict:
-    """用观察里引用的参照路径重算倍数,与 rates() 同结构;任何一条不合规矩都拒收。"""
+    """用观察里引用的参照路径重算倍数,与 rates() 同结构;任何一条不合规矩都拒收(含口径不是当前的:先于条数核对)。"""
     require(scope in SCOPES, f"scope 须为 {SCOPES}")
     require(isinstance(refs, list) and refs, "参照路径须为非空列表")
     rows, seen = [], set()
@@ -191,6 +203,7 @@ def check_refs(root, refs: list, task: str, category: str, scope: str, a=QM.QUIC
         obs = W.read(root, ref)
         require(obs["kind"] == "quick_reference", f"{ref} 不是参照观察(kind={obs['kind']})")
         r = obs["readings"]
+        require(r["params"] == QM.reference_params(a), f"参照 {ref} {stale_reason(obs)}:引用的参照口径须是当前的")
         require(r["task"] == task, f"{ref} 的任务类型是 {r['task']},要的是 {task}")
         if scope == "category":
             require(r["category"] == category, f"{ref} 的类别是 {r['category']},要的是 {category}")

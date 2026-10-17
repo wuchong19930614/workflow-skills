@@ -1164,5 +1164,38 @@ class SlipTest(unittest.TestCase):
 
 
 
+class ParamsSettleTest(unittest.TestCase):
+    def test_settle_refuses_after_params_change(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            with mock.patch.dict(QM.QUICK_ASSUMPTIONS, {"us_only_cutoff": 0.4}):
+                with self.assertRaisesRegex(BenchError, "口径已变,重做预判"):
+                    settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "found")
+
+    def test_settle_refuses_when_reference_params_changed(self):
+        # 预判观察的口径没变、它引用的参照口径变了:同样拒收,不按新口径悄悄重算
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            with mock.patch.dict(QM.QUICK_ASSUMPTIONS, {"reference_task_days": 7}):
+                with self.assertRaisesRegex(BenchError, "口径已变"):
+                    settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "found")
+
+    def test_settle_still_works_with_current_params(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "go")
+
+    def test_review_reads_settled_forecast_after_change(self):
+        with H.TmpRoot() as root:
+            slug, _ = H.setup_forecast(root)
+            settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-10-14")
+            ref = W.write(root, H.task_volume(slug, 30000))
+            with mock.patch.dict(QM.QUICK_ASSUMPTIONS, {"min_references": 4}):
+                self.assertFalse(L.review_forecast(root, slug, [ref], on="2026-11-05")["stop"])
+
+
 if __name__ == "__main__":
     unittest.main()

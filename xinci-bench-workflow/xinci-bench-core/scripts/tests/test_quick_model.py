@@ -134,5 +134,49 @@ class ForecastTest(unittest.TestCase):
         self.assertEqual(Q.compute(r)["scenarios"]["base"], {"share": 0.2, "visits": 10000, "us_visits": 10000, "revenue": 40.0})
 
 
+class ParamsTest(unittest.TestCase):
+    def test_reference_params(self):
+        self.assertEqual(Q.reference_params(), {"object_window": [9, 3], "task_days": 14, "task_span": 60})
+
+    def test_forecast_params(self):
+        self.assertEqual(Q.forecast_params(), {"forecast_days": [3, 21], "min_references": 3, "threshold_visits": 10000,
+                                               "share_base": 0.2, "aio_factor": 0.6, "us_only_cutoff": 0.5})
+
+    def test_params_follow_the_given_table(self):
+        a = dict(Q.QUICK_ASSUMPTIONS, reference_object_window=(10, 4), forecast_days=(2, 9), share={"base": 0.3})
+        self.assertEqual(Q.reference_params(a)["object_window"], [10, 4])
+        self.assertEqual(Q.forecast_params(a)["forecast_days"], [2, 9])
+        self.assertEqual(Q.forecast_params(a)["share_base"], 0.3)
+
+    def test_assumptions_from_params_roundtrips_current(self):
+        a = Q.assumptions_from_params({**Q.reference_params(), **Q.forecast_params()})
+        for k in ("reference_object_window", "reference_task_days", "reference_task_span", "forecast_days",
+                  "min_references", "threshold_visits", "aio_factor", "us_only_cutoff"):
+            self.assertEqual(a[k], Q.QUICK_ASSUMPTIONS[k], k)
+        self.assertEqual(a["share"], Q.QUICK_ASSUMPTIONS["share"])
+        self.assertIsInstance(a["reference_object_window"], tuple)        # 假设表里是元组,不是 JSON 的列表
+        self.assertIsInstance(a["forecast_days"], tuple)
+
+    def test_assumptions_from_params_overrides_and_copies(self):
+        params = {"object_window": [10, 4], "task_days": 7, "task_span": 90, "forecast_days": [2, 9], "min_references": 4,
+                  "threshold_visits": 5000, "share_base": 0.3, "aio_factor": 0.5, "us_only_cutoff": 0.4}
+        a = Q.assumptions_from_params(params)
+        self.assertEqual((a["reference_object_window"], a["reference_task_days"], a["reference_task_span"],
+                          a["forecast_days"], a["min_references"], a["threshold_visits"], a["aio_factor"],
+                          a["us_only_cutoff"]), ((10, 4), 7, 90, (2, 9), 4, 5000, 0.5, 0.4))
+        self.assertEqual(a["share"], {"low": 0.10, "base": 0.3, "high": 0.30})     # 只换 base,其余档照旧
+        self.assertEqual(Q.reference_object_window("2026-07-01", a), ["2026-06-21", "2026-06-27"])
+        self.assertEqual(Q.forecast_suggestion(200000, 300000, True, a=a), "go")
+        self.assertEqual(Q.QUICK_ASSUMPTIONS["share"]["base"], 0.20)               # 原表没被改
+        self.assertEqual(Q.QUICK_ASSUMPTIONS["reference_object_window"], (9, 3))
+        self.assertIsNot(a["share"], Q.QUICK_ASSUMPTIONS["share"])
+
+    def test_assumptions_from_partial_params_keeps_the_rest(self):
+        a = Q.assumptions_from_params({"task_days": 7})
+        self.assertEqual((a["reference_task_days"], a["reference_task_span"]), (7, 60))
+        base = dict(Q.QUICK_ASSUMPTIONS, threshold_visits=777)
+        self.assertEqual(Q.assumptions_from_params({"task_days": 7}, base)["threshold_visits"], 777)
+
+
 if __name__ == "__main__":
     unittest.main()

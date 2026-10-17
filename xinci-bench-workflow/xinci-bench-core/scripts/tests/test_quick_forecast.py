@@ -406,6 +406,107 @@ class ForecastValidationTest(unittest.TestCase):
             self.assertEqual(W.read(root, ref)["readings"]["suggestion"], "go")
 
 
+class ForecastParamsTest(unittest.TestCase):
+    def test_forecast_written_with_current_params(self):
+        r = H.forecast_obs()["readings"]
+        self.assertEqual(r["params"], {"forecast_days": [3, 21], "min_references": 3, "threshold_visits": 10000,
+                                       "share_base": 0.2, "aio_factor": 0.6, "us_only_cutoff": 0.5})
+        self.assertEqual(r["params"], QM.forecast_params())
+        self.assertEqual(r["assumptions_version"], QM.QUICK_ASSUMPTIONS["version"])
+        with H.TmpRoot() as root:
+            vref = setup(root)
+            failing = dict(H.forecast_payload(volume_ref=None),                            # 有不过项,只记观察
+                           checks={**H.forecast_payload()["checks"], "P4": {"pass": False, "basis": "x"}})
+            for payload in (H.forecast_payload(volume_ref=vref), failing):                 # 六条全过 / 只记观察
+                r = QF.build_observation(root, payload, at=AT)["readings"]
+                self.assertEqual(r["params"], QM.forecast_params())
+                self.assertEqual(r["assumptions_version"], QM.QUICK_ASSUMPTIONS["version"])
+
+    def test_write_refuses_made_up_params(self):
+        for key, value in (("min_references", 2), ("threshold_visits", 5000), ("us_only_cutoff", 0.4),
+                           ("forecast_days", [1, 30])):
+            obs = H.forecast_obs()
+            obs["readings"]["params"][key] = value
+            with self.subTest(key), self.assertRaisesRegex(BenchError, "口径"):
+                W.validate(obs)
+
+    def test_read_forecast_after_threshold_change(self):
+        with H.TmpRoot() as root:
+            ref = W.write(root, H.forecast_obs())
+            with mock.patch.dict(QM.QUICK_ASSUMPTIONS, {"threshold_visits": 5000}):
+                self.assertEqual(W.read(root, ref)["readings"]["suggestion"], "go")
+
+    def test_read_checks_suggestion_by_own_params(self):
+        # 现行门槛抬到 2 万:这份 go 按新门槛是 skip,但读回按它自己写的 1 万校验,照样读得进来;现在再写同样的观察就拒收
+        with H.TmpRoot() as root:
+            obs = H.forecast_obs()
+            ref = W.write(root, obs)
+            with mock.patch.dict(QM.QUICK_ASSUMPTIONS, {"threshold_visits": 20000}):
+                self.assertEqual(W.read(root, ref)["readings"]["suggestion"], "go")
+                with self.assertRaisesRegex(BenchError, "口径与当前假设表不一致"):
+                    W.write(root, obs)
+
+    def test_read_checks_reference_count_and_lead_by_own_params(self):
+        with H.TmpRoot() as root:
+            ref = W.write(root, H.forecast_obs())                      # 观察日 10-13,开玩日 10-29:提前 16 天、参照 3 条
+            with mock.patch.dict(QM.QUICK_ASSUMPTIONS, {"min_references": 4, "forecast_days": (3, 10)}):
+                self.assertEqual(W.read(root, ref)["readings"]["tasks"][0]["references"], 3)
+
+    def test_params_survive_json_roundtrip(self):
+        with H.TmpRoot() as root:
+            ref = W.write(root, H.forecast_obs())
+            self.assertEqual(W.read(root, ref)["readings"]["params"], QM.forecast_params())
+
+    def test_validate_current_flag(self):
+        obs = H.forecast_obs()
+        task = obs["readings"]["tasks"][0]
+        obs["readings"]["params"]["min_references"] = 2
+        obs["readings"]["assumptions_version"] = "2026-09-01.old"
+        task.update(references=2, reference_refs=task["reference_refs"][:2])
+        W.validate(obs, current=False)
+        with self.assertRaisesRegex(BenchError, "口径与当前假设表不一致"):
+            W.validate(obs)
+
+    def test_params_shape_refused(self):
+        bad = {
+            "missing_params": (lambda r: r.pop("params"), "缺字段"),
+            "missing_version": (lambda r: r.pop("assumptions_version"), "缺字段"),
+            "blank_version": (lambda r: r.update(assumptions_version=""), "assumptions_version"),
+            "params_not_dict": (lambda r: r.update(params=None), "params"),
+            "missing_key": (lambda r: r["params"].pop("aio_factor"), "params"),
+            "extra_key": (lambda r: r["params"].update(task_days=14), "params"),
+            "days_one_item": (lambda r: r["params"].update(forecast_days=[3]), "forecast_days"),
+            "days_not_int": (lambda r: r["params"].update(forecast_days=[3, "21"]), "forecast_days"),
+            "min_refs_zero": (lambda r: r["params"].update(min_references=0), "min_references"),
+            "min_refs_bool": (lambda r: r["params"].update(min_references=True), "min_references"),
+            "threshold_zero": (lambda r: r["params"].update(threshold_visits=0), "threshold_visits"),
+            "threshold_text": (lambda r: r["params"].update(threshold_visits="10000"), "threshold_visits"),
+            "share_over_one": (lambda r: r["params"].update(share_base=1.5), "share_base"),
+            "aio_negative": (lambda r: r["params"].update(aio_factor=-0.1), "aio_factor"),
+            "cutoff_over_one": (lambda r: r["params"].update(us_only_cutoff=2), "us_only_cutoff"),
+            "cutoff_bool": (lambda r: r["params"].update(us_only_cutoff=True), "us_only_cutoff"),
+        }
+        for name, (mutate, reason) in bad.items():
+            for current in (True, False):
+                obs = H.forecast_obs()
+                mutate(obs["readings"])
+                with self.subTest(name, current=current), self.assertRaisesRegex(BenchError, reason):
+                    W.validate(obs, current=current)
+
+    def test_reference_with_changed_params_is_unusable(self):
+        # 参照库里另一套口径的参照不混着算:跳过,写进"参照不可用"与观察的 points,倍数只按现行口径的 3 条算
+        with H.TmpRoot() as root:
+            vref = setup(root)
+            old = H.write_stale_reference(root, object="Old Game", task_ratio=0.9)
+            unusable = []
+            obs = QF.build_observation(root, H.forecast_payload(volume_ref=vref), at=AT, unusable=unusable)
+            t = obs["readings"]["tasks"][0]
+            self.assertEqual((t["r_p25"], t["r_median"], t["references"]), (0.15, 0.2, 3))
+            self.assertNotIn(old, t["reference_refs"])
+            self.assertEqual(unusable, [{"ref": old, "reason": "口径已变,需重测(写于 2026-09-01.old)"}])
+            self.assertTrue(any("口径已变" in x and old in x for x in obs["points"]))
+
+
 class CliTest(unittest.TestCase):
     def run_cli(self, argv):
         out, err = io.StringIO(), io.StringIO()

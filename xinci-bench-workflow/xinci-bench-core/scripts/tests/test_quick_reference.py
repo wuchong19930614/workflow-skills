@@ -5,10 +5,12 @@ import sys
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import helpers as H
+import quick_model as QM
 import quick_reference as QR
 import write_observation as W
 from _common import BenchError
@@ -223,6 +225,104 @@ class LibraryTest(unittest.TestCase):
             dup = W.write(root, H.reference_obs(object="game  0", task_ratio=0.9))       # 同一对象换个写法
             with self.assertRaises(BenchError):
                 QR.check_refs(root, refs + [dup], "map", "mmo_gacha", "category")
+
+
+class ParamsTest(unittest.TestCase):
+    def test_reference_written_with_current_params(self):
+        r = H.reference_obs()["readings"]
+        self.assertEqual(r["params"], {"object_window": [9, 3], "task_days": 14, "task_span": 60})
+        self.assertEqual(r["assumptions_version"], QM.QUICK_ASSUMPTIONS["version"])
+        r = QR.build_observation(payload(), at="2026-10-16T08:00:00+00:00")["readings"]
+        self.assertEqual(r["params"], QM.reference_params())
+        self.assertEqual(r["assumptions_version"], QM.QUICK_ASSUMPTIONS["version"])
+
+    def test_write_refuses_made_up_params(self):
+        obs = H.reference_obs()
+        obs["readings"]["params"]["task_days"] = 10
+        with self.assertRaisesRegex(BenchError, "口径"):
+            W.validate(obs)
+
+    def test_params_survive_json_roundtrip(self):
+        with H.TmpRoot() as root:
+            ref = W.write(root, H.reference_obs())
+            self.assertEqual(W.read(root, ref)["readings"]["params"], QM.reference_params())
+            self.assertEqual(len(QR.load_library(root)), 1)
+
+    def test_read_uses_own_params_after_change(self):
+        with H.TmpRoot() as root:
+            ref = W.write(root, H.reference_obs())
+            with mock.patch.dict(QM.QUICK_ASSUMPTIONS, {"reference_object_window": (10, 4), "reference_task_days": 7}):
+                self.assertEqual(W.read(root, ref)["readings"]["params"]["task_days"], 14)   # 照样读得进来
+                skipped = []
+                self.assertEqual(QR.load_library(root, skipped), [])                          # 口径不同不进库
+                self.assertIn("口径已变", skipped[0]["reason"])
+                with self.assertRaisesRegex(BenchError, "口径已变"):
+                    QR.check_refs(root, [ref], "map", "mmo_gacha", "task_type")
+
+    def test_validate_current_flag(self):
+        # 另一套口径下写的参照:按自己的口径校验通过(current=False),按现行口径不行(默认)
+        with H.TmpRoot() as root:
+            ref = H.write_stale_reference(root)
+            obs = W.read(root, ref)
+            self.assertEqual(obs["readings"]["params"]["task_days"], 7)
+            W.validate(obs, current=False)
+            with self.assertRaisesRegex(BenchError, "口径与当前假设表不一致"):
+                W.validate(obs)
+
+    def test_current_version_must_match_too(self):
+        obs = H.reference_obs()
+        obs["readings"]["assumptions_version"] = "2026-09-01.old"      # params 是现行的,版本不是
+        with self.assertRaisesRegex(BenchError, "口径与当前假设表不一致"):
+            W.validate(obs)
+        W.validate(obs, current=False)
+
+    def test_params_shape_refused(self):
+        bad = {
+            "missing_params": (lambda r: r.pop("params"), "缺字段"),
+            "missing_version": (lambda r: r.pop("assumptions_version"), "缺字段"),
+            "blank_version": (lambda r: r.update(assumptions_version="  "), "assumptions_version"),
+            "version_not_text": (lambda r: r.update(assumptions_version=5), "assumptions_version"),
+            "params_not_dict": (lambda r: r.update(params=[9, 3]), "params"),
+            "missing_key": (lambda r: r["params"].pop("task_span"), "params"),
+            "extra_key": (lambda r: r["params"].update(share_base=0.2), "params"),
+            "window_one_item": (lambda r: r["params"].update(object_window=[9]), "object_window"),
+            "window_not_int": (lambda r: r["params"].update(object_window=[9.5, 3]), "object_window"),
+            "window_zero": (lambda r: r["params"].update(object_window=[9, 0]), "object_window"),
+            "window_tuple": (lambda r: r["params"].update(object_window=(9, 3)), "object_window"),
+            "days_bool": (lambda r: r["params"].update(task_days=True), "task_days"),
+            "days_zero": (lambda r: r["params"].update(task_span=0), "task_span"),
+        }
+        for name, (mutate, reason) in bad.items():
+            for current in (True, False):
+                obs = H.reference_obs()
+                mutate(obs["readings"])
+                with self.subTest(name, current=current), self.assertRaisesRegex(BenchError, reason):
+                    W.validate(obs, current=current)
+
+    def test_stale_reference_not_in_library(self):
+        with H.TmpRoot() as root:
+            good = H.write_references(root)
+            stale = H.write_stale_reference(root, object="Old Game")
+            skipped = []
+            lib = QR.load_library(root, skipped)
+            self.assertEqual(sorted(x["ref"] for x in lib), sorted(good))
+            self.assertEqual(skipped, [{"ref": stale, "reason": "口径已变,需重测(写于 2026-09-01.old)"}])
+            self.assertEqual(sorted(x["ref"] for x in QR.load_library(root)), sorted(good))     # 没给 skipped 也不进库、不拒收
+
+    def test_stale_reference_among_fresh_ones_refused_by_check_refs(self):
+        with H.TmpRoot() as root:
+            refs = H.write_references(root)
+            stale = H.write_stale_reference(root, object="Old Game", task_ratio=0.4)
+            self.assertEqual(QR.check_refs(root, refs, "map", "mmo_gacha", "category")["references"], 3)
+            with self.assertRaisesRegex(BenchError, "口径已变"):
+                QR.check_refs(root, refs + [stale], "map", "mmo_gacha", "category")      # 4 条里一条老的就拒收,不悄悄少算
+
+    def test_summary_leaves_stale_out(self):
+        with H.TmpRoot() as root:
+            H.write_references(root)
+            H.write_stale_reference(root, object="Old Game", task_ratio=0.9)
+            rows = QR.summary(QR.load_library(root))
+            self.assertEqual((len(rows), rows[0]["条数"]), (1, 3))
 
 
 class CliTest(unittest.TestCase):

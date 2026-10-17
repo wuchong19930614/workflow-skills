@@ -552,12 +552,16 @@ def _check_object_volume(root, rec, r, forecast_at):
 
 
 def forecast_model(root, rec) -> dict:
-    """预判方向的模型:从方向引用里最新的预判观察重算。六条须全过、国家须测全、说法须在任务里;对象名量级须在引用里、
+    """预判方向的模型:从方向引用里最新的预判观察重算。预判观察的口径(params)与它引用的参照的口径都须是当前假设表的,
+    否则拒收"口径已变,重做预判"(不按新口径悄悄重算);六条须全过、国家须测全、说法须在任务里;对象名量级须在引用里、
     对得上、在预判当天或之前 2 天内测;
     每项任务的倍数与条数都按引用的参照路径向参照库重算,不一致就拒收(观察里的倍数不能自己说了算)。"""
     ref, f = latest_forecast(root, rec)
     require(f, "缺预判观察 quick_forecast")
     r = f["readings"]
+    require(r["params"] == QM.forecast_params(),
+            f"口径已变,重做预判:最新预判观察 {ref} 写于假设表 {r['assumptions_version']},口径与现行的"
+            f"({QM.QUICK_ASSUMPTIONS['version']})不同,不能按新口径悄悄重算")
     failed = [k for k in W.FORECAST_CHECKS if r["checks"][k]["pass"] is not True]
     require(not failed, f"最新预判观察 {ref} 的 {'、'.join(failed)} 没过,不能测算")
     require(not r["skipped_geos"], f"最新预判观察 {ref} 还有没测的国家 {r['skipped_geos']},补测其余国家后重新预判")

@@ -43,9 +43,10 @@ REQUIRED = {
                     "data_available", "hosting", "risks"),
     "quick_reference": ("object", "category", "task", "task_term", "playable_at", "anchor_term", "anchor_volume",
                         "anchor_source", "object_window", "object_ratio", "task_window", "task_ratio",
-                        "full_60_days", "object_volume_pre", "task_volume_post", "r"),
+                        "full_60_days", "object_volume_pre", "task_volume_post", "r", "assumptions_version", "params"),
     "quick_forecast": ("object", "category", "playable_at", "date_source", "object_volume_pre", "object_volume_ref",
-                       "skipped_geos", "tasks", "forecast_p25", "forecast_median", "suggestion", "checks", "serp"),
+                       "skipped_geos", "tasks", "forecast_p25", "forecast_median", "suggestion", "checks", "serp",
+                       "assumptions_version", "params"),
 }
 # quick_volume 里每个读得出的国家必须有的字段
 COUNTRY_FIELDS = ("anchor_term", "anchor_volume", "anchor_source", "anchor_measured_at", "new_mean_7d",
@@ -311,9 +312,57 @@ def _check_quick_brief(r):
     require(isinstance(r["data_available"], bool), "data_available 须为布尔")
 
 
-def _check_quick_reference(r, observed_at):
-    """参照:一款已开玩的游戏,开玩前对象名的量与开玩后任务词的量之比 r(预判的倍数从这些参照里取)。"""
-    a = QM.QUICK_ASSUMPTIONS
+def _pos_int(v):
+    return isinstance(v, int) and not isinstance(v, bool) and v > 0
+
+
+def _pos_num(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and v > 0
+
+
+def _fraction(v):
+    return isinstance(v, (int, float)) and not isinstance(v, bool) and 0 <= v <= 1
+
+
+def _int_pair(v):
+    return isinstance(v, list) and len(v) == 2 and all(_pos_int(x) for x in v)
+
+
+# 观察 params 里每个口径的值怎么算合法(键集合取自 QM.reference_params / QM.forecast_params)
+PARAM_RULES = {
+    "object_window": (_int_pair, "两个正整数的列表(开玩日前第几天到第几天)"),
+    "task_days": (_pos_int, "正整数(任务词窗口的天数)"),
+    "task_span": (_pos_int, "正整数(任务词窗口须在开玩后多少天内)"),
+    "forecast_days": (_int_pair, "两个正整数的列表(开玩日在观察日后最近与最远几天)"),
+    "min_references": (_pos_int, "正整数(每项任务至少几条参照)"),
+    "threshold_visits": (_pos_num, "正数(判 go 的月访问门槛)"),
+    "share_base": (_fraction, "0–1 之间的数(基准首发份额)"),
+    "aio_factor": (_fraction, "0–1 之间的数(AI 概览系数)"),
+    "us_only_cutoff": (_fraction, "0–1 之间的数(只测美国时的截断线)"),
+}
+
+
+def _own_assumptions(r, kind, current) -> dict:
+    """观察记下的口径(assumptions_version 与 params):核形状,再还原成假设表的写法,用它跑这一类观察原有的全部校验。
+    current=True(写入)时口径与版本须等于当前假设表,不能自己编;current=False(读回)按观察自己的口径,假设表后来改了也照样读得进来。"""
+    now = QM.reference_params() if kind == "quick_reference" else QM.forecast_params()
+    version, params = r["assumptions_version"], r["params"]
+    require(isinstance(version, str) and version.strip(), f"{kind}.assumptions_version 须为非空文字(写入时的假设表版本)")
+    require(isinstance(params, dict) and set(params) == set(now), f"{kind}.params 须恰好含 {list(now)}")
+    for k, v in params.items():
+        ok, what = PARAM_RULES[k]
+        require(ok(v), f"{kind}.params.{k} 须为{what},收到 {v!r}")
+    if current:
+        require(params == now and version == QM.QUICK_ASSUMPTIONS["version"],
+                f"口径与当前假设表不一致(写入时须用当前口径):观察写的是 {version} {params},当前是 "
+                f"{QM.QUICK_ASSUMPTIONS['version']} {now}")
+    return QM.assumptions_from_params(params)
+
+
+def _check_quick_reference(r, observed_at, current):
+    """参照:一款已开玩的游戏,开玩前对象名的量与开玩后任务词的量之比 r(预判的倍数从这些参照里取)。
+    窗口、天数按观察自己记的 params 校验(写入时 params 须是当前口径)。"""
+    a = _own_assumptions(r, "quick_reference", current)
     for k in ("object", "task_term", "anchor_term"):
         require(isinstance(r[k], str) and r[k].strip(), f"quick_reference.{k} 须为非空文字")
     require(r["category"] in QM.GAME_CATEGORIES, f"category 须为 {QM.GAME_CATEGORIES}")
@@ -322,9 +371,10 @@ def _check_quick_reference(r, observed_at):
     require(is_date(r["playable_at"]), "playable_at 须为日历上存在的 YYYY-MM-DD")
     require(_num(r["anchor_volume"]) and r["anchor_volume"] > 0, "anchor_volume 须为正数")
     require(r["anchor_source"] in ("lexicon", "semrush"), "anchor_source 须为 lexicon/semrush")
-    require(r["object_window"] == QM.reference_object_window(r["playable_at"]),
+    window = QM.reference_object_window(r["playable_at"], a)
+    require(r["object_window"] == window,
             f"object_window 须为开玩日前第 {a['reference_object_window'][0]} 天到第 {a['reference_object_window'][1]} 天"
-            f"(应为 {QM.reference_object_window(r['playable_at'])})")
+            f"(应为 {window})")
     tw = r["task_window"]
     require(isinstance(tw, list) and len(tw) == 2 and all(is_date(d) for d in tw), "task_window 须为 [起, 止] 两个日期")
     start, end, play = date.fromisoformat(tw[0]), date.fromisoformat(tw[1]), date.fromisoformat(r["playable_at"])
@@ -348,9 +398,8 @@ def _check_quick_reference(r, observed_at):
                 f"full_60_days 为 true 须观察日 ≥ 开玩日 + {span} 天(不到就写 false)")
 
 
-def _check_forecast_task(t):
+def _check_forecast_task(t, a):
     """预判里一项任务的倍数:参照条数够数、引用的路径与条数对得上、下四分位不超过中位数。"""
-    a = QM.QUICK_ASSUMPTIONS
     name = t["task"]
     n, refs = t.get("references"), t.get("reference_refs")
     require(isinstance(n, int) and not isinstance(n, bool) and n >= a["min_references"],
@@ -363,7 +412,7 @@ def _check_forecast_task(t):
     require(t.get("scope") in ("category", "task_type"), f"{name}: scope 须为 category(同类别)或 task_type(退到全部类别)")
 
 
-def _check_forecast_numbers(r):
+def _check_forecast_numbers(r, a):
     """六条都过时的数:对象名量、跳过的国家、每项任务的倍数、合计与建议都要对得上。"""
     pre, tasks = r["object_volume_pre"], r["tasks"]
     require(isinstance(pre, dict) and pre and set(pre) <= set(EN_COUNTRIES) and all(_num(v) for v in pre.values()),
@@ -376,18 +425,19 @@ def _check_forecast_numbers(r):
             and "US" not in skipped and not set(skipped) & set(pre),
             "skipped_geos 须为英文区里没查的国家:不含美国、不重复、不与 object_volume_pre 的国家重叠")
     for t in tasks:
-        _check_forecast_task(t)
+        _check_forecast_task(t, a)
     p25, median = QM.forecast_totals(pre, tasks)
     require((r["forecast_p25"], r["forecast_median"]) == (p25, median),
             f"forecast_p25、forecast_median 须等于对象名量 × 各任务倍数之和(取整,应为 {p25}、{median})")
-    want = QM.forecast_suggestion(p25, median, complete=not skipped)
+    want = QM.forecast_suggestion(p25, median, complete=not skipped, a=a)
     require(r["suggestion"] == want, f"suggestion 须为 {want}(按下四分位 {p25}、中位数 {median}、"
                                      f"{'已测全部国家' if not skipped else '只测了部分国家'}算出)")
 
 
-def _check_quick_forecast(r, observed_at):
-    """上线前预判:对象名开玩前的量 × 参照库倍数,一款游戏一个站,按 1–4 项任务合计;六条没有全过时只记观察、建议 skip。"""
-    a = QM.QUICK_ASSUMPTIONS
+def _check_quick_forecast(r, observed_at, current):
+    """上线前预判:对象名开玩前的量 × 参照库倍数,一款游戏一个站,按 1–4 项任务合计;六条没有全过时只记观察、建议 skip。
+    开玩日窗口、参照条数下限、门槛、份额与系数按观察自己记的 params 校验(写入时 params 须是当前口径)。"""
+    a = _own_assumptions(r, "quick_forecast", current)
     require(isinstance(r["object"], str) and r["object"].strip(), "quick_forecast.object 须为非空文字")
     _check_null_rule(r["checks"], FORECAST_CHECKS, r["object"])
     require(r["category"] in QM.GAME_CATEGORIES, f"category 须为 {QM.GAME_CATEGORIES}")
@@ -416,7 +466,7 @@ def _check_quick_forecast(r, observed_at):
                 "P5 有结论时 serp 至少两条(<游戏名> <任务词> 与 <游戏名> wiki),其中一条查询以 \" wiki\" 结尾")
     require(r["suggestion"] in ("go", "watching", "skip", "measure_rest"), "suggestion 须为 go/watching/skip/measure_rest")
     if all(v is True for v in verdicts.values()):
-        _check_forecast_numbers(r)
+        _check_forecast_numbers(r, a)
     else:
         require(r["suggestion"] == "skip", "六条里有不过项时 suggestion 须为 skip(只记观察,不预判)")
 
@@ -431,7 +481,9 @@ def _preflight_ok(pf):
             and isinstance(pf.get("evidence"), str) and bool(pf["evidence"].strip()))
 
 
-def validate(obs: dict) -> None:
+def validate(obs: dict, current: bool = True) -> None:
+    """校验一份观察。current 只对 quick_reference、quick_forecast 有用:True(写入)要求它记的口径等于当前假设表;
+    False(读回)按它自己记的口径校验,不拿当前假设表比。其余类型不受影响。"""
     kind, stage = obs.get("kind"), obs.get("stage")
     require(kind in KINDS, f"kind 须为 {KINDS}")
     require(stage == _expected_stage(kind), "kind=scan 时 stage=scan;快道各类 stage=quick;其余 stage=assess")
@@ -452,8 +504,10 @@ def validate(obs: dict) -> None:
     require(isinstance(r, dict), "readings 须为对象")
     missing = [k for k in REQUIRED[kind] if k not in r]
     require(not missing, f"{kind}.readings 缺字段: {missing}")
-    if kind in ("scan", "quick_reference", "quick_forecast"):
-        globals()[f"_check_{kind}"](r, obs["observed_at"])
+    if kind in ("quick_reference", "quick_forecast"):
+        globals()[f"_check_{kind}"](r, obs["observed_at"], current)
+    elif kind == "scan":
+        _check_scan(r, obs["observed_at"])
     else:
         globals()[f"_check_{kind}"](r)
     if kind == "quick_screen" and (r["checks"]["Q5"]["pass"] is not None or r["checks"]["Q6"]["pass"] is not None):
@@ -480,7 +534,7 @@ def read(root, ref: str) -> dict:
     p = Path(root) / ref
     require(p.is_file(), f"观察不存在: {ref}")
     obs = load_json(p)
-    validate(obs)
+    validate(obs, current=False)                      # 读回按观察自己记的口径校验,假设表后来改了历史观察照样读得进来
     return obs
 
 

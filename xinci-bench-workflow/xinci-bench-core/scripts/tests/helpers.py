@@ -5,6 +5,7 @@ import sys
 import tempfile
 from datetime import date, timedelta
 from pathlib import Path
+from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -254,7 +255,7 @@ def quick_volume_obs(slug, anchor_volume=60000, new_mean=50.0, anchor_mean=60.0,
 def reference_obs(object="Game A", task="map", category="mmo_gacha", playable_at="2026-07-01", task_ratio=0.1,
                   object_ratio=1.0, anchor_volume=10000, task_window=("2026-07-05", "2026-07-18"),
                   observed_at="2026-10-16T08:00:00+00:00"):
-    """一条合法的参照观察:体积与 r 按公式从锚词月量与两个比值派生,窗口按开玩日写死。
+    """一条合法的参照观察:体积与 r 按公式从锚词月量与两个比值派生,窗口按开玩日写死,带当前口径(版本与 params)。
 
     object_volume_pre = 锚词月量 × 对象名比值;task_volume_post = 锚词月量 × 任务词比值;r = 后 ÷ 前(4 位小数);
     full_60_days = 观察日 ≥ 开玩日 + 60 天。
@@ -272,7 +273,15 @@ def reference_obs(object="Game A", task="map", category="mmo_gacha", playable_at
                          "anchor_source": "lexicon", "object_window": QM.reference_object_window(playable_at),
                          "object_ratio": object_ratio, "task_window": list(task_window), "task_ratio": task_ratio,
                          "full_60_days": full, "object_volume_pre": pre, "task_volume_post": post,
-                         "r": round(post / pre, 4)}}
+                         "r": round(post / pre, 4), "assumptions_version": QM.QUICK_ASSUMPTIONS["version"],
+                         "params": QM.reference_params()}}
+
+
+def write_stale_reference(root, **kw):
+    """在另一套口径(任务词窗口 7 天、版本 old)下写一条参照,模拟假设表改之前写的老参照:写完口径就和现行的不同了。"""
+    import write_observation as W
+    with mock.patch.dict(QM.QUICK_ASSUMPTIONS, {"reference_task_days": 7, "version": "2026-09-01.old"}):
+        return W.write(root, reference_obs(task_window=("2026-07-05", "2026-07-11"), **kw))
 
 
 def write_references(root, rs=(0.1, 0.2, 0.3), category="mmo_gacha", task="map"):
@@ -308,7 +317,7 @@ def forecast_payload(slug="mho-map", object="Monster Hunter Outlanders", playabl
 
 
 def forecast_obs(slug="mho-map", playable_at="2026-10-29"):
-    """手写的合法预判观察:观察日 2026-10-13,P1–P6 全过,判 go。
+    """手写的合法预判观察:观察日 2026-10-13,P1–P6 全过,判 go,带当前口径(版本与 params)。
 
     美国对象名月量 600000;三条参照倍数 0.1/0.2/0.3 → 下四分位 0.15、中位数 0.2 →
     站点预测 90000(下四分位)/ 120000(中位数),基准访问 floor(90000 × 0.2 × 0.6) = 10800 ≥ 10000。
@@ -325,7 +334,8 @@ def forecast_obs(slug="mho-map", playable_at="2026-10-29"):
                                     "references": 3, "reference_refs": refs, "scope": "category"}],
                          "forecast_p25": 90000, "forecast_median": 120000, "suggestion": "go", "checks": checks,
                          "serp": [{"query": "monster hunter outlanders map", "top10": list(top10)},
-                                  {"query": "monster hunter outlanders wiki", "top10": list(top10)}]}}
+                                  {"query": "monster hunter outlanders wiki", "top10": list(top10)}],
+                         "assumptions_version": QM.QUICK_ASSUMPTIONS["version"], "params": QM.forecast_params()}}
 
 
 def quick_brief_obs(slug, build_days=2, data_available=True):

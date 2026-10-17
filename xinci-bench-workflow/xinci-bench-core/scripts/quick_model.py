@@ -157,6 +157,37 @@ def reference_object_window(playable_at: str, a=QUICK_ASSUMPTIONS) -> list:
     return [add_days(playable_at, -far), add_days(playable_at, -near)]
 
 
+def reference_params(a=QUICK_ASSUMPTIONS) -> dict:
+    """参照观察校验用到的假设表数值,写进观察的 params(JSON 里窗口是列表,不是假设表里的元组)。"""
+    far, near = a["reference_object_window"]
+    return {"object_window": [far, near], "task_days": a["reference_task_days"], "task_span": a["reference_task_span"]}
+
+
+def forecast_params(a=QUICK_ASSUMPTIONS) -> dict:
+    """预判观察校验用到的假设表数值,写进观察的 params。"""
+    lo, hi = a["forecast_days"]
+    return {"forecast_days": [lo, hi], "min_references": a["min_references"], "threshold_visits": a["threshold_visits"],
+            "share_base": a["share"]["base"], "aio_factor": a["aio_factor"], "us_only_cutoff": a["us_only_cutoff"]}
+
+
+def assumptions_from_params(params: dict, a=QUICK_ASSUMPTIONS) -> dict:
+    """观察自己记的 params → 假设表的写法(a 的副本,params 里出现的键换成观察写的值,其余照 a):
+    用它去跑原有的校验函数,历史观察就按写入时的口径读,不受假设表后来的改动影响。"""
+    out = {**a, "share": dict(a["share"])}
+    for key, value in params.items():
+        if key == "object_window":
+            out["reference_object_window"] = tuple(value)
+        elif key == "forecast_days":
+            out["forecast_days"] = tuple(value)
+        elif key == "share_base":
+            out["share"]["base"] = value
+        elif key in ("task_days", "task_span"):
+            out[f"reference_{key}"] = value
+        else:
+            out[key] = value
+    return out
+
+
 def forecast_dates(playable_at: str, a=QUICK_ASSUMPTIONS) -> dict:
     return {"launch_by": add_days(playable_at, -a["forecast_launch_lead"]),
             "review_at": add_days(playable_at, a["review_days"])}
