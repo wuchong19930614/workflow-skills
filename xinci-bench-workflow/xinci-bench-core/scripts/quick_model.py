@@ -21,7 +21,7 @@ import data_root
 from _common import EN_COUNTRIES, BenchError, load_json, load_ledger, require
 
 QUICK_ASSUMPTIONS = {
-    "version": "2026-10-16.q4",
+    "version": "2026-10-17.q5",
     "countries": EN_COUNTRIES,                            # 英文区:美、英、加、澳、新、爱
     "share": {"low": 0.10, "base": 0.20, "high": 0.30},
     "aio_factor": 0.6,
@@ -41,9 +41,10 @@ QUICK_ASSUMPTIONS = {
     "launch_days": 7,
     "milestones": (14, 30, 90),
     "stop_ratio": 0.25,
-    # 上线前预判(q4)
+    # 上线前预判(q4 起;q5 加 forecast_max_per_object)
     "forecast_days": (3, 21),                             # 开玩日在今天之后 3–21 天才预判
     "forecast_per_run": 2,                                # 每轮最多预判 2 个对象
+    "forecast_max_per_object": 2,                         # 每款游戏最多预判 2 次(建议为 measure_rest 的不算)
     "min_references": 3,                                  # 倍数至少要 3 条同类参照
     "forecast_launch_lead": 1,                            # 预判 go 的建议最晚上线日 = 开玩日前 1 天
     "review_days": 7,                                     # 复核日 = 开玩日 + 7 天

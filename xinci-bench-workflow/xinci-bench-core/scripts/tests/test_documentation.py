@@ -119,6 +119,7 @@ class QuickContractTest(unittest.TestCase):
         lo, hi = a["forecast_days"]
         far, near = a["reference_object_window"]
         for needle in (f"今天之后 {lo}–{hi} 天", f"每轮最多预判 {a['forecast_per_run']} 个", f"参照至少 {a['min_references']} 条",
+                       f"每款游戏最多预判 {a['forecast_max_per_object']} 次",
                        "下四分位", f"开玩日前 {a['forecast_launch_lead']} 天", f"开玩日 + {a['review_days']} 天",
                        f"预测 × {a['review_stop_ratio']:.0%}", f"门槛 × {a['us_only_cutoff']:.0%}",
                        f"开玩日前第 {far} 到第 {near} 天", f"开玩后 {a['reference_task_span']} 天内最高的连续 {a['reference_task_days']} 天",

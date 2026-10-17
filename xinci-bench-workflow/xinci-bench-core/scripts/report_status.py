@@ -10,6 +10,7 @@ from pathlib import Path
 
 import data_root
 import ledger as L
+import quick_forecast as QF
 import quick_model as QM
 import quick_pool
 import quick_reference as QR
@@ -23,32 +24,48 @@ PARKED_WARN_DAYS = 90
 RUN_AFTER_PLAYABLE_DAYS = 3                       # 建议在开玩当天到第 3 天之间跑一次快道
 
 
-def _last_forecasts(root) -> dict:
-    """各方向文件夹里的预判观察 → {规范化对象名: {"observed_at": 日期, "suggestion": 建议}},同一对象取观察时间最新的
-    (同时刻取路径靠后的);读不出、校验不过的跳过(看板不因它拒收)。"""
-    latest = {}
-    for p in sorted(Path(root).glob(FORECAST_GLOB)):
+def _forecast_histories(root) -> dict:
+    """各方向文件夹里的预判观察 → {规范化对象名: [历史条目]},同一款游戏在不同方向名下的也算一起,按观察时间升序
+    (同时刻按路径顺序,靠后的算更新);读不出、校验不过的跳过(看板不因它拒收)。
+    条目 {"observed_at": 日期, "playable_at", "suggestion", "failed": 第一个不过的检查 P1–P6 或 None, "tasks": [任务类型], "category"}。"""
+    found = {}
+    for i, p in enumerate(sorted(Path(root).glob(FORECAST_GLOB))):
         try:
             obs = W.read(root, p.relative_to(root).as_posix())
             r, at = obs["readings"], L._at(obs["observed_at"])
             key = quick_pool.normalize_term(r["object"])
+            failed = next((k for k in W.FORECAST_CHECKS
+                           if isinstance(r["checks"].get(k), dict) and r["checks"][k].get("pass") is False), None)
+            entry = {"observed_at": obs["observed_at"][:10], "playable_at": r["playable_at"], "suggestion": r["suggestion"],
+                     "failed": failed, "tasks": [t["task"] for t in r["tasks"]], "category": r["category"]}
         except (BenchError, ValueError, KeyError, TypeError, AttributeError, OSError):
             continue
-        if obs["kind"] == "quick_forecast" and (key not in latest or at >= latest[key][0]):
-            latest[key] = (at, {"observed_at": obs["observed_at"][:10], "suggestion": r["suggestion"]})
-    return {k: v for k, (_, v) in latest.items()}
+        if obs["kind"] == "quick_forecast":
+            found.setdefault(key, []).append((at, i, entry))
+    return {k: [e for _, _, e in sorted(rows, key=lambda x: x[:2])] for k, rows in found.items()}
 
 
-def _forecast_window(root, on) -> list:
+_REFORECAST_ORDER = {"new": 0, "due": 0, "wait": 1, "no": 2}      # new、due 要做,排最前;wait、no 不做
+
+
+def _forecast_window(root, on, library=None) -> list:
     """可预判的待看原料:开玩日在今天之后 forecast_days 这个范围(含两端)内的。每行带 last_forecast(上次预判的日期与建议,
-    没预判过为 None):预判 skip、measure_rest 不登记也不消耗原料,不标出来每轮都会重做最近的那几个;没预判过的排前面,再按开玩日。"""
+    没预判过为 None)与 reforecast、reason(quick_forecast.reforecast_status:new 没预判过、due 可以重做、wait 还不到时候、
+    no 不再预判;预判 skip、measure_rest 不登记也不消耗原料,不标出来每轮都会重做最近的那几个)。排序:new、due 在前,
+    然后 wait、no,同一档内按开玩日。library 是参照库(没给就现读),判 P3 不过的重做时用。"""
     near, far = QM.QUICK_ASSUMPTIONS["forecast_days"]
-    last = _last_forecasts(root)
-    rows = [{"object": r["object"], "stage": r.get("stage"), "playable_at": r["playable_at"],
-             "days_ahead": (date.fromisoformat(r["playable_at"]) - date.fromisoformat(on)).days,
-             "last_forecast": last.get(quick_pool.normalize_term(r["object"]))}
-            for r in quick_pool.upcoming(root, on=on, days=far)]
-    return sorted([w for w in rows if w["days_ahead"] >= near], key=lambda w: (w["last_forecast"] is not None, w["playable_at"]))
+    histories = _forecast_histories(root)
+    library = QR.load_library(root, []) if library is None else library
+    rows = []
+    for r in quick_pool.upcoming(root, on=on, days=far):
+        history = histories.get(quick_pool.normalize_term(r["object"]), [])
+        last = history[-1] if history else None
+        rows.append({"object": r["object"], "stage": r.get("stage"), "playable_at": r["playable_at"],
+                     "days_ahead": (date.fromisoformat(r["playable_at"]) - date.fromisoformat(on)).days,
+                     "last_forecast": {"observed_at": last["observed_at"], "suggestion": last["suggestion"]} if last else None,
+                     **QF.reforecast_status(history, r["playable_at"], on, library)})
+    return sorted([w for w in rows if w["days_ahead"] >= near],
+                  key=lambda w: (_REFORECAST_ORDER[w["reforecast"]], w["playable_at"]))
 
 
 def _forecast_reminders(dirs, on) -> dict:
@@ -123,7 +140,7 @@ def _quick_status(root, dirs, on) -> dict:
                 for r in quick_pool.upcoming(root, on=on)]
     return {"pending_go": pending, "watching": sorted(watching, key=lambda w: w["days_left"]),
             "milestones_due": launched_due, "pool_pending": len(quick_pool.pending(root, on=on)), "upcoming": upcoming,
-            "forecast_window": _forecast_window(root, on), **_forecast_reminders(dirs, on),
+            "forecast_window": _forecast_window(root, on, library), **_forecast_reminders(dirs, on),
             "references_due": _references_due(library, dirs, on), "references_unusable": unusable}
 
 
@@ -203,9 +220,11 @@ def main(argv=None):
               + f":{u['playable_at']},建议 {u['run_from']}~{u['run_to']} 跑一次快道")
     for w in q["forecast_window"]:
         lf = w["last_forecast"]
+        tail = {"due": "可重做", "wait": "还不到时候", "no": "不再预判"}.get(w["reforecast"])      # new 不加
         print(f"  可预判 {w['object']}:{w['playable_at']},还有 {w['days_ahead']} 天"
               + (f",上次预判 {lf['observed_at']}:{lf['suggestion']}" if lf else "")
-              + f"(每轮最多预判 {QM.QUICK_ASSUMPTIONS['forecast_per_run']} 个)")
+              + f"(每轮最多预判 {QM.QUICK_ASSUMPTIONS['forecast_per_run']} 个)"
+              + (f" → {tail}:{w['reason']}" if tail else ""))
     b = st["semrush"]
     print(f"今天 Semrush 已用 {b['semrush_calls_today']}/{b['semrush_daily_limit']} 次"
           + ("(到了停止线,今天别再跑 Semrush)" if b["semrush_stop"] else "") + f";累计 {st['semrush_calls_total']} 次")

@@ -20,6 +20,7 @@ r_p25、r_median、references、reference_refs、scope 原样来自 quick_refere
 import argparse
 import json
 import sys
+from datetime import date
 from pathlib import Path
 
 import data_root
@@ -140,6 +141,65 @@ def base_visits(readings: dict):
         return None
     return QM.forecast(readings["object_volume_pre"], readings["tasks"], complete=not readings["skipped_geos"])[
         "scenarios"]["base"]["visits"]
+
+
+PERMANENT_FAILS = {"P4": "不在范围内", "P5": "首页已被占位", "P6": "AI 概览已答完"}      # 这几条不过,开玩前不会变好
+
+
+def _days_between(later: str, earlier: str) -> int:
+    return (date.fromisoformat(later[:10]) - date.fromisoformat(earlier[:10])).days
+
+
+def reforecast_status(history: list, playable_at: str, on: str, library: list, a=QM.QUICK_ASSUMPTIONS) -> dict:
+    """看板"可预判"每行的重做状态:这款游戏预判过之后,什么时候值得再预判一次(设计稿 14.1)。纯函数,不读数据区。
+
+    history:这款游戏(按规范化后的游戏名)的预判历史,按观察时间升序,最后一条是"上次";每条
+      {"observed_at": 日期, "playable_at", "suggestion", "failed": 第一个不过的检查 P1–P6 或 None, "tasks": [任务类型], "category"}。
+    playable_at:原料里现在的开玩日;on:今天;library:参照库(quick_reference.load_library 的结果)。
+    返回 {"reforecast": "new" 没预判过 | "due" 可以重做 | "wait" 还不到时候 | "no" 不再预判, "reason": 大白话原因}。
+
+    判法(先到先得):没预判过 → new;已预判满 forecast_max_per_object 次(建议为 measure_rest 的不算),或上次是 go、
+    watching(已登记)→ no;上次 P4、P5、P6 不过 → no;P1 不过 → 开玩日改了才 due;P3 不过 → 每项任务的倍数都取得到才 due,
+    否则 wait;P2 不过、或六条都过但建议 skip(量不够)→ 看对象名窗口(开玩前第 9 到第 3 天):上次已在窗口里做过 no,
+    今天在窗口里 due,还没到窗口 wait,窗口已过 no;上次是 measure_rest → due(补测其余国家)。
+    """
+    far, near = a["reference_object_window"]
+    window, most = f"开玩前 {far}–{near} 天", a["forecast_max_per_object"]
+
+    def out(state, reason):
+        return {"reforecast": state, "reason": reason}
+
+    if not history:
+        return out("new", "没预判过")
+    last = history[-1]
+    done = sum(1 for x in history if x["suggestion"] != "measure_rest")           # measure_rest 只测了美国,不算一次完整预判
+    if done >= most:
+        return out("no", f"已预判 {done} 次(每款游戏最多 {most} 次),不再预判")
+    if last["suggestion"] in ("go", "watching"):
+        return out("no", f"上次建议 {last['suggestion']},已登记,不再预判")
+    failed = last["failed"]
+    if failed in PERMANENT_FAILS:
+        return out("no", f"上次 {failed} 不过({PERMANENT_FAILS[failed]}),开玩后按现行路径看,不再预判")
+    if failed == "P1":
+        if last["playable_at"] != playable_at:
+            return out("due", f"上次 P1 不过,开玩日改了(上次 {last['playable_at']},现在 {playable_at}),可以重做")
+        return out("no", f"上次 P1 不过,开玩日没改(仍是 {playable_at}),不再预判")
+    if failed == "P3":
+        short = [t for t in last["tasks"] if QR.rates(library, t, last["category"], a) is None]
+        if short:
+            return out("wait", f"上次 P3 不过(参照不足),参照库里 {'、'.join(short)} 还没有够 {a['min_references']} 条的参照,补参照后再做")
+        return out("due", "上次 P3 不过(参照不足),现在每项任务的参照都够了,可以重做")
+    if last["suggestion"] == "measure_rest":
+        return out("due", f"上次只测了美国,补测其余 {len(a['countries']) - 1} 国后重做")
+    why = "美国读不出" if failed == "P2" else "量不够"                                  # 剩下的:P2 不过,或六条过了建议 skip
+    ahead = _days_between(playable_at, on)
+    if near <= _days_between(playable_at, last["observed_at"]) <= far:
+        return out("no", f"上次{why},但已在{window}里做过({last['observed_at'][:10]}),不再预判")
+    if ahead > far:
+        return out("wait", f"上次{why},还没到{window},到时再做一次")
+    if ahead >= near:
+        return out("due", f"上次{why},现在到了{window},可以再做一次")
+    return out("no", f"上次{why},现在已过{window},不再预判")
 
 
 def main(argv=None):

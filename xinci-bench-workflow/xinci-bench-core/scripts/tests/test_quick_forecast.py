@@ -588,6 +588,127 @@ class CliTest(unittest.TestCase):
             self.assertTrue(err.startswith("拒收:"))
 
 
+def h(observed, suggestion="skip", failed=None, playable="2026-10-29", tasks=("map",)):
+    """一条预判历史条目(看板从预判观察整理出来的样子)。"""
+    return {"observed_at": observed, "playable_at": playable, "suggestion": suggestion, "failed": failed,
+            "tasks": list(tasks), "category": "mmo_gacha"}
+
+
+def refs_lib(tasks=("map",), category="mmo_gacha", rs=(0.1, 0.2, 0.3)):
+    """参照库(QR.load_library 返回的样子):每个任务 len(rs) 款不同游戏的参照。"""
+    return [dict(H.reference_obs(object=f"G{i}", task=t, task_ratio=r, category=category)["readings"],
+                 ref=f"证据/_quick/{t}-{i}.json", observed_at="2026-10-16T08:00:00+00:00")
+            for t in tasks for i, r in enumerate(rs)]
+
+
+class ReforecastTest(unittest.TestCase):
+    def st(self, history, on, playable="2026-10-29", library=()):
+        return QF.reforecast_status(history, playable, on, list(library))["reforecast"]
+
+    def test_new_and_volume_skip_timeline(self):
+        self.assertEqual(self.st([], "2026-10-14"), "new")
+        early = [h("2026-10-13")]                                   # 开玩前 16 天做的,量不够
+        self.assertEqual(self.st(early, "2026-10-19"), "wait")      # 开玩前 10 天
+        self.assertEqual(self.st(early, "2026-10-20"), "due")       # 开玩前 9 天
+        self.assertEqual(self.st(early, "2026-10-26"), "due")       # 开玩前 3 天
+        self.assertEqual(self.st([h("2026-10-21")], "2026-10-22"), "no")    # 上次已在 9–3 天里做过
+
+    def test_last_made_on_the_window_edges_counts_as_in_the_window(self):
+        self.assertEqual(self.st([h("2026-10-20")], "2026-10-22"), "no")      # 开玩前 9 天做的:在窗口里
+        self.assertEqual(self.st([h("2026-10-26")], "2026-10-26"), "no")      # 开玩前 3 天做的:在窗口里
+        self.assertEqual(self.st([h("2026-10-19")], "2026-10-20"), "due")     # 开玩前 10 天做的:不在窗口里
+
+    def test_past_the_window_is_no(self):
+        # 开玩前不到 3 天:对象名窗口已经过了,再做也不是窗口里的量
+        self.assertEqual(self.st([h("2026-10-13")], "2026-10-27"), "no")
+
+    def test_max_two(self):
+        # 两次都在 9–3 天窗口之外做的;没有上限的话这里会是 due
+        self.assertEqual(self.st([h("2026-10-12"), h("2026-10-13")], "2026-10-20"), "no")
+
+    def test_max_comes_from_the_assumptions(self):
+        two = [h("2026-10-12"), h("2026-10-13")]
+        looser = dict(QM.QUICK_ASSUMPTIONS, forecast_max_per_object=3)
+        self.assertEqual(QF.reforecast_status(two, "2026-10-29", "2026-10-20", [], looser)["reforecast"], "due")
+        self.assertEqual(QM.QUICK_ASSUMPTIONS["forecast_max_per_object"], 2)
+
+    def test_measure_rest_not_counted(self):
+        self.assertEqual(self.st([h("2026-10-13", "measure_rest")], "2026-10-13"), "due")
+        self.assertEqual(self.st([h("2026-10-13", "measure_rest"), h("2026-10-13")], "2026-10-20"), "due")
+
+    def test_measure_rest_is_due_at_once_whatever_the_window(self):
+        self.assertEqual(self.st([h("2026-10-13", "measure_rest")], "2026-10-13"), "due")      # 开玩前 16 天,不等窗口
+        self.assertEqual(self.st([h("2026-10-20", "measure_rest")], "2026-10-21"), "due")      # 上次在窗口里也照补
+
+    def test_permanent_failures(self):
+        for p in ("P4", "P5", "P6"):
+            self.assertEqual(self.st([h("2026-10-13", failed=p)], "2026-10-20"), "no")
+        self.assertEqual(self.st([h("2026-10-13", "go")], "2026-10-20"), "no")
+        self.assertEqual(self.st([h("2026-10-13", "watching")], "2026-10-20"), "no")
+
+    def test_p1_only_after_date_change(self):
+        last = [h("2026-10-13", failed="P1")]
+        self.assertEqual(self.st(last, "2026-10-20"), "no")
+        self.assertEqual(self.st(last, "2026-10-20", playable="2026-11-05"), "due")
+
+    def test_p3_waits_for_references(self):
+        last = [h("2026-10-13", failed="P3")]
+        self.assertEqual(self.st(last, "2026-10-14"), "wait")
+        self.assertEqual(self.st(last, "2026-10-14", library=refs_lib()), "due")
+
+    def test_p3_needs_every_task_to_have_rates(self):
+        two_tasks = [h("2026-10-13", failed="P3", tasks=("map", "tier_list"))]
+        self.assertEqual(self.st(two_tasks, "2026-10-14", library=refs_lib(("map",))), "wait")          # 库里只有 map
+        self.assertEqual(self.st(two_tasks, "2026-10-14", library=refs_lib(("map", "tier_list"))), "due")
+
+    def test_p3_falls_back_to_the_task_type_across_categories(self):
+        # 同类别不够 3 条、同任务类型全部类别够 3 条,也算取得到倍数
+        lib = refs_lib(rs=(0.1,), category="roblox") + refs_lib(rs=(0.2, 0.3), category="sports_racing_party")
+        lib = [dict(x, object=f"G{i}") for i, x in enumerate(lib)]
+        self.assertEqual(self.st([h("2026-10-13", failed="P3")], "2026-10-14", library=lib), "due")
+
+    def test_p2_like_volume(self):
+        self.assertEqual(self.st([h("2026-10-13", failed="P2")], "2026-10-20"), "due")
+        self.assertEqual(self.st([h("2026-10-13", failed="P2")], "2026-10-19"), "wait")
+        self.assertEqual(self.st([h("2026-10-21", failed="P2")], "2026-10-22"), "no")
+
+    def test_only_the_last_one_decides(self):
+        # 历史升序,最后一条是"上次":早先的原因不影响最后一次的结论(放宽次数上限,免得先撞上"已预判满")
+        looser = dict(QM.QUICK_ASSUMPTIONS, forecast_max_per_object=5)
+        def state(history):
+            return QF.reforecast_status(history, "2026-10-29", "2026-10-20", [], looser)["reforecast"]
+        self.assertEqual(state([h("2026-10-10", failed="P5"), h("2026-10-13")]), "due")
+        self.assertEqual(state([h("2026-10-10"), h("2026-10-13", failed="P5")]), "no")
+        self.assertEqual(state([h("2026-10-10", "go"), h("2026-10-13")]), "due")
+
+    def test_reason_keywords(self):
+        def reason(history, on, playable="2026-10-29", library=()):
+            return QF.reforecast_status(history, playable, on, list(library))["reason"]
+        self.assertIn("没预判过", reason([], "2026-10-14"))
+        self.assertIn("已预判 2 次", reason([h("2026-10-12"), h("2026-10-13")], "2026-10-20"))
+        self.assertIn("已登记", reason([h("2026-10-13", "go")], "2026-10-20"))
+        self.assertIn("已登记", reason([h("2026-10-13", "watching")], "2026-10-20"))
+        for p in ("P4", "P5", "P6"):
+            self.assertIn(f"上次 {p} 不过", reason([h("2026-10-13", failed=p)], "2026-10-20"))
+        self.assertIn("开玩日", reason([h("2026-10-13", failed="P1")], "2026-10-20"))
+        self.assertNotIn("开玩日改了", reason([h("2026-10-13", failed="P1")], "2026-10-20"))
+        self.assertIn("开玩日改了", reason([h("2026-10-13", failed="P1")], "2026-10-20", playable="2026-11-05"))
+        self.assertIn("参照不足", reason([h("2026-10-13", failed="P3")], "2026-10-14"))
+        self.assertIn("参照不足", reason([h("2026-10-13", failed="P3")], "2026-10-14", library=refs_lib()))
+        for history, on in (([h("2026-10-13")], "2026-10-19"),                  # wait
+                            ([h("2026-10-13")], "2026-10-20"),                  # due
+                            ([h("2026-10-21")], "2026-10-22"),                  # no
+                            ([h("2026-10-13", failed="P2")], "2026-10-20")):
+            self.assertIn("开玩前 9–3 天", reason(history, on))
+        self.assertIn("补测其余 5 国", reason([h("2026-10-13", "measure_rest")], "2026-10-13"))
+
+    def test_result_shape(self):
+        got = QF.reforecast_status([h("2026-10-13")], "2026-10-29", "2026-10-20", [])
+        self.assertEqual(sorted(got), ["reason", "reforecast"])
+        self.assertIn(got["reforecast"], ("new", "due", "wait", "no"))
+        self.assertIsInstance(got["reason"], str)
+
+
 class CliClockTest(CliTest):
     """同 CliTest,把 quick_forecast 的时钟拨到 2026-10-27 再跑一遍:日期写死的夹具到了那天开玩日就不在 3–21 天窗口里。"""
     CLOCK = "2026-10-27T08:00:00+00:00"

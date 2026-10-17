@@ -128,9 +128,9 @@ class PregameStatusTest(unittest.TestCase):
             q = board(root, "2026-10-13")
             self.assertEqual(q["forecast_window"],
                              [{"object": "Edge Near", "stage": "Early access", "playable_at": "2026-10-16", "days_ahead": 3,
-                               "last_forecast": None},
+                               "last_forecast": None, "reforecast": "new", "reason": "没预判过"},
                               {"object": "Edge Far", "stage": "Open beta", "playable_at": "2026-11-03", "days_ahead": 21,
-                               "last_forecast": None}])
+                               "last_forecast": None, "reforecast": "new", "reason": "没预判过"}])
             self.assertEqual([u["object"] for u in q["upcoming"]], ["Too Soon", "Edge Near"])      # 即将开玩的原有口径(14 天内)不变
 
     def test_window_puts_never_forecast_objects_first(self):
@@ -147,6 +147,75 @@ class PregameStatusTest(unittest.TestCase):
             self.assertIn("可预判 Next Game:2026-11-01,还有 19 天(每轮最多预判 2 个)", out)
             self.assertIn("可预判 monster hunter  OUTLANDERS:2026-10-29,还有 16 天,上次预判 2026-10-13:skip(每轮最多预判 2 个)", out)
             self.assertLess(out.index("可预判 Next Game"), out.index("可预判 monster hunter"))
+
+    def test_history_counts_across_slugs(self):
+        # 同一款游戏在两个方向名下各预判过一次(都 skip):按游戏名数,共 2 次,不再预判
+        with TmpRoot() as root:
+            quick_pool.add_items(root, [pool_row("monster hunter  OUTLANDERS", "2026-10-29")], SIGNAL)
+            H.write_forecast(root, "mho-map", object_us=100000)
+            H.write_forecast(root, "mho-tier-list", object_us=100000)
+            row = board(root, "2026-10-20")["forecast_window"][0]               # 开玩前 9 天,窗口里
+            self.assertEqual((row["reforecast"], row["last_forecast"]),
+                             ("no", {"observed_at": "2026-10-13", "suggestion": "skip"}))
+            self.assertIn("已预判 2 次", row["reason"])
+
+    def test_one_forecast_in_one_slug_still_allows_a_redo(self):
+        with TmpRoot() as root:
+            quick_pool.add_items(root, [pool_row(OBJECT, "2026-10-29")], SIGNAL)
+            H.write_forecast(root, "mho-map", object_us=100000)
+            self.assertEqual(board(root, "2026-10-19")["forecast_window"][0]["reforecast"], "wait")      # 开玩前 10 天
+            self.assertEqual(board(root, "2026-10-20")["forecast_window"][0]["reforecast"], "due")       # 开玩前 9 天
+
+    def test_unreadable_forecast_is_skipped_in_the_history(self):
+        with TmpRoot() as root:
+            quick_pool.add_items(root, [pool_row(OBJECT, "2026-10-29")], SIGNAL)
+            ref, _ = H.write_forecast(root, "mho-map", object_us=100000)
+            (root / ref).write_text("{not json", encoding="utf-8")
+            row = board(root, "2026-10-20")["forecast_window"][0]
+            self.assertEqual((row["reforecast"], row["last_forecast"]), ("new", None))
+
+    def test_window_sorts_by_reforecast(self):
+        # 开玩日最晚的是 new,其次是 no,最早的是 wait;按状态排应是 new、wait、no(而不是按开玩日)
+        with TmpRoot() as root:
+            quick_pool.add_items(root, [pool_row("New Game", "2026-11-01"), pool_row(OBJECT, "2026-10-29"),
+                                        pool_row("Registered Game", "2026-10-31")], SIGNAL)
+            H.write_forecast(root, "mho-map", object_us=100000)                  # skip,开玩前 16 天做的:今天还是 wait
+            done = H.forecast_obs(slug="registered-game")                        # go:已登记,no
+            done["readings"].update(object="Registered Game", playable_at="2026-10-31")
+            W.write(root, done)
+            rows = board(root, "2026-10-13")["forecast_window"]
+            self.assertEqual([(w["object"], w["reforecast"]) for w in rows],
+                             [("New Game", "new"), (OBJECT, "wait"), ("Registered Game", "no")])
+            self.assertTrue(all(isinstance(w["reason"], str) and w["reason"] for w in rows))
+
+    def test_window_new_and_due_share_the_first_group_by_playable_date(self):
+        with TmpRoot() as root:
+            quick_pool.add_items(root, [pool_row("Late New", "2026-10-30"), pool_row(OBJECT, "2026-10-29"),
+                                        pool_row("Early New", "2026-10-25")], SIGNAL)
+            H.write_forecast(root, "mho-map", object_us=100000)                  # 10-20 时开玩前 9 天,due
+            rows = board(root, "2026-10-20")["forecast_window"]
+            self.assertEqual([(w["object"], w["reforecast"]) for w in rows],
+                             [("Early New", "new"), (OBJECT, "due"), ("Late New", "new")])
+
+    def test_cli_shows_reforecast(self):
+        with TmpRoot() as root:
+            quick_pool.add_items(root, [pool_row("New Game", "2026-11-01"), pool_row(OBJECT, "2026-10-29"),
+                                        pool_row("Registered Game", "2026-10-31")], SIGNAL)
+            H.write_forecast(root, "mho-map", object_us=100000)
+            done = H.forecast_obs(slug="registered-game")
+            done["readings"].update(object="Registered Game", playable_at="2026-10-31")
+            W.write(root, done)
+            out = cli_out(root, "2026-10-13").splitlines()
+            lines = {obj: next(ln for ln in out if f"可预判 {obj}:" in ln) for obj in ("New Game", OBJECT, "Registered Game")}
+            self.assertNotIn("→", lines["New Game"])                              # new 不加尾巴
+            self.assertTrue(lines["New Game"].endswith("(每轮最多预判 2 个)"))
+            self.assertIn("(每轮最多预判 2 个) → 还不到时候:", lines[OBJECT])
+            self.assertIn("开玩前 9–3 天", lines[OBJECT])
+            self.assertIn("(每轮最多预判 2 个) → 不再预判:", lines["Registered Game"])
+            self.assertIn("已登记", lines["Registered Game"])
+            # 到了开玩前 9 天:同一款游戏改成"可重做"
+            due = next(ln for ln in cli_out(root, "2026-10-20").splitlines() if f"可预判 {OBJECT}:" in ln)
+            self.assertIn("→ 可重做:", due)
 
     def test_last_forecast_is_the_newest_one(self):
         with TmpRoot() as root:
