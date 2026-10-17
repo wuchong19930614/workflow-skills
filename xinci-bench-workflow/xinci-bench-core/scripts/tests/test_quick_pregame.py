@@ -1263,6 +1263,49 @@ class ParkedAfterLaunchTest(unittest.TestCase):
             rec = settle.settle(root, slug, "go", reason="补数后过线", biggest_unknown="y", on="2026-10-13")
             self.assertEqual(rec["state"], "go")
 
+    def slip(self, root, slug, day, on):
+        return L.update(root, slug, {"object": {"first_public": day, "date_source": "https://example.org/delay"}}, on=on)
+
+    def test_parked_can_record_a_slip_before_the_new_date(self):
+        # 原开玩日 10-29,游戏推迟到 11-20:11-13(原窗口已过、新开玩日未到)记下新开玩日
+        with H.TmpRoot() as root:
+            slug = self.parked(root)
+            rec = self.slip(root, slug, "2026-11-20", on="2026-11-13")
+            self.assertEqual((rec["state"], rec["object"]["first_public"], rec["object"]["date_source"], rec.get("forecast")),
+                             ("parked", "2026-11-20", "https://example.org/delay", None))
+            self.assertEqual(validate_ledger.check_direction(root, slug, rec, on="2026-11-13"), [])
+            self.assertEqual(load_ledger(root)["directions"][slug], rec)
+
+    def test_parked_slip_needs_a_date_source_and_a_later_date(self):
+        with H.TmpRoot() as root:
+            slug = self.parked(root)
+            for name, obj in {"no source": {"first_public": "2026-11-20"},
+                              "blank source": {"first_public": "2026-11-20", "date_source": "  "},
+                              "today": {"first_public": "2026-11-13", "date_source": "https://example.org/x"},
+                              "past": {"first_public": "2026-11-12", "date_source": "https://example.org/x"}}.items():
+                with self.subTest(name):
+                    self.assertRaises(BenchError, L.update, root, slug, {"object": obj}, on="2026-11-13")
+            self.assertEqual(load_ledger(root)["directions"][slug]["object"]["first_public"], "2026-10-29")
+
+    def test_after_a_slip_the_window_follows_the_new_date(self):
+        with H.TmpRoot() as root:
+            slug = self.parked(root)
+            self.slip(root, slug, "2026-11-20", on="2026-11-13")
+            self.evidence(root, slug, "2026-11-21")                      # 新开玩日后第 1 天的速判与量级
+            rec = settle.settle(root, slug, "go", reason="开玩后过线", biggest_unknown="y", on="2026-11-21")
+            self.assertEqual((rec["state"], rec["model"].get("basis")), ("go", None))
+
+    def test_without_a_slip_the_old_window_still_closes_and_says_how_to_slip(self):
+        with H.TmpRoot() as root:
+            slug = self.parked(root)
+            self.evidence(root, slug, "2026-11-21")
+            with self.assertRaisesRegex(BenchError, "须在开玩日 2026-10-29 当天到开玩后 14 天内") as cm:
+                settle.settle(root, slug, "go", reason="x", biggest_unknown="y", on="2026-11-21")
+            for needle in ("ledger.py update", "新开玩日", "否决", "继续搁置"):
+                self.assertIn(needle, str(cm.exception))
+            self.assertNotIn("过了窗口的重新在开玩后观察", str(cm.exception))
+            self.assertEqual(load_ledger(root)["directions"][slug]["state"], "parked")
+
 
 if __name__ == "__main__":
     unittest.main()

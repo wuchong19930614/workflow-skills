@@ -34,7 +34,7 @@ OBJECT_TYPES = ("game", "other")                       # 快道对象类型:游�
 # 快道否决门 → 速判观察里必须不过的那一条
 QUICK_GATE_CHECK = {"not_new": "Q1", "oneoff": "Q3", "scope": "Q4", "occupied": "Q5", "answered": "Q6"}
 QUICK_PATCHABLE = ("title", "site_type", "terms", "object")   # 现行方向的 object 只许更正 date_source
-FORECAST_SLIPPABLE = ("found", "watching", "go")          # 预判方向在这三个状态下可改开玩日(object.first_public)
+FORECAST_SLIPPABLE = ("found", "watching", "go", "parked")   # 预判方向在这四个状态下可改开玩日(object.first_public)
 FORECAST_REGISTERABLE = ("go", "watching")                # 预判建议为这两种才登记;skip、measure_rest 不登记
 FORECAST_KEYS = ("ref", "playable_at", "object_volume_pre", "tasks", "forecast_p25", "forecast_median", "review_at",
                  "review", "slipped_days")                # 预判方向开玩前结算后账本里 forecast 块的键
@@ -130,7 +130,7 @@ def _check_clusters(clusters):
 
 
 def _patched_object(rec, o, on) -> dict:
-    """快道对象的补数 → 补后的 object。现行方向只许更正 date_source;预判方向(开玩前、观察中、go)还可连同新的开玩日
+    """快道对象的补数 → 补后的 object。现行方向只许更正 date_source;预判方向(开玩前、观察中、go、搁置)还可连同新的开玩日
     first_public 一起给,新开玩日须在 on 之后;名称、类型登记后不改。"""
     movable = rec.get("basis") == "forecast" and rec["state"] in FORECAST_SLIPPABLE
     keys = {"date_source", "first_public"} if movable else {"date_source"}
@@ -148,7 +148,8 @@ def _patched_object(rec, o, on) -> dict:
 
 def _slip_forecast(rec, days):
     """预判方向开玩日变了 days 天:forecast 块的开玩日、复核日、累计推迟天数跟着变;观察中的到期日顺延到新复核日,
-    还没开建的 go 的建议最晚上线日顺延到新开玩日前 1 天。开玩前(found)还没有 forecast 块,旧预判观察的开玩日对不上,由结算拦下。"""
+    还没开建的 go 的建议最晚上线日顺延到新开玩日前 1 天。开玩前(found)还没有 forecast 块,旧预判观察的开玩日对不上,由结算拦下;
+    搁置的也没有 forecast 块,只改 object.first_public,开玩后判 go 的窗口跟着新开玩日走。"""
     f = rec.get("forecast")
     if not f:
         return
@@ -165,7 +166,7 @@ def _slip_forecast(rec, days):
 
 def update(root, slug, patch: dict, refs=(), on=None) -> dict:
     """补数:标杆道只对 found/parked,改了输入就清掉旧模型结果;快道只能补标题、站型、说法、对象的日期来源与引用。
-    预判方向(found、观察中、go)还可改开玩日 object.first_public(须同时给 date_source,新日期在 on 之后,on 缺省今天),
+    预判方向(found、观察中、go、搁置)还可改开玩日 object.first_public(须同时给 date_source,新日期在 on 之后,on 缺省今天),
     forecast 块、观察到期日、建议最晚上线日跟着顺延;go 只许改 object。"""
     on = on or today()
     require(is_date(on), f"日期须为日历上存在的 YYYY-MM-DD(收到 {on!r})")
@@ -636,7 +637,9 @@ def _require_parked_after_launch(rec, screen, vol):
     age = (date.fromisoformat(seen) - date.fromisoformat(playable_at)).days
     require(0 <= age <= limit,
             f"预判后搁置的方向开玩后判 go:最新速判是 {seen} 看的,须在开玩日 {playable_at} 当天到开玩后 {limit} 天内"
-            "(开玩前的看不算;过了窗口的重新在开玩后观察)")
+            + ("(开玩前的看不算,开玩后重新速判)" if age < 0 else
+               "(窗口已过:游戏推迟了的话，要在新开玩日到来前用 ledger.py update 记下新开玩日(同时给 date_source),"
+               "窗口跟着新开玩日走;没推迟的，这个方向只能否决或继续搁置)"))
     if vol is not None:
         require(vol["observed_at"][:10] >= playable_at,
                 f"预判后搁置的方向开玩后判 go:最新量级观察是 {vol['observed_at'][:10]} 看的,在开玩日 {playable_at} 之前;"
