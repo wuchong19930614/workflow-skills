@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """只读看板:置顶待开建的快道 go;各状态数、待深核排序、观察中剩余天数、搁置天数、go 的文档、
-到期的验收节点、即将开玩的对象与建议跑快道的日期、上线前预判的五类提醒(可预判的原料、复核到期、预判失准、
-开玩日推迟、补参照)、参照库里不可用的参照、种子池与原料池余量、待复查淘汰、累计 Semrush 调用。"""
+到期的验收节点、即将开玩的对象与建议跑快道的日期、上线前预判的六类提醒(可预判的原料、复核到期、预判失准、
+开玩日推迟、预判后搁置的方向已开玩、补参照)、参照库里不可用的参照、种子池与原料池余量、待复查淘汰、累计 Semrush 调用。"""
 import argparse
 import json
 import sys
@@ -69,11 +69,20 @@ def _forecast_window(root, on, library=None) -> list:
 
 
 def _forecast_reminders(dirs, on) -> dict:
-    """预判方向的三类提醒:复核到期、预判失准、开玩日推迟(都只读账本里的 forecast 块、复核与复查记录)。
-    复核到期:预判 go(模型是开玩前预判,不含观察中开玩后按现行路径才判 go 的)没复核过,或预判观察中还没复查过,且到了复核日。"""
-    due, warnings, slipped = [], [], []
+    """预判方向的四类提醒:复核到期、预判失准、开玩日推迟(这三类只读账本里的 forecast 块、复核与复查记录),
+    以及预判后搁置的方向已开玩(搁置的没有 forecast 块,读 object.first_public)。
+    复核到期:预判 go(模型是开玩前预判,不含观察中开玩后按现行路径才判 go 的)没复核过,或预判观察中还没复查过,且到了复核日。
+    预判后搁置的方向已开玩:开玩日当天到开玩后 new_days_game 天内(开玩后判 go 的速判窗口,ledger._require_parked_after_launch),
+    days_since 是开玩后第几天,days_left 是窗口还剩几天。"""
+    due, warnings, slipped, parked = [], [], [], []
+    limit = QM.QUICK_ASSUMPTIONS["new_days_game"]
     for s, r in dirs.items():
-        f = r.get("forecast")                      # 只有预判登记的方向才有 forecast 块(开玩前结算时写入)
+        if r.get("basis") == "forecast" and r["state"] == "parked":
+            since = (date.fromisoformat(on) - date.fromisoformat(r["object"]["first_public"])).days
+            if 0 <= since <= limit:
+                parked.append({"slug": s, "first_public": r["object"]["first_public"], "days_since": since,
+                               "days_left": limit - since})
+        f = r.get("forecast")                      # 只有预判登记的方向才有 forecast 块(开玩前结算为 go、观察中时写入)
         if not f:
             continue
         if r["state"] == "go" and (r.get("model") or {}).get("basis") == "forecast" and f["review"] is None \
@@ -85,7 +94,8 @@ def _forecast_reminders(dirs, on) -> dict:
             warnings.append({"slug": s, "actual": f["review"]["actual"], "forecast_p25": f["review"]["forecast_p25"]})
         if r["state"] in ("go", "watching") and f["slipped_days"] > QM.QUICK_ASSUMPTIONS["forecast_slip_days"]:
             slipped.append({"slug": s, "first_public": r["object"]["first_public"], "slipped_days": f["slipped_days"]})
-    return {"forecast_reviews_due": due, "forecast_warnings": warnings, "forecast_slipped": slipped}
+    return {"forecast_reviews_due": due, "forecast_warnings": warnings, "forecast_slipped": slipped,
+            "forecast_parked_window": sorted(parked, key=lambda x: (x["days_left"], x["slug"]))}
 
 
 def _references_due(library, dirs, on) -> list:
@@ -196,6 +206,9 @@ def main(argv=None):
         print(f"  预判失准 {w['slug']}:实测 {w['actual']} / 预测 {w['forecast_p25']},建议停止追加投入")
     for w in q["forecast_slipped"]:
         print(f"  开玩日推迟 {w['slug']}:累计 {w['slipped_days']} 天,现为 {w['first_public']},请重新评估")
+    for w in q["forecast_parked_window"]:
+        print(f"  预判后搁置的 {w['slug']} 已开玩 {w['days_since']} 天,开玩后 {QM.QUICK_ASSUMPTIONS['new_days_game']} 天内"
+              f"可按现行路径重新判 go(还剩 {w['days_left']} 天)")
     for x in q["references_due"]:
         print(f"  {'补参照' if x['action'] == 'add' else '更新参照'} {x['object']} {x['task']}")
     for x in q["references_unusable"]:

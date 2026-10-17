@@ -230,6 +230,13 @@ class PregameDocTest(unittest.TestCase):
         self.assertIn(f"开玩后 {a['new_days_game']} 天内", c)
         self.assertIn(f"开玩后 {a['new_days_game']} 天内", skill)
 
+    def test_parked_forecast_window_documented(self):
+        # 看板"预判后搁置的方向已开玩"提醒:命令手册 7.7.7 写 JSON 键与文字版,快道 SKILL 第 2 步列出
+        sec = text("命令与观察.md").split("#### 7.7.7 看板提醒", 1)[1]
+        self.assertIn('"forecast_parked_window"', sec)
+        self.assertIn("预判后搁置的 <方向> 已开玩 N 天", sec)
+        self.assertIn("预判后搁置的方向已开玩", skill_text("xinci-bench-quick"))
+
     def test_tables_of_contents_list_every_heading(self):
         for name, body in (("选站契约.md", text("选站契约.md")), ("命令与观察.md", text("命令与观察.md")),
                            ("数据采集.md", text("数据采集.md")), ("设计稿", SPEC.read_text(encoding="utf-8"))):

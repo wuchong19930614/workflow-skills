@@ -420,6 +420,58 @@ class PregameStatusTest(unittest.TestCase):
             self.assertEqual([x["ref"] for x in q["references_unusable"]], [bad])
             self.assertNotIn(good, [x["ref"] for x in q["references_unusable"]])
 
+    def parked_forecast(self, root):
+        """预判登记后开玩前搁置的方向(开玩日 10-29)。"""
+        slug, _ = H.setup_forecast(root)
+        settle.settle(root, slug, "parked", reason="开玩前搁置", biggest_unknown="开玩后量", on="2026-10-14")
+        return slug
+
+    def test_parked_forecast_window_edges(self):
+        # 开玩日当天(第 0 天)到开玩后第 14 天列出,开玩前与第 15 天不列
+        with TmpRoot() as root:
+            slug = self.parked_forecast(root)
+            for on, want in (("2026-10-28", []),
+                             ("2026-10-29", [{"slug": slug, "first_public": "2026-10-29", "days_since": 0, "days_left": 14}]),
+                             ("2026-11-01", [{"slug": slug, "first_public": "2026-10-29", "days_since": 3, "days_left": 11}]),
+                             ("2026-11-12", [{"slug": slug, "first_public": "2026-10-29", "days_since": 14, "days_left": 0}]),
+                             ("2026-11-13", [])):
+                with self.subTest(on):
+                    self.assertEqual(board(root, on)["forecast_parked_window"], want)
+
+    def test_parked_forecast_window_follows_a_slip(self):
+        with TmpRoot() as root:
+            slug = self.parked_forecast(root)
+            L.update(root, slug, {"object": {"first_public": "2026-11-20", "date_source": "https://example.org/delay"}},
+                     on="2026-11-13")
+            self.assertEqual(board(root, "2026-11-13")["forecast_parked_window"], [])
+            self.assertEqual(board(root, "2026-11-21")["forecast_parked_window"],
+                             [{"slug": slug, "first_public": "2026-11-20", "days_since": 1, "days_left": 13}])
+
+    def test_parked_forecast_window_skips_other_directions(self):
+        def current_parked(root):
+            slug, _ = H.setup_quick(root)
+            settle.settle(root, slug, "parked", reason="先放着", biggest_unknown="y", on="2026-10-13")
+        # 现行方向搁置、预判 go、预判观察中、预判登记还没结算:都不提醒(说法相同,各用一个数据区)
+        for name, make in (("current parked", current_parked), ("forecast go", go_forecast),
+                           ("forecast watching", watching_forecast), ("forecast found", H.setup_forecast)):
+            with self.subTest(name), TmpRoot() as root:
+                make(root)
+                self.assertEqual(board(root, "2026-10-30")["forecast_parked_window"], [])
+
+    def test_cli_prints_the_parked_forecast_line(self):
+        with TmpRoot() as root:
+            slug = self.parked_forecast(root)
+            out = cli_out(root, "2026-11-01")
+            self.assertIn(f"预判后搁置的 {slug} 已开玩 3 天,开玩后 14 天内可按现行路径重新判 go(还剩 11 天)", out)
+            self.assertNotIn("预判后搁置的", cli_out(root, "2026-11-13"))
+
+    def test_json_output_has_the_parked_forecast_key(self):
+        with TmpRoot() as root:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                RS.main(["--data-root", str(root), "--json"])
+            self.assertEqual(json.loads(buf.getvalue())["quick"]["forecast_parked_window"], [])
+
     def test_json_output_has_the_five_keys(self):
         with TmpRoot() as root:
             buf = io.StringIO()
