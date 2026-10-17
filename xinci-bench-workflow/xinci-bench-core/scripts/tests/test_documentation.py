@@ -213,6 +213,23 @@ class PregameDocTest(unittest.TestCase):
         sec = body.split("## 13. 实施时补的口径", 1)[1]
         self.assertEqual([int(n) for n in re.findall(r"^(\d+)\. ", sec, re.M)], list(range(1, 11)))
 
+    def test_pregame_decisions_documented(self):
+        # 2026-10-17 拍板的三条(设计稿第 14 节):重做规则、搁置方向开玩后判 go、观察按自己记下的口径校验
+        doc, skill, c = text("命令与观察.md"), skill_text("xinci-bench-quick"), text("选站契约.md")
+        for needle in ("\"params\"", "\"assumptions_version\"", "\"reforecast\"", "口径已变"):
+            self.assertIn(needle, doc)
+        for needle in ("new", "due", "开玩前 9–3 天"):
+            self.assertIn(needle, skill)
+        for needle in ("口径已变", "开玩后 14 天内"):
+            self.assertIn(needle, c)
+        # 上面的数字也跟假设表对一遍:改了假设表,文档里这几处会跟着失败
+        a = QM.QUICK_ASSUMPTIONS
+        far, near = a["reference_object_window"]
+        self.assertIn(f"开玩前 {far}–{near} 天", skill)
+        self.assertIn(f"每款游戏最多预判 {a['forecast_max_per_object']} 次", skill)
+        self.assertIn(f"开玩后 {a['new_days_game']} 天内", c)
+        self.assertIn(f"开玩后 {a['new_days_game']} 天内", skill)
+
     def test_tables_of_contents_list_every_heading(self):
         for name, body in (("选站契约.md", text("选站契约.md")), ("命令与观察.md", text("命令与观察.md")),
                            ("数据采集.md", text("数据采集.md")), ("设计稿", SPEC.read_text(encoding="utf-8"))):
