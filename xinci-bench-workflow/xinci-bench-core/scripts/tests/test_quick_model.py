@@ -178,5 +178,41 @@ class ParamsTest(unittest.TestCase):
         self.assertEqual(Q.assumptions_from_params({"task_days": 7}, base)["threshold_visits"], 777)
 
 
+
+class RisingSeedsTest(unittest.TestCase):
+    """飙升词种子按天轮换:固定 beta、playtest(游戏分类),游戏任务词 3 个(游戏分类),非游戏 1 个(不加分类)。"""
+
+    def test_six_seeds_with_fixed_and_categories(self):
+        s = Q.rising_seeds("2026-10-19")
+        self.assertEqual(len(s), 6)
+        self.assertEqual(s[:2], [{"term": "beta", "cat": 8}, {"term": "playtest", "cat": 8}])
+        game, other = s[2:5], s[5]
+        self.assertTrue(all(x["cat"] == 8 and x["term"] in Q.RISING_GAME_POOL for x in game))
+        self.assertEqual(len({x["term"] for x in game}), 3)
+        self.assertEqual(other["cat"], 0)
+        self.assertIn(other["term"], Q.RISING_OTHER_POOL)
+
+    def test_no_term_twice_in_a_day(self):
+        from datetime import date, timedelta
+        for n in range(60):
+            day = (date(2026, 10, 1) + timedelta(days=n)).isoformat()
+            terms = [x["term"] for x in Q.rising_seeds(day)]
+            self.assertEqual(len(terms), len(set(terms)), day)
+
+    def test_same_day_same_seeds_and_rotation(self):
+        self.assertEqual(Q.rising_seeds("2026-10-19"), Q.rising_seeds("2026-10-19"))
+        self.assertNotEqual(Q.rising_seeds("2026-10-19")[2:5], Q.rising_seeds("2026-10-20")[2:5])
+
+    def test_pools_covered_within_a_cycle(self):
+        from datetime import date, timedelta
+        days = [(date(2026, 10, 1) + timedelta(days=n)).isoformat() for n in range(12)]
+        self.assertEqual({x["term"] for d in days for x in Q.rising_seeds(d)[2:5]}, set(Q.RISING_GAME_POOL))
+        self.assertEqual({Q.rising_seeds(d)[5]["term"] for d in days}, set(Q.RISING_OTHER_POOL))
+
+    def test_bad_day_refused(self):
+        with self.assertRaises(Exception):
+            Q.rising_seeds("2026-13-01")
+
+
 if __name__ == "__main__":
     unittest.main()

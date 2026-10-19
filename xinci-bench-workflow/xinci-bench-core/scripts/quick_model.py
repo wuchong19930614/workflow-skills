@@ -58,6 +58,13 @@ QUICK_ASSUMPTIONS = {
 }
 TASK_WORDS = ("calculator", "codes", "tracker", "tier list", "map", "checker", "generator",
               "converter", "build", "value")
+# Trends 飙升词种子(用户 2026-10-19 定):每轮 6 个 = 固定 2 个 + 游戏任务词 3 个(游戏分类)+ 非游戏 1 个(不加分类),按天轮换
+RISING_FIXED = ("beta", "playtest")
+RISING_GAME_POOL = ("tier list", "codes", "map", "build", "calculator", "tracker", "wiki", "guide", "demo",
+                    "early access", "server status", "value")
+RISING_OTHER_POOL = ("checker", "tracker", "calculator", "generator", "converter")
+RISING_GAME_PER_DAY = 3
+GAME_CAT = 8                                              # Trends 的游戏分类
 SCENARIOS = ("low", "base", "high")
 GAME_CATEGORIES = ("open_world_survival", "mmo_gacha", "metroidvania_adventure", "sports_racing_party", "roblox")
 TASK_TYPE_RE = re.compile(r"[a-z][a-z0-9_]*")             # 任务类型,如 map、tier_list
@@ -146,6 +153,19 @@ def compute(record: dict, a=QUICK_ASSUMPTIONS) -> dict:
             "single_site_100": raw["base"] >= a["single_site_revenue"],     # 用四舍五入前的收入判
             "threshold_visits": a["threshold_visits"], "searches_needed": searches_needed(factor, a),
             "suggestion": suggestion}
+
+
+def rising_seeds(day: str) -> list:
+    """今天要查的飙升词种子:固定两个 + 游戏任务词连续 3 个(每天往后挪 3 个,4 天轮完)+ 非游戏 1 个(每天换一个,
+    和当天的游戏任务词重名就往后挪);同一天结果相同。"""
+    require(isinstance(day, str) and len(day) >= 10, f"日期须为 YYYY-MM-DD(收到 {day!r})")
+    n = date.fromisoformat(day[:10]).toordinal()
+    pool = RISING_GAME_POOL
+    game = [pool[(n * RISING_GAME_PER_DAY + i) % len(pool)] for i in range(RISING_GAME_PER_DAY)]
+    other = next(w for i in range(len(RISING_OTHER_POOL))
+                 if (w := RISING_OTHER_POOL[(n + i) % len(RISING_OTHER_POOL)]) not in game)
+    return ([{"term": t, "cat": GAME_CAT} for t in RISING_FIXED] + [{"term": t, "cat": GAME_CAT} for t in game]
+            + [{"term": other, "cat": 0}])
 
 
 def add_days(day: str, n: int) -> str:

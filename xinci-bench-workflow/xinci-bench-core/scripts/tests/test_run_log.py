@@ -162,6 +162,12 @@ class QuickDailyRoundTest(unittest.TestCase):
                 f.write_text(_json.dumps(d, ensure_ascii=False), encoding="utf-8")
             self.assertTrue(R.plan(root, lane="quick")["quick_new_round_allowed"])
 
+    def test_plan_gives_todays_rising_seeds(self):
+        import quick_model as QM
+        from _common import today
+        with TmpRoot() as root:
+            self.assertEqual(R.plan(root, lane="quick")["rising_seeds"], QM.rising_seeds(today()))
+
 
 class SemrushBudgetTest(unittest.TestCase):
     def test_today_usage_across_lanes_and_stop_flag(self):
