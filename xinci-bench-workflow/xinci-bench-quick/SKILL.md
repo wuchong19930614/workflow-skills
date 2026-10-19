@@ -7,12 +7,14 @@ description: '新词快道：暗号 xinci_bench_quick_run 或 /xinci-bench-quick
 
 行动前读 `xinci-bench-workflow/xinci-bench-core/选站契约.md` 第 10 节与第 1、7 节，`数据采集.md` 第 4、6、7 节；命令与观察字段见 `命令与观察.md` 第 7 节。脚本都在 `xinci-bench-workflow/xinci-bench-core/scripts/`。暗号即授权既定的观察、账本、原料池和清单写入，不重复确认。
 
-1. `report_status.py` 确认数据区；未配置才问用户。`run_log.py --plan --lane quick`：有未完成的快道运行就恢复它；没有时，`quick_new_round_allowed` 为 false（今天已开过一轮）就不开新的一轮，告诉用户每天最多 1 轮、改天再触发（用户明确说今天再跑才破例）；暗号带数字 N 也只跑今天这 1 轮，汇报里说明其余轮次分天跑；可以开时才写 started 清单（运行编号字母数字连字符），`--seed-value` 列出本次要取的来源，必须含 Trends 飙升词与 Wikipedia 发售表。
+1. `report_status.py` 确认数据区；未配置才问用户。`run_log.py --plan --lane quick`：有未完成的快道运行就恢复它；没有时，`quick_new_round_allowed` 为 false（今天已开过一轮）就不开新的一轮，告诉用户每天最多 1 轮、改天再触发（用户明确说今天再跑才破例）；暗号带数字 N 也只跑今天这 1 轮，汇报里说明其余轮次分天跑；可以开时才写 started 清单（运行编号字母数字连字符），`--seed-value` 列出本次要取的来源，必须含 Trends 飙升词、Wikipedia 发售表、补全字母展开与非游戏上游。
 2. **先提醒**：看板里每个"【立即建站】"行原样放进汇报最前面；验收节点到了的、"即将开玩"里建议今天跑的一并提醒。再带上看板的六类上线前预判提醒，各按看板原文列出：可预判（开玩日在预判窗口内的游戏，带 `reforecast` 与 `reason`）、复核到期、预判失准（建议停止追加投入）、开玩日推迟（累计超过上限，请用户重新评估）、预判后搁置的方向已开玩（开玩后 14 天内可按现行路径重新判 go，做法见第 8 步）、补参照与更新参照；看板有"参照不可用"行的也原样列出（那条参照被跳过、不参与取倍数，要用就重新 `quick_reference.py build`；原因写"口径已变,需重测"的，是假设表改过、旧口径的参照，同样要重测）。
 3. **复查观察中**：每个 watching 方向重测量级（必要时重看首页），写新观察，`ledger.py watch-check --slug <方向> --ref <新观察>`；建议是 go 或否决就用 `settle.py` 结算，建议是 watching 就继续观察。预判方向（记录里 `basis` 为 `forecast`）复核日（开玩日 + 7 天）前 `watch-check` 会拒收，到了才复查：速判要开玩后看的，量级用 `trends_volume.py --term` 测该方向登记的说法之一（对象名的量不算），第一次复查后到期日改为复查日 + 30 天；没复查过之前 `settle.py` 不收这类方向的 go 与 volume、oneoff 否决（看板"复核到期"里列出的、`validate_ledger.py` 报"到了复核日，先跑 watch-check"的，先复查再结算）。**预判 go 到了复核日**（看板"复核到期"）：对每项任务测任务词的量级（`trends_volume.py --term <任务词>`，词取该任务在预判观察里的说法之一，一项任务一份，复核日当天或之后测、6 国都测，只测美国的会被拒收），跑 `ledger.py review-forecast --slug <方向> --ref <各任务的量级观察>`；`stop` 为 true 就在汇报里写"预判失准，建议停止追加投入"，要不要放弃由用户定，不自己改状态。开玩前判观察中、开玩后才判 go 的方向不用复核。
-4. **扫信号**：`quick_pool.py expire`；按 `数据采集.md` 第 7 节取上游新对象，其中两项每次都要取：
-   - **Trends 飙升词**：Trends 页面里用 `scripts/trends_fetch.js` 的 `xinciTrendsRising`，最多 6 个种子词（`beta`、`playtest` 用 `cat: 8` 游戏分类，再选 3–4 个任务词），两次执行间隔 ≥ 30 秒，遇 429 停下，没查的种子写"本次未取"；
-   - **Wikipedia 发售表**：`wiki_releases.py --output <scratchpad>/wiki_releases.json`（最近 14 天已上线与未来 30 天要上线的），把输出的 items 并进本次信号观察，浏览量没取到的也一起并进。
+4. **扫信号**：`quick_pool.py expire`；按 `数据采集.md` 第 7 节取上游新对象，其中四项每次都要取：
+   - **Trends 飙升词**：Trends 页面里用 `scripts/trends_fetch.js` 的 `xinciTrendsRising`，种子照第 1 步 `run_log.py --plan --lane quick` 输出里的 `rising_seeds` 取，6 个，`cat` 照给的写，不自己换，两次执行间隔 ≥ 30 秒，遇 429 停下，没查的种子写"本次未取"；
+   - **Wikipedia 发售表**：`wiki_releases.py --output <scratchpad>/wiki_releases.json`（最近 14 天已上线与未来 30 天要上线的），把输出的 items 并进本次信号观察，浏览量没取到的也一起并进；
+   - **补全字母展开**：`suggest_discover.py --output <scratchpad>/discover.json`（4 个前缀接 a–z，不花 Trends），items 并进本次信号观察；第一次跑只建基线、没有新对象，汇报里写明；
+   - **非游戏上游**：`upstream_fetch.py --output <scratchpad>/upstream.json`（Product Hunt、Show HN、GitHub、联邦公报近 7 天），逐条看 items 里命中的说法是不是在说这个新对象，挑出来的才并进；政策条目只列出，由你判断有没有带出新的计算、查询需求。
    对新对象跑 `suggest_snapshot.py --object`；处在测试、抢先体验或即将上线的对象，原料写 `playable_at`（第一次让大量普通用户用上的日期）与 `stage`，还没到这天的只进即将开玩（`quick_pool.py upcoming`），不看首页。把取回的对象与说法写成一份 `quick_signal` 观察，`quick_pool.py add`。没在本次实际取回的来源不写"已检查"。
 5. **上线前预判**（契约 10.9，命令与字段见 `命令与观察.md` §7.7，取数规程见 `数据采集.md` §7.6）：
    - 取看板 `report_status.py --json` 里 `quick.forecast_window`（开玩日在预判窗口内的游戏），**只取 `reforecast` 为 `new`（没预判过）或 `due`（判过、现在可以重做）的行**，看板已把它们排在前面（再按开玩日），**每轮最多预判 2 个**；`wait`（还不到时候）、`no`（不再预判）的不做，行里的 `reason` 是大白话原因，汇报时原样列出；没有 `new`、`due` 就跳过本步。重做规则（契约 10.9）：每款游戏最多预判 2 次；上次量不够或美国读不出的，要等到开玩前 9–3 天才重做；参照不足的，补够参照才重做；P4、P5、P6 不过的，开玩后按现行路径看，不再预判；`measure_rest` 补测其余 5 国后重做。Trends 不够用时按优先级取：本轮飙升词 > 复核到期 > 预判 > 补参照，没做的写"本次未取"；

@@ -13,8 +13,11 @@ import quick_forecast as QF
 import quick_model as QM
 import quick_reference as QR
 import seed_import as I
+import suggest_discover as D
+import upstream_fetch as U
 import validate_ledger as V
 import write_observation as W
+from helpers import TmpRoot
 
 CORE = Path(__file__).resolve().parents[2]
 WORKFLOW = CORE.parent
@@ -243,6 +246,52 @@ class PregameDocTest(unittest.TestCase):
             toc, want = toc_entries(body), headings(body)
             self.assertEqual([t for t, _ in toc], want, f"{name} 的目录与标题不一致")
             self.assertEqual([a for _, a in toc], [anchor(h) for h in want], f"{name} 的目录锚点有误")
+
+
+class SignalSourcesDocTest(unittest.TestCase):
+    """飙升词种子轮换、补全字母展开、非游戏上游(用户 2026-10-19 定):规程、命令手册、SKILL 都要跟代码对得上。"""
+
+    def test_rising_seed_pools_documented(self):
+        coll, skill = text("数据采集.md"), skill_text("xinci-bench-quick")
+        for needle in ("、".join(f"`{w}`" for w in QM.RISING_FIXED), "、".join(QM.RISING_GAME_POOL),
+                       "、".join(QM.RISING_OTHER_POOL), f"游戏任务词 {QM.RISING_GAME_PER_DAY} 个", f"`cat: {QM.GAME_CAT}`",
+                       "`rising_seeds`"):
+            self.assertIn(needle, coll)
+        self.assertIn("`rising_seeds`", skill)
+        for body in (coll, skill, text("命令与观察.md")):
+            self.assertNotIn("3–4 个任务词", body)          # 旧口径:人自己挑任务词
+
+    def test_discover_and_upstream_documented(self):
+        coll, skill = text("数据采集.md"), skill_text("xinci-bench-quick")
+        for p in D.DISCOVER_PATTERNS:
+            self.assertIn(f"`{p['prefix']} a`", coll)
+        extra = U.UPSTREAM_TASK_WORDS[len(QM.TASK_WORDS):]
+        for needle in ("suggest_discover.py", "upstream_fetch.py", f"points>{U.HN_MIN_POINTS}", f"近 {U.WINDOW_DAYS} 天",
+                       f"每个源最多 {U.LIMIT} 个", "、".join(extra)):
+            self.assertIn(needle, coll)
+        for needle in ("suggest_discover.py", "upstream_fetch.py"):
+            self.assertIn(needle, skill)
+
+    def test_command_doc_lists_every_output_field(self):
+        doc = text("命令与观察.md").split("### 7.2 扫信号与原料池", 1)[1].split("### 7.3 ", 1)[0]
+        for needle in ("suggest_discover.py --output", "upstream_fetch.py --output", '"rising_seeds"'):
+            self.assertIn(needle, doc)
+        with TmpRoot() as root:
+            D.discover(root, lambda q: [], sleeper=lambda s: None, at="2026-10-18T08:00:00+00:00", letters="a",
+                       patterns=D.DISCOVER_PATTERNS[:1])
+            d = D.discover(root, lambda q: ["tier list abyss world roblox"], sleeper=lambda s: None,
+                           at="2026-10-19T08:00:00+00:00", letters="a", patterns=D.DISCOVER_PATTERNS[:1])
+            gh = '{"items": [{"name": "deskpet", "html_url": "https://g/x", "created_at": "2026-10-18T00:00:00Z"}]}'
+            fr = '{"results": [{"title": "Rule A", "html_url": "https://f/x", "publication_date": "2026-10-18"}]}'
+            u = U.fetch_all(root, on="2026-10-19", text_fetcher=lambda url: gh if "github" in url else fr,
+                            suggest_fetcher=lambda q: ["deskpet tracker"], sleeper=lambda s: None,
+                            sources=("github", "policy"))
+            u_err = U.fetch_all(root, on="2026-10-19", text_fetcher=lambda url: 1 / 0, suggest_fetcher=lambda q: [],
+                                sleeper=lambda s: None, sources=("github",))
+        keys = set(d) | set(d["items"][0]) | set(u) | set(u["items"][0]) | set(u["sources"]["github"])
+        keys |= set(u_err["sources"]["github"]) | {k for c in u["candidates"] for k in c}
+        for k in sorted(keys):
+            self.assertIn(f'"{k}"', doc, k)
 
 
 class SkillTest(unittest.TestCase):
