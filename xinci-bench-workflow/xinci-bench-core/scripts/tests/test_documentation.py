@@ -272,6 +272,13 @@ class SignalSourcesDocTest(unittest.TestCase):
         for needle in ("suggest_discover.py", "upstream_fetch.py"):
             self.assertIn(needle, skill)
 
+    def test_derivative_words_documented(self):
+        coll, doc, skill = text("数据采集.md"), text("命令与观察.md"), skill_text("xinci-bench-quick")
+        words = " / ".join(QM.DERIVATIVE_WORDS)
+        self.assertIn(f"<站名> {words}", coll)
+        self.assertIn("suggest_snapshot.py --derivative", doc)
+        self.assertIn("suggest_snapshot.py --derivative", skill)
+
     def test_command_doc_lists_every_output_field(self):
         doc = text("命令与观察.md").split("### 7.2 扫信号与原料池", 1)[1].split("### 7.3 ", 1)[0]
         for needle in ("suggest_discover.py --output", "upstream_fetch.py --output", '"rising_seeds"'):

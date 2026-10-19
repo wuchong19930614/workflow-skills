@@ -58,6 +58,8 @@ QUICK_ASSUMPTIONS = {
 }
 TASK_WORDS = ("calculator", "codes", "tracker", "tier list", "map", "checker", "generator",
               "converter", "build", "value")
+# 派生说法(用户 2026-10-19 定):飙升词里冒出陌生站名时查 "<站名> alternative / like / unlimited" 的补全
+DERIVATIVE_WORDS = ("alternative", "like", "unlimited")
 # Trends 飙升词种子(用户 2026-10-19 定):每轮 6 个 = 固定 2 个 + 游戏任务词 3 个(游戏分类)+ 非游戏 1 个(不加分类),按天轮换
 RISING_FIXED = ("beta", "playtest")
 RISING_GAME_POOL = ("tier list", "codes", "map", "build", "calculator", "tracker", "wiki", "guide", "demo",

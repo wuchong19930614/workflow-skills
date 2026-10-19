@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Google 自动补全快照:取建议、按查询存快照、和以前所有快照比,找出从没出现过的建议。
 
-快道里会联网的脚本之一(另一个是 wiki_releases.py);取数函数可注入,测试不联网。取数失败不写快照(不能当作"没有新建议")。
+快道里会联网的脚本之一;取数函数可注入,测试不联网。取数失败不写快照(不能当作"没有新建议")。
 """
 import argparse
 import hashlib
@@ -81,17 +81,34 @@ def expand(root, obj: str, fetcher=None, sleeper=time.sleep, interval=1.0, at=No
     return out
 
 
-def main(argv=None):
+def derive(root, name: str, fetcher=None, sleeper=time.sleep, interval=1.0, at=None, gl: str = "us") -> list:
+    """陌生站名 + 每个派生词(alternative、like、unlimited);请求之间间隔 interval 秒。"""
+    require(isinstance(name, str) and name.strip(), "站名不能为空")
+    out = []
+    for i, w in enumerate(QM.DERIVATIVE_WORDS):
+        if i:
+            sleeper(interval)
+        out.append(snapshot(root, f"{name.strip()} {w}", fetcher, at, gl))
+    return out
+
+
+def main(argv=None, fetcher=None, sleeper=time.sleep):
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--data-root")
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--object", help="对象名,按任务词展开")
     g.add_argument("--query", help="单条查询")
+    g.add_argument("--derivative", help="飙升词里冒出的陌生站名,查 <站名> " + " / ".join(QM.DERIVATIVE_WORDS))
     ap.add_argument("--gl", default="us", choices=GLS, help="哪个国家的自动补全,默认美国")
     a = ap.parse_args(argv)
     root = data_root.resolve_or_exit(a.data_root)
     try:
-        out = expand(root, a.object, gl=a.gl) if a.object else [snapshot(root, a.query, gl=a.gl)]
+        if a.object:
+            out = expand(root, a.object, fetcher, sleeper, gl=a.gl)
+        elif a.derivative:
+            out = derive(root, a.derivative, fetcher, sleeper, gl=a.gl)
+        else:
+            out = [snapshot(root, a.query, fetcher, gl=a.gl)]
     except BenchError as exc:
         print(f"拒收: {exc}", file=sys.stderr)
         return 1

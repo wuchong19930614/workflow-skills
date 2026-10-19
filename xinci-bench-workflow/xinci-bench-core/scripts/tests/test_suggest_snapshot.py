@@ -1,3 +1,6 @@
+import contextlib
+import io
+import json
 import sys
 import unittest
 from pathlib import Path
@@ -6,6 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import quick_model as Q
 import suggest_snapshot as S
+from _common import BenchError
 from helpers import TmpRoot
 
 
@@ -50,6 +54,32 @@ class SuggestSnapshotTest(unittest.TestCase):
             self.assertEqual(f.calls[0], "Grow a Garden 2 ")
             self.assertIn("Grow a Garden 2 tier list", f.calls)
             self.assertEqual(slept, [1.0] * len(Q.TASK_WORDS))
+
+    def test_derivative_queries_and_interval(self):
+        # 飙升词里冒出陌生站名时查派生说法(用户 2026-10-19 定):<站名> alternative / like / unlimited
+        with TmpRoot() as root:
+            f, slept = fake([["neal.fun alternative sites"], ["neal.fun like websites"], []]), []
+            out = S.derive(root, " neal.fun ", f, sleeper=slept.append, interval=1.0)
+            self.assertEqual(Q.DERIVATIVE_WORDS, ("alternative", "like", "unlimited"))
+            self.assertEqual(f.calls, ["neal.fun alternative", "neal.fun like", "neal.fun unlimited"])
+            self.assertEqual(slept, [1.0, 1.0])
+            self.assertEqual([r["suggestions"] for r in out], [["neal.fun alternative sites"], ["neal.fun like websites"], []])
+            self.assertTrue(S.snapshot_path(root, "neal.fun like").is_file())       # 快照照常存,下次能比出新说法
+
+    def test_derivative_needs_name(self):
+        with TmpRoot() as root:
+            with self.assertRaises(BenchError):
+                S.derive(root, "  ", fake([]), sleeper=lambda s: None)
+
+    def test_cli_derivative(self):
+        with TmpRoot() as root:
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = S.main(["--data-root", str(root), "--derivative", "neal.fun"], fetcher=fake([["a"], ["b"], ["c"]]),
+                            sleeper=lambda s: None)
+            self.assertEqual(rc, 0)
+            self.assertEqual([r["query"] for r in json.loads(buf.getvalue())],
+                             ["neal.fun alternative", "neal.fun like", "neal.fun unlimited"])
 
     def test_other_country_has_own_snapshot(self):
         with TmpRoot() as root:
