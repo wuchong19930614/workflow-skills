@@ -97,9 +97,9 @@ class RunLogTest(unittest.TestCase):
                 start_assess(root, max_rounds=5)
 
 
-def start_quick(root, run_id="quick-a"):
+def start_quick(root, run_id="quick-a", rnd=1, max_rounds=1):
     return R.record(root, skill="xinci-bench-quick", progress={
-        "run_id": run_id, "round": 1, "max_rounds": 1, "source_kind": "quick",
+        "run_id": run_id, "round": rnd, "max_rounds": max_rounds, "source_kind": "quick",
         "seed_value": "自动补全与 Trends 飙升", "outcome": "started", "next_step": "quick"})
 
 
@@ -133,10 +133,8 @@ class QuickRunLogTest(unittest.TestCase):
 
     def test_quick_run_shape(self):
         with TmpRoot() as root:
-            with self.assertRaisesRegex(BenchError, "max_rounds"):
-                R.record(root, skill="xinci-bench-quick", progress={
-                    "run_id": "q", "round": 1, "max_rounds": 2, "source_kind": "quick",
-                    "seed_value": "x", "outcome": "started", "next_step": "quick"})
+            with self.assertRaisesRegex(BenchError, "第 1 轮"):
+                start_quick(root, rnd=2, max_rounds=3)                  # 新运行须从第 1 轮开始
             with self.assertRaisesRegex(BenchError, "source_kind"):
                 R.record(root, skill="xinci-bench-scan", progress={
                     "run_id": "b", "round": 1, "max_rounds": 1, "source_kind": "quick",
@@ -144,23 +142,55 @@ class QuickRunLogTest(unittest.TestCase):
 
 
 
-class QuickDailyRoundTest(unittest.TestCase):
-    def test_one_quick_round_per_day(self):
-        import json as _json
+def _move_to_past(root):
+    import json as _json
+    for f in (root / "运行").glob("*.json"):
+        d = _json.loads(f.read_text(encoding="utf-8"))
+        d["recorded_at"] = "2026-01-01" + d["recorded_at"][10:]
+        f.write_text(_json.dumps(d, ensure_ascii=False), encoding="utf-8")
+
+
+class QuickMultiRoundTest(unittest.TestCase):
+    def test_quick_runs_n_rounds(self):
         with TmpRoot() as root:
-            q = R.plan(root, lane="quick")
-            self.assertEqual((q["quick_rounds_today"], q["quick_rounds_per_day"], q["quick_new_round_allowed"]), (0, 1, True))
+            start_quick(root, max_rounds=3)
+            for rnd in (1, 2):
+                R.finish(root, run_id="quick-a")
+                q = R.plan(root, lane="quick")
+                self.assertEqual((q["action"], q["resume"]["round"]), ("quick", rnd + 1))
+                if rnd == 1:
+                    with self.assertRaisesRegex(BenchError, "恢复位置"):
+                        start_quick(root, rnd=3, max_rounds=3)          # 不能跳轮
+                    with self.assertRaisesRegex(BenchError, "预算"):
+                        start_quick(root, rnd=2, max_rounds=4)          # 中途不能改轮数
+                start_quick(root, rnd=rnd + 1, max_rounds=3)
+            R.finish(root, run_id="quick-a", outcome="blocked")       # 受阻停在第 3 轮
+            self.assertEqual(R.plan(root, lane="quick")["resume"]["round"], 3)
+            R.finish(root, run_id="quick-a")
+            self.assertEqual(R.plan(root, "quick-a", lane="quick")["action"], "done")
+            with self.assertRaisesRegex(BenchError, "已结束"):
+                start_quick(root, run_id="quick-a", rnd=4, max_rounds=4)   # 跑满后不能再追加
+
+    def test_no_daily_cap(self):
+        with TmpRoot() as root:
             start_quick(root, run_id="quick-a")
             R.finish(root, run_id="quick-a")
             q = R.plan(root, lane="quick")
-            self.assertEqual((q["quick_rounds_today"], q["quick_new_round_allowed"], q["action"]), (1, False, "quick"))
-            start(root)                                                                  # 标杆道不算快道轮数
+            self.assertEqual((q["action"], q["quick_rounds_today"]), ("quick", 1))
+            self.assertNotIn("quick_new_round_allowed", q)
+            start_quick(root, run_id="quick-b", max_rounds=10)          # 同一天再开一个 10 轮的运行
+
+    def test_signal_only_first_round_of_the_day(self):
+        with TmpRoot() as root:
+            self.assertTrue(R.plan(root, lane="quick")["quick_signal_due"])
+            start_quick(root, max_rounds=3)
+            self.assertTrue(R.plan(root, lane="quick")["quick_signal_due"])   # 恢复中的这一轮自己不算
+            R.finish(root, run_id="quick-a")
+            self.assertFalse(R.plan(root, lane="quick")["quick_signal_due"])  # 同日第 2 轮不重取
+            start(root)                                                       # 标杆道不算快道轮
             self.assertEqual(R.plan(root, lane="quick")["quick_rounds_today"], 1)
-            for f in (root / "运行").glob("*.json"):                                    # 挪到以前的日子
-                d = _json.loads(f.read_text(encoding="utf-8"))
-                d["recorded_at"] = "2026-01-01" + d["recorded_at"][10:]
-                f.write_text(_json.dumps(d, ensure_ascii=False), encoding="utf-8")
-            self.assertTrue(R.plan(root, lane="quick")["quick_new_round_allowed"])
+            _move_to_past(root)
+            self.assertTrue(R.plan(root, lane="quick")["quick_signal_due"])   # 跨天恢复照常取
 
     def test_plan_gives_todays_rising_seeds(self):
         import quick_model as QM

@@ -20,7 +20,8 @@ SOURCE_KINDS = seeds.SOURCES + ("quick",)
 ROTATION = ("sibling", "serp", "geo", "community")
 OUTCOMES = ("started", "completed", "blocked", "skipped")
 FOUND_TARGET = 3
-QUICK_ROUNDS_PER_DAY = 1         # 快道每天最多开 1 轮(用户 2026-10-15 定:同日第 2 轮 Trends 就 429,多轮分天跑)
+# 快道不限每天轮数:暗号不带数字跑 1 轮,带 N 跑 N 轮(用户 2026-11-02 定,取代 10-15 的每天 1 轮);
+# 同一天只有第一轮取信号,后面的轮不重取(种子按天给,同日重取 Trends 就 429)。
 
 
 def records(root) -> list:
@@ -47,7 +48,7 @@ def next_position(row):
     if p["next_step"] == "done":
         return None
     if STAGE[row["skill"]] == "quick":
-        return {"stage": "quick", "round": 1}
+        return {"stage": "quick", "round": p["round"] + int(p["outcome"] == "completed")}
     bump = STAGE[row["skill"]] == "assess" and p["outcome"] == "completed"
     return {"stage": p["next_step"], "round": p["round"] + int(bump)}
 
@@ -55,11 +56,9 @@ def next_position(row):
 def _expected_next(stage, outcome, rnd, max_rounds):
     if outcome in ("started", "blocked"):
         return stage
-    if stage == "quick":
-        return "done"
     if stage == "scan":
         return "assess"
-    return "done" if rnd == max_rounds else "scan"
+    return "done" if rnd == max_rounds else ("quick" if stage == "quick" else "scan")
 
 
 def record(root, *, skill, progress, sources_opened=(), directions_touched=(), semrush_calls=0, notes=()) -> Path:
@@ -73,7 +72,6 @@ def record(root, *, skill, progress, sources_opened=(), directions_touched=(), s
     require(p["source_kind"] in SOURCE_KINDS, f"source_kind 须为 {SOURCE_KINDS}")
     lane = LANE_OF[skill]
     require((p["source_kind"] == "quick") == (lane == "quick"), "快道运行的 source_kind 固定为 quick,标杆道不能用 quick")
-    require(lane == "bench" or p["max_rounds"] == 1, "快道运行一次只走一遍,max_rounds 固定为 1")
     require(isinstance(p["seed_value"], str) and p["seed_value"].strip(), "seed_value 须写本阶段从哪取种子")
     require(p["outcome"] in OUTCOMES, f"outcome 须为 {OUTCOMES}")
     require(isinstance(semrush_calls, int) and semrush_calls >= 0, "semrush_calls 须为非负整数")
@@ -132,18 +130,21 @@ def _plan_quick(root, rows, run_id):
     require(run_id is None or run_id in latest, "指定的 run_id 不存在")
     conflict = run_id is None and len(active) > 1
     selected = latest.get(run_id) if run_id else (next(iter(active.values())) if len(active) == 1 else None)
-    resume, action = None, "quick"
+    resume, action, current = None, "quick", None
     if selected:
-        if next_position(selected):
-            resume = dict(selected["progress"], next_step="quick")
+        cursor = next_position(selected)
+        if cursor:
+            resume = dict(selected["progress"], round=cursor["round"], next_step="quick")
+            current = (selected["progress"]["run_id"], cursor["round"])
         else:
             action = "done"
     day = today()
-    rounds_today = len({r["progress"]["run_id"] for r in rows
-                        if LANE_OF[r["skill"]] == "quick" and r["recorded_at"][:10] == day})
+    rounds_today = {(r["progress"]["run_id"], r["progress"]["round"]) for r in rows
+                    if LANE_OF[r["skill"]] == "quick" and r["recorded_at"][:10] == day}
     return {"lane": "quick", "action": None if conflict else action, "resume": resume, "conflict": conflict,
-            "quick_rounds_today": rounds_today, "quick_rounds_per_day": QUICK_ROUNDS_PER_DAY,
-            "quick_new_round_allowed": rounds_today < QUICK_ROUNDS_PER_DAY, "rising_seeds": QM.rising_seeds(day),
+            "quick_rounds_today": len(rounds_today),
+            # 今天还没有别的快道轮(恢复中的这一轮不算)才取四项来源;同日后面的轮不重取
+            "quick_signal_due": not (rounds_today - {current}), "rising_seeds": QM.rising_seeds(day),
             "active_run_ids": sorted(active), "latest_log": selected["_path"] if selected else None,
             "semrush_calls_total": sum(r["semrush_calls"] for r in rows), **semrush_budget(rows)}
 
