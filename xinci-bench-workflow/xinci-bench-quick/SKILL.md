@@ -31,4 +31,4 @@ description: '新词快道：暗号 xinci_bench_quick_run 或 /xinci-bench-quick
 
 汇报：各来源取回多少（Trends 飙升词按种子词列，没取到的写本次未取）、原料去重后多少、即将开玩几个及建议跑快道的日期、预判了几个与各自的建议（go / watching / skip / measure_rest）、补了几条参照、复核了几个预判（实测与预测下四分位的比）、各速判条不过多少、登记多少、go / 观察中 / 否决（按门）/ 搁置数、观察中剩余天数、Semrush 调用数。不建站、不改假设表；用户说已开建、已上线或放弃时，照用户说的用 `ledger.py follow-up` 记。
 
-动 Semrush 之前先看 `run_log.py --plan` 的 `semrush_stop`：为 true（今天两条道合计已用到 90 次）就不再开始花 Semrush 的步骤，当前阶段按 blocked 收尾，改天接着跑。
+Semrush 不设每日上限，有额度就用；页面提示额度用完、登录失效或出验证码时停下，当前阶段按 blocked 收尾，改天接着跑（用户 2026-10-20 定）。

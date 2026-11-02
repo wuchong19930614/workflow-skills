@@ -82,7 +82,9 @@ def register(root, slug, title, site_type, domain, scan_ref, reason, by="xinci-b
     W.read(root, scan_ref)
     item = _scan_domain(root, [scan_ref], domain)
     require(_all_pass(item), f"{domain} 在 {scan_ref} 里没有 B1–B5 全过的记录,不能登记")
-    same = [s for s, r in ledger["directions"].items() if any(b["domain"] == domain for b in r["benchmarks"])]
+    # 快道方向没有 benchmarks 字段
+    same = [s for s, r in ledger["directions"].items()
+            if any(b["domain"] == domain for b in r.get("benchmarks", ()))]
     require(not same or (confirm_distinct or "").strip(),
             f"标杆 {domain} 已用于方向 {same};确属不同方向请用 --confirm-distinct 写理由")
     rec = {

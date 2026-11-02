@@ -20,8 +20,6 @@ SOURCE_KINDS = seeds.SOURCES + ("quick",)
 ROTATION = ("sibling", "serp", "geo", "community")
 OUTCOMES = ("started", "completed", "blocked", "skipped")
 FOUND_TARGET = 3
-SEMRUSH_DAILY_LIMIT = 100        # 代理站每天约一百来次(以往运行实测),两条道合计
-SEMRUSH_STOP_AT = 90             # 今天用到这个数就停,留余量给恢复和复查
 QUICK_ROUNDS_PER_DAY = 1         # 快道每天最多开 1 轮(用户 2026-10-15 定:同日第 2 轮 Trends 就 429,多轮分天跑)
 
 
@@ -110,11 +108,10 @@ def record(root, *, skill, progress, sources_opened=(), directions_touched=(), s
 
 
 def semrush_budget(rows, day=None) -> dict:
-    """今天(UTC 日期,与清单时间同口径)两条道合计用了多少 Semrush、还剩多少、是否该停。"""
+    """今天(UTC 日期,与清单时间同口径)两条道合计用了多少 Semrush。只记数、不设上限:
+    用户 2026-10-20 定,有额度就用,Semrush 页面提示额度用完才停(契约 §9)。"""
     day = day or today()
-    used = sum(r["semrush_calls"] for r in rows if r["recorded_at"][:10] == day)
-    return {"semrush_calls_today": used, "semrush_daily_limit": SEMRUSH_DAILY_LIMIT,
-            "semrush_left_today": max(SEMRUSH_DAILY_LIMIT - used, 0), "semrush_stop": used >= SEMRUSH_STOP_AT}
+    return {"semrush_calls_today": sum(r["semrush_calls"] for r in rows if r["recorded_at"][:10] == day)}
 
 
 def _next_source(root, rows):

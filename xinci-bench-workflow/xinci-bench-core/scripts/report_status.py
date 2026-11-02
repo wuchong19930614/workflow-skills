@@ -239,8 +239,7 @@ def main(argv=None):
               + f"(每轮最多预判 {QM.QUICK_ASSUMPTIONS['forecast_per_run']} 个)"
               + (f" → {tail}:{w['reason']}" if tail else ""))
     b = st["semrush"]
-    print(f"今天 Semrush 已用 {b['semrush_calls_today']}/{b['semrush_daily_limit']} 次"
-          + ("(到了停止线,今天别再跑 Semrush)" if b["semrush_stop"] else "") + f";累计 {st['semrush_calls_total']} 次")
+    print(f"今天 Semrush 已用 {b['semrush_calls_today']} 次;累计 {st['semrush_calls_total']} 次")
     return 0
 
 

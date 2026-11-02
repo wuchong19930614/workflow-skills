@@ -490,7 +490,8 @@ class SemrushTodayLineTest(unittest.TestCase):
             buf = io.StringIO()
             with contextlib.redirect_stdout(buf):
                 RS.main(["--data-root", str(root)])
-            self.assertIn("今天 Semrush 已用 0/100 次", buf.getvalue())
+            self.assertIn("今天 Semrush 已用 0 次;累计 0 次", buf.getvalue())
+            self.assertNotIn("/100", buf.getvalue())                                # 不设每日上限
 
 
 if __name__ == "__main__":

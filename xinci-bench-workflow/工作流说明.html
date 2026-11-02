@@ -1,0 +1,2137 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>body{margin:0}</style>
+<title>xinci-bench 工作流说明</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Serif+SC:wght@600;700&display=swap">
+<style>
+/* 布局:左侧固定目录 + 右侧单栏正文;窄屏时目录收进正文顶部的折叠块 */
+:root {
+  --bg: #f5f7f6;
+  --surface: #ffffff;
+  --fg: #1b2422;
+  --muted: #5a6764;
+  --line: #d8dfdc;
+  --accent: #0b6870;
+  --accent-soft: #e2efef;
+  --code-bg: #edf2f0;
+  --go: #1d7647;
+  --no: #ad3a2c;
+  --hold: #9a6300;
+  --bar: #8fbfc2;
+  --watch: #6a4c9c;
+  --display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --body: "PingFang SC", "Hiragino Sans GB", "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111716; --surface: #182120; --fg: #dce4e1; --muted: #93a19d; --line: #2a3533;
+    --accent: #5db7be; --accent-soft: #15292a; --code-bg: #1d2826; --go: #5cc189; --no: #e47b6c;
+    --hold: #dfa64a; --bar: #2f6a6e; --watch: #b89ce6; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111716; --surface: #182120; --fg: #dce4e1; --muted: #93a19d; --line: #2a3533;
+  --accent: #5db7be; --accent-soft: #15292a; --code-bg: #1d2826; --go: #5cc189; --no: #e47b6c;
+  --hold: #dfa64a; --bar: #2f6a6e; --watch: #b89ce6; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.75 var(--body); -webkit-font-smoothing: antialiased; }
+.page { display: grid; grid-template-columns: 16rem minmax(0, 1fr); gap: 3rem; max-width: 77rem; margin: 0 auto; padding-inline: 24px; padding-block: 2.5rem 5rem; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 1.5rem); align-self: start; max-height: calc(100vh - 3rem); overflow-y: auto; font-size: 0.85rem; line-height: 1.5; padding-right: 0.5rem; }
+nav.toc .toc-label { font-family: var(--mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); margin-bottom: 0.6rem; }
+nav.toc ol, details.toc-mobile ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.12rem; }
+nav.toc ol ol, details.toc-mobile ol ol { padding-left: 0.9rem; margin: 0.12rem 0 0.4rem; border-left: 1px solid var(--line); }
+nav.toc a, details.toc-mobile a { color: var(--fg); text-decoration: none; display: block; padding: 0.1rem 0.4rem; border-radius: 4px; }
+nav.toc ol ol a, details.toc-mobile ol ol a { color: var(--muted); }
+nav.toc a:hover, nav.toc a:focus-visible, details.toc-mobile a:hover { background: var(--accent-soft); color: var(--accent); outline: none; }
+details.toc-mobile { display: none; }
+main { min-width: 0; max-width: 48rem; }
+header.doc { margin-bottom: 2.5rem; }
+.eyebrow { font-family: var(--mono); font-size: 0.76rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+h1 { font-family: var(--display); font-size: clamp(1.9rem, 4vw, 2.6rem); line-height: 1.2; margin: 0.4rem 0 0.8rem; text-wrap: balance; }
+h2 { font-family: var(--display); font-size: 1.55rem; line-height: 1.3; margin: 3.6rem 0 1rem; padding-top: 1.2rem; border-top: 1px solid var(--line); text-wrap: balance; }
+h3 { font-size: 1.12rem; line-height: 1.4; margin: 2.2rem 0 0.7rem; text-wrap: balance; }
+h2 .num, h3 .num { font-family: var(--mono); font-weight: 500; color: var(--accent); margin-right: 0.5rem; font-size: 0.85em; }
+p { margin: 0.7rem 0; }
+.meta { color: var(--muted); font-size: 0.9rem; }
+.verdict { background: var(--accent-soft); border-radius: 8px; padding: 1.1rem 1.3rem; margin: 1.4rem 0; }
+.verdict p:first-child { margin-top: 0; } .verdict p:last-child { margin-bottom: 0; }
+.verdict strong { color: var(--accent); }
+.note { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 0.9rem 1.1rem; margin: 1.2rem 0; font-size: 0.95rem; }
+.note .tag { font-family: var(--mono); font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--hold); display: block; margin-bottom: 0.2rem; }
+ul, ol.steps { padding-left: 1.3rem; margin: 0.6rem 0; }
+li { margin: 0.3rem 0; }
+code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 0.08em 0.36em; border-radius: 4px; overflow-wrap: anywhere; }
+pre.json { font-family: var(--mono); font-size: 0.8rem; line-height: 1.6; background: var(--code-bg); border-radius: 8px; padding: 1rem 1.1rem; overflow-x: auto; margin: 1rem 0; }
+pre.json code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+pre.json .c { color: var(--muted); }
+.tw { overflow-x: auto; margin: 1rem 0 1.4rem; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+th { text-align: left; font-weight: 600; background: var(--code-bg); padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+tr:last-child td { border-bottom: 0; }
+td.n, th.n { text-align: right; white-space: nowrap; font-family: var(--mono); font-size: 0.86rem; }
+td.k { white-space: nowrap; font-weight: 600; }
+.diagram { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 1rem; margin: 1rem 0 0.4rem; }
+.diagram pre.mermaid { margin: 0; background: none; font-family: var(--body); }
+.caption { font-size: 0.85rem; color: var(--muted); margin: 0.2rem 0 1.4rem; }
+.chip { display: inline-block; font-family: var(--mono); font-size: 0.78rem; padding: 0.05rem 0.5rem; border-radius: 999px; border: 1px solid currentColor; white-space: nowrap; }
+.chip.go { color: var(--go); } .chip.no { color: var(--no); } .chip.hold { color: var(--hold); } .chip.found { color: var(--accent); } .chip.watch { color: var(--watch); }
+.funnel { display: grid; gap: 0.45rem; margin: 1.1rem 0 0.6rem; }
+.funnel .row { display: grid; grid-template-columns: minmax(0, 13rem) minmax(0, 1fr) 3.5rem; gap: 0.8rem; align-items: center; font-size: 0.9rem; }
+.funnel .track { height: 0.9rem; background: var(--code-bg); border-radius: 3px; overflow: hidden; }
+.funnel .fill { height: 100%; background: var(--bar); }
+.funnel .row:last-child .fill { background: var(--accent); }
+.funnel .val { text-align: right; font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.8rem; margin: 1.4rem 0; }
+.facts div { border-top: 2px solid var(--accent); padding-top: 0.5rem; }
+.facts .k { font-size: 0.8rem; color: var(--muted); }
+.facts .v { font-family: var(--mono); font-size: 0.95rem; font-weight: 500; line-height: 1.45; }
+details.more { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin: 1rem 0; }
+details.more summary { cursor: pointer; padding: 0.7rem 1rem; font-weight: 600; }
+details.more[open] summary { border-bottom: 1px solid var(--line); }
+details.more .tw { border: 0; margin: 0; border-radius: 0 0 8px 8px; }
+a { color: var(--accent); text-underline-offset: 0.18em; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+footer { margin-top: 4rem; padding-top: 1rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+@media (max-width: 900px) {
+  .page { grid-template-columns: minmax(0, 1fr); gap: 0; padding-inline: 16px; padding-block: 1.5rem 4rem; }
+  nav.toc { display: none; }
+  details.toc-mobile { display: block; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 0.6rem 0.9rem; margin-bottom: 1.6rem; font-size: 0.9rem; }
+  details.toc-mobile summary { cursor: pointer; font-weight: 600; }
+  .funnel .row { grid-template-columns: minmax(0, 1fr) 3.5rem; }
+  .funnel .track { grid-column: 1 / -1; grid-row: 2; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+</style>
+</head>
+<body>
+
+<div class="page">
+<nav class="toc" aria-label="目录">
+  <div class="toc-label">目录</div>
+  <ol id="toc-list">
+    <li><a href="#s0">一页看懂</a></li>
+    <li><a href="#s1">1 定位与口径</a><ol>
+      <li><a href="#s1-1">1.1 解决什么问题</a></li>
+      <li><a href="#s1-2">1.2 你已定的口径</a></li>
+      <li><a href="#s1-3">1.3 和旧工作流的关系</a></li></ol></li>
+    <li><a href="#s2">2 组成与用法</a><ol>
+      <li><a href="#s2-1">2.1 五个 skill</a></li>
+      <li><a href="#s2-2">2.2 二十三个脚本</a></li>
+      <li><a href="#s2-3">2.3 运行前准备</a></li>
+      <li><a href="#s2-4">2.4 常用命令</a></li></ol></li>
+    <li><a href="#s3">3 整体流程</a><ol>
+      <li><a href="#s3-1">3.1 流程总图</a></li>
+      <li><a href="#s3-2">3.2 方向的四种状态</a></li>
+      <li><a href="#s3-3">3.3 五个发现来源与顺序</a></li>
+      <li><a href="#s3-4">3.4 深核的先后顺序</a></li>
+      <li><a href="#s3-5">3.5 连续运行的一轮</a></li>
+      <li><a href="#s3-6">3.6 运行清单的规则</a></li></ol></li>
+    <li><a href="#s4">4 时序图</a><ol>
+      <li><a href="#s4-1">4.1 找标杆（scan）</a></li>
+      <li><a href="#s4-2">4.2 深核与测算（assess）</a></li>
+      <li><a href="#s4-3">4.3 结算与回滚（settle）</a></li></ol></li>
+    <li><a href="#s5">5 数据来源</a><ol>
+      <li><a href="#s5-1">5.1 外部来源</a></li>
+      <li><a href="#s5-2">5.2 Google 首屏读取规程</a></li>
+      <li><a href="#s5-3">5.3 旧数据导入</a></li>
+      <li><a href="#s5-4">5.4 种子清单</a></li>
+      <li><a href="#s5-5">5.5 数据区现状</a></li>
+      <li><a href="#s5-6">5.6 采集时已知的坑</a></li></ol></li>
+    <li><a href="#s6">6 数据过滤逻辑</a><ol>
+      <li><a href="#s6-1">6.1 过滤总览</a></li>
+      <li><a href="#s6-2">6.2 旧数据导入过滤</a></li>
+      <li><a href="#s6-3">6.3 范围排除</a></li>
+      <li><a href="#s6-4">6.4 初核五条 B1–B5</a></li>
+      <li><a href="#s6-5">6.5 淘汰与复查</a></li>
+      <li><a href="#s6-6">6.6 深核里的过滤</a></li></ol></li>
+    <li><a href="#s7">7 收入测算</a><ol>
+      <li><a href="#s7-1">7.1 公式</a></li>
+      <li><a href="#s7-2">7.2 付费功能怎么算</a></li>
+      <li><a href="#s7-3">7.3 假设表</a></li>
+      <li><a href="#s7-4">7.4 门槛实际意味着什么</a></li>
+      <li><a href="#s7-5">7.5 里程碑与止损</a></li>
+      <li><a href="#s7-6">7.6 投入与回本</a></li></ol></li>
+    <li><a href="#s8">8 GEO 怎么用</a><ol>
+      <li><a href="#s8-1">8.1 作为发现来源</a></li>
+      <li><a href="#s8-2">8.2 作为筛选信号</a></li>
+      <li><a href="#s8-3">8.3 作为建站规范</a></li></ol></li>
+    <li><a href="#s9">9 判定与证据复核</a><ol>
+      <li><a href="#s9-1">9.1 go 的四个条件</a></li>
+      <li><a href="#s9-2">9.2 否决与搁置</a></li>
+      <li><a href="#s9-3">9.3 结算时的复核</a></li>
+      <li><a href="#s9-4">9.4 数据完整性规则</a></li></ol></li>
+    <li><a href="#s10">10 产出物</a><ol>
+      <li><a href="#s10-1">10.1 决策书</a></li>
+      <li><a href="#s10-2">10.2 建站简报</a></li>
+      <li><a href="#s10-3">10.3 数据区目录</a></li></ol></li>
+    <li><a href="#s11">11 新词快道</a><ol>
+      <li><a href="#s11-1">11.1 为什么要有快道</a></li>
+      <li><a href="#s11-2">11.2 你已定的口径</a></li>
+      <li><a href="#s11-3">11.3 流程总图</a></li>
+      <li><a href="#s11-4">11.4 状态与否决门</a></li>
+      <li><a href="#s11-5">11.5 一次运行的时序图</a></li>
+      <li><a href="#s11-6">11.6 数据来源与取法</a></li>
+      <li><a href="#s11-7">11.7 速判六条与原料池</a></li>
+      <li><a href="#s11-8">11.8 量级换算与判定</a></li>
+      <li><a href="#s11-9">11.9 快道假设表</a></li>
+      <li><a href="#s11-10">11.10 强烈推荐与建站跟进</a></li>
+      <li><a href="#s11-11">11.11 快道决策书与最小版本简报</a></li>
+      <li><a href="#s11-12">11.12 复核与数据完整性</a></li>
+      <li><a href="#s11-13">11.13 上线前预判：为什么、适用范围</a></li>
+      <li><a href="#s11-14">11.14 预测模型与参照库</a></li>
+      <li><a href="#s11-15">11.15 登记、复核与看板提醒</a></li></ol></li>
+    <li><a href="#s12">12 异常处理</a></li>
+    <li><a href="#s13">13 质量保障</a></li>
+    <li><a href="#s14">14 可调参数与待定事项</a><ol>
+      <li><a href="#s14-1">14.1 可调参数一览</a></li>
+      <li><a href="#s14-2">14.2 未确认的假设</a></li>
+      <li><a href="#s14-3">14.3 实现时的调整</a></li>
+      <li><a href="#s14-4">14.4 已知小问题</a></li></ol></li>
+    <li><a href="#s15">15 附：数据结构</a><ol>
+      <li><a href="#s15-1">15.1 方向记录</a></li>
+      <li><a href="#s15-2">15.2 初核观察</a></li>
+      <li><a href="#s15-3">15.3 深核六类观察</a></li>
+      <li><a href="#s15-4">15.4 种子池与淘汰索引</a></li>
+      <li><a href="#s15-5">15.5 运行清单</a></li>
+      <li><a href="#s15-6">15.6 快道方向记录</a></li>
+      <li><a href="#s15-7">15.7 快道四类观察</a></li>
+      <li><a href="#s15-8">15.8 原料池、快道淘汰记录与补全快照</a></li></ol></li>
+  </ol>
+</nav>
+
+<main>
+<details class="toc-mobile"><summary>目录</summary><div id="toc-mobile-slot"></div></details>
+
+<header class="doc">
+  <div class="eyebrow">xinci-bench-workflow · 标杆倒推选站 + 新词快道</div>
+  <h1>xinci-bench 工作流说明</h1>
+  <p class="meta">依据分支 <code>xinci-bench-workflow</code> 的代码与契约（2026-10-17，533 个测试通过）。设计稿：<code>docs/superpowers/specs/2026-10-13-xinci-bench-workflow-design.md</code>（标杆道）、<code>docs/superpowers/specs/2026-10-13-xinci-bench-quick-lane-design.md</code>（新词快道）、<code>docs/superpowers/specs/2026-10-16-xinci-bench-quick-pregame-go-design.md</code>（快道上线前预判）；判据正本：<code>xinci-bench-workflow/xinci-bench-core/选站契约.md</code>。本文与契约不一致时，以契约和代码为准。</p>
+</header>
+
+<section id="s0">
+<h2>一页看懂</h2>
+<div class="verdict">
+  <p><strong>这套工作流先找"最近一两年才起量、权重很低、却已经有流量的小站"，再倒推：同方向我们照着做或做得更好，上线 12 个月能不能单站做到每月 $100。</strong>能就出一份决策书和建站简报，不能就出否决或搁置的决策书。它不建站、不上线。流量、需求和收入都按英文区 6 国（美、英、加、澳、新、爱）合计算。</p>
+  <p>和以前的区别：以前是"找词 → 用搜索量 × 点击率估收入"，估出来比现实乐观 2–5 倍；现在改成"看同方向新站实际拿到了多少流量"，再打折扣算我们的。</p>
+</div>
+<div class="facts">
+  <div><div class="k">达标线</div><div class="v">单站 · 12 个月 · $100/月</div></div>
+  <div><div class="k">初核门槛</div><div class="v">≤24 月 · AS≤30 · ≥5,000</div></div>
+  <div><div class="k">无付费收入时的过线条件</div><div class="v">第 12 月英文区约 1–1.25 万访问</div></div>
+  <div><div class="k">待初核种子</div><div class="v">74 个域名</div></div>
+</div>
+<p>整条链只有三段：<strong>找标杆</strong>（scan，低成本初核 5 条）→ <strong>深核与测算</strong>（assess，6 步核实 + 标杆份额法）→ <strong>结算</strong>（settle，复核证据、生成决策书、转移状态）。连续运行时每轮先补够 3 个待深核方向，再深核排序前 2 个，默认跑 3 轮，出 go 也不停。</p>
+<div class="verdict">
+  <p><strong>另有一条新词快道（第 11 节），专抓最近 1 周到 3 个月才冒出来、首页还没人做、会反复被搜的新词：预计上线 90 天内单月能到 1 万英文区访问（美、英、加、澳、新、爱 6 国合计）就判 go，并强烈推荐你马上建一个 1–3 天能做完的最小版本。</strong>暗号 <code>xinci_bench_quick_run</code>，手动触发。</p>
+  <p>为什么单开一条：刚冒出来的词还没有任何站在做，标杆道"先找标杆"的入口按定义抓不到它。</p>
+  <p>快道还允许<strong>上线前预判</strong>（11.13）：游戏开玩日还有 3–21 天时，按"对象名开玩前的量 × 参照库倍数"预测，预测的下四分位过线就判 go，建议最晚开玩日前 1 天上线；开玩后 7 天用实测对账。预期 go 很少。</p>
+</div>
+</section>
+
+<section id="s1">
+<h2><span class="num">1</span>定位与口径</h2>
+
+<h3 id="s1-1"><span class="num">1.1</span>解决什么问题</h3>
+<p><strong>以前的工作流选出来的词，拿真实小站的流量一核，几乎全部到不了每月 $100。</strong>xinci-simple 跑了 8 次、63 个候选、4 个通过，但复核结果是：trash-pickup 大概率每月不到 $20，dog-parks 达到 $100 的可能不到 1%，fuse-box-diagram 约 $50–150，belt-diagram 不值得做。</p>
+<p>最靠得住的信号反而是"近一年新起量的低权重小站"，例如 wisconsinpropertymap（AS 11，约 9 个月到 5.4K/月）、whatcountyiamin（AS 14，约 3 个月到峰值 2.45 万）、flpropertycheck（AS 12，7 个月约 5,200/月）。它们直接证明"在现在的 AI 概览和 2026 年几轮垃圾内容更新之后，新站还能进"。这套工作流把这类小站当成起点。</p>
+
+<h3 id="s1-2"><span class="num">1.2</span>你已定的口径</h3>
+<p><strong>以下是你 2026-10-13 逐条定的（最后一条是 10-14 追加的），改动需要你拍板。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>口径</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td class="k">达标</td><td>单站，上线后 12 个月内 $100/月</td></tr>
+    <tr><td class="k">站型</td><td>工具站、内容站、游戏站都行（代码里是 tool / content / game / mixed）</td></tr>
+    <tr><td class="k">变现</td><td>只算展示广告、付费功能/订阅；不算联盟佣金和捐赠</td></tr>
+    <tr><td class="k">GEO</td><td>用作筛选信号和建站规范；收入只按 Google 自然点击算</td></tr>
+    <tr><td class="k">投入</td><td>不设上限，决策书写清工时、现金、维护量，由你拍板</td></tr>
+    <tr><td class="k">边界</td><td>到"决策书 + 建站简报"为止，不注册域名、不建站、不上线</td></tr>
+    <tr><td class="k">连续运行</td><td>出 go 不停，跑满预算</td></tr>
+    <tr><td class="k">起点假设</td><td>后来者系数 0.25 / 0.5 / 1.0，止损线"第 6 个月低于基准 25%"</td></tr>
+    <tr><td class="k">英文区（10-14 追加）</td><td>不只算美区：初核 B3、标杆流量、方向需求、访问与收入都按美国、英国、加拿大、澳大利亚、新西兰、爱尔兰 6 国合计；美国以外的读数按国家分布从美区读数换算；美国以外的广告收入按美国的一半（AdSense $2、Journey $8）</td></tr>
+  </tbody>
+</table></div>
+<p>我定的默认做法（你没反对，也可以改）：只做英文站（流量与收入从 10-14 起按英文区 6 国算，原来"只算美区、其他英语国家只作加分"的做法作废）；排除项沿用 YMYL 等，新增"色情/成人、赌博""侵权"，去掉"需亲身体验"（它原本是为联盟评测设的）。</p>
+<p>新词快道另有一组你定的口径，见 11.2。</p>
+
+<h3 id="s1-3"><span class="num">1.3</span>和旧工作流的关系</h3>
+<ul>
+  <li><strong>xinci-simple 冻结</strong>：不删、不再跑，脚本和契约不改；它的 skill 软链仍保留。</li>
+  <li><strong>旧数据只读引用</strong>：从 xinci-simple 数据区导入种子、词库、旧裁决，导入前后逐个文件比对 SHA-256，确认没被改动。</li>
+  <li><strong>零运行时依赖</strong>：新脚本不 import 旧脚本；决策书 html 渲染器是从旧脚本改写来的独立一份。两套各有自己的数据区和指针文件（<code>.xinci-bench-data-root</code>）。</li>
+  <li>xinci 新词工作流不涉及。</li>
+</ul>
+</section>
+
+<section id="s2">
+<h2><span class="num">2</span>组成与用法</h2>
+
+<h3 id="s2-1"><span class="num">2.1</span>五个 skill</h3>
+<p><strong>skill 只串流程，判据只写在 <code>选站契约.md</code>。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>skill</th><th>怎么触发</th><th>做什么</th></tr></thead>
+  <tbody>
+    <tr><td class="k">xinci-bench-scan</td><td>说"bench scan""找标杆站"</td><td>取一批种子，初核 B1–B5，合格的登记为方向，不合格的进淘汰索引</td></tr>
+    <tr><td class="k">xinci-bench-assess</td><td>说"bench assess""深核方向""出建站简报"</td><td>六步深核、测算、结算，生成决策书（go 时附建站简报）</td></tr>
+    <tr><td class="k">xinci-bench-run</td><td>暗号 <code>xinci_bench_run max_rounds=N</code></td><td>连续运行，每轮 scan + assess，默认 3 轮；暗号即授权既定的观察、账本、种子池和清单写入</td></tr>
+    <tr><td class="k">xinci-bench-status</td><td>说"bench status"</td><td>只读看板，不写任何文件</td></tr>
+    <tr><td class="k">xinci-bench-quick</td><td>暗号 <code>xinci_bench_quick_run</code></td><td>新词快道一次运行：先提醒待开建的 go，复查观察中的方向，扫新信号、速判、登记测算结算；出 go 时推送通知，汇报第一行写"【立即建站】"；开玩日在 3–21 天内的游戏另做上线前预判（第 11 节）</td></tr>
+  </tbody>
+</table></div>
+<p>标杆道的四个 skill 汇报前也先读看板：第一屏有"【立即建站】"行时，原样放在汇报最前面。</p>
+
+<h3 id="s2-2"><span class="num">2.2</span>二十三个脚本</h3>
+<p><strong>全部只用 Python 标准库，放在 <code>xinci-bench-core/scripts/</code>。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>脚本</th><th>职责</th></tr></thead>
+  <tbody>
+    <tr><td class="k">_common.py</td><td>路径常量、统一的拒收错误、时间戳、原子写文件、SHA-256、读写账本</td></tr>
+    <tr><td class="k">data_root.py</td><td>找数据区：命令参数 &gt; 环境变量 <code>XINCI_BENCH_DATA_ROOT</code> &gt; 仓库根指针文件 &gt; 退出码 2，不猜位置</td></tr>
+    <tr><td class="k">init_workspace.py</td><td>建 10 个目录和 6 个空文件（含快道的原料池、淘汰记录、补全快照目录），可重复执行；<code>--no-save</code> 不写指针</td></tr>
+    <tr><td class="k">seed_import.py</td><td>从 xinci-simple 数据区只读导入种子、词库、旧裁决</td></tr>
+    <tr><td class="k">lexicon.py</td><td>按包含匹配查旧词库与旧裁决，只读</td></tr>
+    <tr><td class="k">seeds.py</td><td>种子池与淘汰索引：取批、登记、标记已初核、记淘汰、到期回池、统计</td></tr>
+    <tr><td class="k">write_observation.py</td><td>按 13 类观察（标杆道 7 类、快道 6 类）校验字段，只追加写入；初核三个数值门槛、快道锚词比值与日期在这里强制</td></tr>
+    <tr><td class="k">ledger.py</td><td>两条道共用的方向账本：登记、补数、排序（只排标杆道）、结算前复核、状态转移；快道另有登记（含上线前预判的 <code>forecast</code> 登记）、观察中复查、预判复核 <code>review-forecast</code>、建站跟进</td></tr>
+    <tr><td class="k">bench_model.py</td><td>标杆份额法：三档访问与收入、达标所需访问、里程碑</td></tr>
+    <tr><td class="k">build_doc.py</td><td>按账本与绑定观察生成决策书 md（go 时含建站简报），再调 html 渲染</td></tr>
+    <tr><td class="k">build_doc_html.py</td><td>md → 单文件 html，内嵌 md 的 SHA-256；快道"立即建站"一节加底色</td></tr>
+    <tr><td class="k">settle.py</td><td>结算：复核 → 写结论与绑定 → 生成决策书 → 转移 → 校验，失败回滚；按道选决策书与复核规则</td></tr>
+    <tr><td class="k">validate_ledger.py</td><td>账本、种子池、淘汰索引、快道原料池与淘汰记录的不变式校验，有错非零退出</td></tr>
+    <tr><td class="k">run_log.py</td><td>运行清单：写阶段开始与结束、推导下一步与恢复位置；两条道分开恢复、互不阻塞</td></tr>
+    <tr><td class="k">report_status.py</td><td>看板；第一行起置顶待开建的快道 go；列出即将开玩的游戏与建议跑快道的日期；加上线前预判的六类提醒（可预判、复核到期、预判失准、开玩日推迟、预判后搁置的方向已开玩、补参照）</td></tr>
+    <tr><td class="k">quick_model.py</td><td>快道假设表、锚词换算、趋势与冲高回落、三档访问与收入、判定建议、验收节点与止损线</td></tr>
+    <tr><td class="k">quick_pool.py</td><td>快道原料池（去重、7 天过期、过期复活、否决与登记时自动消耗、还没到开玩日的只进 <code>upcoming</code>）与快道淘汰记录；占位小站可顺带登记为标杆道种子</td></tr>
+    <tr><td class="k">suggest_snapshot.py</td><td>取 Google 自动补全并存快照，比出以前从没出现过的新建议；快道里联网的脚本之一，测试用假取数函数不联网</td></tr>
+    <tr><td class="k">build_quick_doc.py</td><td>快道决策书 md（go 时含"立即建站"与最小版本简报），再调 html 渲染</td></tr>
+    <tr><td class="k">trends_volume.py</td><td>快道锚词换算：把各国 Trends 曲线和锚词月量换算成量级观察，读不出的国家自动记 0，列出要去 Semrush 查锚词月量的国家；不再手算</td></tr>
+    <tr><td class="k">quick_reference.py</td><td>快道参照库（上线前预判用）：<code>time-range</code> 算取数日期范围，<code>build</code> 把对象名与任务词两次 Trends 输出算成参照观察（窗口写死，比值与倍数在 Python 里按曲线算），<code>summary</code> 看每个任务类型 × 类别的条数与下四分位、中位数倍数</td></tr>
+    <tr><td class="k">quick_forecast.py</td><td>快道上线前预判：把对象名开玩前的量和参照库倍数算成预判观察（P1–P6、1–4 项任务合计、下四分位与中位数两档），给出 go / watching / skip / measure_rest</td></tr>
+    <tr><td class="k">trends_fetch.js</td><td>不是 Python 脚本：在 Trends 页面里运行。<code>xinciTrends</code> 按国家取新词与锚词的 30 天逐日曲线（去掉当天不完整的点），交给 trends_volume.py；<code>xinciTrendsRising</code> 取某个种子词近 7 天的飙升相关查询（自动丢掉填字游戏提示词）；<code>xinciTrendsFirstSeen</code> 查对象名近 90 天第一次有热度的日子（查不到开玩日期时用）</td></tr>
+    <tr><td class="k">wiki_releases.py</td><td>快道上线日历：从 Wikipedia 发售表取最近 14 天已上线与未来 30 天要上线的原创、抢先体验游戏，按词条浏览量排，前 20 个输出成带开玩日期的原料；一条一条查、遇 429 停下，没查到浏览量的也照样输出</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s2-3"><span class="num">2.3</span>运行前准备</h3>
+<ul>
+  <li><strong>Semrush</strong>：在你自己的 Chrome 里保持登录。工作流通过 Chrome 工具复用这个已登录的标签页。</li>
+  <li><strong>权限</strong>：以往子代理访问 Semrush 代理站被自动模式分类器拦过，转达授权反而连累主会话。所以连续运行由主会话亲自执行，开跑前请在权限设置里给 Chrome 工具加放行规则，或者切到"逐条询问"模式。</li>
+  <li><strong>Google 首屏</strong>：用 Claude 的内置浏览器，保持未登录。</li>
+  <li><strong>新词快道</strong>：Trends 和 Google 首页用内置浏览器，上游来源用 curl；锚词月量美国先查旧词库，美国以外的国家要用 Semrush 查，所以快道每个方向通常也要花几次 Semrush。</li>
+  <li><strong>数据区</strong>：已经初始化，指针写在仓库根的 <code>.xinci-bench-data-root</code>（不入库）。</li>
+</ul>
+
+<h3 id="s2-4"><span class="num">2.4</span>常用命令</h3>
+<p><strong>日常只需要一句暗号；下面是脚本层面的命令，在仓库根执行。</strong></p>
+<pre class="json"><code><span class="c"># 连续运行(在对话里说)</span>
+xinci_bench_run max_rounds=3
+xinci_bench_quick_run                     <span class="c"># 新词快道一次运行</span>
+
+<span class="c"># 看板与校验</span>
+python3 xinci-bench-workflow/xinci-bench-core/scripts/report_status.py
+python3 xinci-bench-workflow/xinci-bench-core/scripts/validate_ledger.py
+python3 xinci-bench-workflow/xinci-bench-core/scripts/run_log.py --plan
+python3 xinci-bench-workflow/xinci-bench-core/scripts/run_log.py --plan --lane quick
+
+<span class="c"># 快道常用</span>
+python3 xinci-bench-workflow/xinci-bench-core/scripts/suggest_snapshot.py --object "Grow a Garden 2"
+python3 xinci-bench-workflow/xinci-bench-core/scripts/quick_pool.py pending --top 10
+python3 xinci-bench-workflow/xinci-bench-core/scripts/trends_volume.py --input &lt;各国曲线与锚词&gt; --slug &lt;方向&gt;
+python3 xinci-bench-workflow/xinci-bench-core/scripts/ledger.py follow-up --slug &lt;方向&gt; --status started --domain &lt;域名&gt;
+
+<span class="c"># 查旧词库与旧死因</span>
+python3 xinci-bench-workflow/xinci-bench-core/scripts/lexicon.py --match "county"
+
+<span class="c"># 首次使用(已做过)</span>
+python3 xinci-bench-workflow/xinci-bench-core/scripts/init_workspace.py --data-root &lt;数据区&gt;
+python3 xinci-bench-workflow/xinci-bench-core/scripts/seed_import.py --legacy-root &lt;xinci-simple 数据区&gt;
+
+<span class="c"># 测试</span>
+python3 -m unittest discover -s xinci-bench-workflow/xinci-bench-core/scripts/tests -t xinci-bench-workflow/xinci-bench-core/scripts/tests -q</code></pre>
+<p>看板显示：各状态方向数；待深核方向的起量速度与 AS；每个 go 的基准收入和决策书路径；搁置天数（超过 90 天提醒）；否决按门分布；种子池按来源统计的待初核数、已初核数、淘汰数、到期可复查数；累计 Semrush 调用。快道部分在最前面：置顶的"【立即建站】"行、到期的验收节点；后面是观察中方向的剩余天数与复查次数、原料池待看数、即将开玩的游戏（建议开玩当天到第 3 天跑一次快道）。</p>
+</section>
+
+<section id="s3">
+<h2><span class="num">3</span>整体流程</h2>
+
+<h3 id="s3-1"><span class="num">3.1</span>流程总图</h3>
+<p><strong>域名先过低成本的初核，合格的才变成"方向"进入深核；深核的结论只经结算脚本落账。</strong></p>
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+  OLD["xinci-simple 旧数据（只读）"] --> IMP["seed_import 导入"]
+  MAN["手工种子"] --> IMP
+  IMP --> POOL["种子池"]
+  IMP --> LEX["旧词库 与 旧裁决"]
+  SRC["sibling / serp / geo / community 新发现"] --> POOL
+  POOL --> TAKE["每批取 16 个域名"]
+  TAKE --> B15{"初核 B1–B5"}
+  B15 -->|任一不过| REJ["淘汰索引"]
+  REJ -->|只因 B3 不过，90 天后| POOL
+  B15 -->|全过| FOUND["登记为方向 found"]
+  FOUND --> RANK["按起量速度排序"]
+  RANK --> STEPS["深核六步：起量手段、需求、首屏与 GEO、差异点、交付、简报素材"]
+  LEX -.查旧量与旧死因.-> STEPS
+  STEPS --> MODEL["标杆份额法：三档访问与收入"]
+  MODEL --> SETTLE{"settle 结算"}
+  SETTLE -->|四条全满足| GO["go：决策书 + 建站简报"]
+  SETTLE -->|命中否决门| NO["rejected：决策书"]
+  SETTLE -->|证据拿不到| HOLD["parked：决策书"]
+  HOLD -.补证据后重新结算.-> SETTLE
+</pre></div>
+<p class="caption">虚线表示可选或回头的路径。</p>
+
+<h3 id="s3-2"><span class="num">3.2</span>方向的四种状态</h3>
+<p><strong>只有四种状态，状态只能由 <code>settle.py</code> 转移。</strong>初核不过的域名不登记成方向，只进淘汰索引，所以账本里不会堆满"只看过一眼"的域名。</p>
+<p>这四种状态是标杆道的；新词快道多一个"观察中"（watching），见 11.4。</p>
+<div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> found: 初核全过，register
+  found --> go: 四条全满足
+  found --> rejected: 命中否决门
+  found --> parked: 关键证据拿不到
+  parked --> go: 补证据后过线
+  parked --> rejected: 补证据后否决
+  go --> [*]
+  rejected --> [*]
+</pre></div>
+<div class="tw"><table>
+  <thead><tr><th>状态</th><th>含义</th><th>能否再改</th></tr></thead>
+  <tbody>
+    <tr><td><span class="chip found">found</span></td><td>已登记、待深核</td><td>可补数（<code>ledger.py update</code>）</td></tr>
+    <tr><td><span class="chip go">go</span></td><td>值得做，有决策书和建站简报</td><td>终态</td></tr>
+    <tr><td><span class="chip no">rejected</span></td><td>带否决门：scope / benchmark / answered / revenue</td><td>终态</td></tr>
+    <tr><td><span class="chip hold">parked</span></td><td>证据不足搁置；超过 90 天看板提醒，不自动转移</td><td>可补数后重新结算，旧决策书归档到 <code>文档/历史/</code></td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s3-3"><span class="num">3.3</span>五个发现来源与顺序</h3>
+<p><strong>先把旧数据导入的标杆种子用完，再按 sibling → serp → geo → community 固定轮换。</strong>你指定来源时以你为准；恢复中断的阶段时沿用原来源。</p>
+<div class="tw"><table>
+  <thead><tr><th>来源</th><th>怎么找域名</th></tr></thead>
+  <tbody>
+    <tr><td class="k">legacy</td><td>旧数据导入的种子池（74 个待初核标杆），按登记顺序每批取 16 个</td></tr>
+    <tr><td class="k">sibling</td><td>对已核实的标杆，或种子池里只用来查同类站的 15 个小站，查 Semrush 自然搜索"竞争对手"列表</td></tr>
+    <tr><td class="k">serp</td><td>拿种子查询读 Google 首页，挑低 AS 的第三方站</td></tr>
+    <tr><td class="k">geo</td><td>AI 概览里点名推荐或引用的小站</td></tr>
+    <tr><td class="k">community</td><td>r/juststart、r/SideProject、Indie Hackers 等自曝流量的复盘帖；自报数字只当线索，必须回 Semrush 核实</td></tr>
+  </tbody>
+</table></div>
+<p>新发现的域名先用 <code>seeds.py add</code> 登记进种子池再初核；已在池里或在淘汰索引里的不会重复登记。不沿用 xinci-simple 的自适应调度，它有已知缺陷：零注册、零调用的轮次会让论坛来源的分数反升。</p>
+
+<h3 id="s3-4"><span class="num">3.4</span>深核的先后顺序</h3>
+<p><strong>待深核的方向按"起量速度"排，快的先核。</strong></p>
+<pre class="json"><code>起量速度 = 标杆当前英文区自然流量 ÷ 起量以来的月数
+          <span class="c">// 起量月没有时用注册月;两样都没有按 24 个月算;月数最少按 1</span>
+          <span class="c">// 一个方向有多个标杆时取最快的;外链驱动的标杆不参与</span>
+同分时:AS 低的在前,再按方向名排</code></pre>
+<p>排序只决定先后，不否决任何方向。</p>
+
+<h3 id="s3-5"><span class="num">3.5</span>连续运行的一轮</h3>
+<p><strong>一轮 = 一次发现 + 一次深核。</strong></p>
+<ol class="steps">
+  <li><strong>发现（scan）</strong>：found 已有 3 个就跳过（照样写一条 skipped 清单）；不够就取一批种子初核，补到 3 个。</li>
+  <li><strong>深核（assess）</strong>：深核排序前 2 个，每个都走到 go / rejected / parked；没有 found 时也写清单并如实记零。</li>
+  <li>核对清单、账本、决策书和 <code>validate_ledger.py</code> 一致后，才算一轮完成。</li>
+</ol>
+<div class="tw"><table>
+  <thead><tr><th>情况</th><th>处理</th></tr></thead>
+  <tbody>
+    <tr><td>跑满 N 轮</td><td>停，汇报</td></tr>
+    <tr><td>出了 go</td><td>不停，继续跑满预算（你定的）</td></tr>
+    <tr><td>Semrush 登录失效、额度用完、验证码；浏览器预检重试仍失败</td><td>写 blocked 清单，保留恢复位置；之后用同一个运行编号接着跑</td></tr>
+  </tbody>
+</table></div>
+<p>收尾汇报包括：跑了几轮、初核数与通过数、登记方向数、go / 各否决门 / 搁置数、每个 go 的基准收入和决策书路径、取到的未确认假设证据、累计 Semrush 调用、种子池余量、下次来源。</p>
+<p>成本估算（设计估算，未实测）：发现约 5 次 Semrush，每个方向深核约 10 次，一轮约 25 次；代理站每天约一百来次，一天大约能跑 3–4 轮。</p>
+
+<h3 id="s3-6"><span class="num">3.6</span>运行清单的规则</h3>
+<p><strong>每个阶段开始、结束各写一条清单，下一步由脚本推导，人不用记位置。</strong></p>
+<ul>
+  <li>新运行必须从第 1 轮的发现阶段开始；运行编号只能用字母、数字、连字符。</li>
+  <li>有一个未完成的运行时，只能恢复它，不能新开；有多个时报冲突，必须指定运行编号。</li>
+  <li>同一个运行的轮数预算不能改；阶段与轮次必须和推导出的恢复位置一致。</li>
+  <li>只有发现阶段可以"跳过"；已经结束的阶段不能再结束一次（防止重复记调用数）。</li>
+  <li>调用数只记本条新增的，不在后面的清单里重复累加。</li>
+  <li><strong>每日额度</strong>：不设上限（用户 2026-10-20 定），Semrush 有额度就用，页面提示额度用完才停、按 blocked 收尾改天接着跑；<code>--plan</code> 与看板只显示今天（UTC 日期）两条道合计已用多少次。</li>
+  <li>写入时间精确到微秒，同一秒内连写多条也能排对先后（实现时修过的一个问题）。</li>
+</ul>
+</section>
+
+<section id="s4">
+<h2><span class="num">4</span>时序图</h2>
+<p><strong>三张图分别对应一轮里的发现、深核，以及深核末尾的结算。</strong>Semrush 走你已登录的 Chrome；Google 首屏走内置浏览器（美区、桌面、未登录）；注册日和 ads.txt 用 curl。</p>
+
+<h3 id="s4-1"><span class="num">4.1</span>找标杆（scan）</h3>
+<div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as 用户
+  participant M as 主会话（run 驱动）
+  participant RL as run_log.py
+  participant SD as seeds.py
+  participant SR as Semrush（Chrome）
+  participant CU as RDAP（curl）
+  participant WO as write_observation.py
+  participant LG as ledger.py
+  U->>M: xinci_bench_run max_rounds=3
+  M->>RL: --plan
+  RL-->>M: action=scan，next_source=legacy，found_count
+  alt found 已有 3 个
+    M->>RL: scan started，再 finish skipped
+  else 不足 3 个
+    M->>RL: scan started
+    M->>SD: requeue（到期的 B3 淘汰域名回池）
+    M->>SD: take --source legacy --n 16
+    SD-->>M: 16 个待初核域名
+    M->>SR: 批量分析 粗筛 AS 与访问量
+    loop 过粗筛的每个域名
+      M->>CU: rdap.org 查注册日（B1）
+      M->>SR: Domain Overview 域级 AS、美区自然流量与按国家分布（B2，换算英文区）
+      M->>SR: Organic Research 去品牌词与定位词后的流量、词与页分布（B3 B4）
+      M->>M: 对照排除项（B5）
+    end
+    M->>WO: 整批写一份 scan 观察
+    WO-->>M: 校验通过，返回观察路径
+    M->>LG: register 全过的域名为方向 found
+    M->>SD: checked 已登记的，reject 不过的
+    M->>RL: finish completed，记 Semrush 调用数
+  end
+</pre></div>
+<p class="caption">前项已不过的域名，后项可以不查（填 null）以省额度；标"通过"但数字不达标的观察会被 write_observation.py 拒收。</p>
+
+<h3 id="s4-2"><span class="num">4.2</span>深核与测算（assess）</h3>
+<div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant M as 主会话
+  participant LG as ledger.py
+  participant SR as Semrush（Chrome）
+  participant LX as lexicon.py
+  participant GB as Google 首屏（内置浏览器）
+  participant CU as curl
+  participant WO as write_observation.py
+  participant BM as bench_model.py
+  participant ST as settle.py
+  M->>LG: rank
+  LG-->>M: 起量速度最高的 2 个方向
+  loop 每个方向
+    M->>SR: Domain Overview 流量曲线，Backlink Analytics 引荐域名与锚文本
+    M->>CU: ads.txt 与定价页
+    M->>WO: benchmark 观察（每个标杆一份）
+    M->>LX: --match 主题词，查旧量与旧死因
+    M->>SR: Keyword Magic 簇量，种子词 Keyword Overview 取 6 国月量，Organic Research 按网址筛对手流量
+    M->>WO: demand 观察
+    loop 3 到 5 个代表查询，两次间隔至少 60 秒
+      M->>GB: 预检后读首屏，看 AI 概览是否答完、引用了谁
+      M->>WO: serp 观察
+    end
+    M->>WO: differentiation 与 delivery 观察，准备判 go 时再写 brief
+    M->>LG: update 把读数补进方向记录并引用观察
+    M->>BM: --direction 看三档
+    BM-->>M: 第 12 个月访问与收入、是否过线
+    M->>ST: --verdict go 或 rejected 或 parked
+  end
+</pre></div>
+<p class="caption">提前否决是允许的：范围命中、标杆不成立、所有簇被答完、基准明显不到 $100，都不必走完六步。</p>
+
+<h3 id="s4-3"><span class="num">4.3</span>结算与回滚（settle）</h3>
+<p><strong>结算先做全部证据复核，不通过就拒、什么都不写；写到一半出错，就把账本和决策书恢复原样。</strong>这是整体审查后修的（原先 parked 改判被拒时账本会卡死）。</p>
+<div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  autonumber
+  participant M as 主会话
+  participant ST as settle.py
+  participant LG as ledger.py
+  participant BM as bench_model.py
+  participant BD as build_doc.py
+  participant VL as validate_ledger.py
+  participant D as 数据区
+  M->>ST: settle --slug --verdict --reason --biggest-unknown
+  ST->>D: 读回每份引用的观察并重新校验
+  ST->>LG: precheck 证据复核
+  alt 复核不通过
+    LG-->>ST: 拒收原因
+    ST-->>M: 拒收，账本和文档一个字不改
+  else 复核通过
+    ST->>D: 备份账本与原决策书
+    ST->>BM: 重算模型
+    ST->>D: 写 decision、绑定观察的 SHA-256
+    ST->>D: parked 改判时归档旧决策书
+    ST->>BD: 生成决策书 md 与 html
+    ST->>D: 把 md 的 SHA 记进 decision.doc_sha256
+    ST->>LG: transition 转移状态
+    alt 任一步失败
+      ST->>D: 账本恢复、删新文档、放回原决策书
+      ST-->>M: 报错，原状不变
+    else 成功
+      ST->>VL: 校验这个方向
+      VL-->>ST: 0 个错误
+      ST-->>M: 新状态与决策书路径
+    end
+  end
+</pre></div>
+<p class="caption">中途被打断（进程被杀）时，用同一条命令重跑即可恢复：已转移的只重建文档与校验，不重复写历史。</p>
+</section>
+
+<section id="s5">
+<h2><span class="num">5</span>数据来源</h2>
+
+<h3 id="s5-1"><span class="num">5.1</span>外部来源</h3>
+<p><strong>Semrush 是唯一的量级来源，其余都是免费的现场读数。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>来源</th><th>用在哪一步</th><th>取什么</th><th>限制</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Semrush 批量分析</td><td>scan 粗筛</td><td>每批 ≤16 个域名的 AS 与访问量</td><td>访问量是全球全渠道，只能粗筛</td></tr>
+    <tr><td class="k">Semrush Domain Overview</td><td>B2、B3、流量曲线</td><td>域级 AS、美区自然流量、按国家分布（英文区 6 国的原始自然流量，用来把美区读数换算成英文区）、起量月与第 3/6/12 个月读数、三次垃圾更新前后读数</td><td>代理站该模块会整体故障，改走 Backlink Analytics 概览</td></tr>
+    <tr><td class="k">Semrush Backlink Analytics</td><td>起量手段；故障时的备用入口</td><td>引荐域名数、锚文本、AS、自然流量</td><td>—</td></tr>
+    <tr><td class="k">Semrush Organic Research</td><td>B3、B4、对手流量、同类站</td><td>去品牌词后的流量、词与页分布、按网址筛的对手流量、竞争对手列表</td><td>按网址筛才准</td></tr>
+    <tr><td class="k">Semrush Keyword Magic</td><td>方向需求</td><td>美区簇量、逐词量、KD；长尾簇可导出 CSV</td><td>导出要你当次允许下载</td></tr>
+    <tr><td class="k">Semrush Keyword Overview</td><td>方向需求</td><td>每簇种子词在英文区 6 国的月量，用来把美区簇量换算成英文区</td><td>每簇多 1 次调用</td></tr>
+    <tr><td class="k">Google 首屏（内置浏览器）</td><td>现场与 GEO</td><td>AI 概览是否答完、引用了谁、是否推荐工具站，标杆排名，前 10 条自然结果</td><td>规程见 5.2</td></tr>
+    <tr><td class="k">RDAP（curl）</td><td>B1</td><td>注册日（<code>rdap.org/domain/&lt;域名&gt;</code>）</td><td>查不到改看 Semrush 曲线并标老域名</td></tr>
+    <tr><td class="k">ads.txt、定价页（curl）</td><td>起量手段</td><td>接了哪家广告网络（AdSense、Ezoic、Mediavine、Raptive 等），有没有付费版</td><td>被 Cloudflare 拦时改读 Google 摘要并注明</td></tr>
+    <tr><td class="k">robots.txt、llms.txt（curl）</td><td>GEO 现状</td><td>标杆是否放行 AI 爬虫</td><td>同上</td></tr>
+    <tr><td class="k">社区帖</td><td>community 来源</td><td>自曝流量的新站线索</td><td>自报数字必须回 Semrush 核实</td></tr>
+  </tbody>
+</table></div>
+<p><strong>Semrush 额度纪律</strong>：每次查询都要能改变一个决策，决策不变就不查；代理站每天约一百来次（域名类与关键词类分开计，以往运行实测），不设每日上限，有额度就用；<code>run_log.py --plan</code> 显示今天已用多少，只作记录；登录失效、验证码、额度提示时停下写 blocked 清单，不绕、不猜数。</p>
+
+<h3 id="s5-2"><span class="num">5.2</span>Google 首屏读取规程</h3>
+<p><strong>每次读首屏前先做浏览器预检，四项都过才能下"首屏已答完"的结论。</strong>搜索网址固定带 <code>gl=us&amp;hl=en&amp;pws=0</code>。</p>
+<div class="tw"><table>
+  <thead><tr><th>预检项</th><th>怎么核</th></tr></thead>
+  <tbody>
+    <tr><td class="k">可控</td><td>能读到完整页面，含自然结果上方区域</td></tr>
+    <tr><td class="k">桌面</td><td>页面主体容器在场，或 UA 与布局为桌面版</td></tr>
+    <tr><td class="k">美区</td><td>网址三参齐备；页脚位置写进依据，不凭参数声称是美国 IP</td></tr>
+    <tr><td class="k">未登录</td><td>页面有 Sign in，没有 Google 账号头像元素</td></tr>
+  </tbody>
+</table></div>
+<ul>
+  <li>任一不过：不写结论，重试一次仍失败记 blocker。两次 Google 请求间隔 ≥ 60 秒。</li>
+  <li>AI 概览是页面载入后才生成的：等几秒再读；出现 Thinking、Searching 时继续等；没看到 AI Overview 字样时隔几秒重读一次确认。</li>
+  <li>只读到自然结果列表时，不能据此判断没有 AI 概览，要补读整页或截图。</li>
+  <li><strong>"已答完"怎么判</strong>：用户不点结果是否已经拿到要的东西。单个查询只有一个答案的（某车型的孔距、某城市的时区）通常会被答掉；单个查询有多个可能答案、要按地点或型号再查的（这趟车几点、这个地址属于哪个县）通常答不了。这是从 xinci-simple 实测里总结出的经验。</li>
+</ul>
+
+<h3 id="s5-3"><span class="num">5.3</span>旧数据导入</h3>
+<p><strong>从 xinci-simple 数据区只读导入五样东西，导入可重复执行、不会重复登记。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>导入物</th><th>来源</th><th class="n">条数</th><th>用途</th></tr></thead>
+  <tbody>
+    <tr><td class="k">标杆种子</td><td>旧证据 SERP 前 10 名里的低 AS 域名（规则见 6.2）</td><td class="n">68</td><td>legacy 来源，待初核</td></tr>
+    <tr><td class="k">同类站种子</td><td>旧账本 15 个小站种子文字里出现的域名</td><td class="n">13</td><td>只用来查同类站，不初核</td></tr>
+    <tr><td class="k">手工种子</td><td><code>种子/手工种子.json</code>，记忆里点过名的标杆，写入前已用 RDAP 核对</td><td class="n">8</td><td>6 个待初核，2 个只查同类站</td></tr>
+    <tr><td class="k">旧词库</td><td>旧账本全部逐词量，按小写词去重，重复时保留测量更晚的那条</td><td class="n">14,258</td><td>深核时查旧量</td></tr>
+    <tr><td class="k">旧裁决</td><td>旧账本 63 个候选的终态、否决门、理由</td><td class="n">63</td><td>查"这个方向以前为什么死"</td></tr>
+  </tbody>
+</table></div>
+<p>手工种子最先导入，所以 legacy 来源会先初核它们。旧词库可以直接拿来测需求，但判 go 时计入需求的簇必须是 90 天内测的，旧词库的量测于 2026-09 至 10 月。</p>
+
+<h3 id="s5-4"><span class="num">5.4</span>种子清单</h3>
+<p><strong>当前种子池共 89 个域名：74 个待初核的标杆、15 个只查同类站的小站。</strong>旧记录里的 AS 来自不同时间、不同取法，有的看着明显偏低（如 bgr.com、surfline.com、pearson.com，这是我的判断），所以导入后一律在初核时重测。</p>
+<div class="tw"><table>
+  <thead><tr><th>手工种子</th><th>用途</th><th>备注（含 RDAP 注册日）</th></tr></thead>
+  <tbody>
+    <tr><td class="k">wisconsinpropertymap.com</td><td>待初核</td><td>AS 11，约 9 个月到 5.4K/月；注册 2025-12-29</td></tr>
+    <tr><td class="k">flpropertycheck.com</td><td>待初核</td><td>AS 12，7 个月约 5,200/月；注册 2026-03-04</td></tr>
+    <tr><td class="k">parcelvision.app</td><td>待初核</td><td>AS 12，自然流量约 9.8K/月；注册 2025-12-19</td></tr>
+    <tr><td class="k">county-cad.org</td><td>待初核</td><td>约 5,200/月，大头来自单页；注册 2026-05-11</td></tr>
+    <tr><td class="k">freeparceldata.com</td><td>待初核</td><td>注册 2015-04-16，不是新域名，B1 只能按老域名重新起量判</td></tr>
+    <tr><td class="k">offleashfinder.com</td><td>待初核</td><td>AS 2，自然流量约 0 但被 AI 搜索提及，反面样本；注册 2026-04-16</td></tr>
+    <tr><td class="k">geocodify.com</td><td>只查同类站</td><td>AS 38，不满足 B2；注册 2020-03-10</td></tr>
+    <tr><td class="k">dittobase.com</td><td>只查同类站</td><td>AS 35，约 34 万/月，不满足 B2；注册 2023-04-10</td></tr>
+  </tbody>
+</table></div>
+<p><strong>只查同类站的 13 个旧小站</strong>（AS 多在 36–49）：101soundboards.com、bimmer.work、bingobaker.com、courtsoftheworld.com、masstimes.org、mathworksheets4kids.com、mdecoder.com、pickleheads.com、queue-times.com、salahtimes.com、whatismyelevation.com、zoneomics.com、zutobi.com。</p>
+<details class="more"><summary>68 个旧标杆种子，按来自哪个旧候选分组（括号里是旧记录的 AS，"未测"表示旧记录为 0）</summary>
+<div class="tw"><table>
+  <thead><tr><th>旧候选</th><th>域名</th></tr></thead>
+  <tbody>
+    <tr><td class="k">tide-chart</td><td>usharbors.com (15)、tide-forecast.com (15)、tidespro.com (未测)、marineweather.net (未测)、surfline.com (未测)、wavecast.com (3)、tides.net (未测)、tidetime.org (13)、myrtlebeach.com (13)、visitmyrtlebeach.com (13)、explorenorthmyrtlebeach.com (14)、surf-forecast.com (未测)</td></tr>
+    <tr><td class="k">scrap-metal-prices</td><td>metrogroup.com (27)、cliftonmetals.com (13)、orangescrap.com (18)、solomonmetals.com (23)、calbag.com (27)、wellste.com (23)</td></tr>
+    <tr><td class="k">theme-park-crowd-calendar</td><td>mickeyalerts.com (10)、dadsguidetowdw.com (29)、orlandoplanningguide.com (12)、rideready.app (24)、pigeonforgetnguide.com (28)、parkqueuetimes.com (11)</td></tr>
+    <tr><td class="k">universal-remote-codes</td><td>bgr.com (14)、rcaaccessories.com (24)、wepc.com (12)、remote-codes.com (4)、myonnremote.com (6)</td></tr>
+    <tr><td class="k">what-county-am-i-in</td><td>whatcountyiamin.com (14)、simplemaplab.com (24)、locality.nyc (22)、geofan.org (24)</td></tr>
+    <tr><td class="k">math-worksheets</td><td>mathworksheets.com (27)、grade1to6.com (29)、tothesquareinch.com (22)</td></tr>
+    <tr><td class="k">rest-areas</td><td>mainerestareas.com (12)、louisianarestareas.com (13)、coloradorestareas.com (15)</td></tr>
+    <tr><td class="k">waterfalls-near-me</td><td>cahikingadventures.com (28)、catescompass.com (23)、wanderwoman.online (28)</td></tr>
+    <tr><td class="k">bah</td><td>compassmilitary.com (29)、dsldmortgage.com (28)</td></tr>
+    <tr><td class="k">basketball-courts</td><td>rocklinebasketball.com (10)、localbasketballcourts.com (11)</td></tr>
+    <tr><td class="k">concrete-calculator</td><td>smyrnareadymix.com (7)、ozinga.com (19)</td></tr>
+    <tr><td class="k">county-gis</td><td>techgeo.org (10)、landmarkgeospatial.com (23)</td></tr>
+    <tr><td class="k">dog-parks</td><td>happydogbaltimore.com (22)、dogfriendlylittlerock.com (12)</td></tr>
+    <tr><td class="k">final-grade-calculator</td><td>samuelmerritt.uloop.com (8)、pearson.com (未测)</td></tr>
+    <tr><td class="k">fuse-box-diagram</td><td>autogenius.info (27)、fixmycarinfo.com (19)</td></tr>
+    <tr><td class="k">mass-times</td><td>massfinder.org (27)、saltandlightradio.com (23)</td></tr>
+    <tr><td class="k">svg-cut-files</td><td>svgheart.com (27)、tibbixel.com (13)</td></tr>
+    <tr><td class="k">trash-pickup</td><td>trashpickupscheduleday.com (未测)、211la.org (11)</td></tr>
+    <tr><td class="k">city-neighborhoods</td><td>chicagocommunitygardens.org (24)</td></tr>
+    <tr><td class="k">lake-levels</td><td>golaketravis.com (25)</td></tr>
+    <tr><td class="k">parks-near-me</td><td>portlandparksconservancy.org (22)</td></tr>
+    <tr><td class="k">school-lunch-menu</td><td>chathamcountyschoolmeals.com (16)</td></tr>
+    <tr><td class="k">vin-decoder</td><td>morepowertuning.com (未测)</td></tr>
+    <tr><td class="k">wire-size</td><td>paigeconnected.com (28)</td></tr>
+  </tbody>
+</table></div>
+</details>
+
+<h3 id="s5-5"><span class="num">5.5</span>数据区现状</h3>
+<p><strong>真实数据区已初始化并导入，快道目录 2026-10-14 已补建；快道 2026-10-14 跑完第一次（32 条原料，看了 10 个首页全不过，登记 0），10-15 跑完第二次（59 条原料，登记 1 个；同日你定试玩版也算之后改判为否决 not_new），同日又连跑两轮（首页 20 个，登记 dayz-badlands-map 观察中、11-14 到期），标杆道还没有开始第一次运行。</strong>路径 <code>/Users/vito.wu/IdeaProjects/keywords-macdownds/数据/xinci-bench/</code>。</p>
+<div class="tw"><table>
+  <thead><tr><th>项目</th><th class="n">当前</th></tr></thead>
+  <tbody>
+    <tr><td>待初核标杆种子（含 6 个手工）</td><td class="n">74</td></tr>
+    <tr><td>只查同类站的种子（含 2 个手工）</td><td class="n">15</td></tr>
+    <tr><td>方向（found / go / rejected / parked / 观察中）</td><td class="n">0 / 0 / 0 / 0 / 0</td></tr>
+    <tr><td>快道原料池待看</td><td class="n">0</td></tr>
+    <tr><td>快道淘汰记录</td><td class="n">0</td></tr>
+    <tr><td>自动补全快照（"grow a garden 2" 加 10 个任务词的基线，验收时取）</td><td class="n">11 份</td></tr>
+    <tr><td>淘汰索引</td><td class="n">0</td></tr>
+    <tr><td>累计 Semrush 调用</td><td class="n">0</td></tr>
+    <tr><td>账本校验</td><td class="n">0 个错误</td></tr>
+    <tr><td>下一步</td><td class="n">标杆道 scan（来源 legacy）；快道 quick</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s5-6"><span class="num">5.6</span>采集时已知的坑</h3>
+<p><strong>都是以往运行踩过的，写在 <code>数据采集.md</code>，执行前必读。</strong></p>
+<ul>
+  <li>代理站对超宽泛种子返回截断数据；对介词或疑问短语种子（如 substitute for、why is my）返回残缺数据，种子只用名词性主题词。</li>
+  <li>Keyword Magic 默认"排除导航意图"会漏掉地方查询词（catawba county gis 曾被误判没量），量地方查询时不要排除。</li>
+  <li>Semrush 对 near me 词按单一抓取点估流量，会把全国量算给一个城市页，不能当真实分流。</li>
+  <li>竞品在某类页面上的流量要按网址筛选再加总，从全站前 100 页里挑会严重低估。</li>
+  <li>批量分析页刚载入时，同一批次内的输入都不生效，要另起一次调用再输；超过约 15 行时比较按钮下移。</li>
+  <li>Organic Research 的筛选条件写在网址的 filter 参数里，可直接拼网址；页面刚载入时输入会被吞，读表头前等 8–10 秒。</li>
+  <li>Chrome 里执行脚本返回超过约 1,000 字会被截断，含 <code>=</code> 或 <code>location.href</code> 会被拦，长表要分段读。</li>
+  <li>同一会话第二次起 Chrome 可能拦"多次下载"，要你允许；翻页可替代导出（每页 100 行算 1 次调用）。</li>
+  <li>内置浏览器和 Chrome 的出口 IP 不在美国，部分站被 Cloudflare 拦。</li>
+  <li>写观察前先用系统命令取时间，不要估。</li>
+</ul>
+</section>
+
+<section id="s6">
+<h2><span class="num">6</span>数据过滤逻辑</h2>
+
+<h3 id="s6-1"><span class="num">6.1</span>过滤总览</h3>
+<p><strong>一共五道筛：导入过滤 → 范围排除 → 初核五条 → 深核里的剔除 → 收入门槛。</strong>前两道零成本，第三道每个域名约 1–2 次 Semrush，第四、五道每个方向约 10 次。</p>
+<div class="tw"><table>
+  <thead><tr><th>筛</th><th>在哪一步</th><th>筛掉什么</th><th>筛掉后去哪</th></tr></thead>
+  <tbody>
+    <tr><td class="k">导入过滤</td><td>seed_import</td><td>政府、官方、品牌、论坛、视频、平台、AS 已知 ≥30 的域名</td><td>不进种子池</td></tr>
+    <tr><td class="k">范围排除</td><td>scan 的 B5，assess 复核</td><td>YMYL、品牌导航、新闻热点、色情/成人与赌博、侵权</td><td>scan 时进淘汰索引；assess 时否决（scope）</td></tr>
+    <tr><td class="k">初核五条</td><td>scan</td><td>太老、权重太高、量太小、流量是假象</td><td>淘汰索引（只因量小的 90 天后复查）</td></tr>
+    <tr><td class="k">深核剔除</td><td>assess</td><td>外链驱动的标杆、首屏已答完的簇、过期的测量、没抽检的簇</td><td>不参与计算；所有簇被答完则否决（answered）</td></tr>
+    <tr><td class="k">收入门槛</td><td>assess 末尾</td><td>基准第 12 个月 &lt; $100</td><td>否决（revenue）</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s6-2"><span class="num">6.2</span>旧数据导入过滤</h3>
+<p><strong>旧证据里出现过的 538 个域名，逐层过滤后剩 68 个标杆种子。</strong>下面是按导入脚本实际规则统计的每层剩余数。</p>
+<div class="funnel" role="img" aria-label="旧证据域名过滤漏斗：538、413、360、241、239、68">
+  <div class="row"><span>101 份 SERP 现场里的域名</span><div class="track"><div class="fill" style="width:100%"></div></div><span class="val">538</span></div>
+  <div class="row"><span>有 AS 记录</span><div class="track"><div class="fill" style="width:76.8%"></div></div><span class="val">413</span></div>
+  <div class="row"><span>去掉政府、教育、军队域名</span><div class="track"><div class="fill" style="width:66.9%"></div></div><span class="val">360</span></div>
+  <div class="row"><span>去掉官方、品牌、论坛、视频类</span><div class="track"><div class="fill" style="width:44.8%"></div></div><span class="val">241</span></div>
+  <div class="row"><span>去掉平台黑名单</span><div class="track"><div class="fill" style="width:44.4%"></div></div><span class="val">239</span></div>
+  <div class="row"><span>AS &lt; 30 或未测</span><div class="track"><div class="fill" style="width:12.6%"></div></div><span class="val">68</span></div>
+</div>
+<ul>
+  <li><strong>政府域名</strong>：<code>.gov</code>、<code>.edu</code>、<code>.mil</code> 结尾，或域名里某一段以 gov 结尾（如 denvergov.org）。</li>
+  <li><strong>类型</strong>：在任何一份旧现场里被标成 official、brand、forum、video 的，一律排除。</li>
+  <li><strong>平台黑名单</strong>：pinterest.com、play.google.com、scribd.com、reddit.com、facebook.com、youtube.com、quora.com、amazon.com；增删要在 <code>数据采集.md</code> 写理由。</li>
+  <li><strong>AS 线</strong>：取旧记录里该域名的最小非零 AS，&lt; 30 才进（初核 B2 是 ≤ 30，导入从严）；AS 全为 0 的当作未测，照样导入，68 个里有 8 个是这种。</li>
+  <li><strong>同类站种子</strong>：从旧账本小站种子的说明文字里用正则抽域名；<strong>旧词库</strong>：按小写词去重。</li>
+  <li><strong>导入安全</strong>：导入前后对读过的 234 个旧文件逐个算 SHA-256，不一致就报错停止；旧证据里损坏的 JSON 跳过。</li>
+</ul>
+
+<h3 id="s6-3"><span class="num">6.3</span>范围排除</h3>
+<p><strong>五条排除，命中任一即排除，不能靠换个说法、改写成工具来规避。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>排除</th><th>代码</th><th>判法</th></tr></thead>
+  <tbody>
+    <tr><td class="k">YMYL</td><td><code>ymyl</code></td><td>按用户拿结果去做什么判，不按话题词判：用于选型、计算或决定危险操作（线径、断路器、刹车、气囊、燃油系统、剂量、贷款等）命中；只是定位或识别原厂规格、按原样替换（保险丝位置、皮带走向）不命中，但要附原厂安全提示；高压系统维修（混动/电动车动力电池、高压保险丝）仍命中</td></tr>
+    <tr><td class="k">纯品牌/导航</td><td><code>brand_nav</code></td><td>用户只想去某站，如 login、customer service、单独品牌名</td></tr>
+    <tr><td class="k">新闻热点</td><td><code>news</code></td><td>具体事件导致、几周内会消失的短暂尖峰</td></tr>
+    <tr><td class="k">色情/成人、赌博</td><td><code>adult_gambling</code></td><td>色情与裸露内容（含 NSFW 的 AI 生成、成人游戏、泄露的私密内容、约炮交友）；博彩、彩票预测、赌场攻略</td></tr>
+    <tr><td class="k">侵权</td><td><code>infringement</code></td><td>克隆有版权或商标的游戏、搬运受版权保护的内容或数据库、绕过付费墙；数据授权禁止再发布也算</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s6-4"><span class="num">6.4</span>初核五条 B1–B5</h3>
+<p><strong>五条全过才登记为方向；前三条的数字由脚本强制，标"通过"但数字不达标的观察直接拒收。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>编号</th><th>判据</th><th class="n">数值</th><th>脚本强制</th></tr></thead>
+  <tbody>
+    <tr><td class="k">B1 年轻</td><td>RDAP 注册日在 24 个月内；或 24 个月前自然流量接近 0（标老域名重新起量，写依据）</td><td class="n">24 个月</td><td>是</td></tr>
+    <tr><td class="k">B2 低权重</td><td>Semrush 域级 Authority Score</td><td class="n">≤ 30</td><td>是</td></tr>
+    <tr><td class="k">B3 有量</td><td>英文区 6 国自然流量，去掉标杆自己的品牌词和 near me 类定位词之后（美区读数 × 6 国合计 ÷ 美国）</td><td class="n">≥ 5,000/月</td><td>是</td></tr>
+    <tr><td class="k">B4 不是假象</td><td>流量分散在多个词、多个页面，不是"单个抓取点把全国量算给一个页面"的失真</td><td class="n">定性</td><td>只要求写依据</td></tr>
+    <tr><td class="k">B5 范围</td><td>6.3 的排除项全部未命中</td><td class="n">—</td><td>只要求写依据</td></tr>
+  </tbody>
+</table></div>
+<p>省额度规则：某一条已经不过，后面几条可以填 <code>null</code> 不查，依据写"前项已不过，未查"；五条都没有"不过"时不允许留 null。英文区换算：Domain Overview 的按国家分布给出 6 国的原始自然流量，英文区 = 去品牌词后的美区读数 × 6 国合计 ÷ 美国（假设各国去品牌词的比例相同）；美国为 0 时改为逐国实测。脚本会核对这个乘法。5,000 只是入场线，参照 wisconsinpropertymap（5.4K）和 flpropertycheck（5.2K，这两个都是美区读数）；能不能到 $100 由第 7 节的测算决定。</p>
+
+<h3 id="s6-5"><span class="num">6.5</span>淘汰与复查</h3>
+<ul>
+  <li>初核不过的域名写进 <code>淘汰索引/域名.json</code>，记没过的编号、读数、日期和对应的初核观察。</li>
+  <li><strong>只有"单独 B3 不过"的设 90 天后复查</strong>：新站还会长，现在不够 5,000 的以后可能够。<code>seeds.py requeue</code> 把到期的放回种子池，并移出淘汰索引。</li>
+  <li>B1、B2、B4、B5 不过的不复查：太老、权重太高、流量假象、范围命中，不会随时间变好。</li>
+  <li>已在种子池或淘汰索引里的域名，新发现时不会重复登记。</li>
+  <li>同一个标杆域名已经用于别的方向时，再登记要写清两个方向的差别（<code>--confirm-distinct</code>）。</li>
+</ul>
+
+<h3 id="s6-6"><span class="num">6.6</span>深核里的过滤</h3>
+<p><strong>深核阶段不再"淘汰域名"，而是决定哪些标杆、哪些簇能参与收入计算。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>规则</th><th>判法</th><th>效果</th></tr></thead>
+  <tbody>
+    <tr><td class="k">干净标杆</td><td>初核五条全过，且不是靠 PBN 或垃圾锚文本起量</td><td>只有干净标杆参与份额率计算；一个都没有就不能测算</td></tr>
+    <tr><td class="k">算法风险</td><td>2026 年 3、6、8 月任一次垃圾内容更新后流量掉 50% 以上</td><td>写进风险，不排除</td></tr>
+    <tr><td class="k">首屏已答完</td><td>AI 概览、精选摘要或原生组件已完成任务</td><td>该簇不计入需求；所有簇都被答完则否决</td></tr>
+    <tr><td class="k">near me 簇</td><td>代表查询含 near me 类定位措辞</td><td>簇量 × 0.2（本地地图包分流）</td></tr>
+    <tr><td class="k">测量新鲜度</td><td>判 go 时，计入需求的簇必须是 90 天内测的</td><td>过期的不能判 go，要重测</td></tr>
+    <tr><td class="k">簇级抽检</td><td>判 go 时，每个计入需求的簇至少有一份首屏观察；任一观察说已答完，该簇就不能计入</td><td>没抽检的簇不能拿来抬高收入</td></tr>
+    <tr><td class="k">账本与观察一致</td><td>判 go 或收入否决时，账本里的标杆读数、簇量、测量日、拥挤度必须等于最新观察；标杆覆盖需求不能小于"标杆已做"的簇量合计</td><td>抄错数字会被拒，不能靠改账本过线</td></tr>
+    <tr><td class="k">拥挤度</td><td>同方向近 24 个月新站数（含标杆）</td><td>≥ 3 时基准系数从 0.5 降到 0.33</td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section id="s7">
+<h2><span class="num">7</span>收入测算（标杆份额法）</h2>
+
+<h3 id="s7-1"><span class="num">7.1</span>公式</h3>
+<p><strong>核心思路：不用"搜索量 × 点击率"，改用"同方向新站在 12 个月里实际做到了多少"，再按后来者打折。</strong></p>
+<pre class="json"><code>我们第 12 个月访问 = min(后来者系数 × 标杆份额率 × 我们覆盖的需求, 15% × 我们覆盖的需求)   <span class="c">// 取整,英文区 6 国合计</span>
+
+标杆份额率     = 标杆起量后第 12 个月英文区自然流量 ÷ 标杆覆盖的全部英文区簇量
+               <span class="c">// 不满 12 个月用当前值,不外推;多个干净标杆取中位数</span>
+               <span class="c">// 分母不做剔除和折减(从严:分母越大,份额率越低)</span>
+我们覆盖的需求 = 计入且未被首屏答完的英文区簇量合计(near me 簇 × 0.2)
+               <span class="c">// 英文区簇量 = 美区簇量 × 种子词 6 国月量合计 ÷ 美国</span>
+               <span class="c">// 包括标杆已做的簇,和差异点里我们额外做、且已抽检的簇</span>
+
+第 12 个月收入 = 广告 + 付费
+美国访问       = 访问 × 美国占比                     <span class="c">// 美国占比 = 我们覆盖需求里美区簇量 ÷ 英文区簇量</span>
+广告           = (美国访问 × 美国每千访问收入 + 其他访问 × 其他英文国家每千访问收入) ÷ 1000
+               <span class="c">// 第 12 个月英文区访问 &lt; 1 万用 AdSense(美国 $4、其他 $2),≥ 1 万用 Journey(美国 $16、其他 $8)</span>
+付费           = 访问 × 付费转化率 × 月价           <span class="c">// 见 7.2</span></code></pre>
+<p>三档情景只差在后来者系数：保守 0.25、基准 0.5、乐观 1.0；拥挤度 ≥ 3 时基准改为 0.33。只照搬标杆、只做标杆那几个簇时，公式退化成"标杆第 12 个月流量 × 系数"。</p>
+
+<h3 id="s7-2"><span class="num">7.2</span>付费功能怎么算</h3>
+<ul>
+  <li><strong>什么时候算</strong>：同方向有对手在卖付费版，并且有证据显示有用户（定价页之外，能看到用户量、评价数或使用量等任一种）。否则付费收入为 0。</li>
+  <li><strong>月价</strong>：取对手定价页的中位数。</li>
+  <li><strong>转化率</strong>：保守 0.1%、基准 0.2%、乐观 0.5%，都是占位值，未确认。</li>
+  <li>有付费收入时，"达标所需访问"会相应降低。比如月价 $5、基准转化 0.2% 时，约 7,143 次访问就够 $100。</li>
+</ul>
+
+<h3 id="s7-3"><span class="num">7.3</span>假设表</h3>
+<p><strong>版本 2026-10-14.2（10-14 由 2026-10-13.1 升版：改按英文区算，美国以外收入按一半）；标"未确认"的几项，首次运行时要优先找证据。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>项目</th><th class="n">值</th><th>状态</th></tr></thead>
+  <tbody>
+    <tr><td>后来者系数 保守/基准/乐观</td><td class="n">0.25 / 0.5 / 1.0</td><td>起点假设，未校准</td></tr>
+    <tr><td>拥挤时基准系数</td><td class="n">0.33</td><td>起点假设（crowding ≥ 3）</td></tr>
+    <tr><td>覆盖需求份额上限</td><td class="n">15%</td><td>起点假设</td></tr>
+    <tr><td>near me 簇折减</td><td class="n">× 0.2</td><td>沿用 xinci-simple</td></tr>
+    <tr><td>AdSense 每千访问（美国，第 12 月 &lt; 1 万访问）</td><td class="n">$4</td><td>第三方方向性数据，工具类可能偏高</td></tr>
+    <tr><td>Mediavine Journey 每千访问（美国，≥ 1 万访问）</td><td class="n">$16</td><td>未确认，全模型最敏感</td></tr>
+    <tr><td>美国以外英文国家每千访问</td><td class="n">AdSense $2 · Journey $8</td><td>你定的按美国一半，未确认</td></tr>
+    <tr><td>内容类、游戏类每千访问</td><td class="n">暂按 $4</td><td>未确认</td></tr>
+    <tr><td>付费转化率 保守/基准/乐观</td><td class="n">0.1% / 0.2% / 0.5%</td><td>未确认，占位</td></tr>
+    <tr><td>达标门槛</td><td class="n">基准 ≥ $100</td><td>你定的</td></tr>
+  </tbody>
+</table></div>
+<p>假设表只由你改，改时升版本号并写变更依据；工作流取到证据时只交给你决定，不自行改表。</p>
+
+<h3 id="s7-4"><span class="num">7.4</span>门槛实际意味着什么</h3>
+<p><strong>没有付费收入时，"基准 ≥ $100"大致等价于"基准第 12 个月英文区访问 ≥ 1 万到 1.25 万"，美国占比越低要得越多。</strong>1 万以下走 AdSense，全在美国时最多 9,999 × $4 ÷ 1000 ≈ $40；一到 1 万就切到 Journey：全在美国 $160，美国占 75% 时 $140，全在美国以外 $80（要 1.25 万访问才到 $100）。</p>
+<ul>
+  <li><strong>只照搬、单标杆</strong>：标杆第 12 个月要有约 2 万英文区访问（拥挤时约 3 万），美国占比低时还要更多。</li>
+  <li><strong>整站覆盖的需求比标杆大</strong>：所需标杆流量按比例下降，但受 15% 上限约束，覆盖需求至少要约 6.7 万/月。</li>
+  <li><strong>套算一个真实例子</strong>：wisconsinpropertymap 当前约 5,400/月（美区读数）、仍在爬坡，照搬时基准 2,700 访问 → AdSense → 约 <strong>$10.80/月</strong>；按英文区重算时还要加上它在英、加等国的流量，那部分按 $2 计。</li>
+</ul>
+<div class="note"><span class="tag">注意</span>这个跳变让 Journey 的真实每千访问收入成了最关键的未确认项：它若只有 $10，1 万访问刚好压线 $100。Journey 的 1 万会话门槛按全部流量算，本模型按英文区 6 国访问算，不含其他国家，口径仍偏保守。决策书会单独列出用到了哪些未确认假设。</div>
+
+<h3 id="s7-5"><span class="num">7.5</span>里程碑与止损</h3>
+<p><strong>建站简报里给出上线后第 3、6、12 个月的预期月点击，第 6 个月低于基准曲线的 25% 就停。</strong></p>
+<ul>
+  <li>第 3、6 个月：基准第 12 个月访问 × 标杆曲线在该月的比例（曲线是美区读数，比例也和标杆的美区流量比）。曲线取流量最高的干净标杆的，比例 = 该月读数 ÷ 干净标杆流量的中位数，最多算到 100%；读不到的月份按线性（3/12、6/12）补。</li>
+  <li>第 12 个月：直接等于基准情景。</li>
+  <li>止损线 = 第 6 个月预期点击 × 25%，用 Search Console 的点击对照。</li>
+</ul>
+
+<h3 id="s7-6"><span class="num">7.6</span>投入与回本</h3>
+<p><strong>投入不设门，只算清楚放进建站简报，由你拍板。</strong></p>
+<pre class="json"><code>首版工时    = 开发 + 数据 + 内容
+总工时      = 首版工时 + 12 × 每月维护工时
+月收入      = 第 12 个月基准收入 × min(k, 12) ÷ 12      <span class="c">// 第 k 个月,按线性爬坡,第 12 个月后持平</span>
+12 个月累计 = 前 12 个月月收入之和
+折合时薪    = 12 个月累计 ÷ 总工时
+现金回本    = 累计收入第一次 ≥ 首年现金的那个月      <span class="c">// 36 个月内到不了就写"回不了本"</span></code></pre>
+</section>
+
+<section id="s8">
+<h2><span class="num">8</span>GEO 怎么用</h2>
+<p><strong>按你定的口径，GEO 不进收入，只在三处起作用。</strong></p>
+
+<h3 id="s8-1"><span class="num">8.1</span>作为发现来源</h3>
+<p>geo 是五个发现来源之一：读 Google 首屏时，AI 概览里点名推荐或引用的小站，登记进种子池等待初核。以往实测过这种情况：what-county 类查询，AI 概览答不了，会点名推荐几个工具站。</p>
+
+<h3 id="s8-2"><span class="num">8.2</span>作为筛选信号</h3>
+<ul>
+  <li>每份首屏观察都要记：AI 概览在不在、有没有把任务答完、引用了哪些域名、有没有点名推荐工具站。</li>
+  <li>答完了的簇不计入需求（这一条会影响收入）。</li>
+  <li>引用或推荐小站算 GEO 加分，只写进决策书的"现场与 GEO"一节，不改收入。</li>
+  <li>深核时用 curl 读标杆的 robots.txt 和 llms.txt，看它是否放行 AI 爬虫。</li>
+</ul>
+
+<h3 id="s8-3"><span class="num">8.3</span>作为建站规范</h3>
+<p>go 的建站简报第 7 节固定写这 5 条，后面再接深核时补充的条目：</p>
+<ol class="steps">
+  <li>每页开头先给答案或工具入口，再展开说明（可被 AI 引用的段落）。</li>
+  <li>结构化数据与页面可见内容一致。</li>
+  <li>根目录放 llms.txt，列出站点用途与主要页面。</li>
+  <li>robots.txt 放行主要 AI 爬虫。</li>
+  <li>上线后每月抽查目标查询的 AI 概览是否引用本站。</li>
+</ol>
+</section>
+
+<section id="s9">
+<h2><span class="num">9</span>判定与证据复核</h2>
+
+<h3 id="s9-1"><span class="num">9.1</span>go 的四个条件</h3>
+<ol class="steps">
+  <li>基准情景上线第 12 个月收入 ≥ $100。</li>
+  <li>至少一个干净标杆。</li>
+  <li>差异点有证据（每条写"标杆现状 → 我们做什么 → 证据观察"），或明说照搬。不接受"体验更好""SEO 做好""更快"这类没有对照证据的说法。</li>
+  <li>交付依据成立：数据拿得到、授权允许再发布（最新 delivery 观察 <code>feasible=true</code>）。</li>
+</ol>
+<p>另外判 go 还要齐 6 类观察（benchmark、demand、serp、differentiation、delivery、brief），并通过 6.6 的新鲜度、簇级抽检、账本与观察一致三项检查。</p>
+
+<h3 id="s9-2"><span class="num">9.2</span>否决与搁置</h3>
+<div class="tw"><table>
+  <thead><tr><th>结论</th><th>否决门</th><th>条件</th><th>最少要有的证据</th></tr></thead>
+  <tbody>
+    <tr><td><span class="chip no">rejected</span></td><td><code>scope</code></td><td>范围排除命中</td><td>命中项（<code>--scope-hit</code>）与理由</td></tr>
+    <tr><td><span class="chip no">rejected</span></td><td><code>benchmark</code></td><td>流量是假象，或只有外链驱动的标杆、找不到第二个</td><td>至少一份起量手段观察</td></tr>
+    <tr><td><span class="chip no">rejected</span></td><td><code>answered</code></td><td>所有簇都被首屏答完；只有部分簇答完的，由收入判定</td><td>每个簇都有"已答完"的首屏观察</td></tr>
+    <tr><td><span class="chip no">rejected</span></td><td><code>revenue</code></td><td>基准情景 &lt; $100</td><td>模型现场重算一致、账本与观察一致</td></tr>
+    <tr><td><span class="chip hold">parked</span></td><td>—</td><td>关键证据拿不到（域名模块故障、曲线读不出、授权说不清、被 Cloudflare 拦且摘要不足以判断）</td><td>一句理由</td></tr>
+  </tbody>
+</table></div>
+<p>早期否决不要求补齐后续步骤。拿不到证据不等于通过。每次结算都要写一句结论理由和"最可能让结论翻转的一项"。</p>
+
+<h3 id="s9-3"><span class="num">9.3</span>结算时的复核</h3>
+<ul>
+  <li><strong>结算前（precheck）</strong>：引用的观察都在且合规；按结论查 9.1、9.2 的条件和 6.6 的一致性规则。不通过就拒，什么都不写。</li>
+  <li><strong>结算时</strong>：重算模型；把所有引用观察的路径和 SHA-256 固定下来（绑定）；把决策书 md 的 SHA 记进账本。</li>
+  <li><strong>转移时</strong>：再查一遍结论与转移方向一致、决策书 md/html 一致、模型重算与账本一致、go 有绑定。</li>
+  <li><strong>出错时</strong>：账本恢复到结算前，删掉本次生成和归档的文档，放回原决策书。</li>
+</ul>
+
+<h3 id="s9-4"><span class="num">9.4</span>数据完整性规则</h3>
+<div class="tw"><table>
+  <thead><tr><th>对象</th><th>规则</th><th>谁来保证</th></tr></thead>
+  <tbody>
+    <tr><td class="k">观察</td><td>只追加，永不覆盖、不手改；路径只能在 <code>证据/</code> 下；时间写之前先取系统时间</td><td>write_observation.py</td></tr>
+    <tr><td class="k">账本</td><td>只由脚本写；状态只经 settle.py 转移；历史只追加</td><td>ledger.py、settle.py</td></tr>
+    <tr><td class="k">绑定</td><td>结算时固定观察的 SHA-256，之后观察被改或丢失会报错</td><td>validate_ledger.py</td></tr>
+    <tr><td class="k">决策书</td><td>md 是唯一事实来源，html 从 md 生成并内嵌 md 的 SHA；手改 md（哪怕重新生成了 html）会被查出</td><td>build_doc_html.py、validate_ledger.py</td></tr>
+    <tr><td class="k">未完成的结算</td><td>found 状态不能带着结论或绑定的残留</td><td>validate_ledger.py</td></tr>
+    <tr><td class="k">旧数据</td><td>只读，导入前后 SHA 一致</td><td>seed_import.py</td></tr>
+    <tr><td class="k">数据区位置</td><td>不猜，没配置就退出码 2，先问你</td><td>data_root.py</td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section id="s10">
+<h2><span class="num">10</span>产出物</h2>
+
+<h3 id="s10-1"><span class="num">10.1</span>决策书</h3>
+<p><strong>每个结论为 go、rejected、parked 的方向都有一份决策书，md 是唯一事实来源，html 从 md 生成。</strong>每节第一句是加粗的大白话结论，数字标"模型估算"或"Semrush 估算"，不写排名保证。html 版开篇结论加底色，证据清单默认折叠。</p>
+<ol class="steps">
+  <li>结论：一句话理由，基准访问与收入，达标所需访问，最大的未知</li>
+  <li>标杆证据：注册日、起量月、当前与第 12 个月流量、AS、外链驱动、算法风险、变现、是否干净，以及引荐域名、锚文本、更新前后读数、ads.txt、定价页</li>
+  <li>方向需求与对手：各簇量与是否计入、对手按网址筛的流量、同方向新站</li>
+  <li>现场与 GEO：每个抽检查询的首屏结论、AI 概览引用与推荐、标杆排名</li>
+  <li>12 个月流量与收入：三档表、份额率、覆盖需求、拥挤度、达标所需访问是标杆的几倍、未确认假设</li>
+  <li>风险与最大未知</li>
+  <li>附：证据清单（绑定的观察文件与 SHA-256）</li>
+</ol>
+
+<h3 id="s10-2"><span class="num">10.2</span>建站简报</h3>
+<p><strong>只在 go 时生成，接在决策书后面，共 11 节。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>节</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td class="k">1 定位</td><td>站型、目标用户、要完成的任务</td></tr>
+    <tr><td class="k">2 首版页面清单</td><td>每页的路径、目标查询与搜索量、页面类型、要交付的内容或功能</td></tr>
+    <tr><td class="k">3 差异点</td><td>逐条对照标杆现状与证据</td></tr>
+    <tr><td class="k">4 数据</td><td>数据源、授权要点</td></tr>
+    <tr><td class="k">5 技术与托管</td><td>免费方案优先；提醒按托管方条款确认允许挂广告（如 Vercel Hobby 禁止含广告的商业用途）</td></tr>
+    <tr><td class="k">6 SEO 规范</td><td>固定 4 条：一页只服务一个主查询；每页有独有数据或功能，不按模板批量复制，避开规模化内容滥用与 doorway 页；按簇做内链，首页链到每个簇的入口；提交 sitemap、加结构化数据。另接深核补充的条目</td></tr>
+    <tr><td class="k">7 GEO 规范</td><td>见 8.3 的 5 条，另接补充条目</td></tr>
+    <tr><td class="k">8 变现计划</td><td>先接哪家、到多少访问换哪家、付费功能做什么</td></tr>
+    <tr><td class="k">9 投入</td><td>开发、数据、内容工时，首年现金，每月维护，现金回本月数，12 个月折合时薪（算法见 7.6）</td></tr>
+    <tr><td class="k">10 里程碑与止损</td><td>第 3/6/12 个月预期点击、止损线</td></tr>
+    <tr><td class="k">11 风险清单</td><td>简报素材里的风险 + 决策部分的风险</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s10-3"><span class="num">10.3</span>数据区目录</h3>
+<div class="tw"><table>
+  <thead><tr><th>路径</th><th>放什么</th></tr></thead>
+  <tbody>
+    <tr><td><code>账本/方向账本.json</code></td><td>全部方向记录</td></tr>
+    <tr><td><code>种子/种子池.json</code></td><td>待初核与已初核的域名</td></tr>
+    <tr><td><code>种子/手工种子.json</code></td><td>手工补充的种子，可标 role=sibling</td></tr>
+    <tr><td><code>淘汰索引/域名.json</code></td><td>初核不过的域名与复查日期</td></tr>
+    <tr><td><code>词库/旧词库.json</code>、<code>词库/旧裁决.json</code></td><td>从 xinci-simple 导入</td></tr>
+    <tr><td><code>证据/_scan/</code>、<code>证据/_quick/</code>、<code>证据/&lt;方向&gt;/</code></td><td>初核观察、快道原料批次观察、各方向的深核与快道观察</td></tr>
+    <tr><td><code>文档/</code>、<code>文档/历史/</code></td><td>决策书 md/html；改判时的旧版本</td></tr>
+    <tr><td><code>运行/</code></td><td>运行清单（两条道共用）</td></tr>
+    <tr><td><code>快道/原料.jsonl</code></td><td>快道原料池，一行一条</td></tr>
+    <tr><td><code>快道/淘汰.json</code></td><td>速判不过的说法，同词不再看</td></tr>
+    <tr><td><code>快道/补全快照/</code></td><td>每个查询一份自动补全历史，用来比出新建议</td></tr>
+    <tr><td><code>反馈/</code></td><td>上线后的真实点击与收入，一站一个 JSON、只追加，用来校准假设（不自动改假设表）</td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section id="s11">
+<h2><span class="num">11</span>新词快道</h2>
+<div class="verdict">
+  <p><strong>快道专抓最近 1 周到 3 个月才冒出来、首页还没人做、会反复被搜的新词：判断我们第一个做，上线 90 天内能不能有一个月达到 1 万英文区访问（美国、英国、加拿大、澳大利亚、新西兰、爱尔兰 6 国合计）。能就判 go，并在四处强烈推荐你建站，站由你自己建。</strong></p>
+  <p>量不够但还在涨的进"观察中"，30 天内每次运行复查一次；判 go 之后一直提醒，直到你说已开建或放弃。判据正本是 <code>选站契约.md</code> 第 10 节，设计稿是 <code>docs/superpowers/specs/2026-10-13-xinci-bench-quick-lane-design.md</code>。</p>
+</div>
+<div class="facts">
+  <div><div class="k">go 门槛</div><div class="v">90 天内英文区单月 ≥ 10,000 访问</div></div>
+  <div><div class="k">英文区</div><div class="v">US · GB · CA · AU · NZ · IE</div></div>
+  <div><div class="k">首发份额</div><div class="v">10% / 20% / 30%</div></div>
+  <div><div class="k">观察期</div><div class="v">30 天</div></div>
+  <div><div class="k">建议最晚上线</div><div class="v">判 go 后 7 天</div></div>
+</div>
+
+<h3 id="s11-1"><span class="num">11.1</span>为什么要有快道</h3>
+<p><strong>标杆道要求同方向已经有一个美区自然流量 ≥ 5,000 的小站，刚冒出一周、还没人做站的词按定义没有标杆，标杆道抓不到。</strong>你认为这类词"有流量、没竞争、非常好上站"，不能错过，所以单开一条道。</p>
+<ul>
+  <li>旧的 xinci 新词工作流（20 天、437 个候选、0 个认定通过）得出过"面向普通用户的新事物，答案与事物几乎同时到"的结论。但它找的是 B2B 付费者，新词阶段刻意不看搜索量，从没测过"普通用户新词 + 广告流量"能不能成立，所以这条结论对快道<strong>未验证</strong>，不作否决依据。</li>
+  <li>它留下的两条教训照用：来源标的"新"常常不准，要从对象自己的发布页核日期；它唯一的 go 因 7 天窗口内没人建站而过期，所以快道的 go 必须强推、必须跟进。</li>
+  <li>快道和标杆道共用账本、观察只追加、结算先复核再写入并可回滚、决策书、运行清单和看板；方向记录多一个 <code>lane</code> 字段区分两条道。快道判 go 的方向不再进标杆道。</li>
+</ul>
+
+<h3 id="s11-2"><span class="num">11.2</span>你已定的口径</h3>
+<p><strong>以下是你 2026-10-13 逐条定的，改动需要你拍板。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>口径</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td class="k">放在哪</td><td>xinci-bench 里单开一条快道，独立 skill <code>xinci-bench-quick</code>，底座共用（方案 A）</td></tr>
+    <tr><td class="k">触发</td><td>暗号 <code>xinci_bench_quick_run</code>，手动运行，不做定时任务</td></tr>
+    <tr><td class="k">门槛</td><td>预计上线后 90 天内有一个月 ≥ 10,000 英文区访问，且需求不是一次性的；基准预计月收入 ≥ $100 的另标"单站就能到 $100"</td></tr>
+    <tr><td class="k">英文区（10-14 追加）</td><td>不只看美国：美国、英国、加拿大、澳大利亚、新西兰、爱尔兰 6 国，搜索量和访问按 6 国合计；不含印度、菲律宾等</td></tr>
+    <tr><td class="k">美国以外的收入（10-14 追加）</td><td>按 AdSense $2/千访问，美国仍是 $4（$2 未确认）</td></tr>
+    <tr><td class="k">首页速判（10-14 追加）</td><td>Q5、Q6 只看美国首页</td></tr>
+    <tr><td class="k">真新的日期（10-14 首跑后）</td><td>按第一次让大量普通用户用上的日期，不按公布日；游戏须在那天之后 14 天内，其他对象 90 天内</td></tr>
+    <tr><td class="k">早期来源（10-14 首跑后）</td><td>加"即将开玩"日历（Wikipedia 发售表、Trends 测试类飙升词）；Trends 飙升词每次运行都要取；仍不做定时任务，由你手动触发</td></tr>
+    <tr><td class="k">首发份额</td><td>保守 10% / 基准 20% / 乐观 30%；AI 概览在场但没答完时再 ×0.6</td></tr>
+    <tr><td class="k">建站</td><td>你自己建；工作流走到 go 时要强烈推荐</td></tr>
+    <tr><td class="k">Steam、Roblox</td><td>不用 GitHub Actions 绕道，靠替代来源</td></tr>
+    <tr><td class="k">默认值</td><td>全部接受：观察期 30 天、每次运行最多现场看 10 个词、"真新" 90 天、冲高回落 30%、原料保留 7 天、10 个任务词、四处强推、收入按 AdSense $4/千访问、最晚上线 7 天、验收节点 14 / 30 / 90 天、第 30 天低于预期 25% 止损</td></tr>
+  </tbody>
+</table></div>
+<p>默认做法：英文站；范围排除沿用标杆道五条（6.3），新闻热点是快道最大的噪声，速判时专门核。新站 90 天内大概率只能接 AdSense，1 万访问全在美国时约 $40/月；新站能否立即申请 Mediavine Journey 未确认。</p>
+
+<h3 id="s11-3"><span class="num">11.3</span>流程总图</h3>
+<p><strong>一次运行八步：先提醒，再复查观察中的方向，然后扫新信号、上线前预判、两段速判、登记测算结算，最后推荐与汇报。</strong></p>
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+  REM["1 先提醒：待开建的 go、到期的验收节点"] --> WAT["2 复查观察中：重测量级，watch-check 给建议"]
+  WAT --> SIG["3 扫信号：上游新对象、上线日历、自动补全、Trends 飙升词"]
+  SIG --> POOL["原料池：与池内、快道淘汰、已有方向、旧裁决去重"]
+  SIG -.开玩日在 3–21 天内的游戏.-> FC["4 上线前预判，见 11.13"]
+  FC -.go 或 watching.-> REG
+  POOL --> Q14{"5 零成本速判 Q1–Q4"}
+  Q14 -->|不过| QREJ["快道淘汰记录，同词不再看"]
+  Q14 -->|全过| Q56{"6 首屏速判 Q5、Q6，每次最多 10 个词"}
+  Q56 -->|不过| QREJ
+  QREJ -.Q5 不过且占位的是小站.-> SEED["登记为标杆道种子"]
+  Q56 -->|六条全过| REG["7 登记为快道方向 found"]
+  REG --> VOL["英文区 6 国各自锚词换算后相加，写简报素材"]
+  VOL --> SET{"settle 结算"}
+  SET -->|基准 ≥ 1 万访问| GO["go：决策书 + 最小版本简报"]
+  SET -->|不到 1 万但趋势不降| WATCH["watching：30 天内复查"]
+  SET -->|命中否决门| NO["rejected"]
+  SET -->|关键证据拿不到| HOLD["parked"]
+  WATCH -.下次运行.-> WAT
+  GO --> PUSH["8 四处强推，跟进到上线验收"]
+</pre></div>
+<p class="caption">速判不过的词不登记成方向，只进快道淘汰记录；这一点同标杆道"初核不过只进淘汰索引"。</p>
+
+<h3 id="s11-4"><span class="num">11.4</span>状态与否决门</h3>
+<p><strong>快道在标杆道四态之外多一个 <span class="chip watch">watching</span>（观察中），只对快道合法。</strong>复查记在记录里，不算状态转移；登记日起 30 天到期。</p>
+<div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> found: 速判六条全过，register-quick
+  found --> go: 基准 ≥ 1 万访问
+  found --> watching: 不到 1 万，趋势不降
+  found --> rejected: 命中否决门
+  found --> parked: 关键证据拿不到
+  watching --> go: 复查时涨过 1 万
+  watching --> rejected: 到期仍不够，或首页有人做了
+  parked --> go: 补证据后过线
+  parked --> rejected: 补证据后否决
+  go --> [*]
+  rejected --> [*]
+</pre></div>
+<div class="tw"><table>
+  <thead><tr><th>否决门</th><th>条件</th><th>最少要有的证据</th></tr></thead>
+  <tbody>
+    <tr><td><code>scope</code></td><td>范围排除命中（同 6.3）</td><td>最新速判 Q4 不过，加 <code>--scope-hit</code></td></tr>
+    <tr><td><code>not_new</code></td><td>对象首次公开超过 90 天，或老东西换名</td><td>最新速判 Q1 不过</td></tr>
+    <tr><td><code>oneoff</code></td><td>新闻热点、一次性需求、冲高回落</td><td>最新速判 Q3 不过，或量级曲线冲高回落</td></tr>
+    <tr><td><code>occupied</code></td><td>首页已有页面完整做了这个任务</td><td>最新速判 Q5 不过并写明占位页面；那个站若是小站，用 <code>seeds.py add --source serp</code> 登记为标杆道种子</td></tr>
+    <tr><td><code>answered</code></td><td>AI 概览或原生组件已答完</td><td>最新速判 Q6 不过</td></tr>
+    <tr><td><code>volume</code></td><td>观察 30 天到期仍不够，或量不够且趋势在降</td><td>最新量级观察，模型现场重算一致</td></tr>
+  </tbody>
+</table></div>
+<p><span class="chip hold">parked</span> 用于关键证据拿不到：Trends 读不出、首页预检重试仍失败、对象发布日期查不到。</p>
+<div class="note"><span class="tag">待你拍板</span>现在 parked 不能转成 watching。如果一个方向当时因为 Trends 读不出被搁置，后来能读了、量不到 1 万但在涨，它既不能 go、也不能按 volume 否决（要求到期或在降），只能一直搁置。这是设计稿状态机漏掉的一条，是否加上 <code>parked → watching</code> 由你定。</div>
+
+<h3 id="s11-5"><span class="num">11.5</span>一次运行的时序图</h3>
+<p><strong>快道一次运行只有一个阶段，运行清单的轮数固定为 1；和标杆道的未完成运行互不阻塞。</strong>上游来源用 curl，Trends 和 Google 首页用内置浏览器，Semrush 只用来查锚词月量。</p>
+<div class="diagram"><pre class="mermaid">
+sequenceDiagram
+  autonumber
+  actor U as 用户
+  participant M as 主会话（xinci-bench-quick）
+  participant RS as report_status.py
+  participant RL as run_log.py
+  participant CU as 上游来源（curl）
+  participant SS as suggest_snapshot.py
+  participant BR as Trends 与 Google 首页（内置浏览器）
+  participant QP as quick_pool.py
+  participant TV as trends_volume.py
+  participant SR as Semrush（Chrome）
+  participant WO as write_observation.py
+  participant LG as ledger.py
+  participant ST as settle.py
+  U->>M: xinci_bench_quick_run
+  M->>RS: 读看板
+  RS-->>M: 【立即建站】行、到期验收节点、观察中剩余天数
+  M->>RL: --plan --lane quick，写 started
+  loop 每个观察中的方向
+    M->>BR: 锚词换算重测量级，必要时重看首页
+    M->>WO: 新的 quick_volume 与 quick_screen 观察
+    M->>LG: watch-check
+    LG-->>M: 建议 go、watching 或 rejected 加否决门
+    M->>ST: 建议是 go 或否决时结算
+  end
+  M->>QP: expire 过期 7 天的原料
+  M->>CU: SteamCharts、Apple 榜、Product Hunt、GitHub、HN、Wikipedia、联邦公报
+  M->>CU: wiki_releases.py 取未来 30 天上线的新游戏（按浏览量前 20）
+  M->>BR: xinciTrendsRising 取飙升词（最多 6 个种子词，间隔 ≥ 30 秒）
+  M->>SS: --object 新对象（对象名加 10 个任务词）
+  SS-->>M: 以前所有快照里都没出现过的建议
+  M->>WO: 一份 quick_signal 观察
+  M->>QP: add，去重后进原料池
+  opt 看板有可预判的游戏（每轮最多 2 个）
+    M->>BR: 预判：美国首页两次判 P5、P6，再只测美国的对象名量
+    M->>TV: --term 对象名，其余 5 国放 skipped
+    M->>WO: quick_forecast.py 生成预判观察
+    M->>LG: go 或 watching 才 register-quick（forecast 键），settle 开玩前结算
+  end
+  loop 每个原料
+    M->>M: 零成本速判 Q1–Q4
+  end
+  M->>QP: pending --top 10，按优先级取首页要看的词
+  loop 最多 10 个词，两次请求间隔至少 60 秒
+    M->>BR: 预检后读 Google 首页，判 Q5、Q6
+    M->>WO: quick_screen 观察
+  end
+  M->>QP: reject 速判不过的词，Q5 占位小站加 --seed-domain
+  M->>LG: register-quick 六条全过的词
+  loop 英文区 6 国
+    M->>BR: trends_fetch.js，geo 设为该国，新词与美国锚词同一次查询
+  end
+  M->>TV: 先只带美国锚词月量算一遍
+  TV-->>M: 读不出的国家记 0，列出要查锚词月量的国家
+  M->>SR: 只为这些国家查锚词在该国的月量
+  M->>TV: 补齐后写入 quick_volume
+  M->>WO: quick_brief 观察
+  M->>LG: update --ref，再 quick-preview 看三档
+  M->>ST: settle go、watching、rejected 或 parked
+  opt 出了 go
+    M->>U: 推送通知：方向、基准访问与收入、最晚上线日
+    M->>U: 汇报第一行以【立即建站】开头
+  end
+  M->>RL: --finish，记 Semrush 调用数
+</pre></div>
+<p class="caption">美国的锚词先用 <code>lexicon.py --match</code> 在旧词库里找量级接近的词；美国找不到合适锚词、以及美国以外的国家，都用 Semrush 查锚词在该国的月量（旧词库只有美国的量），这是快道唯一会花 Semrush 额度的地方。</p>
+
+<h3 id="s11-6"><span class="num">11.6</span>数据来源与取法</h3>
+<p><strong>2026-10-13 从本机逐个实测过。没在本次运行实际取回的来源不写"已检查"；实际打开的网址记进观察的 <code>source_urls</code>。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>通道</th><th>用于</th></tr></thead>
+  <tbody>
+    <tr><td class="k">curl / 脚本</td><td>自动补全（<code>suggest_snapshot.py</code>）、Wikipedia 发售表（<code>wiki_releases.py</code>）、Trends 热搜 RSS、各公开接口与订阅源</td></tr>
+    <tr><td class="k">内置浏览器</td><td>Trends 曲线与飙升词（在 Trends 页面里调用内部接口）、Google 首页、Reddit（经 Google 搜索）、Google Play</td></tr>
+    <tr><td class="k">你的 Chrome</td><td>用 Semrush 查锚词月量：美国只在旧词库没有合适锚词时查；美国以外的国家一律要查</td></tr>
+  </tbody>
+</table></div>
+<p><strong>搜索侧</strong>：告诉我们"有人在搜"和"搜多少"。</p>
+<div class="tw"><table>
+  <thead><tr><th>来源</th><th>怎么取</th><th>取什么</th><th>限制与实测</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Google 自动补全</td><td><code>suggest_snapshot.py --object "&lt;对象名&gt;" [--gl gb]</code>，请求 <code>suggestqueries.google.com/complete/search?client=firefox&amp;hl=en&amp;gl=&lt;国家&gt;&amp;q=&lt;查询&gt;</code>；默认美国，地区性对象加 <code>--gl</code> 查英国、加拿大、澳大利亚等，各国快照分开存</td><td>对"对象名 + 空格"和"对象名 + 每个任务词"各取一次，存快照；以前所有快照里都没出现过的才算新说法</td><td>可用；同一查询隔几秒请求两次结果也不同，所以只认"从没出现过"；脚本间隔 1 秒，频率上限未确认；取数失败不写快照</td></tr>
+    <tr><td class="k">Trends 曲线</td><td>内置浏览器打开 <code>trends.google.com/trends/explore?geo=&lt;国家代码&gt;&amp;q=&lt;词&gt;</code>（6 国各查一次），页内请求 <code>/trends/api/explore</code>，切掉返回体前缀 <code>)]}'</code>，取 TIMESERIES 的 token 再请求 <code>/trends/api/widgetdata/multiline</code></td><td>逐小时（7 天）、逐日（30 天）、3 个月的热度值</td><td>可用；两次请求间隔 ≥ 1.5 秒，curl 直接请求返回 429</td></tr>
+    <tr><td class="k">Trends 飙升词</td><td>用 <code>trends_fetch.js</code> 的 <code>xinciTrendsRising({term, cat})</code>，默认美国、近 7 天</td><td>飙升与热门相关查询（百分比或 breakout）。<strong>每次运行都要取</strong>，最多 6 个种子词：<code>beta</code>、<code>playtest</code> 用游戏分类（<code>cat: 8</code>）抓正在测试的新游戏，再选 3–4 个任务词；测试、抢先体验要查到开玩日期写进原料</td><td>可用。10-14 实测：beta 查到 State of Decay 3 封闭测试（breakout）、Dawn of War 4 测试 +700%；playtest 查到 ArcheAge Chronicles、March of Giants；early access 查到 DayZ Badlands（breakout）。间隔 6 秒连查第 3 次就 429，所以两次执行间隔 ≥ 30 秒，遇 429 停下，没查的种子写"本次未取"</td></tr>
+    <tr><td class="k">锚词换算</td><td>用 <code>trends_fetch.js</code> 在 Trends 页面里每国一次请求，<code>geo</code> 设为该国，放新词与锚词两条曲线；取回的 JSON 交给 <code>trends_volume.py</code>，先用美国的锚词把 6 国都查一遍（不花 Semrush），只有读得出、比值合格的国家才去 Semrush 查锚词月量；新词读得出但锚词在该国热度为 0 的，换锚词重查，不能放进"未查"按 0 计（你 10-15 定）。按地区分布的接口 10-14 实测连续 429，不用</td><td>两条曲线最近 7 天与 30 天均值，换算成该国月搜索量，6 国相加（11.8）</td><td>每国比值须在 0.2–5，不合就给该国换锚词；读不出的国家记 0；低量词是噪声大的小整数</td></tr>
+    <tr><td class="k">Trends 热搜 RSS</td><td><code>curl trends.google.com/trending/rss?geo=&lt;国家代码&gt;</code>，6 国各取一次</td><td>标题、估计流量、新闻标题与链接</td><td>可用；基本是新闻，主要用来判 Q3 是否新闻热点</td></tr>
+    <tr><td class="k">Semrush</td><td>你的 Chrome，Keyword Overview（选国家，或看按国家的分布）</td><td>锚词在各国的月量</td><td>一次能否看全 6 国未实测；新词自身的量多久出现在 Semrush 里未确认</td></tr>
+  </tbody>
+</table></div>
+<p><strong>上游新对象</strong>：新游戏、新产品、新功能、新规则，是新任务说法的源头。</p>
+<div class="tw"><table>
+  <thead><tr><th>来源</th><th>怎么取</th><th>取什么</th><th>实测</th></tr></thead>
+  <tbody>
+    <tr><td class="k">SteamCharts（代替 Steam）</td><td><code>curl steamcharts.com/top</code>；单款 <code>steamcharts.com/app/&lt;id&gt;</code></td><td>名称、当前在线人数、新进榜、单款在线走势；没有发布日期，Q1 改从 Wikipedia 或 Google 读</td><td>可用；不收测试版（WARDOGS 测试版 404），只能看到已上线的游戏</td></tr>
+    <tr><td class="k">Wikipedia 发售表（上线日历）</td><td><code>wiki_releases.py --output &lt;scratchpad&gt;/wiki_releases.json</code>，取 <code>List of video games released in &lt;年&gt;</code> 覆盖最近 14 天到未来 30 天的小节</td><td>最近 14 天已上线与未来 30 天要上线的原创、抢先体验游戏（有独立词条、英文区能玩），按近 30 天浏览量取前 20，带开玩日期与阶段</td><td>可用。10-14 实测 10–12 月 234 行，未来 30 天筛出 21 款，浏览量前三是 Call of Duty: Modern Warfare 4（17.1 万）、Castlevania: Belmont's Curse（8.3 万）、Final Fantasy Resonance（5.1 万）。<strong>只有正式上线和抢先体验日期，没有公开测试</strong>，测试靠 Trends 补；没有独立词条的游戏看不到（如 Aniimo）</td></tr>
+    <tr><td class="k">Roblox</td><td>不直接取：用自动补全与 Trends 盯 "roblox" 加任务词的飙升，再看 YouTube</td><td>新体验名与任务说法</td><td>官方与第三方统计站都取不到</td></tr>
+    <tr><td class="k">Apple 免费榜</td><td><code>curl rss.applemarketingtools.com/api/v2/us/apps/top-free/50/apps.json</code></td><td>名称、发布日期、链接；游戏不能单独筛</td><td>可用</td></tr>
+    <tr><td class="k">iTunes 搜索</td><td><code>curl "itunes.apple.com/search?term=&lt;词&gt;&amp;country=us&amp;entity=software"</code></td><td>名称、发布日期、类别；核发布日期、看有没有配套 App</td><td>可用</td></tr>
+    <tr><td class="k">Google Play</td><td>内置浏览器读 <code>play.google.com/store/games?hl=en&amp;gl=US</code></td><td>新上榜游戏名</td><td>未实测</td></tr>
+    <tr><td class="k">Product Hunt</td><td><code>curl www.producthunt.com/feed</code>（Atom）</td><td>标题、链接、发布时间、简介；有潜力的再用浏览器读原页</td><td>可用</td></tr>
+    <tr><td class="k">GitHub</td><td><code>curl "github.com/trending?since=daily"</code>；<code>gh api "search/repositories?q=created:&gt;日期&amp;sort=stars"</code></td><td>仓库名、创建时间、star 数</td><td>可用；未登录搜索每分钟 10 次</td></tr>
+    <tr><td class="k">Hacker News</td><td><code>curl "hn.algolia.com/api/v1/search_by_date?tags=show_hn&amp;numericFilters=points&gt;50"</code></td><td>标题、链接、分数、时间</td><td>可用</td></tr>
+    <tr><td class="k">YouTube 搜索</td><td><code>curl "www.youtube.com/results?search_query=&lt;词&gt;"</code></td><td>视频条目数与发布时间，看创作者是否跟进</td><td>可用但易碎：出口不在美国，页面是繁体中文（香港）</td></tr>
+    <tr><td class="k">Wikipedia 浏览量</td><td><code>curl wikimedia.org/api/rest_v1/metrics/pageviews/per-article/en.wikipedia/all-access/user/&lt;词条&gt;/daily/&lt;起&gt;/&lt;止&gt;</code></td><td>每日浏览量，对象热度的绝对参照与持续性</td><td>可用；Grow_a_Garden 9-01 为 152、10-12 为 216</td></tr>
+    <tr><td class="k">平台规则与政策</td><td><code>curl "www.federalregister.gov/api/v1/documents.json?order=newest"</code></td><td>标题、发布日期、类型、摘要</td><td>可用</td></tr>
+  </tbody>
+</table></div>
+<p><strong>现场</strong>：Google 首页同 5.2 的规程（美区三参、预检四项、请求间隔 ≥ 60 秒），Q5、Q6 只看美国首页；Reddit 接口返回 403，改在内置浏览器搜 Google <code>site:reddit.com "&lt;对象&gt;" (calculator OR tracker OR tool)</code>，加 <code>tbs=qdr:w</code> 只看过去一周。</p>
+<p><strong>确认不可用</strong>：Steam 官方接口、SteamSpy（Cloudflare 挑战）、SteamDB 即将推出（403）、Gematsu 订阅源（连不上）、TwitchTracker 榜单（写明禁止抓取，开放接口只给单款 30 天汇总）、Roblox 官网与接口（三条通道都打不开）、RoMonitor 与 RoTrends（只得脚本外壳）、Reddit 接口（403）、Trends 接口直接 curl（429）、Google 搜索页直接 curl。Exploding Topics 等付费趋势工具没有账号，不用。</p>
+
+<h3 id="s11-7"><span class="num">11.7</span>速判六条与原料池</h3>
+<p><strong>前四条零成本，过了才看 Google 首页；前一条已不过时后面的可填 null。</strong>Q5、Q6 有结论时，速判观察必须带通过的浏览器预检。</p>
+<div class="tw"><table>
+  <thead><tr><th>编号</th><th>条件</th><th>判法</th><th>不过时</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Q1 真新</td><td>对象首次公开 ≤ 90 天；游戏 ≤ 14 天</td><td>"首次公开"指<strong>第一次让大量普通用户用上</strong>的日期：公开测试、抢先体验、正式发售、App 上架、开放注册中最早的一天；向所有购买或预购者开放的测试算，所有人都能下载的试玩版也算（哪怕只含开头部分），DLC、资料片按新对象算，只限少数受邀者的内测不算；公布、预告、开放预约不算（公布日写进 <code>date_source</code> 备查）。如 WARDOGS 记 2026-08-22 预购玩家封闭测试，不记 2026-02-05 公布。查不到日期的对象（如 Roblox 体验）照常看首页，日期尽量从首页读；首页也读不到，就用 Trends 上对象名近 90 天第一次有热度的那天（<code>xinciTrendsFirstSeen</code>，Roblox 查"&lt;体验名&gt; roblox"），开头就有热度视为早于 90 天、Q1 不过。从对象自己的发布页、商店页、仓库首个版本读日期，不信来源的"新"标签；登记时脚本按速判日期强制</td><td><code>not_new</code></td></tr>
+    <tr><td class="k">Q2 有人在搜</td><td>至少一项证据</td><td>自动补全出现该说法，或 Trends 曲线可读（不全为 0）</td><td>不否决，原料保留 7 天下次再看</td></tr>
+    <tr><td class="k">Q3 不是一次性</td><td>四项都满足</td><td>任务会反复发生；不是新闻事件驱动（对照热搜 RSS）；对象在涨或持平（在线人数、榜单、star、Wikipedia 浏览量）；不冲高回落</td><td><code>oneoff</code></td></tr>
+    <tr><td class="k">Q4 范围</td><td>五条排除未命中</td><td>同 6.3；说法里带 nsfw、porn、hentai、uncensored 这类词的直接判不过</td><td><code>scope</code></td></tr>
+    <tr><td class="k">Q5 没人做</td><td>首页前 10 条没有页面完整做了这个任务</td><td>"完整做了"指页面上直接、免费拿到用户要的结果；新闻、论坛、视频、官方公告不算；只看美国首页</td><td><code>occupied</code>；占位的是小站时同时登记为标杆道种子</td></tr>
+    <tr><td class="k">Q6 没被答完</td><td>AI 概览或原生组件没答完</td><td>同 5.2 的首屏规程；只看美国首页</td><td><code>answered</code></td></tr>
+  </tbody>
+</table></div>
+<p><strong>任务词</strong>（自动补全按这 10 个展开）：calculator、codes、tracker、tier list、map、checker、generator、converter、build、value。</p>
+<ul>
+  <li><strong>原料池去重</strong>：新原料与池里待看或已用的、快道淘汰记录里的、已有方向的说法、旧裁决的主词逐个比对，大小写与多余空格不计；只有对象、还没有任务说法的原料按对象名去重。淘汰过的词再被取回时，报的是淘汰原因。</li>
+  <li><strong>过期</strong>：待看原料超过 7 天还拿不到"有人在搜"的证据就标过期；之后再被来源取回会重新进池（保留原编号，记复活时间），新词第一次出现时 Trends 往往还读不出，不能一次过期就永远挡在外面。</li>
+  <li><strong>即将开玩</strong>：原料可带开玩日期（<code>playable_at</code>，第一次让大量普通用户用上的那天）和阶段（<code>stage</code>）。还没到这天的不进待看、不花首页名额，只在 <code>quick_pool.py upcoming</code> 和看板上列出，建议在开玩当天到第 3 天跑一次快道；保留 7 天从开玩日起算；同一对象再被看到时日期以最新的为准（延期、改测试日期）。</li>
+  <li><strong>取词顺序</strong>：首页速判每次只看 10 个词，按 <code>quick_pool.py pending --top 10</code> 的顺序取——有具体任务说法的排在只有对象名的前面，Roblox 兑换码（原料带 <code>platform: "roblox"</code> 且说法里有 codes）排在其他说法后面，再看被几个来源同时看到（原料池记下每次被哪个来源看到），再看 Trends 飙升幅度（原料可带 <code>rising</code>，<code>breakout</code> 最大），最后是先看到的。</li>
+  <li><strong>自动消耗</strong>：速判否决（<code>quick_pool.py reject</code>）和登记方向（<code>register-quick</code>）会把对应说法的待看原料自动标为已用，下次运行不会重复花首页名额。</li>
+  <li><strong>登记</strong>：速判观察里的词必须是登记的说法之一；同一说法不能属于两个方向，改说法时也查。</li>
+</ul>
+
+<h3 id="s11-8"><span class="num">11.8</span>量级换算与判定</h3>
+<p><strong>Trends 只给相对热度，所以拿一个已知月搜索量的"锚词"和新词放进同一次查询，按两条曲线的比值换算。</strong></p>
+<pre class="json"><code>某国月搜索量 = 锚词在该国的月量 × (新词最近 7 天均值 ÷ 锚词最近 7 天均值)   <span class="c">// geo 设为该国的同一次 Trends 查询</span>
+            <span class="c">// 比值须在 0.2–5 之间,否则给该国换锚词;同时报 30 天均值做对照;读不出的国家记 0</span>
+            <span class="c">// 美国的锚词优先旧词库里 90 天内测过、无季节性的词;美国以外一律用 Semrush 查</span>
+当前月搜索量 = US + GB + CA + AU + NZ + IE 各国月搜索量之和
+预计月访问   = floor(当前月搜索量 × 首发份额 × AI 概览系数)    <span class="c">// 按当前量,不外推增长;门槛看英文区合计</span>
+首发份额     = 保守 0.10 · 基准 0.20 · 乐观 0.30
+AI 概览系数  = 在场但没答完 0.6,否则 1.0                    <span class="c">// 只看美国首页;已答完直接按 answered 否决,不测算</span>
+美国访问     = 预计月访问 × 美国搜索量 ÷ 当前月搜索量          <span class="c">// 访问按各国搜索量的比例分</span>
+预计月收入   = (美国访问 × $4 + 其他英文国家访问 × $2) ÷ 1000   <span class="c">// AdSense;$2 未确认</span>
+
+趋势不降     = 最近 7 天均值 ≥ 前 7 天均值 × 0.8             <span class="c">// 取换算量最大那个国家的 30 天逐日曲线的后 14 天</span>
+冲高回落     = 最近 7 天均值 &lt; 近 30 天峰值 × 0.3            <span class="c">// Q3 不过,oneoff</span></code></pre>
+<div class="tw"><table>
+  <thead><tr><th>结论</th><th>条件</th></tr></thead>
+  <tbody>
+    <tr><td><span class="chip go">go</span></td><td>最新速判六条全过；基准 ≥ 10,000 英文区访问；不冲高回落；锚词测量在 90 天内；简报素材写明最小版本 ≤ 3 天能做出、数据拿得到</td></tr>
+    <tr><td><span class="chip watch">watching</span></td><td>最新速判六条全过；基准 &lt; 10,000；趋势不降；不冲高回落；锚词测量在 90 天内</td></tr>
+    <tr><td><span class="chip no">rejected</span></td><td>命中 11.4 的任一否决门</td></tr>
+    <tr><td><span class="chip hold">parked</span></td><td>关键证据拿不到</td></tr>
+  </tbody>
+</table></div>
+<ul>
+  <li><strong>门槛换成搜索量</strong>：基准 1 万访问需要英文区月搜索量合计 50,000（没有 AI 概览）或约 83,334（AI 概览在场但没答完）。</li>
+  <li><strong>门槛换成收入</strong>：1 万访问全在美国约 $40/月，一半在英国等地约 $30/月；"单站就能到 $100"看基准收入，全是美国流量时要 2.5 万访问（12.5 万搜索）。快道 go 的意思是"值得马上花 1–3 天做一个最小版本"，不是"单站一定到 $100"。</li>
+  <li><strong>一个实测例子</strong>：2026-10-13 用锚词 "what county am i in"（74,000/月）换算出 "grow a garden 2" 在美国约 5,000/月（那次只测了美国），基准约 1,000 访问；若首页确实没人做且趋势不降，会进观察中。那次比值约 1/15，按规则应换一个量级更接近的锚词，只能当量级参考。</li>
+</ul>
+
+<h3 id="s11-9"><span class="num">11.9</span>快道假设表</h3>
+<p><strong>版本 2026-10-17.q5（由 q4 升版：加每款游戏最多预判的次数；q4 由 q3 升版：加上线前预判的各项数值与游戏类别；q3 由 q2 升版：游戏类真新窗口改为开放游玩后 14 天；q2 由 q1 升版：门槛与收入改按英文区算），数值写在 <code>quick_model.QUICK_ASSUMPTIONS</code>，和契约第 10 节由文档一致性测试锁住；只由你改。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>项目</th><th class="n">值</th><th>状态</th></tr></thead>
+  <tbody>
+    <tr><td>首发份额 保守/基准/乐观</td><td class="n">10% / 20% / 30%</td><td>起点假设，基准对应"排第 1、无 AI 概览"的点击率；你定的</td></tr>
+    <tr><td>AI 概览在场未答完系数</td><td class="n">× 0.6</td><td>你定的</td></tr>
+    <tr><td>英文区</td><td class="n">US、GB、CA、AU、NZ、IE</td><td>你定的（10-14）</td></tr>
+    <tr><td>go 门槛（基准，上线 90 天内单月）</td><td class="n">英文区合计 10,000 访问</td><td>你定的</td></tr>
+    <tr><td>单站就能到 $100</td><td class="n">基准月收入 ≥ $100</td><td>只作标记</td></tr>
+    <tr><td>收入展示 美国</td><td class="n">AdSense $4/千访问</td><td>沿用标杆道，未确认</td></tr>
+    <tr><td>收入展示 其他英文国家</td><td class="n">AdSense $2/千访问</td><td>你定的（10-14），未确认</td></tr>
+    <tr><td>真新</td><td class="n">≤ 90 天</td><td>默认值</td></tr>
+    <tr><td>真新（游戏）</td><td class="n">≤ 14 天</td><td>10-14 你定：从开放游玩日算</td></tr>
+    <tr><td>观察期</td><td class="n">30 天</td><td>默认值</td></tr>
+    <tr><td>冲高回落</td><td class="n">峰值 × 30%</td><td>默认值</td></tr>
+    <tr><td>趋势不降</td><td class="n">前 7 天 × 80%</td><td>默认值</td></tr>
+    <tr><td>锚词比值区间</td><td class="n">0.2–5</td><td>默认值</td></tr>
+    <tr><td>锚词测量新鲜度</td><td class="n">90 天</td><td>默认值；按各国里最早的测量日算</td></tr>
+    <tr><td>原料保留</td><td class="n">7 天</td><td>默认值</td></tr>
+    <tr><td>每次运行首屏上限</td><td class="n">10 个词</td><td>默认值</td></tr>
+    <tr><td>建议最晚上线</td><td class="n">判 go 后 7 天</td><td>默认值</td></tr>
+    <tr><td>验收节点</td><td class="n">14 / 30 / 90 天</td><td>默认值</td></tr>
+    <tr><td>止损</td><td class="n">基准 × 25%</td><td>第 30 天月点击低于它就止损</td></tr>
+    <tr><td>预判窗口</td><td class="n">开玩日在今天之后 3–21 天</td><td>设计稿替你定的，可改</td></tr>
+    <tr><td>每轮预判上限</td><td class="n">2 个</td><td>同上；Trends 配额</td></tr>
+    <tr><td>每款游戏预判次数</td><td class="n">最多 2 次</td><td>10-17 你拍板（我提的建议）；按规范化后的游戏名数预判观察的份数，建议为 measure_rest 的不算</td></tr>
+    <tr><td>参照条数下限</td><td class="n">同任务类型、同类别 ≥ 3 条</td><td>同上；不足退到同任务类型全部类别，仍不足不预判</td></tr>
+    <tr><td>预判判定倍数</td><td class="n">下四分位判 go，中位数过线进观察</td><td>同上</td></tr>
+    <tr><td>预判 go 建议最晚上线</td><td class="n">开玩日前 1 天</td><td>同上</td></tr>
+    <tr><td>预判复核日与止损</td><td class="n">开玩日 + 7 天；实测 &lt; 预测 × 25%</td><td>同上；止损只对开玩前就判 go 的方向</td></tr>
+    <tr><td>只测美国的截断线</td><td class="n">美国单国中位数基准 &lt; 门槛 × 50%</td><td>同上；不再测其他 5 国、不花 Semrush</td></tr>
+    <tr><td>参照窗口</td><td class="n">对象名：开玩日前第 9–3 天；任务词：开玩后 60 天内最高的连续 14 天</td><td>同上；写死，不由执行者挑</td></tr>
+    <tr><td>开玩日推迟提醒</td><td class="n">累计推迟 &gt; 7 天</td><td>同上；看板提醒重新评估</td></tr>
+    <tr><td>预判对象名量的时效</td><td class="n">预判当天或之前 2 天内测</td><td>同上；按日期比，在预判之后测的、或比预判早 2 天以上的，生成预判观察与结算都拒收</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s11-10"><span class="num">11.10</span>强烈推荐与建站跟进</h3>
+<p><strong>判 go 的那次运行，下面四处同时出现；之后每次运行都再推荐一次，直到你说已开建或放弃。</strong></p>
+<ol class="steps">
+  <li><strong>推送通知</strong>：<code>xinci-bench-quick</code> 的 SKILL 要求调用推送通知工具，内容含方向、基准访问与收入、建议最晚上线日期。</li>
+  <li><strong>运行汇报第一行</strong>：以"【立即建站】"开头，写方向、基准访问与收入、建议最晚上线日期、决策书路径。</li>
+  <li><strong>决策书开头</strong>：<code>## 立即建站</code> 一节，html 版整节加底色（11.11）。</li>
+  <li><strong>看板置顶</strong>：<code>report_status.py</code> 第一行起列出所有待开建的快道 go，超过建议上线日的标"已超期"；标杆道的 scan、assess、run、status 四个 skill 汇报前也先读看板，把这一行原样放在最前面。</li>
+</ol>
+<pre class="json"><code><span class="c">// 看板第一行的样子(示例值)</span>
+【立即建站】gag2-calculator:基准约 10,000 次访问、$40.00/月,建议最晚 2026-10-21 上线 → …/文档/gag2-calculator.md</code></pre>
+<div class="diagram"><pre class="mermaid">
+stateDiagram-v2
+  [*] --> pending: 判 go，跟进初始化
+  pending --> started: 你说已开建，记域名
+  started --> launched: 你说已上线，记上线日
+  pending --> abandoned: 放弃，写理由
+  started --> abandoned: 放弃，写理由
+  launched --> abandoned: 放弃，写理由
+  launched --> [*]: 14 / 30 / 90 天验收
+</pre></div>
+<ul>
+  <li>用 <code>ledger.py follow-up --slug &lt;方向&gt; --status started|launched|abandoned [--domain] [--date] [--reason]</code> 改，只能前进，不改方向的状态。</li>
+  <li>日期写 YYYY-MM-DD，必须是日历上真实存在的日子（2026-11-31 会被拒）；开建不早于判 go，上线不早于开建。</li>
+  <li>标成已开建后看板不再置顶推荐；已上线的方向，看板按上线日列出已到期的验收节点。</li>
+</ul>
+<div class="tw"><table>
+  <thead><tr><th>上线后</th><th>看什么</th><th>结论</th></tr></thead>
+  <tbody>
+    <tr><td class="k">第 14 天</td><td>主页面是否收录、有展现</td><td>没有就先查收录</td></tr>
+    <tr><td class="k">第 30 天</td><td>月点击是否低于基准预计 × 25%</td><td>低于即止损：不再加工时，站留着</td></tr>
+    <tr><td class="k">第 90 天</td><td>英文区单月是否 ≥ 10,000 访问</td><td>达到算成功</td></tr>
+  </tbody>
+</table></div>
+<p>你记录的点击与收入写进 <code>反馈/</code>，以后用来校准首发份额，不自动改假设表。</p>
+
+<h3 id="s11-11"><span class="num">11.11</span>快道决策书与最小版本简报</h3>
+<p><strong>由 <code>build_quick_doc.py</code> 生成，纪律同 10.1：md 是唯一事实来源，每节第一句是加粗的大白话结论，数字标"模型估算"或"Trends 换算"，结算时把 md 的 SHA 记进账本。</strong></p>
+<ol class="steps">
+  <li><strong>立即建站</strong>（仅 go）：建议最晚上线日期、窗口理由（首页没人做、说法哪天冒出来）、三档预计访问与收入、当前月搜索量、最小版本要做的页面</li>
+  <li><strong>结论</strong>：一句话理由、基准访问与收入、最大的未知</li>
+  <li><strong>第一部分 决策</strong>：新对象与新说法；有人在搜（锚词、比值、30 天对照）；不是一次性（最近 7 天、前 7 天、峰值）；首页现场与 GEO（前 10 条、AI 概览、谁在做）；预计访问与收入（三档、过线所需搜索量、观察中的到期日与复查次数）；风险与最大未知</li>
+  <li><strong>第二部分 最小版本建站简报</strong>（仅 go），见下表</li>
+  <li><strong>附：证据清单</strong>（绑定的观察文件与 SHA-256）</li>
+</ol>
+<div class="tw"><table>
+  <thead><tr><th>节</th><th>内容</th></tr></thead>
+  <tbody>
+    <tr><td class="k">1 做什么</td><td>1 个主页面完成核心任务，最多 2–3 个配套页覆盖同一对象的其他任务词</td></tr>
+    <tr><td class="k">2 页面清单</td><td>路径、目标查询（照抄自动补全原话）、要交付的内容或功能、预计几天做完</td></tr>
+    <tr><td class="k">3 数据</td><td>来源、更新频率、授权</td></tr>
+    <tr><td class="k">4 上线清单</td><td>免费托管，当天提交 Search Console 和 sitemap；SEO 与 GEO 固定条目沿用标杆道（10.2、8.3）</td></tr>
+    <tr><td class="k">5 预计访问与收入</td><td>基准访问与收入，按 AdSense 估算</td></tr>
+    <tr><td class="k">6 验收与止损</td><td>11.10 的三个验收节点与止损线</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s11-12"><span class="num">11.12</span>复核与数据完整性</h3>
+<p><strong>快道沿用标杆道"先复核再写入、失败回滚、绑定观察 SHA、决策书 SHA 防手改"的全部规则（9.3、9.4），另加下面几条。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>环节</th><th>规则</th></tr></thead>
+  <tbody>
+    <tr><td class="k">写观察</td><td>四类快道观察的阶段固定为 quick；量级观察按英文区 6 国各一行，美国以外的锚词须来自 Semrush，合计须等于各国之和，趋势国家须是换算量最大的那个；每国锚词比值须等于两条曲线均值之比且在 0.2–5，估算须等于锚词月量 × 比值；曲线至少 14 个非负数（Trends 显示 "&lt;1" 的点记 0）；日期须是真实日子</td></tr>
+    <tr><td class="k">登记</td><td>速判六条全过、对象首次公开在速判日前 0–90 天、速判的词在登记说法里、说法不和别的方向重复</td></tr>
+    <tr><td class="k">补数</td><td>快道方向只能改标题、站型、说法和追加观察引用；补挂的速判观察必须是本方向说法的</td></tr>
+    <tr><td class="k">结算</td><td>否决门必须属于快道（不能用 revenue 等标杆道的门），不符在写任何东西之前就拒；量级与首屏读数从最新观察推导写入，模型现场重算；观察中写到期日，go 初始化建站跟进</td></tr>
+    <tr><td class="k">复查</td><td><code>watch-check</code> 只给建议、记一次复查：最新速判第一条不过的项给对应否决门（AI 概览已答完给 answered），冲高回落给 oneoff，之后才按量给 go、watching 或 volume</td></tr>
+    <tr><td class="k">校验</td><td><code>validate_ledger.py</code> 对快道重算模型；观察中过了到期日报错；跟进状态与日期不合法报错；原料池状态与快道淘汰记录的否决门、观察引用不合法报错</td></tr>
+    <tr><td class="k">运行清单</td><td>快道运行轮数固定为 1、来源记 quick；标杆道判断"待深核方向是否已有 3 个"时只数标杆道</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s11-13"><span class="num">11.13</span>上线前预判：为什么、适用范围</h3>
+<div class="verdict">
+  <p><strong>你 2026-10-16 允许"上线前按预测判 go"：对开玩日还有 3–21 天的游戏，用"对象名开玩前的月搜索量 × 参照库倍数"预测开玩后的量，预测的下四分位过线（基准预计英文区月访问 ≥ 10,000）就判 go，建议最晚开玩日前 1 天上线，让你在对手之前把站做出来。</strong></p>
+  <p>两条路并存：现行"开玩后按当前量判 go"的路径一个字没改。<strong>预期 go 会很少</strong>：单个任务词的量通常只有对象名的零点几倍，只有超级大作、或工具本身就是核心玩法的游戏才可能过线。判据正本是契约 10.9，设计稿是 <code>docs/superpowers/specs/2026-10-16-xinci-bench-quick-pregame-go-design.md</code>。</p>
+</div>
+<div class="facts">
+  <div><div class="k">预判窗口</div><div class="v">开玩日在今天之后 3–21 天</div></div>
+  <div><div class="k">每轮上限</div><div class="v">最多预判 2 个</div></div>
+  <div><div class="k">判 go 用</div><div class="v">参照倍数的下四分位</div></div>
+  <div><div class="k">建议最晚上线</div><div class="v">开玩日前 1 天</div></div>
+  <div><div class="k">复核日 / 止损</div><div class="v">开玩日 + 7 天 / 实测 &lt; 预测 × 25%</div></div>
+</div>
+<p><strong>为什么要做：</strong>2026-10-14 至 10-16 连续三天快道没出过 go，原因不是找不到新游戏，而是工具位在开玩前后就被占满。</p>
+<ul>
+  <li>WARDOGS、Aniimo 首页上 7 个专做该游戏的占位站，域名注册或首张证书都比开放游玩日早 6–230 天。</li>
+  <li>Castlevania: Belmont's Curse 上线当天，地图首页已有 6 个站（10-01 起有试玩版，做地图的人提前准备）。</li>
+  <li>DayZ Badlands 新地图 10-15 上线，10-16 首页第 1、2 名就是 survivalservers.com 与 iZurvive 的新地图。</li>
+  <li>Pixel Lineage（Roblox）的梯队首页有 3 个专做本作的小站。</li>
+</ul>
+<p>现行规则要求开玩后、按当前搜索量过线才判 go，所以永远晚一步。</p>
+
+<p><strong>适用范围 P1–P6：六条全过才能预判，和 Q1–Q6 一一对应。</strong><code>quick_forecast.py</code> 把六条写进预判观察，P3 由脚本按参照库算，P5 有结论时须带通过的浏览器预检。</p>
+<div class="tw"><table>
+  <thead><tr><th>编号</th><th>条件</th><th>怎么查</th></tr></thead>
+  <tbody>
+    <tr><td class="k">P1 即将开玩</td><td>对象是游戏（含 DLC、资料片），开玩日已定，在预判窗口内，并且还没有所有人都能下载的试玩版或公开测试</td><td>发售表、官方或商店页；有试玩版就说明开玩日已过，按现行路径走</td></tr>
+    <tr><td class="k">P2 有人在等</td><td>对象名开玩前在 Trends 上读得出（美国必须读得出）；自动补全已出现任务说法，或参照库里同类游戏有这类任务</td><td>对象名的美国量（11.14）、<code>suggest_snapshot.py</code></td></tr>
+    <tr><td class="k">P3 任务会反复发生</td><td>最小版本要做的每项任务，参照库里都有够数的参照</td><td>脚本按参照库算；<code>quick_reference.py summary</code> 先看</td></tr>
+    <tr><td class="k">P4 范围</td><td>同第 1 节五条排除</td><td>同 Q4</td></tr>
+    <tr><td class="k">P5 还没人做</td><td>美国首页前 10 条没有专做本作的 wiki 或工具站，大站也没发完整页</td><td>查两次："&lt;游戏名&gt; &lt;任务词&gt;"与"&lt;游戏名&gt; wiki"，间隔 ≥ 60 秒，计入当轮 10 个首页名额</td></tr>
+    <tr><td class="k">P6 没被答完</td><td>开玩前 AI 概览答不了未上线的内容，记"开玩前未知"</td><td>测算一律按在场未答完取系数 0.6，不外推</td></tr>
+  </tbody>
+</table></div>
+<p>六条没有全过：只记观察、建议记 <code>skip</code>，不登记；对象照常留在"即将开玩"日历里，开玩后按现行路径看。</p>
+<div class="diagram"><pre class="mermaid">
+flowchart TD
+  WIN["看板「可预判」：开玩日在 3–21 天内的游戏，每轮最多 2 个"] --> ZERO["零成本先判：P1 开玩日、P3 参照够不够、P4 范围"]
+  ZERO -->|有不过项| SKIP["只记观察，suggestion 为 skip"]
+  ZERO -->|都过| SERP["P5、P6：美国首页两次，计入当轮 10 个名额"]
+  SERP -->|已占位| SKIP
+  SERP -->|没人做| US["只测美国的对象名量，trends_volume.py --term"]
+  US --> F1{"quick_forecast.py"}
+  F1 -->|美国单国中位数基准不到门槛一半| SKIP
+  F1 -->|measure_rest| REST["补测其余 5 国，再跑一次"]
+  REST --> F2{"quick_forecast.py"}
+  F2 -->|下四分位过线| GO["go：register-quick，建议最晚开玩日前 1 天上线"]
+  F2 -->|仅中位数过线| WAT["watching：到期日 = 复核日"]
+  F2 -->|都不过| SKIP
+  GO --> REV["开玩日 + 7 天：review-forecast 对账，实测低于预测 25% 提示止损"]
+  WAT --> WC["开玩日 + 7 天：watch-check，按现行路径复判"]
+</pre></div>
+<p class="caption">预判方向开玩前只能结算 go、观察中或搁置，不能否决（没有速判观察可作依据）；要否决等复核日按现行路径。</p>
+
+<h3 id="s11-14"><span class="num">11.14</span>预测模型与参照库</h3>
+<p><strong>测算单位是"一款游戏一个站"：最小版本覆盖 1–4 项任务（例：交互地图、配装、梯队），量级按这几项任务的预测量相加。</strong>单个任务词几乎到不了门槛，这是实测得出的。</p>
+<pre class="json"><code>对象名开玩前月搜索量 O = 英文区 6 国各自按 Trends 锚词换算后相加          <span class="c">// 测对象名本身,不是任务词;取预判当天之前最近 7 天</span>
+任务 t 的预测月搜索量 F_t = O × r_t                                   <span class="c">// r_t 是参照库里该任务类型的倍数(任务词 ÷ 对象名)</span>
+站点预测月搜索量 F = Σ F_t                                            <span class="c">// 只算最小版本要做的任务</span>
+预计月访问 = floor(F × 首发份额 × 0.6)                                  <span class="c">// 份额 10% / 20% / 30%;AI 概览系数一律取在场未答完</span>
+预计月收入 = (美国访问 × $4 + 其他英文国家访问 × $2) ÷ 1000             <span class="c">// 访问按各国对象名量的比例分</span></code></pre>
+<p>O 取预判前最近 7 天的量，所以对象名的量级观察须在<strong>预判当天或之前 2 天内</strong>测：隔久了、或在预判之后才测的，<code>quick_forecast.py</code> 与结算都拒收，重测对象名的量再预判（开玩日变了重做预判也一样）。</p>
+<p><strong>参照库：每款已开玩游戏的每项任务一条，口径写死，不由执行者现挑。</strong>原因是窗口选法对倍数影响极大：WARDOGS 的地图词，按封闭测试日起 14 天算只有锚词的 0.012 倍，按抢先体验日起 14 天算是 0.122 倍，差 10 倍。</p>
+<ul>
+  <li><strong>只测美国</strong>；对象名和任务词各自和<strong>同一个锚词</strong>放进同一次 Trends 查询比（不是对象名与任务词互比：任务词的量太小，读数全是 0 和 1），每条参照 2 次 Trends。</li>
+  <li><strong>对象名窗口</strong>：开玩日前第 9 到第 3 天（对应最晚的预判时点）；<strong>任务词窗口</strong>：开玩后 60 天内均值最高的连续 14 天（对应"上线 90 天内有一个月"的门槛），并列取最早。</li>
+  <li><strong>倍数 r</strong> = 任务词体积 ÷ 对象名体积，体积 = 锚词月量 × 窗口均值比。日期范围由 <code>quick_reference.py time-range</code> 算，窗口与比值由 <code>quick_reference.py build</code> 按曲线在 Python 里算；曲线不存进观察，<code>write_observation.py</code> 只核对窗口位置与长度、体积 = 锚词月量 × 比值、r = 任务词体积 ÷ 对象名体积，任务词窗口是不是最高的 14 天只有 <code>build</code> 看得到。</li>
+  <li><strong>开玩后满 14 天才能写</strong>（凑得满 14 天窗口）；不满 60 天的写成 <code>full_60_days: false</code>，看板在第 14 天提醒"补参照"、第 60 天提醒"更新参照"。同一款游戏同一任务类型只认最新一条。</li>
+  <li><strong>冷启动</strong>：参照库一开始是空的，先用 WARDOGS、Aniimo、Castlevania: Belmont's Curse、Hellraiser: Revival、Silver Pines、Planet Zoo 2、Order of the Sinking Star、Star Wars: Galactic Racer、Gears of War: E-Day、Valor Mortis、DayZ Badlands、Pixel Lineage 等补，只补开玩已满 14 天的，每轮 2–4 条，大约一周补齐。</li>
+</ul>
+<div class="note"><span class="tag">未确认</span>倍数目前只有 1 个样本：WARDOGS 地图词，对象名 8,623 次/月（美国）、任务词最高两周 1,172 次/月，倍数约 0.14。类别差异、量级差异都未确认，参照库补齐前预测不可信；参照不足时不预判。</div>
+<p><strong>倍数怎么取：</strong>每项任务单独取。</p>
+<ul>
+  <li>同任务类型、同类别的参照 ≥ 3 条：用同类别（记 <code>scope=category</code>）。</li>
+  <li>不够 3 条：退到同任务类型的全部类别（<code>scope=task_type</code>）；仍不够 3 条，该任务 P3 不过，不预判，记"参照不足"。同一款游戏只算一条。</li>
+  <li>判 go 用<strong>下四分位数</strong>（偏保守），同时报中位数。游戏类别分 5 类：开放世界或生存、MMO 或抽卡、银河城或冒险解谜、竞速体育派对、Roblox 体验。</li>
+  <li>预判观察里的倍数不能自己写：<code>quick_forecast.py</code> 从参照库取，<code>write_observation.py</code> 只核对形状与算术；每项任务的倍数在结算时（<code>settle.py</code>）按观察引用的参照路径向参照库重新算，对不上就拒收；账本校验只按账本里的 <code>forecast</code> 块重算模型。</li>
+  <li>参照库里某条参照读不出或不合规：<code>quick_forecast.py</code> 跳过它照常取倍数，在输出的"参照不可用"与观察的 points 里写明跳过了哪条；看板也只是列出它，不再整个拒收。</li>
+</ul>
+<div class="tw"><table>
+  <thead><tr><th>建议（suggestion）</th><th>条件</th><th>然后</th></tr></thead>
+  <tbody>
+    <tr><td><span class="chip go">go</span></td><td>P1–P6 全过；6 国都测过（读不出的记 0，不算没测）；下四分位倍数的基准预计月访问 ≥ 10,000</td><td>登记，结算 go</td></tr>
+    <tr><td><span class="chip watch">watching</span></td><td>P1–P6 全过；6 国都测过；下四分位不过线、中位数过线</td><td>登记，结算观察中，开玩后按现行路径复判</td></tr>
+    <tr><td><span class="chip hold">measure_rest</span></td><td>只测了美国，且美国单国的中位数基准预计 ≥ 门槛 × 50%</td><td>补测其余 5 国（每国 1 次 Trends，读得出的各 1 次 Semrush），重新预判；不拿它登记</td></tr>
+    <tr><td><span class="chip no">skip</span></td><td>六条没有全过；或只测美国时已不到 50% 截断线；或 6 国都测了仍不到中位数过线</td><td>只记观察，不花 Semrush，不登记</td></tr>
+  </tbody>
+</table></div>
+<p><strong>门槛换成搜索量：</strong>基准份额 20%、AI 概览系数 0.6 下，1 万访问需要约 83,334 次英文区搜索/月。WARDOGS 卖了 200 多万份，地图词最高的两周也只有约 1,172 次/月（美国），离门槛差约 70 倍，所以才要一款游戏一个站、几项任务合计。</p>
+
+<h3 id="s11-15"><span class="num">11.15</span>登记、复核与看板提醒</h3>
+<p><strong>登记：</strong><code>ledger.py register-quick</code> 的输入里用 <code>forecast</code>（预判观察路径）代替 <code>screen</code>，二选一。</p>
+<ul>
+  <li>只收游戏（<code>object.type</code> 写 <code>game</code>）、建议为 go 或 watching、<code>object.name</code> 与预判观察的对象名一致（大小写与空格不计）、<code>object.first_public</code> 写开玩日并与预判观察一致、登记的说法都在某项任务的说法里。方向记 <code>basis: "forecast"</code>，同时把日历里这个游戏本身的待看原料标已用。</li>
+  <li>结算（<code>settle.py</code>）开玩前只能 go、watching 或 parked，<strong>不能 rejected</strong>；go 与 watching 的结算日须在开玩前 3–21 天内、重算的预判建议须与结论一致、6 国都测过、最新预判观察与它引用的参照都是当前口径（见下"2026-10-17 你拍板的三条"），go 另要最小版本简报素材；parked 直接放行。</li>
+  <li>go 的建议最晚上线日是<strong>开玩日前 1 天</strong>（现行是判 go 后 7 天）；观察中的到期日先是复核日；决策书改用预判版式（预测访问与收入下四分位、中位数两档各一张三档表，加"预判依据与风险"一节）。</li>
+</ul>
+<p><strong>开玩后复核（开玩日 + 7 天）：</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>方向</th><th>做什么</th><th>结果</th></tr></thead>
+  <tbody>
+    <tr><td class="k">预判 go</td><td>对每项任务测任务词的量级（<code>--term</code> 取该任务在预判观察里的说法之一），<code>ledger.py review-forecast</code>：任务与说法按结算时那份预判观察；每项任务取<strong>复核日当天或之后</strong>测的最新一份，英文区 6 国都要测过（只测美国的拒收，免得误报止损），合计和预测下四分位比</td><td>实测 &lt; 预测 × 25% 记 <code>stop</code>，看板提示"预判失准，建议停止追加投入"；只写记录、不改状态，每个方向只复核一次</td></tr>
+    <tr><td class="k">预判观察中</td><td><code>ledger.py watch-check</code>：复核日前拒收；须有开玩日或之后的速判，以及用 <code>--term</code> 测该方向登记的说法之一的量级（对象名的量不算）</td><td>第一次复查把到期日改为复查日 + 30 天，之后按现行路径给 go、watching 或否决；<strong>复查过才能结算</strong>（go 与按 volume、oneoff 否决都要复核日已到、复查过一次、最新速判与量级都在开玩后），复核日过了还没复查，校验提示"到了复核日，先跑 watch-check"</td></tr>
+    <tr><td class="k">不复核的</td><td>开玩前判观察中、开玩后按现行路径才判 go 的方向</td><td>当初下四分位没过线，拿它判失准没有意义</td></tr>
+  </tbody>
+</table></div>
+<p><strong>开玩日会变。</strong><code>ledger.py update</code> 可以改预判方向的 <code>object.first_public</code>（须同时给 <code>date_source</code>，只能改成今天之后的日期，今天或更早说明已经开玩、按现行路径看首页；开玩后已复核或复查过的不能再改）：<code>forecast</code> 块的开玩日与复核日、观察中的到期日、还没开建的 go 的建议最晚上线日自动顺延；累计推迟超过 7 天，看板提醒重新评估。开玩前尚未结算时改了开玩日，旧预判观察对不上，要重做预判、写新的 <code>quick_forecast</code> 再结算。开玩前搁置的预判方向也能改（没有 <code>forecast</code> 块，只改开玩日），开玩后判 go 的 14 天窗口跟着新开玩日走。</p>
+<p><strong>看板新增六类提醒</strong>（<code>report_status.py</code>，只读）：</p>
+<ul>
+  <li><strong>可预判</strong>：待看原料里开玩日在预判窗口内的游戏，附还有几天；预判过的附"上次预判 日期:建议"。每行还带<strong>重做状态</strong>和一句原因：<code>new</code> 没预判过、<code>due</code> 可以重做、<code>wait</code> 还不到时候、<code>no</code> 不再预判；<code>new</code>、<code>due</code> 排前面，快道每轮只取这两种、最多 2 个（预判 skip 不登记、原料不消耗，靠重做状态避免每轮重做同两款）。文字版在句末加"→ 可重做 / 还不到时候 / 不再预判：原因"。</li>
+  <li><strong>复核到期</strong>：预判 go（没复核过）或预判观察中（没复查过），到了复核日。</li>
+  <li><strong>预判失准</strong>：复核记了 <code>stop</code>、你还没放弃的方向（要不要放弃由你定）。</li>
+  <li><strong>开玩日推迟</strong>：累计推迟超过 7 天的观察中或 go。</li>
+  <li><strong>预判后搁置的方向已开玩</strong>：开玩前搁置的预判方向，今天在开玩日当天到开玩后 14 天内，每天一行"已开玩 N 天，开玩后 14 天内可按现行路径重新判 go（还剩 M 天）"；过了这 14 天就不再提醒。</li>
+  <li><strong>补参照 / 更新参照</strong>：开玩满 14 天、参照库里还没有这款游戏这项任务；或参照库里 <code>full_60_days</code> 为 false 且开玩满 60 天。</li>
+</ul>
+<p>另外，参照库里读不出、不合规、或口径已变的参照每条一行"参照不可用 路径: 原因"（口径已变的原因写"口径已变,需重测(写于 旧版本)"）；它被跳过，看板其余内容（含"【立即建站】"）照常出。</p>
+<p>预判 go 的"【立即建站】"行在方向名后标 <code>(开玩前预判)</code>。同一轮 Trends 不够用时的优先级：当轮飙升词 &gt; 复核到期 &gt; 预判 &gt; 补参照。</p>
+<p><strong>2026-10-17 你拍板的三条</strong>（设计稿第 14 节）：10-16 实施完成后留了三件待定的事，10-17 我给了建议，你回复"ok"，都按建议做。</p>
+<p><strong>① 判过不预判的游戏什么时候重做。</strong>每款游戏最多预判 2 次（建议为 measure_rest 的不算，它只测了美国）。看板"可预判"每行按这款游戏<strong>上次</strong>预判观察给出重做状态，先到先得：</p>
+<div class="tw"><table>
+  <thead><tr><th>上次预判的情况</th><th>现在的状态</th><th>为什么</th></tr></thead>
+  <tbody>
+    <tr><td class="k">没预判过</td><td><code>new</code></td><td>先取</td></tr>
+    <tr><td class="k">已做满 2 次，或上次建议是 go、watching（应已登记；还在可预判里说明没登记，先查原因）</td><td><code>no</code></td><td>让最坏成本确定：每次约 2 个首页名额、1–6 次 Trends（估算）</td></tr>
+    <tr><td class="k">P4（范围）、P5（首页已占位）或 P6（AI 概览已答完）不过</td><td><code>no</code></td><td>开玩前不会变好，开玩后按现行路径看</td></tr>
+    <tr><td class="k">P1（开玩日）不过</td><td>开玩日改了才 <code>due</code>，否则 <code>no</code></td><td>开玩日没变，再判结果一样</td></tr>
+    <tr><td class="k">P3（参照不足）不过</td><td>上次每项任务的参照现在都够了才 <code>due</code>，否则 <code>wait</code></td><td>等补参照；只算当前口径的参照</td></tr>
+    <tr><td class="k">建议 measure_rest</td><td><code>due</code></td><td>补测其余 5 国后重做</td></tr>
+    <tr><td class="k">P2 不过（美国读不出），或六条都过但建议 skip（量不够）</td><td>今天在对象名窗口（开玩前 9–3 天）里且上次不是在窗口里做的 → <code>due</code>；还没到窗口 → <code>wait</code>；上次已在窗口里做过、或窗口已过 → <code>no</code></td><td>对象名的量越临近开玩越大，参照取对象名量的窗口正是这一段，这时预测与参照的口径最一致</td></tr>
+  </tbody>
+</table></div>
+<p><strong>② 预判后搁置的方向，开玩后判 go 要重新判一次"新不新"。</strong>开玩前搁置的预判方向没有复核日、没有观察期；开玩后要判 go，最新速判的观察日须在开玩日当天到开玩后 14 天内（相当于重新判一次 Q1），登记说法的最新量级观察日须在开玩日或之后。游戏推迟了的，要在新开玩日到来前用 <code>ledger.py update</code> 记下新开玩日，窗口跟着走；过了窗口又没推迟的，这个方向只能否决或继续搁置。观察中的预判方向规则不变（复核日已到、复查过、最新速判与量级都在开玩后）。<strong>否决不限制</strong>：not_new、occupied、answered、scope、volume、oneoff 照现行规则——否决是保守方向，判错只是少一个机会，开玩前就看到专做本作的站，当场否决反而省事。</p>
+<p><strong>③ 观察按自己记下的口径校验。</strong>参照与预判观察各记下写入时的假设表版本和校验用的数值（<code>assumptions_version</code>、<code>params</code>）：</p>
+<ul>
+  <li>写入时两项必须等于当前假设表，不能自己编；读回时按观察自己记的口径校验，假设表以后改了，历史观察照样读得进来。</li>
+  <li>参照库算倍数只用当前口径的参照；口径不同的不混着算，也不算坏参照，在"参照不可用"里写"口径已变,需重测"，重测就是用当前口径重新 <code>quick_reference.py build</code>。</li>
+  <li>结算时（<code>settle.py</code>）按当前假设表查两处，都不会按新口径悄悄重算：预判观察自己的口径过时 → 拒收"口径已变,重做预判"，处理是重新预判（对象名量级观察不是预判当天或之前 2 天内测的就先重测，新的预判观察与对象名量级观察都要挂进方向引用）；它引用的某条参照口径过时 → 拒收"参照 … 口径已变,需重测"，处理是先用当前口径重新 <code>quick_reference.py build</code>，再重新预判。只改门槛、份额、系数，参照仍然有效；只改参照窗口，预判观察自己的口径不变，但它引用的参照作废。搁置不受此限。</li>
+  <li>复核、看板读历史预判、重建决策书，都按观察自己的口径读。决策书里的参照窗口取它引用的参照各自记下的口径（预判观察不记窗口），没引用参照的不写窗口。</li>
+  <li><strong>不在这次范围（未确认）</strong>：量级观察的锚词比值区间，以及账本里 go 与观察中方向的模型重算，仍按当前假设表。以后改假设表时，现有方向会不会因此对不上，要到时再议。</li>
+</ul>
+<pre class="json"><code><span class="c"># 一款游戏的命令顺序(详见命令与观察 7.7)</span>
+python3 $S/quick_reference.py time-range --playable-at &lt;开玩日&gt;             <span class="c"># 参照:取数日期范围</span>
+python3 $S/quick_reference.py build --input &lt;两次 Trends 输出&gt;             <span class="c"># 参照:写进参照库</span>
+python3 $S/quick_reference.py summary                                    <span class="c"># 看参照库每个任务类型 × 类别的条数与倍数</span>
+python3 $S/trends_volume.py --input &lt;美国曲线&gt; --slug &lt;方向&gt; --term "&lt;对象名&gt;"   <span class="c"># 预判:先只测美国的对象名量</span>
+python3 $S/quick_forecast.py --input &lt;预判输入&gt;                              <span class="c"># 预判:给出 go / watching / skip / measure_rest</span>
+python3 $S/ledger.py register-quick --input &lt;含 forecast 键的文件&gt;           <span class="c"># 登记</span>
+python3 $S/settle.py --slug &lt;方向&gt; --verdict go --reason "…" --biggest-unknown "…"
+python3 $S/ledger.py update --slug &lt;方向&gt; --patch &lt;含新 first_public 与 date_source&gt;   <span class="c"># 开玩日变了</span>
+python3 $S/ledger.py review-forecast --slug &lt;方向&gt; --ref &lt;各任务的量级观察&gt;   <span class="c"># 开玩日 + 7 天对账</span></code></pre>
+<div class="note"><span class="tag">待你知悉</span>窗口、倍数取法、止损线等细节，以及 10 条实施时补的口径（设计稿第 13 节），都是我替你定的，可以改。用 Trends 日期范围取参照这一用法（<code>xinciTrends</code> 的 <code>time</code> 传 "YYYY-MM-DD YYYY-MM-DD"）尚未在页面里实测，第一次用先 <code>build --dry-run</code> 看曲线是不是逐日。复核后如果发现几乎没有游戏能过线，门槛和收入口径要另行讨论，不在这个方案范围内。</div>
+</section>
+
+<section id="s12">
+<h2><span class="num">12</span>异常处理</h2>
+<p><strong>原则：拿不到就停下或搁置，不猜数、不绕过、不伪造结论。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>情况</th><th>处理</th></tr></thead>
+  <tbody>
+    <tr><td>数据区未配置</td><td>脚本退出码 2，提示先问你，不猜位置</td></tr>
+    <tr><td>Semrush 登录失效、额度用完、验证码</td><td>写 blocked 清单，保留恢复位置</td></tr>
+    <tr><td>Semrush 域名分析模块故障</td><td>改走 Backlink Analytics 概览取 AS 与自然流量；曲线也拿不到 → 搁置，不判否决</td></tr>
+    <tr><td>Google 弹 /sorry 验证页</td><td>两次请求间隔 ≥ 60 秒；已触发就静置约 1 小时，仍触发记 blocked</td></tr>
+    <tr><td>浏览器预检不过</td><td>不写首屏结论，重试一次仍失败记 blocker</td></tr>
+    <tr><td>标杆站被 Cloudflare 拦</td><td>改读 Google 摘要并在观察里注明；关键事实读不到 → 搁置</td></tr>
+    <tr><td>子代理访问 Semrush 被拦</td><td>不要转达授权重试，停下请你加放行规则或切"逐条询问"</td></tr>
+    <tr><td>观察字段不合规</td><td>write_observation.py 拒收，不落盘</td></tr>
+    <tr><td>结算证据不够</td><td>settle.py 拒收，账本与文档不变</td></tr>
+    <tr><td>结算中途失败或被打断</td><td>失败自动回滚；被打断用同一条命令重跑恢复</td></tr>
+    <tr><td>账本、证据、文档不一致</td><td>validate_ledger.py 报错，先修再汇报，不能拿单元测试通过代替</td></tr>
+    <tr><td>旧数据区在导入时被改动</td><td>seed_import.py 报错停止</td></tr>
+    <tr><td>快道：自动补全请求失败或被限流</td><td>这个对象本次不比对，快照不写，汇报写明；不当作"没有新建议"</td></tr>
+    <tr><td>快道：Trends 返回 429</td><td>加大间隔重试一次；仍失败记 blocked，保留恢复位置</td></tr>
+    <tr><td>快道：Trends 曲线全为 0</td><td>不能换算，原料留到下次（Q2 没有证据）</td></tr>
+    <tr><td>快道：锚词比值不在 0.2–5</td><td>换锚词；旧词库与 Semrush 都找不到合适锚词就搁置</td></tr>
+    <tr><td>快道：对象发布日期查不到</td><td>Q1 填 null，搁置</td></tr>
+    <tr><td>快道：上游来源取不到</td><td>汇报写明哪个来源本次没取回，不写"已检查"</td></tr>
+    <tr><td>快道：观察中超过 30 天没处理</td><td>validate_ledger.py 报错；下次运行第 2 步先处理</td></tr>
+    <tr><td>快道：跟进日期写错或先后颠倒</td><td>ledger.py 拒收，账本不变</td></tr>
+  </tbody>
+</table></div>
+</section>
+
+<section id="s13">
+<h2><span class="num">13</span>质量保障</h2>
+<ul>
+  <li><strong>533 个单元测试</strong>全部通过，覆盖 23 个测试文件：标杆道的数据区、观察、种子池、导入、收入模型、账本、决策书、结算与校验、运行清单、看板、文档一致性，加上快道的测算模型、观察、原料池、自动补全快照、上线日历、账本、结算与跟进、快道决策书、上线前预判（参照库、预判观察、重做状态、口径校验）。测试用临时数据区和真实文件，不 mock 业务逻辑。</li>
+  <li><strong>文档一致性测试</strong>：契约里的假设表数值、初核门槛、否决门与排除项代码、平台黑名单、schema 字段、SKILL.md 名称，必须和代码一致，改了一边忘了另一边测试就会失败；快道假设表的版本与各项数值、10 个任务词、6 个否决门代码也在内。</li>
+  <li><strong>标杆道整体审查</strong>：实现完成后由另一个模型做了新上下文审查，修了 1 个严重问题（parked 改判被拒后账本卡死）和 4 个重要问题（缺简报素材时异常、手改决策书查不出、账本数字不核对观察、簇可以不抽检），9 个小问题推迟（见 14.4）。</li>
+  <li><strong>快道整体审查</strong>：同样由另一个模型做新上下文审查，修了 1 个严重问题（跟进日期只核格式不核日历，坏日期会存进账本并让看板崩溃）和 7 个重要问题（标杆道误把快道的待处理方向算进来而跳过发现、速判词归属只在登记时核、改说法绕过去重、过期原料永远进不了池、否决与登记不消耗原料、锚词日期同样只核格式、复查建议只看 Q5），3 个小问题推迟、1 条设计问题待你拍板（见 14.4）。每个修复都先写了能复现问题的测试。</li>
+  <li><strong>写计划时的验证</strong>：计划里的代码先在原型里跑通，再从计划文本反向重建并跑通测试；命令行整条流程走过一遍，真实旧数据试导过一遍。快道的计划还逐任务模拟执行过：从仓库导出干净的树，按任务套用计划里的改动，每个任务都先看到测试失败、再看到通过。验收时对真实的自动补全接口取过一次数（11 次请求、0 次失败、89 条建议）。</li>
+</ul>
+</section>
+
+<section id="s14">
+<h2><span class="num">14</span>可调参数与待定事项</h2>
+
+<h3 id="s14-1"><span class="num">14.1</span>可调参数一览</h3>
+<p><strong>下面每个数字都能改；改假设表要升版本号，契约与代码不一致时文档测试会失败。</strong></p>
+<div class="tw"><table>
+  <thead><tr><th>参数</th><th class="n">当前值</th><th>在哪改</th><th>影响</th></tr></thead>
+  <tbody>
+    <tr><td>初核注册年限</td><td class="n">24 个月</td><td><code>write_observation.LIMITS</code></td><td>B1</td></tr>
+    <tr><td>初核 AS 上限</td><td class="n">30</td><td><code>write_observation.LIMITS</code></td><td>B2</td></tr>
+    <tr><td>初核流量下限</td><td class="n">5,000</td><td><code>write_observation.LIMITS</code></td><td>B3，入场线</td></tr>
+    <tr><td>导入时的 AS 线</td><td class="n">&lt; 30</td><td><code>seed_import.AS_LIMIT</code></td><td>旧证据里多少域名进种子池</td></tr>
+    <tr><td>导入排除的结果类型</td><td class="n">4 类</td><td><code>seed_import.EXCLUDED_TYPES</code></td><td>导入过滤</td></tr>
+    <tr><td>平台黑名单</td><td class="n">8 个</td><td><code>seed_import.PLATFORMS</code></td><td>导入过滤</td></tr>
+    <tr><td>B3 复查间隔</td><td class="n">90 天</td><td><code>seeds.RECHECK_DAYS</code></td><td>量不够的多久再看</td></tr>
+    <tr><td>簇测量新鲜度</td><td class="n">90 天</td><td><code>ledger.FRESH_DAYS</code></td><td>判 go 时旧量能不能用</td></tr>
+    <tr><td>后来者系数</td><td class="n">0.25 / 0.5 / 1.0</td><td><code>bench_model.ASSUMPTIONS</code></td><td>三档访问，最敏感之一</td></tr>
+    <tr><td>拥挤阈值与系数</td><td class="n">3 个 / 0.33</td><td><code>bench_model.ASSUMPTIONS</code></td><td>赛道挤时的基准</td></tr>
+    <tr><td>份额上限</td><td class="n">15%</td><td><code>bench_model.ASSUMPTIONS</code></td><td>防止份额率离谱</td></tr>
+    <tr><td>near me 折减</td><td class="n">× 0.2</td><td><code>bench_model.ASSUMPTIONS</code></td><td>本地类簇</td></tr>
+    <tr><td>广告网络分档</td><td class="n">1 万访问</td><td><code>bench_model.ASSUMPTIONS</code></td><td>决定用哪个每千访问收入</td></tr>
+    <tr><td>每千访问收入（美国）</td><td class="n">$4 / $16</td><td><code>bench_model.ASSUMPTIONS</code></td><td>收入，最敏感之一</td></tr>
+    <tr><td>每千访问收入（其他英文国家）</td><td class="n">$2 / $8</td><td><code>bench_model.ASSUMPTIONS.rpm_other_en</code></td><td>美国占比低的方向收入</td></tr>
+    <tr><td>英文区国家</td><td class="n">US GB CA AU NZ IE</td><td><code>_common.EN_COUNTRIES</code></td><td>两条道共用</td></tr>
+    <tr><td>付费转化率</td><td class="n">0.1% / 0.2% / 0.5%</td><td><code>bench_model.ASSUMPTIONS</code></td><td>付费收入</td></tr>
+    <tr><td>达标门槛</td><td class="n">$100</td><td><code>bench_model.ASSUMPTIONS</code></td><td>go 的条件 1</td></tr>
+    <tr><td>止损比例</td><td class="n">25%</td><td><code>bench_model.milestones</code>（写死）</td><td>建站简报第 10 节</td></tr>
+    <tr><td>每轮补足的待深核数</td><td class="n">3</td><td><code>run_log.FOUND_TARGET</code></td><td>何时跳过发现</td></tr>
+    <tr><td>每轮深核数</td><td class="n">2</td><td>xinci-bench-run / assess 的 SKILL.md</td><td>每轮成本</td></tr>
+    <tr><td>每批初核数</td><td class="n">16</td><td><code>seeds.take</code> 默认值、scan 的 SKILL.md</td><td>每轮成本</td></tr>
+    <tr><td>默认轮数</td><td class="n">3</td><td>xinci-bench-run 的 SKILL.md</td><td>一次运行多长</td></tr>
+    <tr><td>来源轮换顺序</td><td class="n">sibling → serp → geo → community</td><td><code>run_log.ROTATION</code></td><td>legacy 用完后从哪找</td></tr>
+    <tr><td>搁置提醒</td><td class="n">90 天</td><td><code>report_status.PARKED_WARN_DAYS</code></td><td>看板</td></tr>
+    <tr><td>快道每天轮数</td><td class="n">1 轮</td><td><code>run_log.QUICK_ROUNDS_PER_DAY</code></td><td>同日第 2 轮 Trends 就 429;暗号带数字也分天跑</td></tr>
+    <tr><td>Semrush 每日上限</td><td class="n">不设</td><td><code>run_log.semrush_budget</code> 只记数</td><td>两条道合计；页面提示额度用完才停（用户 2026-10-20 定）</td></tr>
+    <tr><td>首页速判取词顺序</td><td class="n">说法 &gt; 非 Roblox 兑换码 &gt; 来源数 &gt; 飙升 &gt; 先后</td><td><code>quick_pool.priority</code></td><td>每次 10 个名额先给谁</td></tr>
+    <tr><td>快道假设表（份额、系数、门槛、观察期、预判窗口与倍数等）</td><td class="n">见 11.9</td><td><code>quick_model.QUICK_ASSUMPTIONS</code></td><td>快道的全部判定</td></tr>
+    <tr><td>快道任务词</td><td class="n">10 个</td><td><code>quick_model.TASK_WORDS</code></td><td>自动补全按哪些词展开</td></tr>
+    <tr><td>自动补全请求间隔</td><td class="n">1 秒</td><td><code>suggest_snapshot.expand</code></td><td>取数速度与被限流风险</td></tr>
+    <tr><td>自动补全可选国家</td><td class="n">us（默认）、gb、ca、au、nz、ie</td><td><code>suggest_snapshot.GLS</code></td><td>地区性对象查哪国的建议</td></tr>
+    <tr><td>快道原料来源代码</td><td class="n">15 个</td><td><code>write_observation.QUICK_SOURCES</code></td><td>原料能标哪些来源</td></tr>
+  </tbody>
+</table></div>
+
+<h3 id="s14-2"><span class="num">14.2</span>未确认的假设</h3>
+<ul>
+  <li><strong>后来者系数</strong>：只有几个零散数据点（wisconsinpropertymap 在县 gis 词上份额约 2.8% 等），没有校准过。</li>
+  <li><strong>Mediavine Journey 每千访问 $16</strong>：用 Ezoic 的第三方汽车类数据代替，Journey 的实际水平未确认。</li>
+  <li><strong>内容类、游戏类每千访问</strong>：本项目从未取证，暂按工具类 $4。</li>
+  <li><strong>付费转化率</strong>：占位值。</li>
+  <li><strong>标杆道英文区按比例换算</strong>：假设各国去品牌词的比例与美国相同、簇里各词的国家分布与种子词相同；首次运行时抽几个域名逐国核一次。</li>
+  <li><strong>美国以外英文国家每千访问按美国一半</strong>（AdSense $2、Journey $8）：你定的口径，实际水平未确认。</li>
+  <li><strong>每轮约 25 次 Semrush</strong>：设计估算，首次运行后才知道真实值。</li>
+  <li><strong>快道首发份额 10% / 20% / 30%</strong>：基准取"排第 1、无 AI 概览"的点击率（AWR 2026-07 约 20%，美国桌面）；新域名多久能排上去未确认。</li>
+  <li><strong>新站能否立即申请 Mediavine Journey</strong>：未确认，快道收入一律按 AdSense 算。</li>
+  <li><strong>美国以外英文国家每千访问 $2</strong>：你定的折扣口径，实际水平未确认。</li>
+  <li><strong>Semrush Keyword Overview 能否一次看全 6 国的锚词月量</strong>：未实测，首次运行时确认；不能的话每个国家要多花一次查询。</li>
+  <li><strong>新词在 Semrush 里多久有量</strong>：未确认，首次运行时测。</li>
+  <li><strong>自动补全的频率上限</strong>：未确认，脚本按 1 秒间隔取。</li>
+  <li><strong>旧新词工作流"答案与事物几乎同时到"的结论</strong>：对"普通用户新词 + 广告流量"未验证，不作否决依据。</li>
+  <li><strong>上线前预判的倍数</strong>：目前只有 WARDOGS 1 个样本（约 0.14），类别、量级差异都未确认，参照库补齐前预测不可信。</li>
+  <li><strong>用 Trends 日期范围取参照</strong>：<code>xinciTrends</code> 的 <code>time</code> 传 "YYYY-MM-DD YYYY-MM-DD" 是 Trends 网址 date 参数的写法，本工作流尚未在页面里实测。</li>
+  <li><strong>开玩前一周的营销尖峰</strong>：对象名的量取开玩前 7 天，避开了公布当天的尖峰，但大作开玩前一周也可能有营销尖峰，会把预测推高；开玩后 7 天复核看得出来。</li>
+</ul>
+
+<h3 id="s14-3"><span class="num">14.3</span>实现时的调整</h3>
+<p><strong>相对设计稿做了 9 处调整，已写回设计稿 §13。</strong></p>
+<ol class="steps">
+  <li>观察新增"建站简报素材"一类，简报要从结构化字段生成。</li>
+  <li>标杆观察新增第 3/6/12 个月的流量读数，用来算里程碑。</li>
+  <li>方向记录新增 decision 字段（结论、否决门、理由、最大未知、命中项、时间、决策书 SHA）。</li>
+  <li>交付观察的字段定名为开发/数据/内容工时、首年现金、每月维护；对手流量每项定为"域名、流量、筛选依据"。</li>
+  <li>手工种子的 RDAP 核对由执行者用 curl 做，脚本不联网。</li>
+  <li>初核前三条的数值门槛由脚本强制。</li>
+  <li>旧数据导入实测：标杆种子 68 个（设计稿写"约 71"，3 个平台被黑名单去掉），同类站种子 13 个。</li>
+  <li>手工种子可以标 role（默认待初核），geocodify、dittobase 标为只查同类站。</li>
+  <li>整体审查后加严：结算先复核再写、失败回滚；账本数字与观察交叉核对；簇级抽检；决策书 SHA 防手改；found 不许有结算残留。</li>
+</ol>
+<p><strong>新词快道相对它的设计稿补了 17 处，已写回快道设计稿 §15。</strong>前 12 处是写实施计划时补的，后 5 处是整体审查后加严的。</p>
+<ol class="steps">
+  <li>自动补全的新建议指以前所有快照里都没出现过的建议（同一查询隔几秒结果也不同）；第一次快照只作基线。</li>
+  <li>快道运行清单的来源固定记 quick，本次用了哪些来源写在种子说明里。</li>
+  <li>结算在写任何东西之前先核对否决门属于该方向所在的道。</li>
+  <li>速判 Q5 不过、占位的是小站时，记淘汰的同时用 <code>--seed-domain</code> 登记为标杆道种子。</li>
+  <li>登记时速判观察里的词须是登记的说法之一；同一说法不能属于两个方向。</li>
+  <li>量级观察额外校验比值、估算和曲线（Trends 显示 "&lt;1" 的点记 0）。</li>
+  <li>快道方向补数只能改标题、站型、说法和追加观察引用。</li>
+  <li>建站跟进的日期须为 YYYY-MM-DD，开建不早于判 go，上线不早于开建。</li>
+  <li>原料池每行多记来源批次观察与更新时间；淘汰记录在顺带登记种子时多记种子域名。</li>
+  <li>决策书把设计稿的第 3–8 项归在"第一部分 决策"下，简报为"第二部分"。</li>
+  <li>测试新增 69 个，合计 162 个（设计稿估约 40 个）。</li>
+  <li>工作流说明 html 与发布页放到实施与整体审查完成之后更新（就是这一版）。</li>
+  <li>快道所有日期都须是日历上真实存在的日子，校验对已存的跟进日期兜底。</li>
+  <li>补挂速判观察、观察中复查、结算复核时都核对速判的词属于本方向；改说法也不能和别的方向重复。</li>
+  <li>原料过期后再被来源取回会重新进池；速判否决与登记会把对应原料自动标为已用。</li>
+  <li>观察中复查的建议先看最新速判第一条不过的项，再看冲高回落，最后才看量。</li>
+  <li>标杆道判断"待深核方向是否已有 3 个"时只数标杆道。</li>
+</ol>
+<p><strong>2026-10-15 连跑两轮后你同意的四条</strong>：DLC、资料片算新对象（发售表也收资料片）；Roblox 兑换码排到其他说法后面（当天 12 个全在 1–3 天内被大站占满）；快道每天最多跑 1 轮，暗号带数字也分天跑（同日第 2 轮 Trends 就连续 429）；还没上线、日期不明的对象首页看过但不登记也不淘汰时，不写速判观察，汇报里列出。</p>
+<p><strong>2026-10-15 你对三条裁定的拍板</strong>：试玩版也算"用上"，哪怕只含开头部分；查不到开玩日期的对象（如 Roblox 体验）也照常看首页，首页也读不到就用 Trends 首次出现日（实测 "huss valley" 会被同名网络梗带偏，所以 Roblox 查"&lt;体验名&gt; roblox"，得到 08-13）；新词读得出的国家必须换算，锚词热度为 0 就换锚词、美国以外去 Semrush 查，不能按 0 计。按新口径，Order of the Sinking Star（6 月新品节试玩版）改判否决 not_new，Final Fantasy Resonance（09-03 试玩版）从即将开玩里淘汰。</p>
+<p><strong>2026-10-15 第二次运行后修的问题</strong>（不改判据）：发售表也收最近 14 天已上线的游戏（正是游戏类 Q1 窗口，原来要手工补）；浏览量被 429 挡住后没查的候选照样输出成原料，不再丢掉；剥掉 <code>{{efn}}</code>、<code>&lt;ref&gt;</code> 脚注，平台格跨行时沿用上一行；原料池同一批里同一个词被第二个来源看到也记下来源；锚词换算遇到 Trends 空曲线直接按读不出记 0；账本允许快道只更正对象的日期来源（名称、类型、首次公开日仍不能改）。</p>
+<p><strong>2026-10-14 你同意的三项快道调整</strong>（依据：WARDOGS、Aniimo 首页上 7 个专做这款游戏的占位工具站，按域名注册或首张证书取最早的日期，都比开放游玩日早 6–230 天；可玩后第 28、34 天首页已被占满）：</p>
+<ol class="steps">
+  <li>游戏类真新窗口改为开放游玩后 14 天，其他对象仍 90 天；登记时对象写类型（game / other）；假设表升 2026-10-14.q3。样本只有 2 款，14 天是推断。</li>
+  <li>加"即将开玩"日历：<code>wiki_releases.py</code> 取 Wikipedia 发售表未来 30 天上线的新游戏，Trends 测试类飙升词补公开测试；还没到开玩日的只进日历、不看首页，看板建议开玩当天到第 3 天跑快道。</li>
+  <li>Trends 飙升词每次运行都要取：<code>trends_fetch.js</code> 加 <code>xinciTrendsRising</code>，最多 6 个种子词，间隔 ≥ 30 秒，遇 429 停下写"本次未取"。</li>
+</ol>
+<p>（当时留下的"上线前按预测判 go"，用户 2026-10-16 允许后已于 2026-10-16 实施，见 11.13–11.15；现在 go 既可以开玩后按当前搜索量判，也可以开玩前按预测判。）</p>
+<p><strong>2026-10-14 快道首跑后你定的 Q1 口径</strong>："首次公开"按第一次让大量普通用户用上的日期算，不按公布日。起因是 WARDOGS（2026-02-05 公布、08-22 预购玩家封闭测试）和 Aniimo（2025 年 6 月公布、2026-09-16 上线）按公布日都超 90 天，按能用的日期都在 90 天内，而任务词要等大家玩上了才出现。公布与预告期间的搜索量也不再作为"不新"的证据。只改了文字，代码只核天数，不用动。已写进契约 10.1、10.4 和快道设计稿 §16 第 9 条。</p>
+<p><strong>2026-10-14 你同意的四项执行优化</strong>（不改判据，只减少执行出错和浪费）：</p>
+<ol class="steps">
+  <li>锚词换算改用 <code>trends_fetch.js</code> 取数、<code>trends_volume.py</code> 换算并写入，执行者不再手算均值、比值和估算量。</li>
+  <li>先用美国的锚词把 6 国曲线都查一遍，读不出的国家记 0，只为读得出的国家查 Semrush；按地区分布的接口实测连续 429，没用上。</li>
+  <li>每日 Semrush 额度：不设上限，有额度就用，页面提示额度用完才停。</li>
+  <li>原料池按优先级排序，首页速判取前 10 个；原料记下被哪些来源看到、Trends 飙升幅度。</li>
+</ol>
+<p><strong>2026-10-14 你追加的口径变更：标杆道也不只算美区，改算英文区。</strong>已写进契约第 1–6 节和标杆道设计稿 §14。</p>
+<ol class="steps">
+  <li>初核 B3 改为英文区 6 国合计 ≥ 5,000（去品牌词与定位词后）。</li>
+  <li>美国以外的流量和簇量按比例换算：标杆用 Domain Overview 的按国家分布，簇用种子词 Keyword Overview 的 6 国月量；脚本核对乘法。美国为 0 时改为逐国实测。</li>
+  <li>份额率、我们覆盖的需求、第 12 个月访问都按英文区算；访问按覆盖需求里美国的占比分到美国，其余按美国一半的每千访问收入（AdSense $2、Journey $8）；Journey 分档看英文区合计访问。</li>
+  <li>待深核排序用英文区流量；里程碑仍用美区曲线，比例和标杆的美区流量比。</li>
+  <li>假设表升版为 2026-10-14.2。</li>
+</ol>
+<p><strong>2026-10-14 你追加的口径变更：快道不只看美区，改看英文区。</strong>已写进契约第 10 节和快道设计稿 §16。</p>
+<ol class="steps">
+  <li>英文区 = 美国、英国、加拿大、澳大利亚、新西兰、爱尔兰 6 国。</li>
+  <li>量级按国家各做一次 Trends 锚词换算再相加，读不出的国家记 0；美国以外的锚词月量用 Semrush 查。</li>
+  <li>门槛改为英文区合计单月 1 万访问；收入美国 $4、其他英文国家 $2/千访问；"单站就能到 $100"改看基准收入。</li>
+  <li>首页速判仍只看美国首页；自动补全默认美国，地区性对象用 <code>--gl</code> 查别国。</li>
+  <li>假设表升版为 2026-10-14.q2。</li>
+</ol>
+
+<h3 id="s14-4"><span class="num">14.4</span>已知小问题</h3>
+<p><strong>整体审查里定为小问题、这次没修的 9 条。</strong>第 2、8 条最容易让执行时卡住。</p>
+<ol class="steps">
+  <li>观察时间只写日期、不带时分也能通过。</li>
+  <li>命令行遇到格式错误的输入会直接抛出 Python 报错，而不是给出拒收提示。</li>
+  <li>登记方向时域名没做统一写法处理（带不带 www）。</li>
+  <li>收入模型里"达标所需访问"字段名和设计稿写的不一样。</li>
+  <li>校验不检查账本历史最后一条的否决门与结论是否一致。</li>
+  <li>设计稿三处没落地：决策书数据节默认折叠（现在只折叠证据清单）、记录数据更新频率、列出其他英语国家的流量。</li>
+  <li>还有干净标杆时，也能以"标杆不成立"否决。</li>
+  <li>命令手册没写深核阶段开始时运行清单的来源与种子参数怎么填。</li>
+  <li>多个标杆时，里程碑的比例可能被截断到 100%。</li>
+</ol>
+<p><strong>新词快道整体审查里定为小问题、这次没修的 3 条，另有 1 条要你拍板。</strong></p>
+<ol class="steps">
+  <li>量级观察的 7 天均值没有和逐日曲线核对，估算和趋势可能来自两套数字；两者是否同源要在契约里写明。</li>
+  <li>速判观察里 Q5 判"没人做"却写了占位站、Q6 判"没答完"却标了 AI 概览已答完，都不会被拒收。</li>
+  <li>文档三处小偏差：锚词 90 天期限对观察中也生效没写明；观察中转 go 前要先写简报素材，SKILL 没写；观察中转 go 后决策书里仍有"观察中"那一行。</li>
+  <li><strong>待你拍板</strong>：搁置的快道方向不能转成观察中（见 11.4）。</li>
+</ol>
+</section>
+
+<section id="s15">
+<h2><span class="num">15</span>附：数据结构</h2>
+<p><strong>下面是示例值，不是实测数据；注释说明每个字段给哪个判断用。</strong>正本见 <code>xinci-bench-core/数据结构/</code> 下 3 份 schema 与 <code>命令与观察.md</code>；快道的数据结构见 15.6–15.8。</p>
+
+<h3 id="s15-1"><span class="num">15.1</span>方向记录</h3>
+<pre class="json"><code>{
+  "slug": "example-county-lookup",          <span class="c">// 方向的唯一标识</span>
+  "title": "按地址查所属县及各级行政归属",       <span class="c">// 方向一句话</span>
+  "site_type": "tool",                      <span class="c">// tool | content | game | mixed,决定 RPM 是否未确认</span>
+  "lane": "bench",                          <span class="c">// bench 标杆道 | quick 新词快道;缺失时校验报错</span>
+  "state": "found",                         <span class="c">// found | go | rejected | parked(快道多一个 watching)</span>
+  "benchmarks": [{
+    "domain": "example-bench.com",          <span class="c">// 标杆域名</span>
+    "registered_at": "2025-12-29",          <span class="c">// RDAP 注册日,B1</span>
+    "aged_domain": false,                   <span class="c">// 老域名重新起量</span>
+    "traffic_start": "2026-04",             <span class="c">// 起量月,排序用</span>
+    "authority_score": 11,                  <span class="c">// 域级 AS,B2</span>
+    "us_organic_now": 5400,                 <span class="c">// 去品牌词与定位词后的美区自然流量</span>
+    "us_organic_m12": null,                 <span class="c">// 起量后第 12 个月美区;不满 12 个月为 null</span>
+    "en_organic_now": 7200,                 <span class="c">// 英文区 6 国合计,B3 与排序看它</span>
+    "en_organic_m12": null,                 <span class="c">// 起量后第 12 个月英文区;不满 12 个月为 null,用当前值</span>
+    "covered_demand": 127916,               <span class="c">// 标杆覆盖的全部英文区簇量,份额率的分母</span>
+    "link_driven": false,                   <span class="c">// 靠垃圾外链起量,true 则不算干净</span>
+    "algo_risk": false,                     <span class="c">// 垃圾更新后掉一半以上,写进风险</span>
+    "monetization": ["adsense"],            <span class="c">// ads.txt 与定价页读到的变现方式</span>
+    "clean": true                           <span class="c">// 干净标杆才参与测算</span>
+  }],
+  "clusters": [{
+    "id": "core",                           <span class="c">// 簇标识</span>
+    "seed_term": "what county am i in",     <span class="c">// Keyword Magic 种子</span>
+    "volume": 100000,                       <span class="c">// 美区簇量</span>
+    "en_volume": 127000,                    <span class="c">// 英文区簇量,测算用它</span>
+    "measured_at": "2026-10-13",            <span class="c">// 测量日,判 go 时须在 90 天内</span>
+    "coverage": "benchmark",                <span class="c">// benchmark 标杆已做 | ours 我们额外做</span>
+    "near_me": false,                       <span class="c">// true 时簇量 × 0.2</span>
+    "answered": false,                      <span class="c">// 首屏已答完,true 则不计入</span>
+    "counted": true                         <span class="c">// 是否计入我们覆盖的需求</span>
+  }],
+  "crowding": 2,                            <span class="c">// 同方向近 24 个月新站数,≥3 时基准系数 0.33</span>
+  "paid": {
+    "applicable": false,                    <span class="c">// 是否计付费收入</span>
+    "price_month": null,                    <span class="c">// 对手定价中位数</span>
+    "evidence": null                        <span class="c">// 有用户的证据</span>
+  },
+  "model": null,                            <span class="c">// 结算时写入三档访问与收入</span>
+  "decision": null,                         <span class="c">// 结算时写入结论、否决门、理由、最大未知、命中项、时间、决策书 SHA</span>
+  "evidence_refs": ["证据/_scan/...-scan.json"],  <span class="c">// 引用的观察</span>
+  "bindings": null,                         <span class="c">// 结算时固定的观察路径与 SHA-256</span>
+  "history": [ ... ]                        <span class="c">// 状态转移历史,只追加</span>
+}</code></pre>
+
+<h3 id="s15-2"><span class="num">15.2</span>初核观察</h3>
+<pre class="json"><code>{
+  "slug": null,                             <span class="c">// 初核按批记录,不属于某个方向</span>
+  "observed_at": "2026-10-14T02:10:00+00:00",  <span class="c">// ISO 时间,写之前取系统时间</span>
+  "stage": "scan",                          <span class="c">// 初核固定 scan,深核固定 assess</span>
+  "kind": "scan",
+  "source_urls": ["..."],                   <span class="c">// 实际打开的网址,不能为空</span>
+  "semrush_calls": 3,                       <span class="c">// 本观察新增的 Semrush 调用</span>
+  "points": ["批量分析 16 个,3 个过粗筛"],      <span class="c">// 要点,不转录原文</span>
+  "readings": {"domains": [{
+    "domain": "example-bench.com",
+    "registered_at": "2025-12-29",          <span class="c">// B1 判通过时必填,除非标老域名</span>
+    "aged_domain": false,
+    "authority_score": 11,                  <span class="c">// B2 判通过时须 ≤ 30</span>
+    "us_organic_now": 5400,                 <span class="c">// 去品牌词与定位词后的美区自然流量</span>
+    "country_traffic": {"US": 6000, "GB": 900, "CA": 600, "AU": 300, "NZ": 100, "IE": 100},  <span class="c">// Domain Overview 按国家分布,6 国原始自然流量</span>
+    "en_organic_now": 7200,                 <span class="c">// = 5400 × 8000 ÷ 6000;B3 判通过时须 ≥ 5,000</span>
+    "checks": {                             <span class="c">// 恰好 B1–B5;pass 为 true / false / null</span>
+      "B1": {"pass": true, "basis": "RDAP 2025-12-29 注册"},
+      "B2": {"pass": true, "basis": "Domain Overview AS 11"},
+      "B3": {"pass": true, "basis": "排除品牌词后美区 5,400,换算英文区 7,200"},
+      "B4": {"pass": true, "basis": "前 20 词分布在 9 个页面"},
+      "B5": {"pass": true, "basis": "按地址查县,不涉排除项"}
+    }
+  }]}
+}</code></pre>
+
+<h3 id="s15-3"><span class="num">15.3</span>深核六类观察</h3>
+<p><strong>公共字段同初核观察（stage 固定 assess、slug 为方向名）；下面只列各类 readings 的必填字段。</strong>serp 类还必须带通过的浏览器预检。</p>
+<pre class="json"><code><span class="c">// benchmark:每个标杆一份</span>
+{
+  "domain": "example-bench.com",
+  "traffic_start": "2026-04",               <span class="c">// 起量月 YYYY-MM;读不出为 null</span>
+  "us_organic_now": 5400,                   <span class="c">// 当前美区自然流量</span>
+  "us_organic_m12": null,                   <span class="c">// 起量后第 12 个月;不满为 null</span>
+  "country_traffic": {"US": 6000, "GB": 900, "CA": 600, "AU": 300, "NZ": 100, "IE": 100},  <span class="c">// 按国家分布,同初核</span>
+  "en_organic_now": 7200,                   <span class="c">// 英文区 = 美区 × 6 国合计 ÷ 美国</span>
+  "en_organic_m12": null,                   <span class="c">// 同一倍数换算</span>
+  "curve": {"3": 500, "6": 5400, "12": null},  <span class="c">// 起量后第 3/6/12 个月的美区读数,里程碑用</span>
+  "referring_domains": 40,                  <span class="c">// 引荐域名数</span>
+  "anchor_summary": "品牌词与网址为主",       <span class="c">// 锚文本概况,判外链驱动</span>
+  "link_driven": false,
+  "algo_risk": false,
+  "update_readings": "3/6/8 月更新前后平稳",  <span class="c">// 三次垃圾更新前后读数</span>
+  "ads_txt": "google.com, pub-xxx, DIRECT", <span class="c">// 广告网络</span>
+  "pricing": null                           <span class="c">// 定价页要点;没有付费版为 null</span>
+}
+
+<span class="c">// demand:方向需求</span>
+{
+  "clusters": [{"id": "core", "seed_term": "what county am i in", "volume": 100700,   <span class="c">// 美区簇量</span>
+                "seed_country_volume": {"US": 74000, "GB": 8100, "CA": 6600, "AU": 4400, "NZ": 500, "IE": 400},  <span class="c">// 种子词 6 国月量</span>
+                "en_volume": 127916,      <span class="c">// = 100700 × 94000 ÷ 74000</span>
+                "measured_at": "2026-10-14", "coverage": "benchmark", "near_me": false}],
+  "competitor_traffic": [{"domain": "example-big.com", "traffic": 21000,
+                          "basis": "Organic Research 按 /county/ 筛"}],  <span class="c">// 必须写筛法</span>
+  "crowding": 2,                            <span class="c">// ≥ 1,含标杆</span>
+  "new_sites": ["example-bench.com"]
+}
+
+<span class="c">// serp:每个查询一份</span>
+{
+  "query": "what county am i in",
+  "cluster_id": "core",                     <span class="c">// 对应 demand 里的簇</span>
+  "answered": false,                        <span class="c">// 首屏已完成任务</span>
+  "answered_basis": "AI 概览只推荐工具,不给县名",
+  "ai_overview": {"present": true, "completes_task": false,
+                  "cited_domains": ["example-bench.com"], "recommends_tools": true},  <span class="c">// GEO 信号</span>
+  "benchmark_position": 4,                  <span class="c">// 不在前 10 为 null</span>
+  "top10": [{"pos": 1, "domain": "example-big.com", "type": "tool", "authority_score": 38}]
+}
+
+<span class="c">// differentiation:差异点</span>
+{
+  "copy_only": false,                       <span class="c">// 照搬时为 true,gaps 可为空</span>
+  "gaps": [{"benchmark_now": "只查县", "ours": "同时给学区与选区", "evidence": "证据/.../serp 观察"}]
+}
+
+<span class="c">// delivery:交付依据</span>
+{
+  "data_sources": ["Census Geocoder(公有领域)"],
+  "license": "美国联邦政府作品,公有领域",
+  "hours": {"dev": 20, "data": 5, "content": 10},  <span class="c">// 首版工时</span>
+  "cash_first_year": 15,                    <span class="c">// 首年现金,美元</span>
+  "monthly_hours": 2,                       <span class="c">// 每月维护</span>
+  "feasible": true,                         <span class="c">// 数据拿不到或授权禁止再发布为 false</span>
+  "basis": "接口实测可用"
+}
+
+<span class="c">// brief:建站简报素材,准备判 go 时写</span>
+{
+  "positioning": "按当前位置或地址一次给出县、学区和选区",
+  "pages": [{"path": "/", "target_query": "what county am i in", "volume": 74000,
+             "page_type": "tool", "deliverable": "定位后给出县名与边界"}],
+  "tech_hosting": "Astro 静态站 + Cloudflare Pages 免费版",
+  "monetization_plan": "先接 AdSense,过 1 万访问后申请 Mediavine Journey",
+  "seo_notes": ["县名页不做批量模板"],       <span class="c">// 接在 4 条固定 SEO 规范之后</span>
+  "geo_notes": ["首屏给一句可引用的答案"],   <span class="c">// 接在 5 条固定 GEO 规范之后</span>
+  "risks": ["同方向已有 2 个新站"]
+}</code></pre>
+
+<h3 id="s15-4"><span class="num">15.4</span>种子池与淘汰索引</h3>
+<pre class="json"><code><span class="c">// 种子/种子池.json</span>
+{
+  "schema_version": 1,
+  "seeds": {
+    "example-bench.com": {                  <span class="c">// 键为去 www 的域名</span>
+      "source": "legacy",                   <span class="c">// legacy | sibling | serp | geo | community</span>
+      "source_ref": "xinci-simple:证据/.../a-verify.json",  <span class="c">// 从哪发现的</span>
+      "role": "benchmark",                  <span class="c">// benchmark 待初核 | sibling 只查同类站</span>
+      "added_at": "2026-10-13T07:40:00+00:00",
+      "status": "pending",                  <span class="c">// pending | checked</span>
+      "as_recorded": 14                     <span class="c">// 旧记录的 AS;null 表示未测</span>
+    }
+  }
+}
+
+<span class="c">// 淘汰索引/域名.json</span>
+{
+  "schema_version": 1,
+  "domains": {
+    "example-small.com": {
+      "failed": ["B3"],                     <span class="c">// 没过的初核编号</span>
+      "readings": "英文区自然流量 2,100(去品牌词后)",  <span class="c">// 读数摘要</span>
+      "at": "2026-10-14",
+      "recheck_after": "2027-01-12",        <span class="c">// 只有单独 B3 不过时设,其余为 null</span>
+      "observation": "证据/_scan/...-scan.json"  <span class="c">// 对应的初核观察</span>
+    }
+  }
+}
+
+<span class="c">// 种子/手工种子.json</span>
+{
+  "schema_version": 1,
+  "seeds": [{"domain": "geocodify.com", "role": "sibling", "note": "AS 38,只查同类站"}]  <span class="c">// role 不写默认 benchmark</span>
+}</code></pre>
+
+<h3 id="s15-5"><span class="num">15.5</span>运行清单</h3>
+<pre class="json"><code><span class="c">// 运行/&lt;日期&gt;-&lt;skill&gt;-&lt;运行编号&gt;-r&lt;轮&gt;-&lt;随机&gt;.json,每个阶段开始与结束各一份</span>
+{
+  "skill": "xinci-bench-scan",              <span class="c">// xinci-bench-scan | xinci-bench-assess | xinci-bench-quick</span>
+  "recorded_at": "2026-10-14T02:00:00.123456+00:00",  <span class="c">// 微秒精度,排序用</span>
+  "progress": {
+    "run_id": "run-20261014-a",             <span class="c">// 字母数字连字符</span>
+    "round": 1,                             <span class="c">// 第几轮</span>
+    "max_rounds": 3,                        <span class="c">// 预算,同一运行不能改;快道固定为 1</span>
+    "source_kind": "legacy",                <span class="c">// 本阶段的来源;快道固定为 quick</span>
+    "seed_value": "种子池 legacy 前 16 个",   <span class="c">// 从哪取种子</span>
+    "outcome": "started",                   <span class="c">// started | completed | blocked | skipped</span>
+    "next_step": "scan"                     <span class="c">// scan | assess | quick | done,由脚本推导</span>
+  },
+  "sources_opened": ["..."],
+  "directions_touched": ["example-county-lookup"],
+  "semrush_calls": 0,                       <span class="c">// 只记本条新增</span>
+  "notes": ["..."]
+}</code></pre>
+
+<h3 id="s15-6"><span class="num">15.6</span>快道方向记录</h3>
+<p><strong>与标杆道共用 slug、title、site_type、state、model、decision、evidence_refs、bindings、history；下面只列快道的字段。</strong></p>
+<pre class="json"><code>{
+  "slug": "gag2-calculator",
+  "title": "Grow a Garden 2 价格计算器",
+  "site_type": "tool",
+  "lane": "quick",                          <span class="c">// bench 标杆道 | quick 新词快道</span>
+  "state": "go",                            <span class="c">// found | go | rejected | parked | watching</span>
+  "object": {
+    "name": "Grow a Garden 2",              <span class="c">// 催生新说法的对象</span>
+    "type": "game",                         <span class="c">// game 游戏(14 天) | other 其他(90 天)</span>
+    "first_public": "2026-10-01",           <span class="c">// 第一次让大量普通用户用上的日期(公布日不算),游戏须在速判日前 0–14 天、其他 0–90 天</span>
+    "date_source": "https://…"              <span class="c">// 日期从哪读的(对象自己的发布页、商店页);公布日写在这里备查</span>
+  },
+  "terms": [
+    {"term": "grow a garden 2 calculator",  <span class="c">// 冒出的任务说法;同一说法不能属于两个方向</span>
+     "source": "autocomplete",              <span class="c">// 从哪个来源看到的</span>
+     "first_seen": "2026-10-13"}            <span class="c">// 第一次看到的日期</span>
+  ],
+  "volume": {                               <span class="c">// 结算时由最新量级观察推导写入</span>
+    "estimate_7d": 76500,                   <span class="c">// 当前月搜索量:英文区各国按最近 7 天换算后相加,测算用它</span>
+    "estimate_30d": 76500,                  <span class="c">// 按 30 天换算的合计,对照</span>
+    "by_geo": {"US": 50000, "GB": 22500, "AU": 4000},   <span class="c">// 读得出的国家各自的换算量,收入按它分</span>
+    "anchors": {"US": {"term": "…", "volume": 60000, "source": "lexicon", "measured_at": "2026-10-08", "ratio_7d": 0.8333},
+                "GB": {"term": "…", "volume": 30000, "source": "semrush", "measured_at": "2026-10-14", "ratio_7d": 0.75}},
+    "anchor_measured_at": "2026-10-08",     <span class="c">// 各国锚词里最早的测量日,go 与观察中都要求在 90 天内</span>
+    "trend_geo": "US",                      <span class="c">// 趋势按哪个国家的逐日曲线判断(换算量最大的)</span>
+    "trend": {"last7": 46.0, "prev7": 39.0, "peak30": 49,
+              "non_declining": true,        <span class="c">// 趋势不降,观察中的前提</span>
+              "spike_decay": false}         <span class="c">// 冲高回落,true 时按 oneoff 否决</span>
+  },
+  "serp": {                                 <span class="c">// 结算时由最新速判观察推导写入</span>
+    "aio_present": false,                   <span class="c">// AI 概览在场</span>
+    "aio_completes": false,                 <span class="c">// AI 概览已答完</span>
+    "occupied_by": null                     <span class="c">// 首页完整做了任务的页面域名</span>
+  },
+  "watch": null,                            <span class="c">// 观察中时:{"since", "expires_at"(+30 天), "checks": [每次复查的日期、月搜索量、基准访问、趋势、建议]}</span>
+  "follow_up": {                            <span class="c">// 判 go 时初始化</span>
+    "status": "pending",                    <span class="c">// pending 待开建 | started 已开建 | launched 已上线 | abandoned 放弃</span>
+    "go_at": "2026-10-14",                  <span class="c">// 判 go 日期</span>
+    "launch_by": "2026-10-21",              <span class="c">// 建议最晚上线 = 判 go 后 7 天</span>
+    "domain": null,                         <span class="c">// 已开建时必填</span>
+    "started_at": null,                     <span class="c">// 不早于判 go 日期</span>
+    "launched_at": null,                    <span class="c">// 不早于开建日期,验收节点由它起算</span>
+    "reason": null                          <span class="c">// 放弃时必填</span>
+  },
+  "model": {                                <span class="c">// quick_model.compute 的输出,结算时写入</span>
+    "assumptions_version": "2026-10-14.q3",
+    "searches": 76500,                      <span class="c">// 英文区当前月搜索量合计</span>
+    "us_share": 0.6536,                     <span class="c">// 美国搜索量占比</span>
+    "aio_factor": 1.0,                      <span class="c">// AI 概览在场未答完时 0.6</span>
+    "scenarios": {
+      "low":  {"share": 0.1, "visits": 7650,  "us_visits": 5000,  "revenue": 25.3},
+      "base": {"share": 0.2, "visits": 15300, "us_visits": 10000, "revenue": 50.6},   <span class="c">// 判定看基准;10000×$4 + 5300×$2</span>
+      "high": {"share": 0.3, "visits": 22950, "us_visits": 15000, "revenue": 75.9}
+    },
+    "passes": true,                         <span class="c">// 基准 ≥ 10,000 英文区访问</span>
+    "single_site_100": false,               <span class="c">// 基准月收入 ≥ $100</span>
+    "threshold_visits": 10000,
+    "searches_needed": 50000,               <span class="c">// 基准过线需要的英文区月搜索量</span>
+    "suggestion": "go"                      <span class="c">// go | watching | rejected:volume | rejected:oneoff</span>
+  }
+}</code></pre>
+
+<h3 id="s15-7"><span class="num">15.7</span>快道四类观察</h3>
+<p><strong>公共字段同初核观察，stage 固定为 quick；quick_signal 一次运行一份、slug 为 null，其余三类写拟登记或已登记的方向名。</strong></p>
+<pre class="json"><code><span class="c">// quick_signal:一次运行的原料批次</span>
+{
+  "items": [{
+    "source": "autocomplete",               <span class="c">// autocomplete | trends_rising | trends_rss | steamcharts | apple | itunes | google_play | producthunt | github | hackernews | youtube | wikipedia | policy | reddit | other</span>
+    "object": "Grow a Garden 2",            <span class="c">// 催生新说法的对象</span>
+    "term": "grow a garden 2 calculator",   <span class="c">// 冒出的任务说法;只有对象时为 null</span>
+    "url": "https://suggestqueries.google.com/…",  <span class="c">// 实际取回的网址</span>
+    "seen_at": "2026-10-14"                 <span class="c">// 看到的日期</span>
+  }]
+}
+
+<span class="c">// quick_screen:一个说法的速判,Q5、Q6 有结论时须带通过的浏览器预检</span>
+{
+  "term": "grow a garden 2 calculator",     <span class="c">// 须是登记的说法之一</span>
+  "checks": {                               <span class="c">// 恰好 Q1–Q6;pass 为 true / false / null(前项已不过才可 null)</span>
+    "Q1": {"pass": true, "basis": "官方发布页 2026-09-28"},
+    "Q2": {"pass": true, "basis": "自动补全出现该说法"},
+    "Q3": {"pass": true, "basis": "每局都要算;Wikipedia 浏览量持平"},
+    "Q4": {"pass": true, "basis": "游戏工具,不涉排除项"},
+    "Q5": {"pass": true, "basis": "首页为 reddit、YouTube、官方 Discord"},
+    "Q6": {"pass": true, "basis": "无 AI 概览"}
+  },
+  "ai_overview": {"present": false, "completes_task": false, "cited_domains": []},
+  "top10": [{"pos": 1, "domain": "reddit.com", "type": "forum", "completes_task": false}],
+  "occupied_by": null                       <span class="c">// Q5 不过时必填完整做了任务的页面域名</span>
+}
+
+<span class="c">// quick_volume:按国家的锚词换算,恰好英文区 6 国各一行</span>
+{
+  "window_days": 7,                         <span class="c">// 固定 7,同时报 30 天对照</span>
+  "countries": [
+    {"geo": "US", "readable": true,         <span class="c">// Trends 读得出</span>
+     "basis": "Trends today 1-m,geo=US",
+     "anchor_term": "…",                    <span class="c">// 美国可用 lexicon.py --match 在旧词库里找</span>
+     "anchor_volume": 9900,                 <span class="c">// 锚词在该国的月量</span>
+     "anchor_source": "lexicon",            <span class="c">// lexicon(只限美国) | semrush</span>
+     "anchor_measured_at": "2026-10-08",    <span class="c">// 须是真实日子</span>
+     "new_mean_7d": 54.0, "anchor_mean_7d": 96.0, "new_mean_30d": 44.0, "anchor_mean_30d": 90.0,
+     "ratio_7d": 0.5625,                    <span class="c">// 须等于 new_mean_7d ÷ anchor_mean_7d,且在 0.2–5 之间</span>
+     "estimate_7d": 5569,                   <span class="c">// 须等于 anchor_volume × ratio_7d(允许取整误差 1)</span>
+     "estimate_30d": 4840},
+    {"geo": "GB", "readable": true, "basis": "Trends today 1-m,geo=GB",
+     "anchor_term": "…", "anchor_volume": 2400, "anchor_source": "semrush",   <span class="c">// 美国以外只能是 semrush</span>
+     "anchor_measured_at": "2026-10-14", "new_mean_7d": 30.0, "anchor_mean_7d": 60.0,
+     "new_mean_30d": 24.0, "anchor_mean_30d": 60.0, "ratio_7d": 0.5, "estimate_7d": 1200, "estimate_30d": 960},
+    {"geo": "CA", "readable": false, "basis": "Trends 全为 0"},    <span class="c">// 读不出的国家记 0</span>
+    {"geo": "AU", "readable": false, "basis": "Trends 全为 0"},
+    {"geo": "NZ", "readable": false, "basis": "Trends 全为 0"},
+    {"geo": "IE", "readable": false, "basis": "Trends 全为 0"}
+  ],
+  "estimate_7d": 6769,                      <span class="c">// 须等于各国 estimate_7d 合计</span>
+  "estimate_30d": 5800,                     <span class="c">// 须等于各国 estimate_30d 合计</span>
+  "trend_geo": "US",                        <span class="c">// 须是换算量最大的国家</span>
+  "series_30d": [0, 0, 11, 13, 20, …]       <span class="c">// trend_geo 那国的 30 天逐日新词值,至少 14 个非负数,"&lt;1" 记 0</span>
+}
+
+<span class="c">// quick_brief:最小版本简报素材,判 go 时必须有</span>
+{
+  "positioning": "输入作物与天气,算出售价",
+  "pages": [{"path": "/", "target_query": "grow a garden 2 calculator", "deliverable": "按作物与突变算价格"}],
+  "data_sources": ["社区 wiki 价格表"],
+  "license": "事实数据,自行整理",
+  "update_frequency": "随游戏更新",
+  "build_days": 2,                          <span class="c">// 判 go 须 ≤ 3</span>
+  "data_available": true,                   <span class="c">// 判 go 须为 true</span>
+  "hosting": "Cloudflare Pages 免费版",
+  "risks": ["游戏热度可能三个月内回落"]
+}</code></pre>
+
+<p>上线前预判另有两类观察 <code>quick_reference</code>、<code>quick_forecast</code>，方向记录新增 <code>basis</code> 与 <code>forecast</code> 块，<code>quick_volume</code> 多一个可选的 <code>term</code>；字段见 <code>命令与观察.md</code> 7.7。</p>
+
+<h3 id="s15-8"><span class="num">15.8</span>原料池、快道淘汰记录与补全快照</h3>
+<pre class="json"><code><span class="c">// 快道/原料.jsonl,一行一条原料</span>
+{
+  "id": "fcd025c088e5",                     <span class="c">// 规范化说法(没有说法时用对象名)的 SHA-1 前 12 位</span>
+  "source": "autocomplete",
+  "object": "Grow a Garden 2",
+  "term": "grow a garden 2 calculator",
+  "url": "https://suggestqueries.google.com/…",
+  "seen_at": "2026-10-13",                  <span class="c">// 超过 7 天还没证据就过期</span>
+  "rising": 200,                            <span class="c">// 可选:Trends 飙升百分比,飙升词为 "breakout";排优先级用</span>
+  "playable_at": "2026-10-20",              <span class="c">// 可选:开玩日期,可在未来;没到这天只进即将开玩,保留 7 天从这天起算</span>
+  "stage": "closed beta",                   <span class="c">// 可选:阶段,如 closed beta、Early access、Original</span>
+  "also_seen": [{"source": "trends_rising", "seen_at": "2026-10-14", "observation": "证据/_quick/…"}],  <span class="c">// 之后又被别的来源看到</span>
+  "status": "pending",                      <span class="c">// pending 待看 | used 已登记或已否决 | expired 已过期</span>
+  "observation": "证据/_quick/…-quick_signal.json"  <span class="c">// 来自哪份原料批次观察</span>
+}                                           <span class="c">// 过期后再被取回会复活成 pending,并多一个 revived_at</span>
+
+<span class="c">// 快道/淘汰.json,速判不过的词,同词不再看</span>
+{
+  "schema_version": 1,
+  "terms": {
+    "grow a garden 2 tier list": {
+      "gate": "occupied",                   <span class="c">// scope | not_new | oneoff | occupied | answered | volume</span>
+      "at": "2026-10-14",
+      "observation": "证据/…-quick_screen.json",
+      "seed": "gag2tiers.com",              <span class="c">// 用了 --seed-domain 时才有:占位小站</span>
+      "seed_added": true                    <span class="c">// 是否新登记进了标杆道种子池</span>
+    }
+  }
+}
+
+<span class="c">// 快道/补全快照/&lt;规范化查询&gt;-&lt;查询 SHA-1 前 8 位&gt;.json,每次取数追加一条</span>
+[
+  {"fetched_at": "2026-10-14T02:57:00+00:00", "query": "grow a garden 2 calculator",
+   "suggestions": ["…", "…"]}               <span class="c">// 以前所有快照里都没出现过的才算新建议</span>
+]</code></pre>
+
+<footer>依据 xinci-bench-workflow 分支的代码、选站契约、数据采集规程、命令与观察、五个 SKILL.md 与三份设计稿整理（标杆道 2026-10-13，新词快道 2026-10-14，快道上线前预判 2026-10-16）。数据区数字取自 2026-10-14 的看板、种子池与快道目录。</footer>
+</section>
+</main>
+</div>
+
+<script>
+// 窄屏时把侧栏目录复制进正文顶部的折叠块,两处共用一份目录
+(function () {
+  var list = document.getElementById("toc-list");
+  var slot = document.getElementById("toc-mobile-slot");
+  if (list && slot) { var copy = list.cloneNode(true); copy.removeAttribute("id"); slot.appendChild(copy); }
+})();
+</script>
+<!-- 本地打开时用 mermaid 渲染图;发布版由页面原生渲染,不需要这段 -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+<script>
+mermaid.initialize({ startOnLoad: true, theme: window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "default" });
+</script>
+</body>
+</html>

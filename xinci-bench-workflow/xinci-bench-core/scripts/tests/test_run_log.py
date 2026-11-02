@@ -169,18 +169,22 @@ class QuickDailyRoundTest(unittest.TestCase):
             self.assertEqual(R.plan(root, lane="quick")["rising_seeds"], QM.rising_seeds(today()))
 
 
-class SemrushBudgetTest(unittest.TestCase):
-    def test_today_usage_across_lanes_and_stop_flag(self):
+class SemrushUsageTest(unittest.TestCase):
+    def test_today_usage_across_lanes_without_cap(self):
+        # 用户 2026-10-20 定:不设每日上限,只记今天用了多少;页面提示额度用完才停
         import json as _json
         with TmpRoot() as root:
             start(root)
             R.finish(root, run_id="run-a", semrush_calls=60)
             p = R.plan(root)
-            self.assertEqual((p["semrush_calls_today"], p["semrush_left_today"], p["semrush_stop"]), (60, 40, False))
+            self.assertEqual(p["semrush_calls_today"], 60)
+            for key in ("semrush_stop", "semrush_left_today", "semrush_daily_limit"):
+                self.assertNotIn(key, p)
             start_quick(root)
-            R.finish(root, run_id="quick-a", semrush_calls=31)
+            R.finish(root, run_id="quick-a", semrush_calls=131)
             q = R.plan(root, lane="quick")
-            self.assertEqual((q["semrush_calls_today"], q["semrush_stop"]), (91, True))     # 两条道合计,到 90 就停
+            self.assertEqual(q["semrush_calls_today"], 191)                               # 两条道合计,超过 100 也不拦
+            self.assertNotIn("semrush_stop", q)
             for f in (root / "运行").glob("*.json"):                                      # 挪到以前的日子
                 d = _json.loads(f.read_text(encoding="utf-8"))
                 d["recorded_at"] = "2026-01-01" + d["recorded_at"][10:]

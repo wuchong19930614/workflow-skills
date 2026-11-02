@@ -6,7 +6,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import ledger as L
 import write_observation as W
-from _common import BenchError, load_ledger
+from _common import BenchError, load_ledger, save_ledger
 from helpers import TmpRoot, benchmark_record, cluster_record, demand_obs, scan_obs, setup_direction
 
 
@@ -32,6 +32,16 @@ class RegisterTest(unittest.TestCase):
             with self.assertRaisesRegex(BenchError, "confirm-distinct"):
                 L.register(root, "b", "方向 B", "tool", "example-bench.com", ref, "r")
             L.register(root, "b", "方向 B", "tool", "example-bench.com", ref, "r", confirm_distinct="B 是学区不是县")
+
+    def test_register_with_quick_direction_in_ledger(self):
+        # 快道方向没有 benchmarks 字段,查重时不能因此拒收标杆道登记
+        with TmpRoot() as root:
+            ledger = load_ledger(root)
+            ledger["directions"]["some-game-map"] = {"slug": "some-game-map", "lane": "quick", "state": "rejected"}
+            save_ledger(root, ledger)
+            ref = W.write(root, scan_obs("example-bench.com"))
+            rec = L.register(root, "example-county", "按地址查县", "tool", "example-bench.com", ref, "初核全过")
+            self.assertEqual(rec["state"], "found")
 
     def test_duplicate_slug_and_bad_site_type(self):
         with TmpRoot() as root:
